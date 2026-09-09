@@ -1,0 +1,15 @@
+name: IAM Trader Test
+
+on:
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Test
+        run: |
+          echo "IAM Trader backend is running"
+          node --version
+          npm --version
