@@ -1,0 +1,16 @@
+{
+  "name": "iamtrader-backend",
+  "version": "1.0.0",
+  "description": "Backend du journal de trading IAM Trader",
+  "type": "module",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node --watch server.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "latest",
+    "dotenv": "latest",
+    "express": "latest"
+  }
+}
