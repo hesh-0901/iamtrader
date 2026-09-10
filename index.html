@@ -1,88 +1,88 @@
 <!doctype html>
-<html lang="fr" class="bg-slate-950">
+<html lang="fr" class="bg-[#070B10]">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>IAMTRADER — Quick Trade</title>
+  <title>IAMTRADER — Trader Performance System</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          fontFamily: { sans: ['Inter','sans-serif'], mono: ['JetBrains Mono','monospace'] },
-          colors: { ink:'#080B0D', navy:'#0A192F', line:'#1E334B', mint:'#00C796', gold:'#C7A86B' },
-          boxShadow: { premium:'0 24px 80px rgba(0,0,0,.35)' }
-        }
-      }
-    }
+    tailwind.config={theme:{extend:{fontFamily:{sans:['Inter','sans-serif'],mono:['JetBrains Mono','monospace']},colors:{ink:'#070B10',navy:'#0A1422',panel:'#0D1928',line:'#1D3044',mint:'#00C796',gold:'#C7A86B'},boxShadow:{premium:'0 24px 80px rgba(0,0,0,.32)',glow:'0 0 32px rgba(0,199,150,.10)'}}}};
   </script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
 </head>
-<body class="min-h-screen bg-[radial-gradient(circle_at_80%_-10%,rgba(0,199,150,.10),transparent_28%),linear-gradient(135deg,#080B0D,#0A192F)] text-white font-sans antialiased">
-  <div class="min-h-screen">
-    <header class="sticky top-0 z-20 border-b border-white/10 bg-[#080B0D]/85 backdrop-blur-xl">
-      <div class="mx-auto flex h-[72px] max-w-[1440px] items-center justify-between px-5 sm:px-8 lg:px-10">
-        <div class="flex items-center gap-3">
-          <div class="grid h-10 w-10 place-items-center rounded-xl border border-mint/40 bg-mint/5 font-mono font-bold text-mint shadow-[0_0_24px_rgba(0,199,150,.08)]">I</div>
-          <div><div class="text-sm font-extrabold tracking-[.18em]">IAMTRADER</div><div class="text-[9px] font-semibold tracking-[.18em] text-slate-500">TRADER PERFORMANCE SYSTEM</div></div>
-        </div>
-        <div class="hidden items-center gap-2 rounded-full border border-white/10 bg-white/[.03] px-3 py-1.5 sm:flex"><span class="h-1.5 w-1.5 rounded-full bg-mint shadow-[0_0_10px_#00C796]"></span><span class="font-mono text-[10px] font-semibold tracking-wider text-slate-400">SYSTEM READY</span></div>
+<body class="min-h-screen bg-[radial-gradient(circle_at_75%_0%,rgba(0,199,150,.08),transparent_25%),linear-gradient(135deg,#070B10,#0A1422)] text-white font-sans antialiased">
+  <div class="min-h-screen lg:flex">
+    <aside id="sidebar" class="fixed inset-y-0 left-0 z-40 flex w-[270px] -translate-x-full flex-col border-r border-white/10 bg-[#080D14]/95 backdrop-blur-2xl transition-transform duration-200 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0">
+      <div class="flex h-[76px] items-center border-b border-white/10 px-6">
+        <div class="grid h-9 w-9 place-items-center rounded-xl border border-mint/40 bg-mint/5 font-mono font-bold text-mint">I</div>
+        <div class="ml-3"><div class="text-sm font-extrabold tracking-[.18em]">IAMTRADER</div><div class="mt-1 text-[8px] font-semibold tracking-[.18em] text-slate-500">PERFORMANCE SYSTEM</div></div>
       </div>
-    </header>
+      <nav class="flex-1 overflow-y-auto px-3 py-6">
+        <div class="mb-2 px-3 font-mono text-[9px] font-semibold tracking-[.18em] text-slate-600">WORKSPACE</div>
+        <button data-page="dashboard" class="nav-item mb-1 flex w-full items-center gap-3 rounded-xl bg-mint/10 px-3 py-2.5 text-left text-xs font-semibold text-mint"><span class="icon">⌂</span>Dashboard</button>
+        <button data-page="quick" class="nav-item mb-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-xs font-semibold text-slate-400 transition hover:bg-white/5 hover:text-white"><span class="icon">＋</span>Quick Trade</button>
+        <button data-page="journal" class="nav-item mb-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-xs font-semibold text-slate-400 transition hover:bg-white/5 hover:text-white"><span class="icon">▤</span>Journal</button>
+        <div class="mb-2 mt-7 px-3 font-mono text-[9px] font-semibold tracking-[.18em] text-slate-600">ANALYTICS</div>
+        <button data-page="performance" class="nav-item mb-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-xs font-semibold text-slate-400 transition hover:bg-white/5 hover:text-white"><span class="icon">⌁</span>Performance</button>
+        <button data-page="risk" class="nav-item mb-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-xs font-semibold text-slate-400 transition hover:bg-white/5 hover:text-white"><span class="icon">◇</span>Risk</button>
+        <button data-page="behavior" class="nav-item mb-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-xs font-semibold text-slate-400 transition hover:bg-white/5 hover:text-white"><span class="icon">◎</span>Behavior</button>
+        <div class="mb-2 mt-7 px-3 font-mono text-[9px] font-semibold tracking-[.18em] text-slate-600">EVALUATION</div>
+        <button data-page="score" class="nav-item mb-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-xs font-semibold text-slate-400 transition hover:bg-white/5 hover:text-white"><span class="icon">★</span>Trader Score</button>
+        <button data-page="discipline" class="nav-item mb-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-xs font-semibold text-slate-400 transition hover:bg-white/5 hover:text-white"><span class="icon">✓</span>Discipline</button>
+        <div class="mb-2 mt-7 px-3 font-mono text-[9px] font-semibold tracking-[.18em] text-slate-600">ACCOUNT</div>
+        <button data-page="accounts" class="nav-item mb-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-xs font-semibold text-slate-400 transition hover:bg-white/5 hover:text-white"><span class="icon">▣</span>Trading Accounts</button>
+        <button data-page="settings" class="nav-item flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-xs font-semibold text-slate-400 transition hover:bg-white/5 hover:text-white"><span class="icon">⚙</span>Settings</button>
+      </nav>
+      <div class="border-t border-white/10 p-4"><div class="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[.025] p-3"><div class="grid h-9 w-9 place-items-center rounded-full bg-mint/10 font-mono text-xs font-bold text-mint">HS</div><div class="min-w-0"><div class="truncate text-xs font-bold">Trader Workspace</div><div class="mt-0.5 text-[9px] text-slate-500">Personal account</div></div></div></div>
+    </aside>
 
-    <main class="mx-auto max-w-[1440px] px-5 py-8 sm:px-8 sm:py-10 lg:px-10">
-      <section class="mb-8 flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
-        <div>
-          <div class="mb-2 font-mono text-[10px] font-semibold tracking-[.18em] text-mint">JOURNAL / QUICK TRADE</div>
-          <h1 class="text-3xl font-extrabold tracking-tight sm:text-4xl">Nouvelle opération</h1>
-          <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-400">Enregistrez votre setup. Le moteur IAMTRADER calcule instantanément le risque et le ratio R:R.</p>
-        </div>
-        <div class="rounded-2xl border border-white/10 bg-white/[.04] px-5 py-3 shadow-premium"><div class="text-[9px] font-semibold tracking-[.16em] text-slate-500">ACCOUNT BALANCE</div><div id="accountBalanceLabel" class="mt-1 font-mono text-lg font-bold">$10,000.00</div></div>
-      </section>
+    <div id="overlay" class="fixed inset-0 z-30 hidden bg-black/60 lg:hidden"></div>
+    <div class="min-w-0 flex-1">
+      <header class="sticky top-0 z-20 flex h-[76px] items-center justify-between border-b border-white/10 bg-[#080D14]/85 px-4 backdrop-blur-xl sm:px-7 lg:px-9">
+        <div class="flex items-center gap-3"><button id="menuBtn" class="grid h-9 w-9 place-items-center rounded-lg border border-white/10 text-slate-400 lg:hidden">☰</button><div><div id="topEyebrow" class="font-mono text-[9px] font-semibold tracking-[.18em] text-mint">OVERVIEW</div><div id="topTitle" class="mt-1 text-sm font-bold">Dashboard</div></div></div>
+        <div class="flex items-center gap-3"><div class="hidden rounded-full border border-white/10 bg-white/[.03] px-3 py-1.5 sm:flex"><span class="mr-2 mt-0.5 h-1.5 w-1.5 rounded-full bg-mint shadow-[0_0_10px_#00C796]"></span><span class="font-mono text-[9px] font-semibold tracking-wider text-slate-500">SYSTEM READY</span></div><div class="grid h-9 w-9 place-items-center rounded-full border border-white/10 bg-white/[.04] text-xs font-bold">HS</div></div>
+      </header>
 
-      <section class="grid gap-5 xl:grid-cols-[minmax(0,1.65fr)_minmax(330px,.8fr)]">
-        <form id="tradeForm" class="rounded-2xl border border-white/10 bg-[#0A192F]/80 p-5 shadow-premium backdrop-blur sm:p-7">
-          <div class="mb-7 flex items-start justify-between border-b border-white/10 pb-5"><div><h2 class="text-base font-bold">Trade Setup</h2><p class="mt-1 text-xs text-slate-500">Entrée manuelle · données essentielles</p></div><span class="rounded-lg border border-mint/25 bg-mint/5 px-2.5 py-1.5 font-mono text-[10px] font-bold text-mint">01</span></div>
-          <div class="grid gap-4 sm:grid-cols-2">
-            <label class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Asset / Symbol<input id="symbol" name="symbol" placeholder="XAUUSD" required class="mt-2 w-full rounded-xl border border-white/10 bg-black/20 px-3.5 py-3 font-mono text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-mint/60 focus:ring-2 focus:ring-mint/10" /></label>
-            <label class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Direction<select id="direction" name="direction" class="mt-2 w-full rounded-xl border border-white/10 bg-black/20 px-3.5 py-3 font-mono text-sm text-white outline-none focus:border-mint/60 focus:ring-2 focus:ring-mint/10"><option value="BUY">BUY</option><option value="SELL">SELL</option></select></label>
+      <main class="mx-auto max-w-[1500px] px-4 py-7 sm:px-7 sm:py-9 lg:px-9">
+        <section id="page-dashboard" class="page space-y-6">
+          <div class="flex flex-col justify-between gap-4 md:flex-row md:items-end"><div><div class="font-mono text-[10px] font-semibold tracking-[.18em] text-mint">TRADING PERFORMANCE</div><h1 class="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">Good afternoon, Trader.</h1><p class="mt-2 text-sm text-slate-500">Voici une vue synthétique de votre activité et de votre discipline.</p></div><button data-page="quick" class="rounded-xl bg-mint px-4 py-2.5 text-xs font-extrabold text-[#04120F] shadow-glow transition hover:brightness-110">＋ NEW TRADE</button></div>
+          <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+            <div class="metric-card"><div class="label">ACCOUNT EQUITY</div><div class="mt-3 font-mono text-2xl font-bold">$10,842.50</div><div class="mt-2 text-[10px] font-semibold text-mint">+8.42% <span class="text-slate-600">vs. starting balance</span></div></div>
+            <div class="metric-card"><div class="label">WIN RATE</div><div class="mt-3 font-mono text-2xl font-bold">68.4%</div><div class="mt-2 text-[10px] text-slate-500">26 wins · 12 losses</div></div>
+            <div class="metric-card"><div class="label">PROFIT FACTOR</div><div class="mt-3 font-mono text-2xl font-bold">1.82</div><div class="mt-2 text-[10px] text-mint">Healthy expectancy</div></div>
+            <div class="metric-card"><div class="label">MAX DRAWDOWN</div><div class="mt-3 font-mono text-2xl font-bold">−3.21%</div><div class="mt-2 text-[10px] text-slate-500">Controlled risk profile</div></div>
           </div>
-          <div class="mt-4 grid gap-4 sm:grid-cols-3">
-            <label class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Entry<input id="entry" name="entry" type="number" step="any" placeholder="2500.00" required class="mt-2 w-full rounded-xl border border-white/10 bg-black/20 px-3.5 py-3 font-mono text-sm text-white outline-none focus:border-mint/60 focus:ring-2 focus:ring-mint/10" /></label>
-            <label class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Stop Loss<input id="stopLoss" name="stopLoss" type="number" step="any" placeholder="2490.00" required class="mt-2 w-full rounded-xl border border-white/10 bg-black/20 px-3.5 py-3 font-mono text-sm text-white outline-none focus:border-mint/60 focus:ring-2 focus:ring-mint/10" /></label>
-            <label class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Take Profit<input id="takeProfit" name="takeProfit" type="number" step="any" placeholder="2530.00" required class="mt-2 w-full rounded-xl border border-white/10 bg-black/20 px-3.5 py-3 font-mono text-sm text-white outline-none focus:border-mint/60 focus:ring-2 focus:ring-mint/10" /></label>
+          <div class="grid gap-5 xl:grid-cols-[1.6fr_.8fr]">
+            <div class="panel"><div class="mb-6 flex items-start justify-between"><div><h2 class="text-sm font-bold">Performance Curve</h2><p class="mt-1 text-[10px] text-slate-500">Equity progression · last 30 sessions</p></div><div class="rounded-lg border border-white/10 px-2.5 py-1 font-mono text-[9px] text-slate-500">30D</div></div><div class="relative h-64 overflow-hidden rounded-xl border border-white/5 bg-black/10"><div class="absolute inset-0 opacity-30" style="background-image:linear-gradient(rgba(255,255,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.06) 1px,transparent 1px);background-size:64px 64px"></div><svg class="absolute inset-0 h-full w-full" viewBox="0 0 800 250" preserveAspectRatio="none"><polyline points="0,205 55,190 105,198 160,170 215,180 270,145 325,156 380,118 435,130 490,92 545,108 600,76 655,88 710,52 800,42" fill="none" stroke="#00C796" stroke-width="3" vector-effect="non-scaling-stroke"/><polyline points="0,205 55,190 105,198 160,170 215,180 270,145 325,156 380,118 435,130 490,92 545,108 600,76 655,88 710,52 800,42 800,250 0,250" fill="rgba(0,199,150,.06)" stroke="none"/></svg><div class="absolute bottom-3 left-4 font-mono text-[9px] text-slate-600">START</div><div class="absolute right-4 top-3 font-mono text-[9px] text-mint">$10,842.50</div></div></div>
+            <div class="panel"><div class="flex items-start justify-between"><div><h2 class="text-sm font-bold">Trader Score</h2><p class="mt-1 text-[10px] text-slate-500">Composite evaluation</p></div><span class="rounded-full border border-mint/20 bg-mint/5 px-2.5 py-1 font-mono text-[9px] font-bold text-mint">GOOD</span></div><div class="mt-7 flex items-center justify-center"><div class="grid h-40 w-40 place-items-center rounded-full border-[10px] border-mint/15 bg-mint/[.03] shadow-glow"><div class="text-center"><div class="font-mono text-4xl font-bold">87</div><div class="mt-1 text-[9px] font-semibold tracking-wider text-slate-500">/ 100</div></div></div></div><div class="mt-7 space-y-3"><div class="flex justify-between text-[10px]"><span class="text-slate-500">Risk Control</span><b>92</b></div><div class="h-1 rounded-full bg-white/5"><div class="h-1 w-[92%] rounded-full bg-mint"></div></div><div class="flex justify-between text-[10px]"><span class="text-slate-500">Consistency</span><b>84</b></div><div class="h-1 rounded-full bg-white/5"><div class="h-1 w-[84%] rounded-full bg-mint"></div></div><div class="flex justify-between text-[10px]"><span class="text-slate-500">Discipline</span><b>86</b></div><div class="h-1 rounded-full bg-white/5"><div class="h-1 w-[86%] rounded-full bg-mint"></div></div></div></div>
           </div>
-          <div class="mt-4 grid gap-4 sm:grid-cols-3">
-            <label class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Quantity / Lot<input id="quantity" name="quantity" type="number" step="any" min="0.000001" placeholder="1.00" required class="mt-2 w-full rounded-xl border border-white/10 bg-black/20 px-3.5 py-3 font-mono text-sm text-white outline-none focus:border-mint/60 focus:ring-2 focus:ring-mint/10" /></label>
-            <label class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Contract multiplier<input id="contractMultiplier" name="contractMultiplier" type="number" step="any" min="0.000001" value="1" required class="mt-2 w-full rounded-xl border border-white/10 bg-black/20 px-3.5 py-3 font-mono text-sm text-white outline-none focus:border-mint/60 focus:ring-2 focus:ring-mint/10" /></label>
-            <label class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Account balance<input id="accountBalance" name="accountBalance" type="number" step="any" min="0.01" value="10000" required class="mt-2 w-full rounded-xl border border-white/10 bg-black/20 px-3.5 py-3 font-mono text-sm text-white outline-none focus:border-mint/60 focus:ring-2 focus:ring-mint/10" /></label>
-          </div>
-          <div class="mt-4 grid gap-4 sm:grid-cols-2">
-            <label class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Date / Time<input id="dateTime" name="dateTime" type="datetime-local" required class="mt-2 w-full rounded-xl border border-white/10 bg-black/20 px-3.5 py-3 font-mono text-sm text-white outline-none focus:border-mint/60 focus:ring-2 focus:ring-mint/10" /></label>
-            <label class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Reason / Note<textarea id="note" name="note" rows="1" placeholder="Pourquoi cette entrée ? (optionnel)" class="mt-2 min-h-[48px] w-full rounded-xl border border-white/10 bg-black/20 px-3.5 py-3 text-sm text-white outline-none placeholder:text-slate-600 focus:border-mint/60 focus:ring-2 focus:ring-mint/10"></textarea></label>
-          </div>
-          <div id="error" hidden class="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/5 px-3 py-2.5 text-xs text-rose-300"></div>
-          <button class="mt-5 flex w-full items-center justify-center rounded-xl bg-mint px-4 py-3.5 text-sm font-extrabold tracking-wide text-[#04120F] shadow-[0_8px_30px_rgba(0,199,150,.16)] transition hover:brightness-110 active:scale-[.99]" type="submit">CALCULER & ENREGISTRER <span class="ml-auto text-lg">→</span></button>
-        </form>
+          <div class="panel"><div class="mb-5 flex items-center justify-between"><div><h2 class="text-sm font-bold">Recent Trades</h2><p class="mt-1 text-[10px] text-slate-500">Latest recorded operations</p></div><button data-page="journal" class="text-[10px] font-semibold text-mint">VIEW JOURNAL →</button></div><div class="overflow-x-auto"><table class="w-full min-w-[700px] text-left"><thead><tr class="border-b border-white/10 font-mono text-[9px] tracking-wider text-slate-600"><th class="pb-3">ASSET</th><th class="pb-3">SIDE</th><th class="pb-3">ENTRY</th><th class="pb-3">R:R</th><th class="pb-3">RISK</th><th class="pb-3">STATUS</th></tr></thead><tbody id="dashboardRows"></tbody></table></div></div>
+        </section>
 
-        <aside class="rounded-2xl border border-white/10 bg-[#0A192F]/80 p-5 shadow-premium backdrop-blur sm:p-7">
-          <div class="mb-6 flex items-start justify-between border-b border-white/10 pb-5"><div><h2 class="text-base font-bold">Risk Preview</h2><p class="mt-1 text-xs text-slate-500">Calculs automatiques</p></div><span class="rounded-full border border-mint/25 bg-mint/5 px-2.5 py-1 font-mono text-[9px] font-bold tracking-wider text-mint">LIVE</span></div>
-          <div class="border-b border-white/10 pb-6"><div class="font-mono text-[9px] tracking-[.16em] text-slate-500">PLANNED R:R</div><div id="rr" class="mt-2 font-mono text-4xl font-bold tracking-tight text-mint">—</div></div>
-          <div class="grid grid-cols-2 gap-4 border-b border-white/10 py-4"><div><div class="font-mono text-[9px] tracking-wider text-slate-500">RISK AMOUNT</div><div id="riskAmount" class="mt-2 font-mono text-lg font-bold">—</div></div><div><div class="font-mono text-[9px] tracking-wider text-slate-500">RISK %</div><div id="riskPercent" class="mt-2 font-mono text-lg font-bold">—</div></div></div>
-          <div class="divide-y divide-white/10"><div class="flex justify-between py-3 text-xs"><span class="text-slate-500">Risk distance</span><b id="riskFormula" class="font-mono">Entry ↔ SL</b></div><div class="flex justify-between py-3 text-xs"><span class="text-slate-500">Reward distance</span><b id="rewardFormula" class="font-mono">Entry ↔ TP</b></div></div>
-          <div id="directionBox" class="mt-4 rounded-xl border border-mint/15 bg-mint/5 px-3 py-2.5 font-mono text-[10px] font-semibold text-mint">BUY · Long exposure</div>
-          <p class="mt-4 text-[10px] leading-5 text-slate-500">Preview indicatif. Les calculs validés par le moteur serveur restent la référence.</p>
-        </aside>
-      </section>
+        <section id="page-quick" class="page hidden space-y-6">
+          <div><div class="font-mono text-[10px] font-semibold tracking-[.18em] text-mint">JOURNAL / QUICK TRADE</div><h1 class="mt-2 text-3xl font-extrabold tracking-tight">Nouvelle opération</h1><p class="mt-2 text-sm text-slate-500">Saisissez les données essentielles. IAMTRADER calcule instantanément votre risque.</p></div>
+          <div class="grid gap-5 xl:grid-cols-[1.6fr_.8fr]">
+            <form id="tradeForm" class="panel p-5 sm:p-7"><div class="mb-7 flex items-start justify-between border-b border-white/10 pb-5"><div><h2 class="text-sm font-bold">Trade Setup</h2><p class="mt-1 text-[10px] text-slate-500">Entrée manuelle · données essentielles</p></div><span class="rounded-lg border border-mint/20 bg-mint/5 px-2.5 py-1.5 font-mono text-[9px] font-bold text-mint">01</span></div>
+              <div class="grid gap-4 sm:grid-cols-2"><label class="field-label">Asset / Symbol<input id="symbol" placeholder="XAUUSD" required class="field-input" /></label><label class="field-label">Direction<select id="direction" class="field-input"><option>BUY</option><option>SELL</option></select></label></div>
+              <div class="mt-4 grid gap-4 sm:grid-cols-3"><label class="field-label">Entry<input id="entry" type="number" step="any" placeholder="2500.00" required class="field-input" /></label><label class="field-label">Stop Loss<input id="stopLoss" type="number" step="any" placeholder="2490.00" required class="field-input" /></label><label class="field-label">Take Profit<input id="takeProfit" type="number" step="any" placeholder="2530.00" required class="field-input" /></label></div>
+              <div class="mt-4 grid gap-4 sm:grid-cols-3"><label class="field-label">Quantity / Lot<input id="quantity" type="number" step="any" min="0.000001" placeholder="1.00" required class="field-input" /></label><label class="field-label">Contract multiplier<input id="contractMultiplier" type="number" step="any" min="0.000001" value="1" required class="field-input" /></label><label class="field-label">Account balance<input id="accountBalance" type="number" step="any" min="0.01" value="10000" required class="field-input" /></label></div>
+              <div class="mt-4 grid gap-4 sm:grid-cols-2"><label class="field-label">Date / Time<input id="dateTime" type="datetime-local" required class="field-input" /></label><label class="field-label">Reason / Note<textarea id="note" rows="1" placeholder="Pourquoi cette entrée ?" class="field-input min-h-[48px] resize-y font-sans"></textarea></label></div>
+              <div id="error" hidden class="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/5 px-3 py-2.5 text-xs text-rose-300"></div><button class="mt-5 flex w-full items-center justify-center rounded-xl bg-mint px-4 py-3.5 text-sm font-extrabold tracking-wide text-[#04120F] shadow-[0_8px_30px_rgba(0,199,150,.16)] transition hover:brightness-110 active:scale-[.99]">CALCULER & ENREGISTRER <span class="ml-auto text-lg">→</span></button>
+            </form>
+            <aside class="panel p-5 sm:p-7"><div class="mb-6 flex items-start justify-between border-b border-white/10 pb-5"><div><h2 class="text-sm font-bold">Risk Preview</h2><p class="mt-1 text-[10px] text-slate-500">Calculs automatiques</p></div><span class="rounded-full border border-mint/20 bg-mint/5 px-2.5 py-1 font-mono text-[9px] font-bold tracking-wider text-mint">LIVE</span></div><div class="border-b border-white/10 pb-6"><div class="font-mono text-[9px] tracking-[.16em] text-slate-500">PLANNED R:R</div><div id="rr" class="mt-2 font-mono text-4xl font-bold text-mint">—</div></div><div class="grid grid-cols-2 gap-4 border-b border-white/10 py-4"><div><div class="font-mono text-[9px] text-slate-500">RISK AMOUNT</div><div id="riskAmount" class="mt-2 font-mono text-lg font-bold">—</div></div><div><div class="font-mono text-[9px] text-slate-500">RISK %</div><div id="riskPercent" class="mt-2 font-mono text-lg font-bold">—</div></div></div><div class="divide-y divide-white/10"><div class="flex justify-between py-3 text-xs"><span class="text-slate-500">Risk distance</span><b id="riskFormula" class="font-mono">Entry ↔ SL</b></div><div class="flex justify-between py-3 text-xs"><span class="text-slate-500">Reward distance</span><b id="rewardFormula" class="font-mono">Entry ↔ TP</b></div></div><div id="directionBox" class="mt-4 rounded-xl border border-mint/15 bg-mint/5 px-3 py-2.5 font-mono text-[10px] font-semibold text-mint">BUY · Long exposure</div><p class="mt-4 text-[10px] leading-5 text-slate-500">Preview indicatif. Les calculs validés par le moteur serveur restent la référence.</p></aside>
+          </div>
+        </section>
 
-      <section class="mt-5 rounded-2xl border border-white/10 bg-[#0A192F]/80 p-5 shadow-premium backdrop-blur sm:p-7">
-        <div class="mb-5 flex flex-col gap-3 border-b border-white/10 pb-5 sm:flex-row sm:items-start sm:justify-between"><div><h2 class="text-base font-bold">Session Journal</h2><p class="mt-1 text-xs text-slate-500">Opérations enregistrées dans ce navigateur</p></div><button id="clearTrades" class="rounded-lg border border-white/10 bg-white/[.02] px-3 py-2 text-[10px] font-semibold text-slate-400 transition hover:border-white/20 hover:text-white" type="button">Effacer la session</button></div>
-        <div class="overflow-x-auto"><table class="w-full min-w-[760px] border-collapse"><thead><tr class="border-b border-white/10"><th class="px-3 py-3 text-left font-mono text-[9px] tracking-wider text-slate-500">DATE</th><th class="px-3 py-3 text-left font-mono text-[9px] tracking-wider text-slate-500">ASSET</th><th class="px-3 py-3 text-left font-mono text-[9px] tracking-wider text-slate-500">SIDE</th><th class="px-3 py-3 text-left font-mono text-[9px] tracking-wider text-slate-500">ENTRY</th><th class="px-3 py-3 text-left font-mono text-[9px] tracking-wider text-slate-500">SL</th><th class="px-3 py-3 text-left font-mono text-[9px] tracking-wider text-slate-500">TP</th><th class="px-3 py-3 text-left font-mono text-[9px] tracking-wider text-slate-500">R:R</th><th class="px-3 py-3 text-left font-mono text-[9px] tracking-wider text-slate-500">RISK</th></tr></thead><tbody id="tradeRows"><tr><td colspan="8" class="px-3 py-8 text-center text-xs text-slate-500">Aucune opération enregistrée.</td></tr></tbody></table></div>
-      </section>
-    </main>
+        <section id="page-journal" class="page hidden space-y-6"><div><div class="font-mono text-[10px] font-semibold tracking-[.18em] text-mint">TRADING / JOURNAL</div><h1 class="mt-2 text-3xl font-extrabold tracking-tight">Trade Journal</h1><p class="mt-2 text-sm text-slate-500">Toutes les opérations enregistrées dans cette session.</p></div><div class="panel p-5 sm:p-7"><div class="mb-5 flex items-center justify-between border-b border-white/10 pb-5"><div><h2 class="text-sm font-bold">Session Journal</h2><p class="mt-1 text-[10px] text-slate-500">Stockage local temporaire · prochaine étape : base de données</p></div><button id="clearTrades" class="rounded-lg border border-white/10 px-3 py-2 text-[10px] font-semibold text-slate-400 hover:text-white">Effacer</button></div><div class="overflow-x-auto"><table class="w-full min-w-[850px] text-left"><thead><tr class="border-b border-white/10 font-mono text-[9px] tracking-wider text-slate-600"><th class="pb-3">DATE</th><th class="pb-3">ASSET</th><th class="pb-3">SIDE</th><th class="pb-3">ENTRY</th><th class="pb-3">SL</th><th class="pb-3">TP</th><th class="pb-3">R:R</th><th class="pb-3">RISK</th></tr></thead><tbody id="tradeRows"></tbody></table></div></div></section>
+
+        <section id="page-generic" class="page hidden"><div class="panel flex min-h-[420px] flex-col items-center justify-center p-8 text-center"><div class="grid h-14 w-14 place-items-center rounded-2xl border border-mint/20 bg-mint/5 font-mono text-xl text-mint">◎</div><div id="genericTitle" class="mt-5 text-xl font-bold">Performance</div><p class="mt-2 max-w-md text-sm leading-6 text-slate-500">Ce module est prévu dans l'architecture IAMTRADER. Nous le connecterons au moteur de données après le Journal et la base de données.</p><span class="mt-5 rounded-full border border-gold/20 bg-gold/5 px-3 py-1 font-mono text-[9px] font-semibold tracking-wider text-gold">PHASE 1 · COMING NEXT</span></div></section>
+      </main>
+    </div>
   </div>
+  <style>
+    .panel{border:1px solid rgba(255,255,255,.09);background:linear-gradient(145deg,rgba(13,25,40,.88),rgba(8,13,20,.92));border-radius:16px;box-shadow:0 24px 80px rgba(0,0,0,.25);backdrop-filter:blur(16px)}.metric-card{border:1px solid rgba(255,255,255,.09);background:rgba(13,25,40,.68);border-radius:14px;padding:18px;box-shadow:0 12px 40px rgba(0,0,0,.15)}.label{font:600 9px 'JetBrains Mono',monospace;letter-spacing:.12em;color:#667485}.field-label{font:600 9px uppercase;letter-spacing:.08em;color:#8491a0}.field-input{display:block;width:100%;margin-top:7px;border:1px solid rgba(255,255,255,.09);border-radius:11px;background:rgba(0,0,0,.2);padding:12px 13px;color:#fff;font:500 13px 'JetBrains Mono',monospace;outline:none;transition:.15s}.field-input::placeholder{color:#465263}.field-input:focus{border-color:rgba(0,199,150,.6);box-shadow:0 0 0 3px rgba(0,199,150,.08)}.icon{width:18px;text-align:center;font-size:14px}.nav-item.active{background:rgba(0,199,150,.1);color:#00C796}.nav-item{transition:all .15s}
+  </style>
   <script src="./app.js"></script>
 </body>
 </html>
