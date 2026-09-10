@@ -18,6 +18,10 @@ const __dirname = path.dirname(__filename);
 app.use(express.json());
 app.use(express.static(path.join(__dirname, "../frontend")));
 
+app.get("/", (req, res) => {
+  res.sendFile(path.join(__dirname, "../frontend/index.html"));
+});
+
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", service: "IAM Trader Backend" });
 });
@@ -47,10 +51,6 @@ app.post("/api/trades/calculate", (req, res) => {
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
-});
-
-app.get("*", (req, res) => {
-  res.sendFile(path.join(__dirname, "../frontend/index.html"));
 });
 
 app.listen(PORT, () => {
