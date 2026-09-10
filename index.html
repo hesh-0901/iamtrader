@@ -1,62 +1,85 @@
 <!doctype html>
-<html lang="fr">
+<html lang="fr" class="bg-slate-950">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>IAMTRADER — Quick Trade</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter','sans-serif'], mono: ['JetBrains Mono','monospace'] },
+          colors: { ink:'#080B0D', navy:'#0A192F', line:'#1E334B', mint:'#00C796', gold:'#C7A86B' },
+          boxShadow: { premium:'0 24px 80px rgba(0,0,0,.35)' }
+        }
+      }
+    }
+  </script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
 </head>
-<body>
-  <div class="app-shell">
-    <header class="topbar">
-      <div class="brand"><span class="brand-mark">I</span><div><strong>IAMTRADER</strong><small>TRADER PERFORMANCE SYSTEM</small></div></div>
-      <div class="status"><span class="dot"></span> SYSTEM READY</div>
+<body class="min-h-screen bg-[radial-gradient(circle_at_80%_-10%,rgba(0,199,150,.10),transparent_28%),linear-gradient(135deg,#080B0D,#0A192F)] text-white font-sans antialiased">
+  <div class="min-h-screen">
+    <header class="sticky top-0 z-20 border-b border-white/10 bg-[#080B0D]/85 backdrop-blur-xl">
+      <div class="mx-auto flex h-[72px] max-w-[1440px] items-center justify-between px-5 sm:px-8 lg:px-10">
+        <div class="flex items-center gap-3">
+          <div class="grid h-10 w-10 place-items-center rounded-xl border border-mint/40 bg-mint/5 font-mono font-bold text-mint shadow-[0_0_24px_rgba(0,199,150,.08)]">I</div>
+          <div><div class="text-sm font-extrabold tracking-[.18em]">IAMTRADER</div><div class="text-[9px] font-semibold tracking-[.18em] text-slate-500">TRADER PERFORMANCE SYSTEM</div></div>
+        </div>
+        <div class="hidden items-center gap-2 rounded-full border border-white/10 bg-white/[.03] px-3 py-1.5 sm:flex"><span class="h-1.5 w-1.5 rounded-full bg-mint shadow-[0_0_10px_#00C796]"></span><span class="font-mono text-[10px] font-semibold tracking-wider text-slate-400">SYSTEM READY</span></div>
+      </div>
     </header>
-    <main class="content">
-      <section class="page-head">
-        <div><p class="eyebrow">JOURNAL / QUICK TRADE</p><h1>Nouvelle opération</h1><p class="muted">Saisissez les données essentielles. IAMTRADER calcule automatiquement le risque et le ratio R:R.</p></div>
-        <div class="account-chip"><span>ACCOUNT</span><b id="accountBalanceLabel">$10,000.00</b></div>
+
+    <main class="mx-auto max-w-[1440px] px-5 py-8 sm:px-8 sm:py-10 lg:px-10">
+      <section class="mb-8 flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
+        <div>
+          <div class="mb-2 font-mono text-[10px] font-semibold tracking-[.18em] text-mint">JOURNAL / QUICK TRADE</div>
+          <h1 class="text-3xl font-extrabold tracking-tight sm:text-4xl">Nouvelle opération</h1>
+          <p class="mt-2 max-w-2xl text-sm leading-6 text-slate-400">Enregistrez votre setup. Le moteur IAMTRADER calcule instantanément le risque et le ratio R:R.</p>
+        </div>
+        <div class="rounded-2xl border border-white/10 bg-white/[.04] px-5 py-3 shadow-premium"><div class="text-[9px] font-semibold tracking-[.16em] text-slate-500">ACCOUNT BALANCE</div><div id="accountBalanceLabel" class="mt-1 font-mono text-lg font-bold">$10,000.00</div></div>
       </section>
-      <section class="grid">
-        <form id="tradeForm" class="card form-card">
-          <div class="card-title"><div><h2>Trade Setup</h2><p>Entrée manuelle</p></div><span class="step">01</span></div>
-          <div class="field-grid two">
-            <label>Asset / Symbol<input id="symbol" name="symbol" placeholder="XAUUSD" required /></label>
-            <label>Direction<select id="direction" name="direction"><option value="BUY">BUY</option><option value="SELL">SELL</option></select></label>
+
+      <section class="grid gap-5 xl:grid-cols-[minmax(0,1.65fr)_minmax(330px,.8fr)]">
+        <form id="tradeForm" class="rounded-2xl border border-white/10 bg-[#0A192F]/80 p-5 shadow-premium backdrop-blur sm:p-7">
+          <div class="mb-7 flex items-start justify-between border-b border-white/10 pb-5"><div><h2 class="text-base font-bold">Trade Setup</h2><p class="mt-1 text-xs text-slate-500">Entrée manuelle · données essentielles</p></div><span class="rounded-lg border border-mint/25 bg-mint/5 px-2.5 py-1.5 font-mono text-[10px] font-bold text-mint">01</span></div>
+          <div class="grid gap-4 sm:grid-cols-2">
+            <label class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Asset / Symbol<input id="symbol" name="symbol" placeholder="XAUUSD" required class="mt-2 w-full rounded-xl border border-white/10 bg-black/20 px-3.5 py-3 font-mono text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-mint/60 focus:ring-2 focus:ring-mint/10" /></label>
+            <label class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Direction<select id="direction" name="direction" class="mt-2 w-full rounded-xl border border-white/10 bg-black/20 px-3.5 py-3 font-mono text-sm text-white outline-none focus:border-mint/60 focus:ring-2 focus:ring-mint/10"><option value="BUY">BUY</option><option value="SELL">SELL</option></select></label>
           </div>
-          <div class="field-grid three">
-            <label>Entry<input id="entry" name="entry" type="number" step="any" placeholder="2500.00" required /></label>
-            <label>Stop Loss<input id="stopLoss" name="stopLoss" type="number" step="any" placeholder="2490.00" required /></label>
-            <label>Take Profit<input id="takeProfit" name="takeProfit" type="number" step="any" placeholder="2530.00" required /></label>
+          <div class="mt-4 grid gap-4 sm:grid-cols-3">
+            <label class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Entry<input id="entry" name="entry" type="number" step="any" placeholder="2500.00" required class="mt-2 w-full rounded-xl border border-white/10 bg-black/20 px-3.5 py-3 font-mono text-sm text-white outline-none focus:border-mint/60 focus:ring-2 focus:ring-mint/10" /></label>
+            <label class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Stop Loss<input id="stopLoss" name="stopLoss" type="number" step="any" placeholder="2490.00" required class="mt-2 w-full rounded-xl border border-white/10 bg-black/20 px-3.5 py-3 font-mono text-sm text-white outline-none focus:border-mint/60 focus:ring-2 focus:ring-mint/10" /></label>
+            <label class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Take Profit<input id="takeProfit" name="takeProfit" type="number" step="any" placeholder="2530.00" required class="mt-2 w-full rounded-xl border border-white/10 bg-black/20 px-3.5 py-3 font-mono text-sm text-white outline-none focus:border-mint/60 focus:ring-2 focus:ring-mint/10" /></label>
           </div>
-          <div class="field-grid three">
-            <label>Quantity / Lot<input id="quantity" name="quantity" type="number" step="any" min="0.000001" placeholder="1.00" required /></label>
-            <label>Contract multiplier<input id="contractMultiplier" name="contractMultiplier" type="number" step="any" min="0.000001" value="1" required /></label>
-            <label>Account balance<input id="accountBalance" name="accountBalance" type="number" step="any" min="0.01" value="10000" required /></label>
+          <div class="mt-4 grid gap-4 sm:grid-cols-3">
+            <label class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Quantity / Lot<input id="quantity" name="quantity" type="number" step="any" min="0.000001" placeholder="1.00" required class="mt-2 w-full rounded-xl border border-white/10 bg-black/20 px-3.5 py-3 font-mono text-sm text-white outline-none focus:border-mint/60 focus:ring-2 focus:ring-mint/10" /></label>
+            <label class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Contract multiplier<input id="contractMultiplier" name="contractMultiplier" type="number" step="any" min="0.000001" value="1" required class="mt-2 w-full rounded-xl border border-white/10 bg-black/20 px-3.5 py-3 font-mono text-sm text-white outline-none focus:border-mint/60 focus:ring-2 focus:ring-mint/10" /></label>
+            <label class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Account balance<input id="accountBalance" name="accountBalance" type="number" step="any" min="0.01" value="10000" required class="mt-2 w-full rounded-xl border border-white/10 bg-black/20 px-3.5 py-3 font-mono text-sm text-white outline-none focus:border-mint/60 focus:ring-2 focus:ring-mint/10" /></label>
           </div>
-          <div class="field-grid two">
-            <label>Date / Time<input id="dateTime" name="dateTime" type="datetime-local" required /></label>
-            <label>Reason / Note<textarea id="note" name="note" rows="2" placeholder="Pourquoi cette entrée ? (optionnel)"></textarea></label>
+          <div class="mt-4 grid gap-4 sm:grid-cols-2">
+            <label class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Date / Time<input id="dateTime" name="dateTime" type="datetime-local" required class="mt-2 w-full rounded-xl border border-white/10 bg-black/20 px-3.5 py-3 font-mono text-sm text-white outline-none focus:border-mint/60 focus:ring-2 focus:ring-mint/10" /></label>
+            <label class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Reason / Note<textarea id="note" name="note" rows="1" placeholder="Pourquoi cette entrée ? (optionnel)" class="mt-2 min-h-[48px] w-full rounded-xl border border-white/10 bg-black/20 px-3.5 py-3 text-sm text-white outline-none placeholder:text-slate-600 focus:border-mint/60 focus:ring-2 focus:ring-mint/10"></textarea></label>
           </div>
-          <div id="error" class="error" hidden></div>
-          <button class="primary" type="submit">CALCULER & ENREGISTRER <span>→</span></button>
+          <div id="error" hidden class="mt-4 rounded-xl border border-rose-400/20 bg-rose-400/5 px-3 py-2.5 text-xs text-rose-300"></div>
+          <button class="mt-5 flex w-full items-center justify-center rounded-xl bg-mint px-4 py-3.5 text-sm font-extrabold tracking-wide text-[#04120F] shadow-[0_8px_30px_rgba(0,199,150,.16)] transition hover:brightness-110 active:scale-[.99]" type="submit">CALCULER & ENREGISTRER <span class="ml-auto text-lg">→</span></button>
         </form>
-        <aside class="card preview-card">
-          <div class="card-title"><div><h2>Risk Preview</h2><p>Calculs automatiques</p></div><span class="live">LIVE</span></div>
-          <div class="metric hero"><span>PLANNED R:R</span><strong id="rr">—</strong></div>
-          <div class="metric-row"><div class="metric"><span>RISK AMOUNT</span><strong id="riskAmount">—</strong></div><div class="metric"><span>RISK %</span><strong id="riskPercent">—</strong></div></div>
-          <div class="formula"><span>Risk</span><b id="riskFormula">Entry ↔ SL</b></div>
-          <div class="formula"><span>Reward</span><b id="rewardFormula">Entry ↔ TP</b></div>
-          <div class="direction-box" id="directionBox">BUY · Long exposure</div>
-          <p class="small muted">Les valeurs affichées ici sont prévisionnelles. Le calcul serveur reste la référence.</p>
+
+        <aside class="rounded-2xl border border-white/10 bg-[#0A192F]/80 p-5 shadow-premium backdrop-blur sm:p-7">
+          <div class="mb-6 flex items-start justify-between border-b border-white/10 pb-5"><div><h2 class="text-base font-bold">Risk Preview</h2><p class="mt-1 text-xs text-slate-500">Calculs automatiques</p></div><span class="rounded-full border border-mint/25 bg-mint/5 px-2.5 py-1 font-mono text-[9px] font-bold tracking-wider text-mint">LIVE</span></div>
+          <div class="border-b border-white/10 pb-6"><div class="font-mono text-[9px] tracking-[.16em] text-slate-500">PLANNED R:R</div><div id="rr" class="mt-2 font-mono text-4xl font-bold tracking-tight text-mint">—</div></div>
+          <div class="grid grid-cols-2 gap-4 border-b border-white/10 py-4"><div><div class="font-mono text-[9px] tracking-wider text-slate-500">RISK AMOUNT</div><div id="riskAmount" class="mt-2 font-mono text-lg font-bold">—</div></div><div><div class="font-mono text-[9px] tracking-wider text-slate-500">RISK %</div><div id="riskPercent" class="mt-2 font-mono text-lg font-bold">—</div></div></div>
+          <div class="divide-y divide-white/10"><div class="flex justify-between py-3 text-xs"><span class="text-slate-500">Risk distance</span><b id="riskFormula" class="font-mono">Entry ↔ SL</b></div><div class="flex justify-between py-3 text-xs"><span class="text-slate-500">Reward distance</span><b id="rewardFormula" class="font-mono">Entry ↔ TP</b></div></div>
+          <div id="directionBox" class="mt-4 rounded-xl border border-mint/15 bg-mint/5 px-3 py-2.5 font-mono text-[10px] font-semibold text-mint">BUY · Long exposure</div>
+          <p class="mt-4 text-[10px] leading-5 text-slate-500">Preview indicatif. Les calculs validés par le moteur serveur restent la référence.</p>
         </aside>
       </section>
-      <section class="card history-card">
-        <div class="card-title"><div><h2>Session Journal</h2><p>Opérations enregistrées dans ce navigateur</p></div><button id="clearTrades" class="ghost" type="button">Effacer la session</button></div>
-        <div class="table-wrap"><table><thead><tr><th>DATE</th><th>ASSET</th><th>SIDE</th><th>ENTRY</th><th>SL</th><th>TP</th><th>R:R</th><th>RISK</th></tr></thead><tbody id="tradeRows"><tr><td colspan="8" class="empty">Aucune opération enregistrée.</td></tr></tbody></table></div>
+
+      <section class="mt-5 rounded-2xl border border-white/10 bg-[#0A192F]/80 p-5 shadow-premium backdrop-blur sm:p-7">
+        <div class="mb-5 flex flex-col gap-3 border-b border-white/10 pb-5 sm:flex-row sm:items-start sm:justify-between"><div><h2 class="text-base font-bold">Session Journal</h2><p class="mt-1 text-xs text-slate-500">Opérations enregistrées dans ce navigateur</p></div><button id="clearTrades" class="rounded-lg border border-white/10 bg-white/[.02] px-3 py-2 text-[10px] font-semibold text-slate-400 transition hover:border-white/20 hover:text-white" type="button">Effacer la session</button></div>
+        <div class="overflow-x-auto"><table class="w-full min-w-[760px] border-collapse"><thead><tr class="border-b border-white/10"><th class="px-3 py-3 text-left font-mono text-[9px] tracking-wider text-slate-500">DATE</th><th class="px-3 py-3 text-left font-mono text-[9px] tracking-wider text-slate-500">ASSET</th><th class="px-3 py-3 text-left font-mono text-[9px] tracking-wider text-slate-500">SIDE</th><th class="px-3 py-3 text-left font-mono text-[9px] tracking-wider text-slate-500">ENTRY</th><th class="px-3 py-3 text-left font-mono text-[9px] tracking-wider text-slate-500">SL</th><th class="px-3 py-3 text-left font-mono text-[9px] tracking-wider text-slate-500">TP</th><th class="px-3 py-3 text-left font-mono text-[9px] tracking-wider text-slate-500">R:R</th><th class="px-3 py-3 text-left font-mono text-[9px] tracking-wider text-slate-500">RISK</th></tr></thead><tbody id="tradeRows"><tr><td colspan="8" class="px-3 py-8 text-center text-xs text-slate-500">Aucune opération enregistrée.</td></tr></tbody></table></div>
       </section>
     </main>
   </div>
