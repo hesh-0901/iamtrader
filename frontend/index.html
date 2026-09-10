@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>IAMTRADER — Quick Trade</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark">I</span><div><strong>IAMTRADER</strong><small>TRADER PERFORMANCE SYSTEM</small></div></div>
+      <div class="status"><span class="dot"></span> SYSTEM READY</div>
+    </header>
+
+    <main class="content">
+      <section class="page-head">
+        <div><p class="eyebrow">JOURNAL / QUICK TRADE</p><h1>Nouvelle opération</h1><p class="muted">Saisissez les données essentielles. IAMTRADER calcule automatiquement le risque et le ratio R:R.</p></div>
+        <div class="account-chip"><span>ACCOUNT</span><b id="accountBalanceLabel">$10,000.00</b></div>
+      </section>
+
+      <section class="grid">
+        <form id="tradeForm" class="card form-card">
+          <div class="card-title"><div><h2>Trade Setup</h2><p>Entrée manuelle</p></div><span class="step">01</span></div>
+
+          <div class="field-grid two">
+            <label>Asset / Symbol<input id="symbol" name="symbol" placeholder="XAUUSD" required /></label>
+            <label>Direction<select id="direction" name="direction"><option value="BUY">BUY</option><option value="SELL">SELL</option></select></label>
+          </div>
+          <div class="field-grid three">
+            <label>Entry<input id="entry" name="entry" type="number" step="any" placeholder="2500.00" required /></label>
+            <label>Stop Loss<input id="stopLoss" name="stopLoss" type="number" step="any" placeholder="2490.00" required /></label>
+            <label>Take Profit<input id="takeProfit" name="takeProfit" type="number" step="any" placeholder="2530.00" required /></label>
+          </div>
+          <div class="field-grid three">
+            <label>Quantity / Lot<input id="quantity" name="quantity" type="number" step="any" min="0.000001" placeholder="1.00" required /></label>
+            <label>Contract multiplier<input id="contractMultiplier" name="contractMultiplier" type="number" step="any" min="0.000001" value="1" required /></label>
+            <label>Account balance<input id="accountBalance" name="accountBalance" type="number" step="any" min="0.01" value="10000" required /></label>
+          </div>
+          <div class="field-grid two">
+            <label>Date / Time<input id="dateTime" name="dateTime" type="datetime-local" required /></label>
+            <label>Reason / Note<textarea id="note" name="note" rows="2" placeholder="Pourquoi cette entrée ? (optionnel)"></textarea></label>
+          </div>
+
+          <div id="error" class="error" hidden></div>
+          <button class="primary" type="submit">CALCULER & ENREGISTRER <span>→</span></button>
+        </form>
+
+        <aside class="card preview-card">
+          <div class="card-title"><div><h2>Risk Preview</h2><p>Calculs automatiques</p></div><span class="live">LIVE</span></div>
+          <div class="metric hero"><span>PLANNED R:R</span><strong id="rr">—</strong></div>
+          <div class="metric-row"><div class="metric"><span>RISK AMOUNT</span><strong id="riskAmount">—</strong></div><div class="metric"><span>RISK %</span><strong id="riskPercent">—</strong></div></div>
+          <div class="formula"><span>Risk</span><b id="riskFormula">Entry ↔ SL</b></div>
+          <div class="formula"><span>Reward</span><b id="rewardFormula">Entry ↔ TP</b></div>
+          <div class="direction-box" id="directionBox">BUY · Long exposure</div>
+          <p class="small muted">Les valeurs affichées ici sont prévisionnelles. Le calcul serveur reste la référence.</p>
+        </aside>
+      </section>
+
+      <section class="card history-card">
+        <div class="card-title"><div><h2>Session Journal</h2><p>Opérations enregistrées dans ce navigateur</p></div><button id="clearTrades" class="ghost" type="button">Effacer la session</button></div>
+        <div class="table-wrap"><table><thead><tr><th>DATE</th><th>ASSET</th><th>SIDE</th><th>ENTRY</th><th>SL</th><th>TP</th><th>R:R</th><th>RISK</th></tr></thead><tbody id="tradeRows"><tr><td colspan="8" class="empty">Aucune opération enregistrée.</td></tr></tbody></table></div>
+      </section>
+    </main>
+  </div>
+  <script src="./app.js"></script>
+</body>
+</html>
