@@ -1,24 +1,182 @@
 (()=>{
 const $=id=>document.getElementById(id);
-const esc=v=>String(v??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]));
-const money=(x,c='USD')=>Number.isFinite(Number(x))?`${c==='USD'?'$':c+' '}${Number(x).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})}`:'—';
-const num=(x,d=2)=>Number.isFinite(Number(x))?Number(x).toLocaleString('fr-FR',{minimumFractionDigits:d,maximumFractionDigits:d}):'—';
 const KEYS={settings:'iamtrader_settings_v2',trades:'iamtrader_trades'};
 const readTrades=()=>{try{return JSON.parse(localStorage.getItem(KEYS.trades)||'[]')}catch{return[]}};
 const saveTrades=v=>localStorage.setItem(KEYS.trades,JSON.stringify(v.slice(0,500)));
-const settings=()=>{try{return JSON.parse(localStorage.getItem(KEYS.settings)||'{}')}catch{return{}}};
-const active=()=>{const s=settings();return (s.accounts||[]).find(a=>a.id===s.activeAccountId)||(s.accounts||[])[0]||null};
-const fieldMap={qAccount:'accountId',qSymbol:'symbol',qDirection:'direction',qDate:'dateTime',qEntry:'entry',qSL:'sl',qTP:'tp',qQty:'qty',qMult:'mult',qClose:'close',qNote:'note',qBefore:'beforeImageUrl',qAfter:'afterImageUrl'};
-function validateLevels(direction,entry,sl,tp){if(![entry,sl,tp].every(Number.isFinite))return 'Renseignez Entry, Stop Loss et Take Profit.';if(direction==='BUY'&&!(sl<entry&&entry<tp))return 'BUY incohérent : le Stop Loss doit être inférieur à l’Entry et le Take Profit supérieur à l’Entry.';if(direction==='SELL'&&!(tp<entry&&entry<sl))return 'SELL incohérent : le Take Profit doit être inférieur à l’Entry et le Stop Loss supérieur à l’Entry.';return ''}
-function ensureModal(){if($('tradeDetailModal'))return;document.body.insertAdjacentHTML('beforeend',`<div id="tradeDetailModal" class="fixed inset-0 z-[100] hidden items-center justify-center bg-slate-950/35 p-4 backdrop-blur-sm"><div class="w-full max-w-3xl overflow-hidden rounded-2xl border border-line bg-white shadow-float"><div class="flex items-center justify-between border-b border-line px-5 py-4"><div><div class="kicker">DÉTAIL DU TRADE</div><h3 id="tradeModalTitle" class="mt-1 text-lg font-extrabold text-ink">—</h3></div><button id="tradeModalClose" class="grid h-9 w-9 place-items-center rounded-xl border border-line text-slate-500 hover:bg-slate-50">×</button></div><div id="tradeModalBody" class="max-h-[72vh] overflow-y-auto p-5"></div><div class="flex flex-wrap justify-end gap-2 border-t border-line bg-slate-50 px-5 py-4"><button id="tradeModalEdit" class="btn secondary">Modifier</button><button id="tradeModalDelete" class="btn secondary !border-red-200 !text-red-600">Supprimer</button><button id="tradeModalClose2" class="btn primary">Fermer</button></div></div></div>`);const close=()=>{$('tradeDetailModal')?.classList.add('hidden');$('tradeDetailModal')?.classList.remove('flex')};$('tradeModalClose').onclick=close;$('tradeModalClose2').onclick=close;$('tradeDetailModal').addEventListener('click',e=>{if(e.target.id==='tradeDetailModal')close()})}
-function openTrade(id){ensureModal();const t=readTrades().find(x=>x.id===id);if(!t)return;const a=active();$('tradeModalTitle').textContent=`${t.symbol||'Trade'} · ${t.direction||'—'}`;$('tradeModalBody').innerHTML=`<div class="grid gap-3 sm:grid-cols-4"><div class="rounded-xl bg-slate-50 p-3"><div class="text-[10px] muted">DATE</div><div class="mt-1 text-[12px] font-bold">${t.dateTime?new Date(t.dateTime).toLocaleString('fr-FR'):'—'}</div></div><div class="rounded-xl bg-slate-50 p-3"><div class="text-[10px] muted">R:R</div><div class="mt-1 mono text-[13px] font-bold">${num(t.rr)}</div></div><div class="rounded-xl bg-slate-50 p-3"><div class="text-[10px] muted">RISQUE</div><div class="mt-1 mono text-[13px] font-bold">${money(t.riskAmount,a?.currency)} · ${num(t.riskPercent)}%</div></div><div class="rounded-xl bg-slate-50 p-3"><div class="text-[10px] muted">R MULTIPLE</div><div class="mt-1 mono text-[13px] font-bold ${Number(t.rMultiple)>=0?'text-emerald-600':'text-red-500'}">${t.rMultiple!=null?num(t.rMultiple)+' R':'—'}</div></div></div><div class="mt-4 grid gap-3 sm:grid-cols-4"><div><div class="text-[10px] muted">ENTRY</div><div class="mono mt-1 font-bold">${num(t.entry)}</div></div><div><div class="text-[10px] muted">STOP LOSS</div><div class="mono mt-1 font-bold">${num(t.sl)}</div></div><div><div class="text-[10px] muted">TAKE PROFIT</div><div class="mono mt-1 font-bold">${num(t.tp)}</div></div><div><div class="text-[10px] muted">CLÔTURE</div><div class="mono mt-1 font-bold">${t.close!=null?num(t.close):'—'}</div></div></div><div class="mt-4 rounded-xl border border-line p-4"><div class="text-[10px] font-bold tracking-wider muted">NOTE DU TRADE</div><div class="mt-2 whitespace-pre-wrap text-[13px] leading-6">${esc(t.note||'Aucune note renseignée.')}</div></div><div class="mt-4 grid gap-3 sm:grid-cols-2"><div class="rounded-xl border border-line p-3"><div class="text-[10px] font-bold muted">PREUVE AVANT</div>${t.beforeImageUrl?`<a href="${esc(t.beforeImageUrl)}" target="_blank" rel="noopener" class="mt-2 block overflow-hidden rounded-lg bg-slate-50"><img src="${esc(t.beforeImageUrl)}" alt="Preuve avant" class="h-40 w-full object-cover" onerror="this.parentElement.innerHTML='<div class=\"grid h-40 place-items-center text-xs muted\">Image indisponible · ouvrir le lien</div>'"></a>`:'<div class="mt-2 grid h-40 place-items-center rounded-lg bg-slate-50 text-xs muted">Aucune preuve</div>'}</div><div class="rounded-xl border border-line p-3"><div class="text-[10px] font-bold muted">PREUVE FINALE</div>${t.afterImageUrl?`<a href="${esc(t.afterImageUrl)}" target="_blank" rel="noopener" class="mt-2 block overflow-hidden rounded-lg bg-slate-50"><img src="${esc(t.afterImageUrl)}" alt="Preuve finale" class="h-40 w-full object-cover" onerror="this.parentElement.innerHTML='<div class=\"grid h-40 place-items-center text-xs muted\">Image indisponible · ouvrir le lien</div>'"></a>`:'<div class="mt-2 grid h-40 place-items-center rounded-lg bg-slate-50 text-xs muted">Aucune preuve finale</div>'}</div></div>${t.psychology?`<div class="mt-4 rounded-xl border border-brand/15 bg-brand/[.035] p-4"><div class="text-[10px] font-extrabold tracking-wider text-brand">LECTURE PSYCHOLOGIQUE</div><div class="mt-3 grid gap-3 sm:grid-cols-4"><div><div class="text-[10px] muted">ÉTAT AVANT</div><div class="mt-1 text-[12px] font-bold">${esc(t.psychology.emotion||'—')}</div></div><div><div class="text-[10px] muted">CONFIANCE</div><div class="mt-1 text-[12px] font-bold">${t.psychology.confidence?`${t.psychology.confidence}/5`:'—'}</div></div><div><div class="text-[10px] muted">MOTIF</div><div class="mt-1 text-[12px] font-bold">${esc(t.psychology.reason||'—')}</div></div><div><div class="text-[10px] muted">PLAN</div><div class="mt-1 text-[12px] font-bold">${esc(t.psychology.planFollowed||'—')}</div></div></div></div>`:''}`;$('tradeModalEdit').onclick=()=>confirmAction('Modifier ce trade ?','Vous allez modifier les données enregistrées de ce trade.',()=>{closeTradeModal();editTrade(id)});$('tradeModalDelete').onclick=()=>confirmAction('Supprimer définitivement ce trade ?','Cette action est irréversible.',()=>{saveTrades(readTrades().filter(x=>x.id!==id));closeTradeModal();if(typeof renderAll==='function')renderAll()});const modal=$('tradeDetailModal');modal.classList.remove('hidden');modal.classList.add('flex')}
+const readSettings=()=>{try{return JSON.parse(localStorage.getItem(KEYS.settings)||'{}')}catch{return{}}};
+const active=()=>{const s=readSettings();return(s.accounts||[]).find(a=>a.id===s.activeAccountId)||(s.accounts||[])[0]||null};
+const esc=v=>String(v??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]));
+const num=(x,d=2)=>Number.isFinite(Number(x))?Number(x).toLocaleString('fr-FR',{minimumFractionDigits:d,maximumFractionDigits:d}):'—';
+const money=(x,c='USD')=>Number.isFinite(Number(x))?`${c==='USD'?'$':c+' '}${Number(x).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})}`:'—';
+
+function validateLevels(direction,entry,sl,tp){
+  if(![entry,sl,tp].every(Number.isFinite))return 'Renseignez Entry, Stop Loss et Take Profit.';
+  if(direction==='BUY'&&!(sl<entry&&entry<tp))return 'BUY incohérent : SL < Entry < TP.';
+  if(direction==='SELL'&&!(tp<entry&&entry<sl))return 'SELL incohérent : TP < Entry < SL.';
+  return '';
+}
+
+function ensureModal(){
+  if($('tradeDetailModal'))return;
+  document.body.insertAdjacentHTML('beforeend',`
+  <div id="tradeDetailModal" class="fixed inset-0 z-[100] hidden items-center justify-center bg-slate-950/30 p-4 backdrop-blur-sm">
+    <div class="w-full max-w-2xl overflow-hidden rounded-2xl border border-line bg-white shadow-float">
+      <div class="flex items-center justify-between border-b border-line px-5 py-4">
+        <div><div class="kicker">DÉTAIL DU TRADE</div><h3 id="tradeModalTitle" class="mt-1 text-lg font-extrabold text-ink">—</h3></div>
+        <button id="tradeModalClose" type="button" class="grid h-9 w-9 place-items-center rounded-xl border border-line text-lg text-slate-500 hover:bg-slate-50">×</button>
+      </div>
+      <div id="tradeModalBody" class="max-h-[72vh] overflow-y-auto p-5"></div>
+      <div class="flex flex-wrap justify-end gap-2 border-t border-line bg-slate-50 px-5 py-4">
+        <button id="tradeModalEdit" type="button" class="btn secondary">Modifier</button>
+        <button id="tradeModalDelete" type="button" class="btn secondary !border-red-200 !text-red-600">Supprimer</button>
+        <button id="tradeModalClose2" type="button" class="btn primary">Fermer</button>
+      </div>
+    </div>
+  </div>`);
+  const close=closeTradeModal;
+  $('tradeModalClose').onclick=close;$('tradeModalClose2').onclick=close;
+  $('tradeDetailModal').addEventListener('click',e=>{if(e.target.id==='tradeDetailModal')close()});
+}
+
+function openTrade(id){
+  ensureModal();
+  const t=readTrades().find(x=>x.id===id);if(!t)return;
+  const a=(readSettings().accounts||[]).find(x=>x.id===t.accountId)||active();
+  $('tradeModalTitle').textContent=`${t.symbol||'Trade'} · ${t.direction||'—'}`;
+  const pnlValue=t.netPnl!=null?money(t.netPnl,a?.currency):'—';
+  const pnlClass=Number(t.netPnl)>=0?'text-emerald-600':'text-red-500';
+  const planLabel={yes:'Oui',partial:'Partiellement',no:'Non'};
+  const psych=t.psychology||{};
+  $('tradeModalBody').innerHTML=`
+    <div class="grid gap-3 sm:grid-cols-4">
+      <div class="rounded-xl bg-slate-50 p-3"><div class="text-[10px] muted">RÉSULTAT</div><div class="mt-1 mono text-[14px] font-extrabold ${pnlClass}">${pnlValue}</div></div>
+      <div class="rounded-xl bg-slate-50 p-3"><div class="text-[10px] muted">R MULTIPLE</div><div class="mt-1 mono text-[14px] font-extrabold">${t.rMultiple!=null?num(t.rMultiple)+' R':'—'}</div></div>
+      <div class="rounded-xl bg-slate-50 p-3"><div class="text-[10px] muted">RISQUE</div><div class="mt-1 mono text-[13px] font-bold">${money(t.riskAmount,a?.currency)}</div></div>
+      <div class="rounded-xl bg-slate-50 p-3"><div class="text-[10px] muted">R:R PLANIFIÉ</div><div class="mt-1 mono text-[14px] font-extrabold">${num(t.rr)}</div></div>
+    </div>
+    <div class="mt-4 rounded-xl border border-line p-4">
+      <div class="grid gap-4 sm:grid-cols-5">
+        <div><div class="text-[10px] muted">DATE</div><div class="mt-1 text-[12px] font-bold">${t.dateTime?new Date(t.dateTime).toLocaleString('fr-FR'):'—'}</div></div>
+        <div><div class="text-[10px] muted">ENTRY</div><div class="mono mt-1 text-[13px] font-bold">${num(t.entry)}</div></div>
+        <div><div class="text-[10px] muted">SL</div><div class="mono mt-1 text-[13px] font-bold">${num(t.sl)}</div></div>
+        <div><div class="text-[10px] muted">TP</div><div class="mono mt-1 text-[13px] font-bold">${num(t.tp)}</div></div>
+        <div><div class="text-[10px] muted">CLÔTURE</div><div class="mono mt-1 text-[13px] font-bold">${t.close!=null?num(t.close):'—'}</div></div>
+      </div>
+    </div>
+    <div class="mt-4 rounded-xl border border-line p-4">
+      <div class="text-[10px] font-extrabold tracking-wider muted">NOTE DU TRADE</div>
+      <div class="mt-2 whitespace-pre-wrap text-[13px] leading-6 text-ink">${esc(t.note||'Aucune note renseignée.')}</div>
+    </div>
+    <div class="mt-4 rounded-xl border border-brand/15 bg-brand/[.035] p-4">
+      <div class="flex items-center justify-between gap-3"><div class="text-[10px] font-extrabold tracking-wider text-brand">PSYCHOLOGIE & DISCIPLINE</div><span class="rounded-full bg-white px-2 py-1 text-[9px] font-bold text-slate-500">PERFORMANCE COMPORTEMENTALE</span></div>
+      ${Object.values(psych).some(Boolean)?`
+      <div class="mt-3 grid gap-3 sm:grid-cols-2">
+        <div><div class="text-[10px] muted">ÉTAT AVANT</div><div class="mt-1 text-[12px] font-bold">${esc(psych.emotion||'—')}</div></div>
+        <div><div class="text-[10px] muted">CONFIANCE</div><div class="mt-1 text-[12px] font-bold">${psych.confidence?esc(psych.confidence)+'/5':'—'}</div></div>
+        <div><div class="text-[10px] muted">MOTIF D’ENTRÉE</div><div class="mt-1 text-[12px] font-bold">${esc(psych.reason||'—')}</div></div>
+        <div><div class="text-[10px] muted">PLAN RESPECTÉ</div><div class="mt-1 text-[12px] font-bold">${esc(planLabel[psych.planFollowed]||psych.planFollowed||'—')}</div></div>
+        <div class="sm:col-span-2"><div class="text-[10px] muted">ÉTAT APRÈS LE TRADE</div><div class="mt-1 text-[12px] font-bold">${esc(psych.afterEmotion||'—')}</div></div>
+      </div>`:'<div class="mt-3 rounded-lg bg-white p-3 text-[12px] muted">Aucune donnée psychologique enregistrée pour ce trade.</div>'}
+    </div>`;
+  $('tradeModalEdit').onclick=()=>confirmAction('Modifier ce trade ?','Les données pourront être modifiées puis enregistrées.',()=>{closeTradeModal();editTrade(id)});
+  $('tradeModalDelete').onclick=()=>confirmAction('Supprimer définitivement ce trade ?','Cette action est irréversible.',()=>{saveTrades(readTrades().filter(x=>x.id!==id));closeTradeModal();if(typeof renderAll==='function')renderAll()});
+  const modal=$('tradeDetailModal');modal.classList.remove('hidden');modal.classList.add('flex');
+}
 function closeTradeModal(){$('tradeDetailModal')?.classList.add('hidden');$('tradeDetailModal')?.classList.remove('flex')}
 function confirmAction(title,body,yes){if(window.confirm(`${title}\n\n${body}`))yes()}
-function editTrade(id){const t=readTrades().find(x=>x.id===id);if(!t)return;const form=$('quickForm')||document.querySelector('form:has(#qEntry)');if(!form)return;Object.entries(fieldMap).forEach(([id,key])=>{if($(id))$(id).value=t[key]??''});['qEmotion','qConfidence','qReason','qPlan','qAfterEmotion'].forEach(id=>{if($(id))$(id).value=t.psychology?.[({qEmotion:'emotion',qConfidence:'confidence',qReason:'reason',qPlan:'planFollowed',qAfterEmotion:'afterEmotion'})[id]]??''});form.dataset.editingId=id;if(typeof navigate==='function')navigate('quick');if(typeof toast==='function')toast('Trade chargé pour modification.')}
-function addPsychologyFields(){const note=$('qNote');if(!note||$('qEmotion'))return;const box=document.createElement('div');box.id='psychologyFields';box.className='mt-4 rounded-2xl border border-brand/15 bg-brand/[.035] p-4';box.innerHTML=`<div class="flex items-center justify-between gap-3"><div><div class="text-[10px] font-extrabold tracking-[.12em] text-brand">LECTURE PSYCHOLOGIQUE</div><div class="mt-1 text-[12px] font-bold text-ink">Comment prends-tu cette décision ?</div></div><span class="rounded-full bg-white px-2 py-1 text-[9px] font-bold text-slate-500">OPTIONNEL · RECOMMANDÉ</span></div><div class="mt-4 grid gap-3 sm:grid-cols-2"><label class="text-[11px] font-semibold">État avant<select id="qEmotion" class="field mt-1"><option value="">Sélectionner</option><option>Calme</option><option>Confiant</option><option>Incertain</option><option>Stressé</option><option>FOMO</option><option>Frustré</option><option>Pressé</option><option>Excité</option></select></label><label class="text-[11px] font-semibold">Confiance dans le setup<select id="qConfidence" class="field mt-1"><option value="">—</option><option value="1">1 / 5</option><option value="2">2 / 5</option><option value="3">3 / 5</option><option value="4">4 / 5</option><option value="5">5 / 5</option></select></label><label class="text-[11px] font-semibold">Motif d’entrée<select id="qReason" class="field mt-1"><option value="">Sélectionner</option><option>Setup conforme</option><option>Opportunité exceptionnelle</option><option>FOMO</option><option>Revenge trading</option><option>Impulsion</option><option>Autre</option></select></label><label class="text-[11px] font-semibold">Plan respecté<select id="qPlan" class="field mt-1"><option value="">—</option><option value="yes">Oui</option><option value="partial">Partiellement</option><option value="no">Non</option></select></label><label class="text-[11px] font-semibold sm:col-span-2">État après le trade<select id="qAfterEmotion" class="field mt-1"><option value="">—</option><option>Calme</option><option>Satisfait</option><option>Déçu</option><option>Frustré</option><option>En colère</option><option>Euphorique</option><option>Stressé</option></select></label></div>`;note.parentElement?.after(box)}
-function validateForm(e){const f=e.target;if(!f||!$('qEntry'))return;const err=validateLevels($('qDirection')?.value,Number($('qEntry')?.value),Number($('qSL')?.value),Number($('qTP')?.value));if(err){e.preventDefault();e.stopImmediatePropagation();window.alert(err);return false}}
-function attachPsychologyToLatest(){setTimeout(()=>{const f=$('quickForm')||document.querySelector('form:has(#qEntry)');if(!f||f.dataset.editingId)return;const psych={emotion:$('qEmotion')?.value||null,confidence:Number($('qConfidence')?.value)||null,reason:$('qReason')?.value||null,planFollowed:$('qPlan')?.value||null,afterEmotion:$('qAfterEmotion')?.value||null};if(!Object.values(psych).some(Boolean))return;const all=readTrades(),symbol=$('qSymbol')?.value;const t=all.find(x=>x.symbol===symbol);if(!t)return;t.psychology=psych;saveTrades(all);if(typeof renderAll==='function')renderAll()},0)}
-function augmentJournal(){const rows=$('journalRows');if(!rows)return;rows.querySelectorAll('tr').forEach(row=>{if(row.dataset.enhanced)return;const text=row.textContent.trim();const match=readTrades().find(t=>text.includes(String(t.symbol||''))&&text.includes(String(t.direction||'')));if(!match)return;const cell=document.createElement('td');cell.className='px-3 py-3 text-right';cell.innerHTML=`<button title="Détails du trade" class="trade-more grid h-8 w-8 place-items-center rounded-lg border border-line bg-white text-slate-500 hover:border-brand hover:text-brand">•••</button>`;cell.firstElementChild.onclick=()=>openTrade(match.id);row.appendChild(cell);row.dataset.enhanced='1'})}
-function boot(){ensureModal();addPsychologyFields();const form=$('quickForm')||document.querySelector('form:has(#qEntry)');if(form){form.addEventListener('submit',validateForm,true);form.addEventListener('submit',attachPsychologyToLatest,false)}const observer=new MutationObserver(()=>{addPsychologyFields();augmentJournal()});observer.observe(document.body,{subtree:true,childList:true});augmentJournal();window.__iamtraderEnhancements={openTrade,validateLevels,confirmAction}}
+
+const fieldMap={qAccount:'accountId',qSymbol:'symbol',qDirection:'direction',qDate:'dateTime',qEntry:'entry',qSL:'sl',qTP:'tp',qQty:'qty',qMult:'mult',qClose:'close',qNote:'note',qBefore:'beforeImageUrl',qAfter:'afterImageUrl'};
+function editTrade(id){
+  const t=readTrades().find(x=>x.id===id);if(!t)return;
+  const form=$('quickForm')||document.querySelector('form:has(#qEntry)');if(!form)return;
+  Object.entries(fieldMap).forEach(([id,key])=>{if($(id))$(id).value=t[key]??''});
+  const p=t.psychology||{};
+  if($('qEmotion'))$('qEmotion').value=p.emotion||'';
+  if($('qConfidence'))$('qConfidence').value=p.confidence||'';
+  if($('qReason'))$('qReason').value=p.reason||'';
+  if($('qPlan'))$('qPlan').value=p.planFollowed||'';
+  if($('qAfterEmotion'))$('qAfterEmotion').value=p.afterEmotion||'';
+  form.dataset.editingId=id;
+  if(typeof navigate==='function')navigate('quick');
+  if(typeof toast==='function')toast('Trade chargé pour modification.');
+}
+
+function addPsychologyFields(){
+  const note=$('qNote');if(!note||$('psychologyFields'))return;
+  const box=document.createElement('div');box.id='psychologyFields';box.className='mt-4 rounded-2xl border border-brand/15 bg-brand/[.035] p-4';
+  box.innerHTML=`<div class="flex items-center justify-between gap-3"><div><div class="text-[10px] font-extrabold tracking-[.12em] text-brand">PSYCHOLOGIE & DISCIPLINE</div><div class="mt-1 text-[12px] font-bold text-ink">Observe ton état avant et après la décision.</div></div><span class="rounded-full bg-white px-2 py-1 text-[9px] font-bold text-slate-500">RECOMMANDÉ</span></div><div class="mt-4 grid gap-3 sm:grid-cols-2"><label class="text-[11px] font-semibold">État avant<select id="qEmotion" class="field mt-1"><option value="">Sélectionner</option><option>Calme</option><option>Confiant</option><option>Incertain</option><option>Stressé</option><option>FOMO</option><option>Frustré</option><option>Pressé</option><option>Excité</option></select></label><label class="text-[11px] font-semibold">Confiance dans le setup<select id="qConfidence" class="field mt-1"><option value="">—</option><option value="1">1 / 5</option><option value="2">2 / 5</option><option value="3">3 / 5</option><option value="4">4 / 5</option><option value="5">5 / 5</option></select></label><label class="text-[11px] font-semibold">Motif d’entrée<select id="qReason" class="field mt-1"><option value="">Sélectionner</option><option value="Setup conforme">Setup conforme</option><option value="Opportunité exceptionnelle">Opportunité exceptionnelle</option><option value="FOMO">FOMO</option><option value="Revenge trading">Revenge trading</option><option value="Impulsion">Impulsion</option><option value="Autre">Autre</option></select></label><label class="text-[11px] font-semibold">Plan respecté<select id="qPlan" class="field mt-1"><option value="">—</option><option value="yes">Oui</option><option value="partial">Partiellement</option><option value="no">Non</option></select></label><label class="text-[11px] font-semibold sm:col-span-2">État après le trade<select id="qAfterEmotion" class="field mt-1"><option value="">—</option><option>Calme</option><option>Satisfait</option><option>Déçu</option><option>Frustré</option><option>En colère</option><option>Euphorique</option><option>Stressé</option></select></label></div>`;
+  note.parentElement?.after(box);
+}
+
+function psychFromForm(){return{emotion:$('qEmotion')?.value||null,confidence:Number($('qConfidence')?.value)||null,reason:$('qReason')?.value||null,planFollowed:$('qPlan')?.value||null,afterEmotion:$('qAfterEmotion')?.value||null}}
+function hasPsych(p){return Object.values(p||{}).some(Boolean)}
+function capturePsychologyBeforeSubmit(e){
+  const f=e.target;if(!f||!$('qEntry'))return;
+  if(f.dataset.editingId)return;
+  const psych=psychFromForm();if(!hasPsych(psych))return;
+  const beforeIds=new Set(readTrades().map(t=>t.id));
+  setTimeout(()=>{
+    const all=readTrades();
+    const fresh=all.filter(t=>!beforeIds.has(t.id));
+    const candidate=fresh[0]||all[0];
+    if(!candidate)return;
+    candidate.psychology=psych;
+    saveTrades(all);
+    if(typeof renderAll==='function')renderAll();
+  },120);
+}
+
+function updateEditedTrade(e){
+  const f=e.target;if(!f||!f.dataset.editingId)return;
+  const id=f.dataset.editingId;
+  if(!window.confirm('Confirmer la modification de ce trade ?')){e.preventDefault();e.stopImmediatePropagation();return false}
+  const direction=$('qDirection')?.value,entry=Number($('qEntry')?.value),sl=Number($('qSL')?.value),tp=Number($('qTP')?.value),qty=Number($('qQty')?.value),mult=Number($('qMult')?.value||1),closeRaw=$('qClose')?.value,close=closeRaw===''?null:Number(closeRaw);
+  const levelError=validateLevels(direction,entry,sl,tp);
+  if(levelError){e.preventDefault();e.stopImmediatePropagation();window.alert(levelError);return false}
+  if(!Number.isFinite(qty)||qty<=0||!Number.isFinite(mult)||mult<=0){e.preventDefault();e.stopImmediatePropagation();window.alert('Quantité et multiplicateur doivent être supérieurs à 0.');return false}
+  if(close!==null&&!Number.isFinite(close)){e.preventDefault();e.stopImmediatePropagation();window.alert('Prix de clôture invalide.');return false}
+  e.preventDefault();e.stopImmediatePropagation();
+  const all=readTrades(),idx=all.findIndex(t=>t.id===id);if(idx<0)return false;
+  const old=all[idx],a=(readSettings().accounts||[]).find(x=>x.id===($('qAccount')?.value||old.accountId))||active(),capital=Number(a?.initialCapital||0);
+  const riskAmount=Math.abs(entry-sl)*qty*mult;
+  const riskPercent=capital>0?riskAmount/capital*100:(old.riskPercent||0);
+  const rr=Math.abs(tp-entry)/Math.abs(entry-sl);
+  let netPnl=old.netPnl,rMultiple=old.rMultiple;
+  if(close!==null){netPnl=direction==='BUY'?(close-entry)*qty*mult:(entry-close)*qty*mult;rMultiple=riskAmount?netPnl/riskAmount:null}
+  all[idx]={...old,accountId:$('qAccount')?.value||old.accountId,symbol:$('qSymbol')?.value||old.symbol,direction,dateTime:$('qDate')?.value||old.dateTime,entry,sl,tp,qty,mult,close,note:$('qNote')?.value||'',beforeImageUrl:$('qBefore')?.value||null,afterImageUrl:$('qAfter')?.value||null,riskAmount,riskPercent,rr,netPnl,rMultiple,psychology:psychFromForm(),updatedAt:new Date().toISOString()};
+  saveTrades(all);delete f.dataset.editingId;
+  if(typeof renderAll==='function')renderAll();
+  if(typeof navigate==='function')navigate('journal');
+  if(typeof toast==='function')toast('Trade modifié et psychologie enregistrée.');
+  return false;
+}
+
+function validateForm(e){
+  const f=e.target;if(!f||!$('qEntry')||f.dataset.editingId)return;
+  const err=validateLevels($('qDirection')?.value,Number($('qEntry')?.value),Number($('qSL')?.value),Number($('qTP')?.value));
+  if(err){e.preventDefault();e.stopImmediatePropagation();window.alert(err);return false}
+}
+
+function augmentJournal(){
+  const rows=$('journalRows');if(!rows)return;
+  rows.querySelectorAll('tr').forEach(row=>{
+    if(row.dataset.enhanced)return;
+    const text=row.textContent.trim();
+    const match=readTrades().find(t=>text.includes(String(t.symbol||''))&&text.includes(String(t.direction||'')));
+    if(!match)return;
+    const cell=document.createElement('td');cell.className='px-3 py-3 text-right';cell.innerHTML='<button title="Détails du trade" type="button" class="trade-more grid h-8 w-8 place-items-center rounded-lg border border-line bg-white text-slate-500 hover:border-brand hover:text-brand">•••</button>';
+    cell.firstElementChild.onclick=()=>openTrade(match.id);row.appendChild(cell);row.dataset.enhanced='1';
+  });
+}
+
+function boot(){
+  ensureModal();addPsychologyFields();
+  const form=$('quickForm')||document.querySelector('form:has(#qEntry)');
+  if(form){form.addEventListener('submit',updateEditedTrade,true);form.addEventListener('submit',validateForm,true);form.addEventListener('submit',capturePsychologyBeforeSubmit,false)}
+  const observer=new MutationObserver(()=>{addPsychologyFields();augmentJournal()});
+  observer.observe(document.body,{subtree:true,childList:true});
+  augmentJournal();
+  window.__iamtraderEnhancements={openTrade,validateLevels,confirmAction,editTrade};
+}
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
 })();
