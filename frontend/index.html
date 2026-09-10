@@ -1,71 +1,82 @@
 <!doctype html>
 <html lang="fr">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>IAMTRADER — Quick Trade</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#07111f">
+  <title>IAMTRADER — Trader Performance</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+  <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
-  <div class="app-shell">
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <div class="brand"><div class="brand-logo">IA</div><div><strong>IAM<span>TRADER</span></strong><small>DISCIPLINE · STRATÉGIE · RÉSULTATS</small></div></div>
+    <nav>
+      <p class="nav-label">ESPACE TRADER</p>
+      <button class="nav-item active" data-view="dashboard"><i class="bi bi-grid-1x2-fill"></i><span>Vue d'ensemble</span></button>
+      <button class="nav-item" data-view="accounts"><i class="bi bi-wallet2"></i><span>Comptes</span></button>
+      <button class="nav-item" data-view="quick"><i class="bi bi-plus-circle"></i><span>Nouveau trade</span></button>
+      <button class="nav-item" data-view="journal"><i class="bi bi-journal-text"></i><span>Journal</span></button>
+      <button class="nav-item" data-view="performance"><i class="bi bi-bar-chart-line"></i><span>Performance</span></button>
+      <button class="nav-item" data-view="evaluation"><i class="bi bi-award"></i><span>Évaluation</span></button>
+      <p class="nav-label nav-spacer">GESTION</p>
+      <button class="nav-item" data-view="markets"><i class="bi bi-sliders"></i><span>Paires & Univers</span></button>
+      <button class="nav-item" data-view="capital"><i class="bi bi-cash-stack"></i><span>Capital</span></button>
+      <button class="nav-item" data-view="settings"><i class="bi bi-gear"></i><span>Préférences</span></button>
+    </nav>
+    <div class="sidebar-bottom"><div class="pro-card"><i class="bi bi-stars"></i><div><b>Mode Pro</b><small>Performance & discipline</small></div><i class="bi bi-chevron-right"></i></div><small class="version">v1.1.0</small></div>
+  </aside>
+
+  <main class="main">
     <header class="topbar">
-      <div class="brand"><span class="brand-mark">I</span><div><strong>IAMTRADER</strong><small>TRADER PERFORMANCE SYSTEM</small></div></div>
-      <div class="status"><span class="dot"></span> SYSTEM READY</div>
+      <button class="mobile-menu" id="mobileMenu"><i class="bi bi-list"></i></button>
+      <div class="welcome"><h1>Bonjour, Trader <span>👋</span></h1><p>Restez discipliné. Les bonnes habitudes créent les grands résultats.</p></div>
+      <div class="top-actions"><button class="icon-btn" title="Recherche"><i class="bi bi-search"></i></button><button class="icon-btn" title="Notifications"><i class="bi bi-bell"></i><em>3</em></button><button class="icon-btn" title="Thème"><i class="bi bi-sun"></i></button><div class="avatar">T</div><b>Trader</b><i class="bi bi-chevron-down"></i></div>
     </header>
 
-    <main class="content">
-      <section class="page-head">
-        <div><p class="eyebrow">JOURNAL / QUICK TRADE</p><h1>Nouvelle opération</h1><p class="muted">Saisissez les données essentielles. IAMTRADER calcule automatiquement le risque et le ratio R:R.</p></div>
-        <div class="account-chip"><span>ACCOUNT</span><b id="accountBalanceLabel">$10,000.00</b></div>
-      </section>
+    <section class="content">
+      <div class="account-banner">
+        <div class="account-brand"><div class="account-icon"><i class="bi bi-buildings"></i></div><div><span>COMPTE ACTIF</span><h2 id="accountName">Compte Trading</h2><small id="accountMeta">Compte personnel · USD</small></div></div>
+        <div class="account-login"><span>Capital initial</span><b id="headerInitial">$10,000.00</b></div>
+        <div class="account-login"><span>Equity</span><b id="headerEquity">$10,000.00</b></div>
+        <div class="account-login gain"><span>Gain / Perte</span><b id="headerPnl">+$0.00</b></div>
+        <select id="accountSelect" class="account-select" aria-label="Choisir un compte"></select>
+        <button class="outline-btn" data-view="settings"><i class="bi bi-gear"></i> Paramètres</button>
+      </div>
 
-      <section class="grid">
-        <form id="tradeForm" class="card form-card">
-          <div class="card-title"><div><h2>Trade Setup</h2><p>Entrée manuelle</p></div><span class="step">01</span></div>
+      <div class="subnav"><div><button class="subtab active">Vue d'ensemble</button><button class="subtab" data-view="journal">Historique</button><button class="subtab" data-view="performance">Analyse</button><button class="subtab" data-view="evaluation">Évaluation</button></div><div class="date-pill"><i class="bi bi-calendar3"></i><span id="dateRange">Aujourd'hui</span><i class="bi bi-chevron-down"></i></div></div>
 
-          <div class="field-grid two">
-            <label>Asset / Symbol<input id="symbol" name="symbol" placeholder="XAUUSD" required /></label>
-            <label>Direction<select id="direction" name="direction"><option value="BUY">BUY</option><option value="SELL">SELL</option></select></label>
-          </div>
-          <div class="field-grid three">
-            <label>Entry<input id="entry" name="entry" type="number" step="any" placeholder="2500.00" required /></label>
-            <label>Stop Loss<input id="stopLoss" name="stopLoss" type="number" step="any" placeholder="2490.00" required /></label>
-            <label>Take Profit<input id="takeProfit" name="takeProfit" type="number" step="any" placeholder="2530.00" required /></label>
-          </div>
-          <div class="field-grid three">
-            <label>Quantity / Lot<input id="quantity" name="quantity" type="number" step="any" min="0.000001" placeholder="1.00" required /></label>
-            <label>Contract multiplier<input id="contractMultiplier" name="contractMultiplier" type="number" step="any" min="0.000001" value="1" required /></label>
-            <label>Account balance<input id="accountBalance" name="accountBalance" type="number" step="any" min="0.01" value="10000" required /></label>
-          </div>
-          <div class="field-grid two">
-            <label>Date / Time<input id="dateTime" name="dateTime" type="datetime-local" required /></label>
-            <label>Reason / Note<textarea id="note" name="note" rows="2" placeholder="Pourquoi cette entrée ? (optionnel)"></textarea></label>
-          </div>
+      <div id="view-dashboard" class="view active">
+        <div class="dashboard-grid">
+          <section class="panel chart-panel"><div class="panel-head"><div><h3>Évolution du capital <i class="bi bi-info-circle"></i></h3><div class="big-number" id="equityBig">$10,000.00</div><div class="positive" id="equityChange">+0.00% &nbsp; (+$0.00)</div></div><div class="range-tabs"><button>1M</button><button>3M</button><button class="active">6M</button><button>1A</button><button>Tout</button></div></div><div class="chart" id="equityChart"><div class="chart-grid"></div><svg viewBox="0 0 800 260" preserveAspectRatio="none" aria-label="Graphique d'évolution"><defs><linearGradient id="area" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="#00d6a0" stop-opacity=".28"/><stop offset="1" stop-color="#00d6a0" stop-opacity="0"/></linearGradient></defs><path id="chartArea" fill="url(#area)" d="M0,230 L80,218 L160,220 L240,190 L320,200 L400,166 L480,175 L560,135 L640,145 L720,90 L800,70 L800,260 L0,260 Z"></path><path id="chartLine" d="M0,230 L80,218 L160,220 L240,190 L320,200 L400,166 L480,175 L560,135 L640,145 L720,90 L800,70" fill="none" stroke="#00d6a0" stroke-width="3" vector-effect="non-scaling-stroke"></path></svg><div class="chart-axis"><span>Début</span><span>Progression</span><span>Aujourd'hui</span></div></div></section>
+          <section class="panel objectives"><div class="panel-head"><h3>Objectifs de trading</h3><button class="text-btn" data-view="evaluation">Voir les règles <i class="bi bi-arrow-right"></i></button></div><div class="objective" data-type="profit"><div class="obj-icon green"><i class="bi bi-bullseye"></i></div><div class="obj-body"><div><b>Objectif de profit</b><span id="profitObjText">$0 / $10,000</span></div><div class="progress"><i id="profitBar"></i></div></div><strong id="profitPct">0%</strong></div><div class="objective"><div class="obj-icon red"><i class="bi bi-arrow-down"></i></div><div class="obj-body"><div><b>Perte quotidienne max</b><span id="dailyLossText">$0 / $2,000</span></div><div class="progress"><i id="dailyLossBar"></i></div></div><strong id="dailyLossPct">0%</strong></div><div class="objective"><div class="obj-icon amber"><i class="bi bi-shield-exclamation"></i></div><div class="obj-body"><div><b>Drawdown maximal</b><span id="ddText">$0 / $8,000</span></div><div class="progress"><i id="ddBar"></i></div></div><strong id="ddPct">0%</strong></div><div class="objective"><div class="obj-icon green"><i class="bi bi-calendar-check"></i></div><div class="obj-body"><div><b>Jours de trading</b><span id="daysText">0 / 5 jours</span></div><div class="progress"><i id="daysBar"></i></div></div><strong id="daysPct">0%</strong></div></section>
+        </div>
+        <div class="stats-row"><div class="stat-card"><span>Profit Factor</span><b id="statPF">—</b><i class="bi bi-graph-up-arrow green-icon"></i></div><div class="stat-card"><span>Win Rate</span><b id="statWin">—</b><i class="bi bi-bullseye green-icon"></i></div><div class="stat-card"><span>Trades</span><b id="statTrades">0</b><i class="bi bi-list-ul blue-icon"></i></div><div class="stat-card"><span>Gain moyen</span><b id="statAvgWin">$0.00</b><i class="bi bi-arrow-up green-icon"></i></div><div class="stat-card"><span>Perte moyenne</span><b id="statAvgLoss">$0.00</b><i class="bi bi-arrow-down red-icon"></i></div><div class="stat-card"><span>Ratio G/P</span><b id="statRatio">—</b><i class="bi bi-bar-chart-steps purple-icon"></i></div></div>
+        <section class="panel trades-panel"><div class="panel-head"><div><h3>Derniers trades</h3><p>Les opérations les plus récentes de votre compte</p></div><button class="text-btn" data-view="journal">Voir tout <i class="bi bi-arrow-right"></i></button></div><div class="table-scroll"><table><thead><tr><th>DATE</th><th>SYMBOL</th><th>TYPE</th><th>LOTS</th><th>OUVERTURE</th><th>CLÔTURE</th><th>P&L</th><th>R</th><th>STATUT</th><th></th></tr></thead><tbody id="recentRows"><tr><td colspan="10" class="empty">Aucun trade enregistré.</td></tr></tbody></table></div></section>
+      </div>
 
-          <div id="error" class="error" hidden></div>
-          <button class="primary" type="submit">CALCULER & ENREGISTRER <span>→</span></button>
-        </form>
+      <div id="view-quick" class="view"><div class="page-title"><div><span>NOUVEAU TRADE</span><h2>Enregistrer une opération</h2><p>Une saisie simple. Les métriques sont calculées automatiquement.</p></div></div><div class="quick-grid"><form id="tradeForm" class="panel form-panel"><div class="form-section"><h3>Setup</h3><div class="form-grid two"><label>Compte<select id="qAccount"></select></label><label>Symbole<select id="qSymbol"></select></label></div><div class="form-grid two"><label>Direction<div class="segmented"><button type="button" class="side-btn active buy" data-side="BUY">BUY</button><button type="button" class="side-btn sell" data-side="SELL">SELL</button></div></label><label>Date & heure<input id="qDate" type="datetime-local" required></label></div><div class="form-grid three"><label>Prix d'entrée<input id="qEntry" type="number" step="any" required></label><label>Stop Loss<input id="qSL" type="number" step="any" required></label><label>Take Profit<input id="qTP" type="number" step="any" required></label></div><div class="form-grid two"><label>Lot / Quantité<input id="qQty" type="number" step="any" min="0.000001" value="1" required></label><label>Multiplicateur contrat<input id="qMult" type="number" step="any" min="0.000001" value="1" required></label></div><label>Note / raison<textarea id="qNote" rows="3" placeholder="Contexte, setup, justification…"></textarea></label></div><div class="form-section"><h3>Preuves du trade <span>optionnel</span></h3><div class="form-grid two"><label>Lien image avant entrée<input id="qBefore" type="url" placeholder="https://…"></label><label>Lien image après sortie<input id="qAfter" type="url" placeholder="https://…"></label></div><div class="url-note"><i class="bi bi-link-45deg"></i> Utilisez des liens publics vers vos graphiques. IAMTRADER ne stocke pas les captures.</div></div><div id="quickError" class="error" hidden></div><button class="primary-btn" type="submit"><i class="bi bi-check2-circle"></i> Enregistrer le trade</button></form><aside class="panel risk-card"><div class="panel-head"><div><h3>Prévisualisation</h3><p>Calcul en temps réel</p></div><span class="live-dot"><i></i> LIVE</span></div><div class="risk-hero"><span>R:R PLANIFIÉ</span><b id="qRR">—</b></div><div class="risk-pair"><div><span>Risque</span><b id="qRisk">—</b></div><div><span>Risque %</span><b id="qRiskPct">—</b></div></div><div class="risk-lines"><div><span>Distance SL</span><b id="qSLDist">—</b></div><div><span>Distance TP</span><b id="qTPDist">—</b></div><div><span>Exposition</span><b id="qExposure">—</b></div></div><div class="risk-status" id="qRiskStatus">Configurez votre entrée, SL et TP.</div></aside></div></div>
 
-        <aside class="card preview-card">
-          <div class="card-title"><div><h2>Risk Preview</h2><p>Calculs automatiques</p></div><span class="live">LIVE</span></div>
-          <div class="metric hero"><span>PLANNED R:R</span><strong id="rr">—</strong></div>
-          <div class="metric-row"><div class="metric"><span>RISK AMOUNT</span><strong id="riskAmount">—</strong></div><div class="metric"><span>RISK %</span><strong id="riskPercent">—</strong></div></div>
-          <div class="formula"><span>Risk</span><b id="riskFormula">Entry ↔ SL</b></div>
-          <div class="formula"><span>Reward</span><b id="rewardFormula">Entry ↔ TP</b></div>
-          <div class="direction-box" id="directionBox">BUY · Long exposure</div>
-          <p class="small muted">Les valeurs affichées ici sont prévisionnelles. Le calcul serveur reste la référence.</p>
-        </aside>
-      </section>
+      <div id="view-journal" class="view"><div class="page-title"><div><span>JOURNAL</span><h2>Historique des trades</h2><p>Analysez vos opérations et leurs preuves.</p></div><button class="primary-small" data-view="quick"><i class="bi bi-plus"></i> Nouveau trade</button></div><div class="filterbar"><div class="searchbox"><i class="bi bi-search"></i><input id="journalSearch" placeholder="Rechercher un symbole…"></div><select id="journalSide"><option value="ALL">Toutes directions</option><option value="BUY">BUY</option><option value="SELL">SELL</option></select><button id="clearTrades" class="danger-btn"><i class="bi bi-trash3"></i> Effacer les trades</button></div><section class="panel trades-panel"><div class="table-scroll"><table><thead><tr><th>DATE</th><th>SYMBOL</th><th>TYPE</th><th>LOTS</th><th>ENTRY</th><th>SL</th><th>TP</th><th>R:R</th><th>RISQUE</th><th>PREUVES</th></tr></thead><tbody id="journalRows"><tr><td colspan="10" class="empty">Aucun trade.</td></tr></tbody></table></div></section></div>
 
-      <section class="card history-card">
-        <div class="card-title"><div><h2>Session Journal</h2><p>Opérations enregistrées dans ce navigateur</p></div><button id="clearTrades" class="ghost" type="button">Effacer la session</button></div>
-        <div class="table-wrap"><table><thead><tr><th>DATE</th><th>ASSET</th><th>SIDE</th><th>ENTRY</th><th>SL</th><th>TP</th><th>R:R</th><th>RISK</th></tr></thead><tbody id="tradeRows"><tr><td colspan="8" class="empty">Aucune opération enregistrée.</td></tr></tbody></table></div>
-      </section>
-    </main>
-  </div>
-  <script src="./app.js"></script>
+      <div id="view-performance" class="view"><div class="page-title"><div><span>ANALYSE</span><h2>Performance du trader</h2><p>Transformez vos résultats en informations exploitables.</p></div></div><div class="analysis-grid"><section class="panel insight-panel"><h3>Vue statistique</h3><div class="insight-grid"><div><span>Trades gagnants</span><b id="perfWins">0</b></div><div><span>Trades perdants</span><b id="perfLosses">0</b></div><div><span>P&L net</span><b id="perfPnl">$0.00</b></div><div><span>R moyen</span><b id="perfAvgR">0.00R</b></div></div></section><section class="panel insight-panel"><h3>Qualité d'exécution</h3><div class="quality"><div><span>Discipline de saisie</span><b id="qualityDiscipline">100%</b></div><div class="quality-bar"><i id="qualityBar"></i></div><p>Basé sur la complétude des notes et des preuves.</p></div></section></div></div>
+
+      <div id="view-evaluation" class="view"><div class="page-title"><div><span>ÉVALUATION</span><h2>Score du trader</h2><p>Une lecture globale de votre performance et de votre discipline.</p></div></div><div class="score-layout"><section class="panel score-main"><div class="score-circle"><div><b id="scoreValue">—</b><span>/100</span></div></div><h3>Trader Score</h3><p id="scoreText">Enregistrez des trades pour calculer votre score.</p></section><section class="panel score-breakdown"><h3>Composantes</h3><div class="score-line"><span>Rentabilité</span><b id="scoreProfit">—</b></div><div class="score-line"><span>Risque</span><b id="scoreRisk">—</b></div><div class="score-line"><span>Régularité</span><b id="scoreConsistency">—</b></div><div class="score-line"><span>Discipline</span><b id="scoreDiscipline">—</b></div></section></div></div>
+
+      <div id="view-accounts" class="view"><div class="page-title"><div><span>GESTION</span><h2>Mes comptes</h2><p>Gérez vos comptes de trading et leurs capitaux.</p></div></div><section class="panel"><div class="account-list" id="accountList"></div><div class="add-account"><input id="newAccountName" placeholder="Nom du nouveau compte"><input id="newAccountCapital" type="number" placeholder="Capital initial"><button id="addAccount" class="primary-small"><i class="bi bi-plus"></i> Ajouter</button></div></section></div>
+
+      <div id="view-markets" class="view"><div class="page-title"><div><span>GESTION</span><h2>Paires & Univers</h2><p>Définissez les instruments disponibles dans Quick Trade.</p></div></div><section class="panel settings-panel"><h3>Symboles autorisés</h3><div class="chips" id="symbolChips"></div><div class="add-row"><input id="newSymbol" placeholder="Ex. US30"><button id="addSymbol" class="primary-small">Ajouter</button></div></section></div>
+
+      <div id="view-capital" class="view"><div class="page-title"><div><span>GESTION</span><h2>Capital</h2><p>Le capital est calculé automatiquement à partir des mouvements.</p></div></div><section class="capital-grid"><div class="panel capital-summary"><div><span>Capital initial</span><b id="capInitial">$0.00</b></div><div><span>Ajouts</span><b class="positive" id="capDeposits">+$0.00</b></div><div><span>Retraits</span><b id="capWithdrawals">-$0.00</b></div><div class="total"><span>Capital de référence</span><b id="capReference">$0.00</b></div><div class="total"><span>Equity</span><b id="capEquity">$0.00</b></div></div><div class="panel movement-form"><h3>Ajouter un mouvement</h3><div class="segmented"><button type="button" class="move-btn active" data-move="deposit">Ajout</button><button type="button" class="move-btn" data-move="withdrawal">Retrait</button></div><input id="movementAmount" type="number" step="any" min="0" placeholder="Montant"><input id="movementNote" placeholder="Note (optionnel)"><button id="addMovement" class="primary-btn">Enregistrer le mouvement</button></div></section><section class="panel"><div class="panel-head"><h3>Historique du capital</h3></div><div id="movementRows" class="movement-list"></div></section></div>
+
+      <div id="view-settings" class="view"><div class="page-title"><div><span>PARAMÈTRES</span><h2>Préférences</h2><p>Les paramètres du compte actif sont utilisés partout dans IAMTRADER.</p></div></div><section class="panel settings-panel"><h3>Compte actif</h3><div class="form-grid two"><label>Nom du compte<input id="setAccountName"></label><label>Capital initial<input id="setInitialCapital" type="number"></label></div><button id="saveAccountSettings" class="primary-small"><i class="bi bi-save"></i> Enregistrer</button></section></div>
+    </section>
+  </main>
+</div>
+<script src="./app.js"></script>
 </body>
 </html>
