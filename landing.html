@@ -3,54 +3,102 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>iamtrader — Trade with discipline</title>
+<title>iamtrader — L’environnement du trader</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
-<script>tailwind.config={theme:{extend:{colors:{navy:'#08243a',navy2:'#0d3550',brand:'#00c896',ink:'#102a43',muted:'#6b7f93',line:'#dce8ee'}}}}</script>
+<script>tailwind.config={theme:{extend:{colors:{navy:'#08243a',brand:'#00c896',ink:'#102a43',muted:'#6b7f93',line:'#dbe6eb',canvas:'#f7fafb'}}}}</script>
 </head>
-<body class="min-h-screen bg-[#f4f8fa] text-ink antialiased">
-<div class="relative min-h-screen overflow-hidden">
-<div class="pointer-events-none absolute -right-40 -top-40 h-[520px] w-[520px] rounded-full bg-[#00c896]/10 blur-3xl"></div>
-<div class="pointer-events-none absolute -bottom-48 -left-40 h-[520px] w-[520px] rounded-full bg-[#08243a]/10 blur-3xl"></div>
-<header class="relative z-10 mx-auto flex max-w-7xl items-center justify-between px-5 py-6 sm:px-8 lg:px-10">
-<a href="landing.html" class="flex items-center gap-3 no-underline">
-<span class="grid h-11 w-11 place-items-center rounded-xl bg-navy shadow-lg shadow-[#08243a]/10"><svg class="h-6 w-6 text-brand" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19h16M6 17V9l4-4v12M14 17V5l4-2v14"/><path d="M9 11h6"/></svg></span>
-<span><span class="block text-[19px] font-extrabold tracking-[-.04em] text-navy">iam<span class="text-brand">trader</span></span><span class="block text-[8px] font-bold tracking-[.18em] text-muted">DISCIPLINE · STRATÉGIE · RÉSULTATS</span></span>
-</a>
-<a href="index.html" class="hidden rounded-lg border border-line bg-white px-4 py-2.5 text-[12px] font-bold text-navy shadow-sm transition hover:-translate-y-0.5 hover:border-[#00c896]/40 sm:block">Accéder à l’espace →</a>
+<body class="bg-canvas text-ink antialiased">
+<header class="border-b border-line bg-white">
+  <div class="mx-auto flex h-[72px] max-w-6xl items-center justify-between px-5 sm:px-8">
+    <a href="landing.html" class="flex items-center gap-3 no-underline">
+      <span class="grid h-9 w-9 place-items-center rounded-lg bg-navy text-brand">
+        <svg class="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"><path d="M4 18.5h16M6 16V9l4-4v11M14 16V6l4-2v12"/><path d="M9 11h6"/></svg>
+      </span>
+      <span><span class="block text-[18px] font-extrabold tracking-[-.045em] text-navy">iam<span class="text-brand">trader</span></span><span class="block text-[7px] font-bold tracking-[.19em] text-muted">DISCIPLINE · STRATÉGIE · RÉSULTATS</span></span>
+    </a>
+    <nav class="hidden items-center gap-7 text-[12px] font-semibold text-muted md:flex">
+      <a href="#approche" class="transition hover:text-navy">Notre approche</a>
+      <a href="#outils" class="transition hover:text-navy">Les outils</a>
+      <a href="#progression" class="transition hover:text-navy">Progression</a>
+    </nav>
+    <a href="app.html" class="rounded-lg bg-navy px-4 py-2.5 text-[11px] font-bold text-white transition hover:bg-[#0d3550]">Accéder à l’espace</a>
+  </div>
 </header>
-<main class="relative z-10 mx-auto max-w-7xl px-5 pb-16 pt-10 sm:px-8 lg:px-10 lg:pb-24 lg:pt-16">
-<section class="grid items-center gap-12 lg:grid-cols-[1.05fr_.95fr] lg:gap-16">
-<div>
-<div class="mb-5 inline-flex items-center gap-2 rounded-full border border-[#00c896]/20 bg-white px-3 py-1.5 text-[10px] font-extrabold tracking-[.12em] text-[#008e6b] shadow-sm"><span class="h-1.5 w-1.5 rounded-full bg-[#00c896]"></span>TRADER PERFORMANCE MANAGEMENT</div>
-<h1 class="max-w-3xl text-[44px] font-extrabold leading-[1.02] tracking-[-.055em] text-navy sm:text-[58px] lg:text-[70px]">Ne vous contentez plus de trader.<br><span class="text-brand">Mesurez votre performance.</span></h1>
-<p class="mt-6 max-w-2xl text-[16px] leading-7 text-muted sm:text-[18px]">IAMTRADER transforme votre historique de trading en une lecture claire de votre risque, votre exécution, votre discipline et votre comportement.</p>
-<div class="mt-8 flex flex-col gap-3 sm:flex-row"><a href="index.html" class="inline-flex h-12 items-center justify-center rounded-xl bg-brand px-6 text-[13px] font-extrabold text-[#05251d] shadow-lg shadow-[#00c896]/15 transition hover:-translate-y-0.5 hover:bg-[#08b98d]">Entrer dans IAMTRADER <span class="ml-2">→</span></a><a href="#systeme" class="inline-flex h-12 items-center justify-center rounded-xl border border-line bg-white px-6 text-[13px] font-bold text-navy transition hover:border-[#bfd2dc] hover:bg-white">Découvrir le système</a></div>
-<div class="mt-8 flex flex-wrap gap-x-6 gap-y-2 text-[11px] font-semibold text-muted"><span>Risk Management</span><span>Performance</span><span>Discipline</span><span>Psychologie</span></div>
-</div>
-<div class="relative">
-<div class="rounded-[26px] bg-navy p-4 shadow-2xl shadow-navy/20 sm:p-5">
-<div class="rounded-[20px] border border-white/10 bg-white/[.055] p-5 sm:p-6">
-<div class="flex items-center justify-between"><div><div class="text-[9px] font-bold tracking-[.16em] text-slate-400">TRADER PERFORMANCE</div><div class="mt-1 text-[15px] font-extrabold text-white">Vue d’ensemble</div></div><span class="rounded-full bg-brand/15 px-2.5 py-1 text-[9px] font-bold text-brand">LIVE</span></div>
-<div class="mt-6 grid grid-cols-2 gap-3"><div class="rounded-xl bg-white/[.06] p-4"><div class="text-[9px] font-bold text-slate-400">EQUITY</div><div class="mt-2 font-mono text-[23px] font-bold text-white">$10,842.50</div><div class="mt-1 text-[10px] font-bold text-brand">+8.42%</div></div><div class="rounded-xl bg-white/[.06] p-4"><div class="text-[9px] font-bold text-slate-400">SCORE</div><div class="mt-2 font-mono text-[23px] font-bold text-white">84<span class="text-[13px] text-slate-400">/100</span></div><div class="mt-1 text-[10px] font-bold text-brand">Très solide</div></div></div>
-<div class="mt-3 rounded-xl bg-white/[.06] p-4"><div class="flex items-center justify-between"><span class="text-[10px] font-bold text-slate-300">Progression du compte</span><span class="font-mono text-[10px] text-brand">84%</span></div><div class="mt-3 h-2 overflow-hidden rounded-full bg-white/10"><div class="h-full w-[84%] rounded-full bg-brand"></div></div><div class="mt-4 flex justify-between text-[9px] text-slate-500"><span>Capital de référence</span><span>Objectif +10%</span></div></div>
-<div class="mt-3 grid grid-cols-3 gap-2"><div class="rounded-xl bg-white/[.06] p-3"><div class="text-[8px] font-bold text-slate-500">WIN RATE</div><div class="mt-1 font-mono text-[14px] font-bold text-white">63.6%</div></div><div class="rounded-xl bg-white/[.06] p-3"><div class="text-[8px] font-bold text-slate-500">R MOYEN</div><div class="mt-1 font-mono text-[14px] font-bold text-white">+0.72R</div></div><div class="rounded-xl bg-white/[.06] p-3"><div class="text-[8px] font-bold text-slate-500">MAX DD</div><div class="mt-1 font-mono text-[14px] font-bold text-white">2.1%</div></div></div>
-</div></div>
-<div class="absolute -bottom-5 -left-5 hidden rounded-2xl border border-line bg-white p-4 shadow-xl sm:block"><div class="text-[9px] font-bold tracking-wider text-muted">LECTURE COMPORTEMENTALE</div><div class="mt-1 text-[12px] font-extrabold text-navy">Discipline <span class="text-brand">92/100</span></div><div class="mt-1 text-[10px] text-muted">Plan respecté sur 18/20 trades</div></div>
-</div>
+
+<main>
+<section class="border-b border-line bg-white">
+  <div class="mx-auto grid max-w-6xl items-center gap-14 px-5 py-16 sm:px-8 sm:py-20 lg:grid-cols-[1.08fr_.92fr] lg:py-24">
+    <div>
+      <div class="mb-6 flex items-center gap-2 text-[10px] font-extrabold tracking-[.16em] text-brand"><span class="h-px w-7 bg-brand"></span>TRADER PERFORMANCE MANAGEMENT</div>
+      <h1 class="max-w-3xl text-[43px] font-extrabold leading-[1.04] tracking-[-.055em] text-navy sm:text-[56px]">L’environnement conçu pour <span class="text-brand">faire progresser le trader.</span></h1>
+      <p class="mt-6 max-w-2xl text-[16px] leading-7 text-muted sm:text-[17px]">IAMTRADER accompagne le trader au-delà du simple journal. Un espace structuré pour préparer, exécuter, analyser et évaluer sa pratique, avec les outils nécessaires pour construire une performance durable.</p>
+      <div class="mt-8 flex flex-col gap-3 sm:flex-row">
+        <a href="app.html" class="inline-flex h-11 items-center justify-center rounded-lg bg-brand px-5 text-[12px] font-extrabold text-[#05251d] transition hover:bg-[#08b98d]">Commencer mon suivi <span class="ml-2">→</span></a>
+        <a href="#outils" class="inline-flex h-11 items-center justify-center rounded-lg border border-line bg-white px-5 text-[12px] font-bold text-navy transition hover:border-[#b8cbd4]">Découvrir les outils</a>
+      </div>
+    </div>
+    <div class="lg:pl-5">
+      <div class="overflow-hidden rounded-2xl border border-line bg-white shadow-[0_18px_50px_rgba(8,36,58,.09)]">
+        <div class="flex items-center justify-between border-b border-line px-5 py-4"><div><div class="text-[9px] font-bold tracking-[.15em] text-muted">IAMTRADER</div><div class="mt-1 text-[15px] font-extrabold text-navy">Vue du trader</div></div><span class="rounded-md bg-[#e9faf5] px-2 py-1 text-[9px] font-bold text-[#008e6b]">ACTIF</span></div>
+        <div class="grid grid-cols-2 border-b border-line">
+          <div class="border-r border-line p-5"><div class="text-[9px] font-bold text-muted">EQUITY</div><div class="mt-2 font-mono text-[22px] font-bold text-navy">$10,842.50</div><div class="mt-1 text-[10px] font-bold text-brand">+8.42%</div></div>
+          <div class="p-5"><div class="text-[9px] font-bold text-muted">SCORE</div><div class="mt-2 font-mono text-[22px] font-bold text-navy">84<span class="text-[12px] text-muted">/100</span></div><div class="mt-1 text-[10px] font-bold text-brand">Très solide</div></div>
+        </div>
+        <div class="p-5">
+          <div class="mb-3 flex items-center justify-between"><span class="text-[10px] font-bold text-navy">Profil de performance</span><span class="font-mono text-[10px] text-muted">84%</span></div>
+          <div class="h-1.5 rounded-full bg-[#e8eef1]"><div class="h-full w-[84%] rounded-full bg-brand"></div></div>
+          <div class="mt-5 grid grid-cols-3 gap-2">
+            <div class="rounded-lg bg-canvas p-3"><div class="text-[8px] font-bold text-muted">RISQUE</div><div class="mt-1 font-mono text-[13px] font-bold text-navy">1.0%</div></div>
+            <div class="rounded-lg bg-canvas p-3"><div class="text-[8px] font-bold text-muted">WIN RATE</div><div class="mt-1 font-mono text-[13px] font-bold text-navy">63.6%</div></div>
+            <div class="rounded-lg bg-canvas p-3"><div class="text-[8px] font-bold text-muted">DISCIPLINE</div><div class="mt-1 font-mono text-[13px] font-bold text-navy">92/100</div></div>
+          </div>
+          <div class="mt-4 flex items-center justify-between border-t border-line pt-4 text-[10px]"><span class="text-muted">Lecture comportementale</span><span class="font-semibold text-navy">Plan respecté · 18/20</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
 </section>
-<section id="systeme" class="mt-24 sm:mt-32"><div class="max-w-2xl"><div class="text-[9px] font-extrabold tracking-[.16em] text-brand">UN SYSTÈME, PAS UN SIMPLE JOURNAL</div><h2 class="mt-3 text-[32px] font-extrabold tracking-[-.04em] text-navy sm:text-[42px]">Chaque trade devient une donnée exploitable.</h2><p class="mt-4 text-[15px] leading-7 text-muted">L’objectif est simple : réduire la saisie, augmenter l’intelligence disponible et vous aider à comprendre comment vous tradez réellement.</p></div>
-<div class="mt-9 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-<div class="rounded-2xl border border-line bg-white p-5 shadow-sm"><div class="grid h-10 w-10 place-items-center rounded-xl bg-[#e9faf5] text-brand">01</div><h3 class="mt-5 text-[16px] font-extrabold">Journal intelligent</h3><p class="mt-2 text-[12px] leading-5 text-muted">Entry, SL, TP, clôture, risque, R:R et résultat centralisés.</p></div>
-<div class="rounded-2xl border border-line bg-white p-5 shadow-sm"><div class="grid h-10 w-10 place-items-center rounded-xl bg-[#eef6ff] text-[#2684ff]">02</div><h3 class="mt-5 text-[16px] font-extrabold">Risk Engine</h3><p class="mt-2 text-[12px] leading-5 text-muted">Le risque et l’exposition sont calculés avant la validation du trade.</p></div>
-<div class="rounded-2xl border border-line bg-white p-5 shadow-sm"><div class="grid h-10 w-10 place-items-center rounded-xl bg-[#fff8e8] text-[#9a6b18]">03</div><h3 class="mt-5 text-[16px] font-extrabold">Score du trader</h3><p class="mt-2 text-[12px] leading-5 text-muted">Évaluez risque, régularité, discipline et qualité d’exécution.</p></div>
-<div class="rounded-2xl border border-line bg-white p-5 shadow-sm"><div class="grid h-10 w-10 place-items-center rounded-xl bg-[#f0ecff] text-[#7357c7]">04</div><h3 class="mt-5 text-[16px] font-extrabold">Psychologie</h3><p class="mt-2 text-[12px] leading-5 text-muted">Reliez vos décisions, émotions, confiance et respect du plan aux résultats.</p></div>
-</div></section>
-<section class="mt-20 rounded-[26px] bg-navy px-6 py-10 text-center sm:px-10 sm:py-14"><div class="mx-auto max-w-2xl"><div class="text-[9px] font-extrabold tracking-[.16em] text-brand">DISCIPLINE · STRATÉGIE · RÉSULTATS</div><h2 class="mt-3 text-[30px] font-extrabold tracking-[-.04em] text-white sm:text-[40px]">Construisez une performance que vous pouvez mesurer.</h2><p class="mt-4 text-[13px] leading-6 text-slate-400">Commencez par votre compte, puis laissez IAMTRADER construire progressivement votre profil de trader.</p><a href="index.html" class="mt-7 inline-flex h-12 items-center justify-center rounded-xl bg-brand px-7 text-[13px] font-extrabold text-[#05251d] transition hover:bg-[#08b98d]">Accéder à mon espace →</a></div></section>
+
+<section id="approche" class="mx-auto max-w-6xl px-5 py-16 sm:px-8 sm:py-20">
+  <div class="grid gap-10 lg:grid-cols-[.7fr_1.3fr]">
+    <div><div class="text-[10px] font-extrabold tracking-[.16em] text-brand">UNE VISION GLOBALE</div><h2 class="mt-3 text-[30px] font-extrabold leading-tight tracking-[-.04em] text-navy sm:text-[38px]">Votre trading ne se résume pas à votre P&L.</h2></div>
+    <div class="max-w-2xl"><p class="text-[15px] leading-7 text-muted">Une bonne performance repose sur plusieurs dimensions : la maîtrise du risque, la qualité d’exécution, la régularité, la discipline et la capacité à comprendre ses propres comportements.</p><p class="mt-4 text-[15px] leading-7 text-muted">IAMTRADER rassemble ces dimensions dans un même environnement afin de transformer vos opérations en informations utiles à votre progression.</p></div>
+  </div>
+  <div id="progression" class="mt-12 grid border-y border-line sm:grid-cols-5">
+    <div class="border-b border-line py-5 sm:border-b-0 sm:border-r sm:px-5"><div class="font-mono text-[10px] font-bold text-brand">01</div><div class="mt-2 text-[13px] font-extrabold text-navy">Planifier</div><div class="mt-1 text-[11px] leading-5 text-muted">Définir le risque et le scénario.</div></div>
+    <div class="border-b border-line py-5 sm:border-b-0 sm:border-r sm:px-5"><div class="font-mono text-[10px] font-bold text-brand">02</div><div class="mt-2 text-[13px] font-extrabold text-navy">Exécuter</div><div class="mt-1 text-[11px] leading-5 text-muted">Documenter chaque décision.</div></div>
+    <div class="border-b border-line py-5 sm:border-b-0 sm:border-r sm:px-5"><div class="font-mono text-[10px] font-bold text-brand">03</div><div class="mt-2 text-[13px] font-extrabold text-navy">Analyser</div><div class="mt-1 text-[11px] leading-5 text-muted">Lire les données et les tendances.</div></div>
+    <div class="border-b border-line py-5 sm:border-b-0 sm:border-r sm:px-5"><div class="font-mono text-[10px] font-bold text-brand">04</div><div class="mt-2 text-[13px] font-extrabold text-navy">Évaluer</div><div class="mt-1 text-[11px] leading-5 text-muted">Mesurer les compétences réelles.</div></div>
+    <div class="py-5 sm:px-5"><div class="font-mono text-[10px] font-bold text-brand">05</div><div class="mt-2 text-[13px] font-extrabold text-navy">Progresser</div><div class="mt-1 text-[11px] leading-5 text-muted">Corriger et consolider ses acquis.</div></div>
+  </div>
+</section>
+
+<section id="outils" class="border-y border-line bg-white">
+  <div class="mx-auto max-w-6xl px-5 py-16 sm:px-8 sm:py-20">
+    <div class="max-w-2xl"><div class="text-[10px] font-extrabold tracking-[.16em] text-brand">L’ÉCOSYSTÈME IAMTRADER</div><h2 class="mt-3 text-[30px] font-extrabold tracking-[-.04em] text-navy sm:text-[38px]">Les outils dont le trader a besoin.</h2><p class="mt-4 text-[14px] leading-6 text-muted">Chaque module répond à une étape précise de votre pratique. L’objectif n’est pas d’ajouter de la complexité, mais de rendre votre progression lisible.</p></div>
+    <div class="mt-10 grid gap-px overflow-hidden rounded-xl border border-line bg-line sm:grid-cols-2 lg:grid-cols-3">
+      <div class="bg-white p-6"><div class="font-mono text-[10px] font-bold text-brand">TRADING</div><h3 class="mt-3 text-[15px] font-extrabold text-navy">Journal intelligent</h3><p class="mt-2 text-[11px] leading-5 text-muted">Centralisez vos entrées, sorties, risques, résultats et décisions.</p></div>
+      <div class="bg-white p-6"><div class="font-mono text-[10px] font-bold text-brand">RISK</div><h3 class="mt-3 text-[15px] font-extrabold text-navy">Risk Engine</h3><p class="mt-2 text-[11px] leading-5 text-muted">Calculez et contrôlez le risque avant qu’une opération ne soit engagée.</p></div>
+      <div class="bg-white p-6"><div class="font-mono text-[10px] font-bold text-brand">ANALYSE</div><h3 class="mt-3 text-[15px] font-extrabold text-navy">Performance</h3><p class="mt-2 text-[11px] leading-5 text-muted">Analysez P&L, R, drawdown, actifs, sessions et régularité.</p></div>
+      <div class="bg-white p-6"><div class="font-mono text-[10px] font-bold text-brand">ÉVALUATION</div><h3 class="mt-3 text-[15px] font-extrabold text-navy">Score du trader</h3><p class="mt-2 text-[11px] leading-5 text-muted">Une lecture multidimensionnelle de vos compétences et de votre constance.</p></div>
+      <div class="bg-white p-6"><div class="font-mono text-[10px] font-bold text-brand">COMPORTEMENT</div><h3 class="mt-3 text-[15px] font-extrabold text-navy">Psychologie & discipline</h3><p class="mt-2 text-[11px] leading-5 text-muted">Identifiez les habitudes qui influencent vos décisions et vos résultats.</p></div>
+      <div class="bg-white p-6"><div class="font-mono text-[10px] font-bold text-brand">GESTION</div><h3 class="mt-3 text-[15px] font-extrabold text-navy">Comptes & capital</h3><p class="mt-2 text-[11px] leading-5 text-muted">Suivez vos comptes, le capital de référence et l’évolution de votre equity.</p></div>
+    </div>
+  </div>
+</section>
+
+<section class="mx-auto max-w-6xl px-5 py-16 sm:px-8 sm:py-20">
+  <div class="rounded-2xl bg-navy px-6 py-10 sm:px-10 sm:py-12">
+    <div class="grid items-center gap-8 lg:grid-cols-[1fr_auto]">
+      <div><div class="text-[9px] font-extrabold tracking-[.17em] text-brand">DISCIPLINE · STRATÉGIE · RÉSULTATS</div><h2 class="mt-3 max-w-2xl text-[28px] font-extrabold leading-tight tracking-[-.035em] text-white sm:text-[36px]">Ne cherchez pas seulement à gagner. Comprenez comment vous tradez.</h2><p class="mt-4 max-w-xl text-[13px] leading-6 text-slate-300">Construisez progressivement un profil de trader fondé sur vos données, vos décisions et votre discipline.</p></div>
+      <a href="app.html" class="inline-flex h-11 items-center justify-center rounded-lg bg-brand px-5 text-[12px] font-extrabold text-[#05251d] transition hover:bg-[#08b98d]">Accéder à IAMTRADER →</a>
+    </div>
+  </div>
+</section>
 </main>
-<footer class="relative z-10 mx-auto max-w-7xl border-t border-line px-5 py-6 text-center text-[10px] text-muted sm:px-8 lg:px-10">iamtrader · Trader Performance Management System</footer>
-</div>
+<footer class="border-t border-line bg-white"><div class="mx-auto flex max-w-6xl flex-col gap-2 px-5 py-6 text-[10px] text-muted sm:flex-row sm:items-center sm:justify-between sm:px-8"><span>iamtrader · Trader Performance Management System</span><span>DISCIPLINE · STRATÉGIE · RÉSULTATS</span></div></footer>
 </body>
 </html>
