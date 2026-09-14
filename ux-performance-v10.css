@@ -1,0 +1,51 @@
+/* IAMTRADER — Performance v10
+   Clean financial terminal: sober, spacious, decisive. */
+
+/* Page identity */
+.content:has(.performance-grid) .page-head{display:flex;align-items:flex-end;justify-content:space-between;margin:0 0 22px;padding-bottom:17px;border-bottom:1px solid #E4E9ED}
+.content:has(.performance-grid) .page-head h2{font-size:28px!important;letter-spacing:-.035em;color:#0A192F;margin:4px 0 5px}
+.content:has(.performance-grid) .page-head p{font-size:12px;color:#6D7B86;margin:0}
+.content:has(.performance-grid) .page-head .eyebrow{font-size:9px;letter-spacing:.16em;color:#00A982;font-weight:800}
+
+/* KPI strip — turn six equal cards into a single analytical header */
+.content:has(.performance-grid) .compact-kpis{display:grid!important;grid-template-columns:1.35fr repeat(5,1fr)!important;gap:0!important;margin-bottom:18px;background:#fff;border:1px solid #DDE5EA;border-radius:12px;overflow:hidden;box-shadow:0 5px 18px rgba(10,25,47,.035)}
+.content:has(.performance-grid) .compact-kpis .kpi{min-height:108px!important;padding:17px 18px!important;border:0!important;border-radius:0!important;border-right:1px solid #E8EDF0!important;box-shadow:none!important;background:#fff!important}
+.content:has(.performance-grid) .compact-kpis .kpi:last-child{border-right:0!important}
+.content:has(.performance-grid) .compact-kpis .kpi-top{margin-bottom:11px}
+.content:has(.performance-grid) .compact-kpis .metric-label{font-size:8px!important;letter-spacing:.10em;text-transform:uppercase;color:#7B8993!important;font-weight:800}
+.content:has(.performance-grid) .compact-kpis .kpi-icon{width:25px!important;height:25px!important;border-radius:7px!important;background:#F3F6F7!important;color:#71808B!important}
+.content:has(.performance-grid) .compact-kpis .metric{font-size:20px!important;line-height:1.1!important;letter-spacing:-.025em;color:#172A38!important}
+.content:has(.performance-grid) .compact-kpis .kpi:first-child .metric{font-size:25px!important}
+.content:has(.performance-grid) .compact-kpis .metric.positive{color:#008E70!important}
+.content:has(.performance-grid) .compact-kpis .kpi-sub{font-size:8px!important;color:#89959D!important;margin-top:7px!important;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* Main analysis area */
+.content:has(.performance-grid) .performance-grid{display:grid!important;grid-template-columns:minmax(0,1.72fr) minmax(270px,.68fr)!important;gap:16px!important;align-items:stretch}
+.content:has(.performance-grid) .performance-grid>.card{background:#fff!important;border:1px solid #DDE5EA!important;border-radius:12px!important;box-shadow:0 5px 18px rgba(10,25,47,.035)!important}
+.content:has(.performance-grid) .performance-grid>.large{min-height:390px;padding:19px!important}
+.content:has(.performance-grid) .performance-grid>.large .section-head{margin-bottom:15px}
+.content:has(.performance-grid) .performance-grid h3{font-size:14px!important;color:#102534!important;letter-spacing:-.01em}
+.content:has(.performance-grid) .performance-grid .section-head p{font-size:9px!important;color:#89959D!important}
+.content:has(.performance-grid) .performance-grid>.large h3:before{content:'TRAJECTOIRE';display:block;font-size:8px;letter-spacing:.14em;color:#00A982;margin-bottom:5px;font-weight:800}
+.content:has(.performance-grid) .performance-grid>.large .chart-svg{height:292px!important;background:#FBFCFC;border:1px solid #EDF1F3;border-radius:9px;padding:4px}
+.content:has(.performance-grid) .performance-grid>.large .chart-legend{font-size:9px!important;color:#89959D;margin-top:9px}
+.content:has(.performance-grid) .performance-grid>.large .chart-legend b{font-size:11px!important;color:#008E70}
+
+/* Profitability card */
+.content:has(.performance-grid) .performance-grid>.card:not(.large){padding:20px!important;display:flex;flex-direction:column}
+.content:has(.performance-grid) .performance-grid>.card:not(.large)>h3{font-size:14px!important;margin:1px 0 18px;padding-bottom:13px;border-bottom:1px solid #E8EDF0}
+.content:has(.performance-grid) .performance-grid>.card:not(.large)>h3:before{content:'DÉCOMPOSITION';display:block;font-size:8px;letter-spacing:.14em;color:#7F8C96;margin-bottom:6px}
+.content:has(.performance-grid) .performance-grid .health-row{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:13px 0;border-bottom:1px solid #EEF1F3}
+.content:has(.performance-grid) .performance-grid .health-row:last-child{border-bottom:0}
+.content:has(.performance-grid) .performance-grid .health-row span{font-size:10px;color:#667681}
+.content:has(.performance-grid) .performance-grid .health-row b{font:700 12px/1.2 ui-monospace,SFMono-Regular,Menlo,monospace;color:#1A2D3A}
+.content:has(.performance-grid) .performance-grid .health-row b.positive{color:#008E70}
+.content:has(.performance-grid) .performance-grid .health-row b.negative{color:#C6535E}
+
+/* Remove legacy visual noise that competes with the analysis */
+.content:has(.performance-grid) .kpi.card:hover{transform:none!important}
+.content:has(.performance-grid) .card{transition:border-color .15s ease,box-shadow .15s ease}
+.content:has(.performance-grid) .performance-grid>.card:hover{border-color:#CBD7DE!important;box-shadow:0 7px 22px rgba(10,25,47,.055)!important}
+
+@media(max-width:1200px){.content:has(.performance-grid) .compact-kpis{grid-template-columns:repeat(3,1fr)!important}.content:has(.performance-grid) .compact-kpis .kpi:nth-child(3){border-right:0!important}.content:has(.performance-grid) .performance-grid{grid-template-columns:1fr!important}}
+@media(max-width:700px){.content:has(.performance-grid) .compact-kpis{grid-template-columns:1fr 1fr!important}.content:has(.performance-grid) .compact-kpis .kpi:nth-child(2n){border-right:0!important}.content:has(.performance-grid) .compact-kpis .kpi{min-height:92px!important}.content:has(.performance-grid) .performance-grid>.large{min-height:330px;padding:14px!important}.content:has(.performance-grid) .performance-grid>.large .chart-svg{height:235px!important}}
