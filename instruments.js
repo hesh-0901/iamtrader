@@ -9,4 +9,10 @@ export const INSTRUMENTS = Object.freeze({
   XAGUSD: { symbol:'XAGUSD', name:'Silver', contractSize:5000, tickSize:0.001, pipSize:0.01, quoteCurrency:'USD', lotStep:0.01, minLot:0.01 }
 });
 
-export function getInstrument(symbol){ return INSTRUMENTS[symbol] || null; }
+export function getInstrument(symbol){
+  if(INSTRUMENTS[symbol]) return INSTRUMENTS[symbol];
+  try{
+    const raw=JSON.parse(localStorage.getItem('iamtrader:v1')||'{}');
+    return (raw.customInstruments||[]).find(x=>x.symbol===symbol)||null;
+  }catch{return null}
+}
