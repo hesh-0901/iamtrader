@@ -1,4 +1,4 @@
-/* IAMTRADER CALENDAR V4.2 — direct month/year pivot, DOM-safe boot */
+/* IAMTRADER CALENDAR V4.3 — direct month/year pivot, deterministic mount */
 (()=>{
   const KEY='iamtrader:v1';
   const state={month:new Date(new Date().getFullYear(),new Date().getMonth(),1),range:null,preset:'month'};
@@ -9,7 +9,7 @@
   const esc=v=>String(v??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]));
   const money=(v,c='USD')=>`${Number(v||0).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})} ${c}`;
   const monthLabel=d=>d.toLocaleDateString('fr-FR',{month:'long',year:'numeric'}).replace(/^./,x=>x.toUpperCase());
-  const isCalendarPage=()=>window.IAMTRADER?.state?.page==='calendar'||!!document.querySelector('.calendar-v3')||/calendrier/i.test(document.querySelector('.content')?.textContent||'');
+  const isCalendarPage=()=>window.IAMTRADER?.state?.page==='calendar'||/calendrier/i.test(document.querySelector('.content')?.textContent||'');
   const account=()=>{const s=read();return s.accounts?.find(a=>a.id===s.activeAccountId)||null};
   const trades=()=>{const s=read();return (s.trades||[]).filter(t=>t.accountId===s.activeAccountId&&t.exit!==null&&t.exit!==undefined&&t.exit!=='')};
   const dayMap=()=>{const map=new Map();for(const t of trades()){const d=dateOnly(t.date);if(!d)continue;const k=key(d);const x=map.get(k)||{pnl:0,trades:0};x.pnl+=Number(t.pnl||0);x.trades++;map.set(k,x)}return map};
@@ -19,7 +19,7 @@
   function render(force=false){
     if(!isCalendarPage())return;
     const host=document.querySelector('.content');if(!host)return;
-    if(document.querySelector('.calendar-v3')&&host.querySelector('.calendar-v3')&&!force)return;
+    if(host.querySelector('.calendar-v3')&&!force)return;
     const a=account(),currency=a?.currency||'USD',map=dayMap(),selected=state.range,sum=selected?summary(selected):{pnl:0,trades:0,days:0};
     const first=new Date(state.month.getFullYear(),state.month.getMonth(),1),start=new Date(first);start.setDate(1-((first.getDay()||7)-1));
     const cells=[];
@@ -47,7 +47,9 @@
     year.onchange=()=>{state.month=new Date(Number(year.value),state.month.getMonth(),1);render(true)};
   }
   let timer;
-  const observer=new MutationObserver(()=>{clearTimeout(timer);timer=setTimeout(()=>{if(isCalendarPage()&&!document.querySelector('.calendar-v3'))render()},50)});
+  const schedule=delay=>{clearTimeout(timer);timer=setTimeout(()=>render(true),delay)};
+  const observer=new MutationObserver(()=>{if(isCalendarPage()&&!document.querySelector('.calendar-v3'))schedule(30)});
   observer.observe(document.body,{childList:true,subtree:true});
-  window.addEventListener('load',()=>setTimeout(render,50));
+  window.addEventListener('load',()=>schedule(100));
+  schedule(250);
 })();
