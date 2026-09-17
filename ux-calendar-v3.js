@@ -1,4 +1,4 @@
-/* IAMTRADER CALENDAR V5.1 — reference-inspired, intuitive calendar UI */
+/* IAMTRADER CALENDAR V6 — month-only performance calendar */
 (()=>{
   const KEY='iamtrader:v1';
   const today=new Date();
@@ -26,16 +26,17 @@
     const host=document.querySelector('.content');if(!host)return false;
     if(host.querySelector('.calendar-v3')&&!force)return true;
     const a=account(),currency=a?.currency||'USD',map=dayMap(),selected=state.range,sum=summary(selected);
-    const first=monthStart(state.month),start=new Date(first);start.setDate(1-((first.getDay()||7)-1));
+    const first=monthStart(state.month),daysInMonth=new Date(first.getFullYear(),first.getMonth()+1,0).getDate(),leading=(first.getDay()||7)-1,totalCells=Math.ceil((leading+daysInMonth)/7)*7;
     const cells=[];
-    for(let i=0;i<42;i++){
-      const d=new Date(start);d.setDate(start.getDate()+i);const k=key(d),x=map.get(k)||{pnl:0,trades:0},inMonth=d.getMonth()===first.getMonth(),inRange=state.preset==='custom'&&selected&&d>=selected.from&&d<=selected.to,today=k===key(new Date()),weekend=d.getDay()===0||d.getDay()===6;
-      const activity=x.trades?`<div class="cal3-result ${x.pnl>0?'win':x.pnl<0?'loss':'flat'}"><strong>${x.pnl>=0?'+':''}${money(x.pnl,currency)}</strong><small>Trades: ${x.trades}</small></div>`:'';
-      cells.push(`<button type="button" class="cal3-day ${inMonth?'':'muted'} ${today?'today':''} ${weekend?'weekend':''} ${x.trades?'has-trades':''} ${inRange?'selected':''}" data-date="${k}"><b>${d.getDate()}</b>${activity}</button>`)
+    for(let i=0;i<totalCells;i++){
+      const dayNumber=i-leading+1;
+      if(dayNumber<1||dayNumber>daysInMonth){cells.push('<div class="cal3-empty" aria-hidden="true"></div>');continue}
+      const d=new Date(first.getFullYear(),first.getMonth(),dayNumber),k=key(d),x=map.get(k)||{pnl:0,trades:0},today=k===key(new Date()),weekend=d.getDay()===0||d.getDay()===6,inRange=state.preset==='custom'&&selected&&d>=selected.from&&d<=selected.to;
+      const status=x.trades?(x.pnl>0?'win':x.pnl<0?'loss':'flat'):'empty';
+      cells.push(`<button type="button" class="cal3-day ${status} ${today?'today':''} ${weekend?'weekend':''} ${inRange?'selected':''}" data-date="${k}"><b>${dayNumber}</b>${x.trades?`<div class="cal3-result"><strong>${x.pnl>=0?'+':''}${money(x.pnl,currency)}</strong><small>Trades: ${x.trades}</small></div>`:''}</button>`)
     }
     host.innerHTML=`<section class="calendar-v3 card">
       <div class="cal3-toolbar"><button type="button" class="cal3-today" data-cal-today>Aujourd'hui</button><button type="button" class="cal3-nav" data-prev aria-label="Mois précédent">‹</button><button type="button" class="cal3-month-picker" data-month-open aria-label="Choisir le mois"><strong>${monthLabel(first)}</strong><span>Choisir le mois</span></button><button type="button" class="cal3-nav" data-next aria-label="Mois suivant">›</button><div class="cal3-toolbar-spacer"></div><div class="cal3-period-summary"><span>Statistiques mensuelles</span><strong class="${sum.pnl>=0?'positive':'negative'}">${sum.pnl>=0?'+':''}${money(sum.pnl,currency)}</strong><em>Jours de trading: ${sum.days}</em></div><button type="button" class="cal3-period-trigger" data-period-open><span>Période</span><b>${periodLabel()}</b></button></div>
-      <div class="cal3-summary"><div><span>P&L période</span><b class="${sum.pnl>=0?'positive':'negative'}">${sum.pnl>=0?'+':''}${money(sum.pnl,currency)}</b></div><div><span>Trades</span><b>${sum.trades}</b></div><div><span>Jours actifs</span><b>${sum.days}</b></div><div class="cal3-range-label">${esc(fmtRange(selected))}</div></div>
       <div class="cal3-weekdays">${['Lun','Mar','Mer','Jeu','Vend.','Sam','Dim'].map(x=>`<b>${x}</b>`).join('')}</div><div class="cal3-grid">${cells.join('')}</div>
       <p class="cal3-footnote">Les trades sont affichés selon l'heure de la plateforme, ce qui peut différer du fuseau horaire local.</p>
       <div class="cal3-popover" data-period-pop hidden><div class="cal3-pop-head"><b>Choisir une période</b><button type="button" data-period-close>×</button></div><div class="cal3-presets">${[['month','Ce mois'],['prev-month','Mois précédent'],['week','Cette semaine'],['7d','7 derniers jours'],['30d','30 derniers jours'],['year','Cette année']].map(([v,l])=>`<button type="button" data-preset="${v}">${l}</button>`).join('')}</div><div class="cal3-custom"><span>Personnalisée</span><label>Du<input type="date" data-from></label><label>Au<input type="date" data-to></label><button type="button" data-apply>Appliquer</button></div></div>
@@ -57,7 +58,7 @@
     const year=root.querySelector('[data-year]');root.querySelectorAll('[data-month]').forEach(b=>b.onclick=()=>{setMonth(new Date(Number(year.value),Number(b.dataset.month),1));mp.hidden=true});
     year.onchange=()=>{setMonth(new Date(Number(year.value),state.month.getMonth(),1));mp.hidden=true};
   }
-  window.IAMTRADER_CALENDAR={render,version:'5.1'};
+  window.IAMTRADER_CALENDAR={render,version:'6.0'};
   const boot=()=>{try{render(true)}catch(err){window.IAMTRADER_CALENDAR.error=String(err);console.error('[IAMTRADER calendar]',err)}};
   let timer;
   const observer=new MutationObserver(()=>{if(isCalendarPage()&&!document.querySelector('.calendar-v3')){clearTimeout(timer);timer=setTimeout(boot,30)}});
