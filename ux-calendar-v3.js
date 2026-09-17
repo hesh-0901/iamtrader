@@ -1,4 +1,4 @@
-/* IAMTRADER CALENDAR V4.1 — direct month/year pivot, DOM-safe boot */
+/* IAMTRADER CALENDAR V4.2 — direct month/year pivot, DOM-safe boot */
 (()=>{
   const KEY='iamtrader:v1';
   const state={month:new Date(new Date().getFullYear(),new Date().getMonth(),1),range:null,preset:'month'};
@@ -16,10 +16,10 @@
   const fmtRange=r=>r?`${r.from.toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'})} → ${r.to.toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'})}`:'Aucune période sélectionnée';
   const rangeForPreset=p=>{const now=new Date(),today=new Date(now.getFullYear(),now.getMonth(),now.getDate());if(p==='month')return {from:new Date(today.getFullYear(),today.getMonth(),1),to:new Date(today.getFullYear(),today.getMonth()+1,0)};if(p==='prev-month')return {from:new Date(today.getFullYear(),today.getMonth()-1,1),to:new Date(today.getFullYear(),today.getMonth(),0)};if(p==='week'){const day=today.getDay()||7,from=new Date(today);from.setDate(today.getDate()-day+1);const to=new Date(from);to.setDate(from.getDate()+6);return {from,to}}if(p==='7d'){const from=new Date(today);from.setDate(today.getDate()-6);return {from,to:today}}if(p==='30d'){const from=new Date(today);from.setDate(today.getDate()-29);return {from,to:today}}if(p==='year')return {from:new Date(today.getFullYear(),0,1),to:new Date(today.getFullYear(),11,31)};return null};
   function summary(r){const ts=trades().filter(t=>{const d=dateOnly(t.date);return d&&d>=r.from&&d<=r.to});return {pnl:ts.reduce((n,t)=>n+Number(t.pnl||0),0),trades:ts.length,days:new Set(ts.map(t=>key(dateOnly(t.date)))).size}};
-  function render(){
+  function render(force=false){
     if(!isCalendarPage())return;
     const host=document.querySelector('.content');if(!host)return;
-    if(document.querySelector('.calendar-v3')&&host.querySelector('.calendar-v3'))return;
+    if(document.querySelector('.calendar-v3')&&host.querySelector('.calendar-v3')&&!force)return;
     const a=account(),currency=a?.currency||'USD',map=dayMap(),selected=state.range,sum=selected?summary(selected):{pnl:0,trades:0,days:0};
     const first=new Date(state.month.getFullYear(),state.month.getMonth(),1),start=new Date(first);start.setDate(1-((first.getDay()||7)-1));
     const cells=[];
@@ -35,16 +35,16 @@
   }
   function bind(){
     const root=document.querySelector('.calendar-v3');if(!root)return;
-    root.querySelector('[data-prev]').onclick=()=>{state.month=new Date(state.month.getFullYear(),state.month.getMonth()-1,1);render()};
-    root.querySelector('[data-next]').onclick=()=>{state.month=new Date(state.month.getFullYear(),state.month.getMonth()+1,1);render()};
-    root.querySelector('[data-cal-today]').onclick=()=>{const d=new Date();state.month=new Date(d.getFullYear(),d.getMonth(),1);state.range=rangeForPreset('month');state.preset='month';render()};
+    root.querySelector('[data-prev]').onclick=()=>{state.month=new Date(state.month.getFullYear(),state.month.getMonth()-1,1);render(true)};
+    root.querySelector('[data-next]').onclick=()=>{state.month=new Date(state.month.getFullYear(),state.month.getMonth()+1,1);render(true)};
+    root.querySelector('[data-cal-today]').onclick=()=>{const d=new Date();state.month=new Date(d.getFullYear(),d.getMonth(),1);state.range=rangeForPreset('month');state.preset='month';render(true)};
     const pop=root.querySelector('[data-period-pop]');root.querySelector('[data-period-open]').onclick=()=>{pop.hidden=!pop.hidden};root.querySelector('[data-period-close]').onclick=()=>{pop.hidden=true};
-    root.querySelectorAll('[data-preset]').forEach(b=>b.onclick=()=>{const r=rangeForPreset(b.dataset.preset);if(!r)return;state.range=r;state.preset=b.dataset.preset;state.month=new Date(r.to.getFullYear(),r.to.getMonth(),1);render()});
-    root.querySelector('[data-apply]').onclick=()=>{const f=root.querySelector('[data-from]').value,t=root.querySelector('[data-to]').value;if(!f||!t||f>t)return;state.range={from:new Date(`${f}T00:00:00`),to:new Date(`${t}T00:00:00`)};state.preset='custom';state.month=new Date(`${t}T00:00:00`);state.month.setDate(1);render()};
-    root.querySelectorAll('[data-date]').forEach(b=>b.onclick=()=>{const d=new Date(`${b.dataset.date}T00:00:00`);if(!state.range)state.range={from:d,to:d};else if(d<state.range.from)state.range={from:d,to:state.range.to};else if(d>state.range.to)state.range={from:state.range.from,to:d};else state.range={from:d,to:d};state.preset='custom';render()});
+    root.querySelectorAll('[data-preset]').forEach(b=>b.onclick=()=>{const r=rangeForPreset(b.dataset.preset);if(!r)return;state.range=r;state.preset=b.dataset.preset;state.month=new Date(r.to.getFullYear(),r.to.getMonth(),1);render(true)});
+    root.querySelector('[data-apply]').onclick=()=>{const f=root.querySelector('[data-from]').value,t=root.querySelector('[data-to]').value;if(!f||!t||f>t)return;state.range={from:new Date(`${f}T00:00:00`),to:new Date(`${t}T00:00:00`)};state.preset='custom';state.month=new Date(`${t}T00:00:00`);state.month.setDate(1);render(true)};
+    root.querySelectorAll('[data-date]').forEach(b=>b.onclick=()=>{const d=new Date(`${b.dataset.date}T00:00:00`);if(!state.range)state.range={from:d,to:d};else if(d<state.range.from)state.range={from:d,to:state.range.to};else if(d>state.range.to)state.range={from:state.range.from,to:d};else state.range={from:d,to:d};state.preset='custom';render(true)});
     const mp=root.querySelector('[data-month-pop]');root.querySelector('[data-month-open]').onclick=()=>{mp.hidden=!mp.hidden};root.querySelector('[data-month-close]').onclick=()=>{mp.hidden=true};
-    const year=root.querySelector('[data-year]');root.querySelectorAll('[data-month]').forEach(b=>b.onclick=()=>{state.month=new Date(Number(year.value),Number(b.dataset.month),1);mp.hidden=true;render()});
-    year.onchange=()=>{state.month=new Date(Number(year.value),state.month.getMonth(),1);render()};
+    const year=root.querySelector('[data-year]');root.querySelectorAll('[data-month]').forEach(b=>b.onclick=()=>{state.month=new Date(Number(year.value),Number(b.dataset.month),1);mp.hidden=true;render(true)});
+    year.onchange=()=>{state.month=new Date(Number(year.value),state.month.getMonth(),1);render(true)};
   }
   let timer;
   const observer=new MutationObserver(()=>{clearTimeout(timer);timer=setTimeout(()=>{if(isCalendarPage()&&!document.querySelector('.calendar-v3'))render()},50)});
