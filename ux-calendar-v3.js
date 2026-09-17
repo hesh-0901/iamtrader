@@ -1,4 +1,4 @@
-/* IAMTRADER CALENDAR V4.3 — direct month/year pivot, deterministic mount */
+/* IAMTRADER CALENDAR V4.4 — hard boot + deterministic mount */
 (()=>{
   const KEY='iamtrader:v1';
   const state={month:new Date(new Date().getFullYear(),new Date().getMonth(),1),range:null,preset:'month'};
@@ -17,9 +17,9 @@
   const rangeForPreset=p=>{const now=new Date(),today=new Date(now.getFullYear(),now.getMonth(),now.getDate());if(p==='month')return {from:new Date(today.getFullYear(),today.getMonth(),1),to:new Date(today.getFullYear(),today.getMonth()+1,0)};if(p==='prev-month')return {from:new Date(today.getFullYear(),today.getMonth()-1,1),to:new Date(today.getFullYear(),today.getMonth(),0)};if(p==='week'){const day=today.getDay()||7,from=new Date(today);from.setDate(today.getDate()-day+1);const to=new Date(from);to.setDate(from.getDate()+6);return {from,to}}if(p==='7d'){const from=new Date(today);from.setDate(today.getDate()-6);return {from,to:today}}if(p==='30d'){const from=new Date(today);from.setDate(today.getDate()-29);return {from,to:today}}if(p==='year')return {from:new Date(today.getFullYear(),0,1),to:new Date(today.getFullYear(),11,31)};return null};
   function summary(r){const ts=trades().filter(t=>{const d=dateOnly(t.date);return d&&d>=r.from&&d<=r.to});return {pnl:ts.reduce((n,t)=>n+Number(t.pnl||0),0),trades:ts.length,days:new Set(ts.map(t=>key(dateOnly(t.date)))).size}};
   function render(force=false){
-    if(!isCalendarPage())return;
-    const host=document.querySelector('.content');if(!host)return;
-    if(host.querySelector('.calendar-v3')&&!force)return;
+    if(!isCalendarPage())return false;
+    const host=document.querySelector('.content');if(!host)return false;
+    if(host.querySelector('.calendar-v3')&&!force)return true;
     const a=account(),currency=a?.currency||'USD',map=dayMap(),selected=state.range,sum=selected?summary(selected):{pnl:0,trades:0,days:0};
     const first=new Date(state.month.getFullYear(),state.month.getMonth(),1),start=new Date(first);start.setDate(1-((first.getDay()||7)-1));
     const cells=[];
@@ -32,6 +32,7 @@
       <div class="cal3-popover cal3-month-popover" data-month-pop hidden><div class="cal3-pop-head"><b>Choisir un mois</b><button type="button" data-month-close>×</button></div><div class="cal3-month-select"><label>Année<select data-year>${Array.from({length:21},(_,i)=>new Date().getFullYear()-10+i).map(y=>`<option value="${y}" ${y===first.getFullYear()?'selected':''}>${y}</option>`).join('')}</select></label><div class="cal3-months">${Array.from({length:12},(_,i)=>`<button type="button" data-month="${i}" class="${i===first.getMonth()?'active':''}">${new Date(2000,i,1).toLocaleDateString('fr-FR',{month:'long'}).replace(/^./,x=>x.toUpperCase())}</button>`).join('')}</div></div></div>
     </section>`;
     bind();
+    return true;
   }
   function bind(){
     const root=document.querySelector('.calendar-v3');if(!root)return;
@@ -46,10 +47,13 @@
     const year=root.querySelector('[data-year]');root.querySelectorAll('[data-month]').forEach(b=>b.onclick=()=>{state.month=new Date(Number(year.value),Number(b.dataset.month),1);mp.hidden=true;render(true)});
     year.onchange=()=>{state.month=new Date(Number(year.value),state.month.getMonth(),1);render(true)};
   }
+  window.IAMTRADER_CALENDAR_V44={render,version:'4.4'};
+  const boot=()=>{try{render(true)}catch(err){window.IAMTRADER_CALENDAR_V44.error=String(err);console.error('[IAMTRADER calendar]',err)}};
   let timer;
-  const schedule=delay=>{clearTimeout(timer);timer=setTimeout(()=>render(true),delay)};
-  const observer=new MutationObserver(()=>{if(isCalendarPage()&&!document.querySelector('.calendar-v3'))schedule(30)});
+  const observer=new MutationObserver(()=>{if(isCalendarPage()&&!document.querySelector('.calendar-v3')){clearTimeout(timer);timer=setTimeout(boot,30)}});
   observer.observe(document.body,{childList:true,subtree:true});
-  window.addEventListener('load',()=>schedule(100));
-  schedule(250);
+  boot();
+  setTimeout(boot,500);
+  setTimeout(boot,1500);
+  setTimeout(boot,3000);
 })();
