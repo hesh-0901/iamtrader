@@ -122,14 +122,21 @@ export function watchAuth(callback){
 
 export async function getUserData(uid){
   const {db}=requireFirebase();
-  const [accountsSnap,tradesSnap]=await Promise.all([
-    getDocsFromServer(query(collection(db,'accounts'),where('uid','==',uid))),
-    getDocsFromServer(query(collection(db,'trades'),where('uid','==',uid)))
-  ]);
-  return {
-    accounts:accountsSnap.docs.map(s=>s.data()),
-    trades:tradesSnap.docs.map(s=>s.data())
-  };
+  try{
+    const [accountsSnap,tradesSnap]=await Promise.all([
+      getDocsFromServer(query(collection(db,'accounts'),where('uid','==',uid))),
+      getDocsFromServer(query(collection(db,'trades'),where('uid','==',uid)))
+    ]);
+    const result={
+      accounts:accountsSnap.docs.map(s=>s.data()),
+      trades:tradesSnap.docs.map(s=>s.data())
+    };
+    console.info('[IAMTRADER FIRESTORE] read OK',{uid,accounts:result.accounts.length,trades:result.trades.length});
+    return result;
+  }catch(error){
+    console.error('[IAMTRADER FIRESTORE] read failed',{code:error?.code,message:error?.message});
+    throw error;
+  }
 }
 
 export async function migrateSingleAccountTrades(accountId){
