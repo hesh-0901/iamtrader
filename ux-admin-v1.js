@@ -288,7 +288,7 @@ export async function renderAdminPage({icon,toast,mount=document.querySelector('
             </tr>`).join('')}</tbody>
         </table></div>`:'<div class="admin-empty">Aucun utilisateur.</div>';
 
-      root.querySelector('[data-admin-requests]').innerHTML=requests.length?requests.slice().sort((a,b)=>String(a.status).localeCompare(String(b.status))).map(r=>`
+      root.querySelector('[data-admin-requests]').innerHTML=requests.length?requests.slice().sort((a,b)=>{const rank={pending:0,approved:1,rejected:2};return (rank[String(a.status)]??9)-(rank[String(b.status)]??9)}).map(r=>`
         <div class="admin-list-row">
           <div><b>${adminEsc(r.firstName||r.uid||'—')}</b><small>${adminEsc(r.status||'pending')} · ${adminFormatDate(r.createdAt)}</small></div>
           <div class="admin-request-actions">
