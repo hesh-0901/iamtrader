@@ -269,6 +269,10 @@ async function bootFirebaseSession(){
         state.page='dashboard';
         render();
       }else if(location.hash==='#admin'){
+        if(claims.admin!==true){
+          location.hash='#home-settings';
+          return;
+        }
         renderAdminPage({icon,toast});
       }else if(location.hash==='#home'||location.hash==='#home-settings'){
         document.querySelector('#app').innerHTML=location.hash==='#home-settings'?homeSettings():userHome();
