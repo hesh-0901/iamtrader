@@ -10,68 +10,64 @@ function adminStat(label,value,sub){return `<div class="card admin-stat"><small>
 export async function renderAdminPage({icon,toast,mount=document.querySelector('#app')}) {
   const root=document.createElement('div');
   root.className='admin-console-shell';
-  root.innerHTML=`
+  root.innerHTML=\`
     <div class="admin-console-nav">
-      <button class="admin-console-brand" data-admin-home><span>↗</span>IAM<span>TRADER</span></button>
+      <button class="admin-console-brand" data-admin-home>${icon("shield",18)} <span>IAM</span>TRADER</button>
       <div class="admin-console-nav-title"><small>IAMTRADER</small><b>ADMIN CONSOLE</b></div>
       <div class="admin-console-user"><i></i><span>ADMINISTRATEUR</span></div>
     </div>
     <div class="admin-page">
       <div class="admin-head">
-        <div>
-          <span class="eyebrow">CONTROL CENTER</span>
-          <h2>Administration IAMTRADER</h2>
-          <p>Vue centrale des utilisateurs, accès, comptes et activité de la plateforme.</p>
-        </div>
-        <div class="admin-actions">
-          <button class="admin-back-link" data-admin-home>${icon('arrow-left',14)} <span>Retour</span></button>
-          <span class="admin-badge"><i></i> ADMINISTRATEUR</span>
-          <button class="btn ghost small admin-refresh-btn" data-admin-refresh>${icon('upload',15)} Actualiser</button>
-        </div>
+        <div><span class="eyebrow">ADMINISTRATION</span><h2>Console administrateur</h2><p>Gérez les utilisateurs, les demandes Community et le suivi de la plateforme.</p></div>
+        <div class="admin-actions"><span class="admin-badge"><i></i> ADMIN ACTIF</span><button class="admin-back-link" data-admin-home>${icon("home",16)} <span>Retour à IAMTRADER</span></button></div>
       </div>
 
-      <div class="admin-stats" data-admin-stats>
-        ${adminStat('Utilisateurs','—','Chargement')}
-        ${adminStat('Comptes trading','—','Chargement')}
-        ${adminStat('Trades','—','Chargement')}
-        ${adminStat('Demandes Community','—','Chargement')}
+      <div class="admin-tabs" role="tablist" aria-label="Administration IAMTRADER">
+        <button class="admin-tab-btn" data-admin-tab="users" role="tab" aria-selected="false"><span class="admin-tab-icon admin-tab-icon-blue">${icon("wallet",25)}</span><span><b>Utilisateurs</b><small>Comptes et accès</small></span><em data-side-users>—</em></button>
+        <button class="admin-tab-btn" data-admin-tab="requests" role="tab" aria-selected="false"><span class="admin-tab-icon admin-tab-icon-purple">${icon("book",25)}</span><span><b>Demandes</b><small>Community à traiter</small></span><em data-side-community>—</em></button>
+        <button class="admin-tab-btn active" data-admin-tab="pilot" role="tab" aria-selected="true"><span class="admin-tab-icon admin-tab-icon-green">${icon("chart",25)}</span><span><b>Centre de pilotage</b><small>Vue globale</small></span><em>•</em></button>
       </div>
 
-      <div class="admin-grid">
-        <section class="card admin-card">
-          <div class="admin-card-head"><h3>Utilisateurs</h3><span data-admin-user-count></span></div>
-          <div data-admin-users class="admin-empty">Chargement des données…</div>
-        </section>
-
-        <section class="card admin-card">
-          <div class="admin-card-head"><h3>Demandes Community</h3><span>Accès contrôlé</span></div>
-          <div data-admin-requests class="admin-list"></div>
-        </section>
-      </div>
-
-      <section class="admin-modules">
-        <div class="admin-module-head"><div><span class="admin-panel-kicker">OPERATIONS</span><h2>Centre de pilotage</h2><p>Les indicateurs essentiels de la plateforme, réunis dans un espace compact.</p></div></div>
-        <div class="admin-module-grid">
-          <article class="admin-module-card"><div class="admin-module-icon">↗</div><span>COMPTES TRADING</span><strong data-module-accounts>—</strong><small>comptes enregistrés</small></article>
-          <article class="admin-module-card"><div class="admin-module-icon">◔</div><span>ACTIVITÉ</span><strong data-module-trades>—</strong><small>opérations enregistrées</small></article>
-          <article class="admin-module-card"><div class="admin-module-icon">◆</div><span>COMMUNITY</span><strong data-module-pending>—</strong><small>demandes en attente</small></article>
-          <article class="admin-module-card"><div class="admin-module-icon">✓</div><span>SÉCURITÉ</span><strong>ACTIVE</strong><small>protection administrateur</small></article>
-        </div>
+      <section class="admin-tab-panel" data-admin-panel="users" hidden>
+        <div class="admin-section-heading"><div><span class="admin-panel-kicker">GESTION</span><h3>Utilisateurs</h3><p>Consultez et gérez les comptes enregistrés sur IAMTRADER.</p></div><span class="admin-section-count" data-admin-user-count>—</span></div>
+        <section class="admin-card admin-users-card"><div data-admin-users class="admin-empty">Chargement des données…</div></section>
       </section>
 
-      <div class="admin-note"><b>Sécurité :</b> ce panneau est protégé par le custom claim Firebase <code>admin: true</code>. Les opérations sensibles restent côté serveur.</div>
+      <section class="admin-tab-panel" data-admin-panel="requests" hidden>
+        <div class="admin-section-heading"><div><span class="admin-panel-kicker">COMMUNITY</span><h3>Demandes d’accès</h3><p>Validez ou refusez les demandes d’accès à la communauté.</p></div><span class="admin-section-count"><i></i> Accès contrôlé</span></div>
+        <section class="admin-card admin-requests-card"><div data-admin-requests class="admin-list"></div></section>
+      </section>
+
+      <section class="admin-tab-panel active" data-admin-panel="pilot">
+        <div class="admin-section-heading"><div><span class="admin-panel-kicker">OPERATIONS</span><h3>Centre de pilotage</h3><p>Les indicateurs essentiels de la plateforme, sans surcharge.</p></div><button class="admin-refresh-btn" data-admin-refresh>${icon("upload",15)} Actualiser</button></div>
+        <div class="admin-stats" data-admin-stats>${adminStat("Utilisateurs","—","Chargement")}${adminStat("Comptes trading","—","Chargement")}${adminStat("Trades","—","Chargement")}${adminStat("Demandes Community","—","Chargement")}</div>
+        <div class="admin-pilot-grid">
+          <section class="admin-card admin-status-card"><div class="admin-card-head"><div><span class="admin-panel-kicker">SYSTÈME</span><h3>État de la plateforme</h3></div><span class="admin-live"><i></i> Opérationnel</span></div>
+            <div class="admin-status-list">
+              <div><span class="admin-status-icon">${icon("shield",20)}</span><div><b>Authentification</b><small>Firebase Auth</small></div><strong>En ligne</strong></div>
+              <div><span class="admin-status-icon">${icon("wallet",20)}</span><div><b>Base de données</b><small>Firestore</small></div><strong>En ligne</strong></div>
+              <div><span class="admin-status-icon">${icon("chart",20)}</span><div><b>Services administrateur</b><small>API sécurisée</small></div><strong>En ligne</strong></div>
+            </div>
+          </section>
+          <section class="admin-card admin-security-card"><div class="admin-card-head"><div><span class="admin-panel-kicker">SÉCURITÉ</span><h3>Accès administrateur</h3></div><span class="admin-live"><i></i> Protégé</span></div>
+            <div class="admin-security-body"><span class="admin-security-icon">${icon("shield",30)}</span><div><b>Custom claim Firebase</b><p>Les opérations sensibles sont vérifiées côté serveur avec <code>admin: true</code>.</p></div></div>
+          </section>
+        </div>
+        <section class="admin-card admin-quick-card"><div class="admin-card-head"><div><span class="admin-panel-kicker">ACCÈS RAPIDE</span><h3>Sections administratives</h3></div></div>
+          <div class="admin-quick-grid"><button data-admin-tab-link="users"><span>${icon("wallet",22)}</span><b>Gérer les utilisateurs</b>${icon("chart",15)}</button><button data-admin-tab-link="requests"><span>${icon("book",22)}</span><b>Voir les demandes</b>${icon("chart",15)}</button></div>
+        </section>
+      </section>
+
+      <div class="admin-bottom-bar"><span>${icon("shield",15)} Console protégée par Firebase Admin</span><button data-admin-home>${icon("home",14)} Retour à IAMTRADER</button></div>
     </div>
 
-    <div class="admin-modal-backdrop" data-admin-modal hidden>
-      <div class="admin-modal" role="dialog" aria-modal="true">
-        <div class="admin-modal-head">
-          <div><span class="eyebrow">ADMINISTRATION</span><h3 data-admin-modal-title></h3></div>
-          <button class="admin-modal-close" data-admin-modal-close aria-label="Fermer">×</button>
-        </div>
-        <div data-admin-modal-body></div>
-      </div>
-    </div>
-  `;
+    <div class="admin-modal-backdrop" data-admin-modal hidden><div class="admin-modal" role="dialog" aria-modal="true">
+      <div class="admin-modal-head"><div><span class="eyebrow">ADMINISTRATION</span><h3 data-admin-modal-title></h3></div><button class="admin-modal-close" data-admin-modal-close aria-label="Fermer">×</button></div>
+      <div data-admin-modal-body></div>
+    </div></div>
+  \`;
+
+
 
   const mountRoot=()=>{
     (mount||document.querySelector('#app'))?.replaceChildren(root);
@@ -184,9 +180,27 @@ export async function renderAdminPage({icon,toast,mount=document.querySelector('
     await confirmAction(label,()=>adminAction('community-request',{uid,status:action==='approve'?'approved':'rejected'}));
   }
 
+  let activeAdminTab='pilot';
+
+  function setAdminTab(tab){
+    activeAdminTab=tab;
+    root.querySelectorAll('[data-admin-tab]').forEach(btn=>{
+      const active=btn.dataset.adminTab===tab;
+      btn.classList.toggle('active',active);
+      btn.setAttribute('aria-selected',active?'true':'false');
+    });
+    root.querySelectorAll('[data-admin-panel]').forEach(panel=>{
+      const active=panel.dataset.adminPanel===tab;
+      panel.hidden=!active;
+      panel.classList.toggle('active',active);
+    });
+  }
+
   function bind(){
+    root.querySelectorAll('[data-admin-tab]').forEach(btn=>btn.addEventListener('click',()=>setAdminTab(btn.dataset.adminTab)));
+    root.querySelectorAll('[data-admin-tab-link]').forEach(btn=>btn.addEventListener('click',()=>setAdminTab(btn.dataset.adminTabLink)));
     root.querySelector('[data-admin-refresh]').onclick=load;
-    root.querySelector('[data-admin-home]').onclick=()=>{location.hash='#home-settings'};
+    root.querySelectorAll('[data-admin-home]').forEach(btn=>btn.onclick=()=>{location.hash='#home'});
     root.querySelector('[data-admin-modal-close]').onclick=closeModal;
     root.querySelector('[data-admin-modal]').addEventListener('click',e=>{
       if(e.target.matches('[data-admin-modal]')||e.target.closest('[data-admin-modal-close]')) closeModal();
