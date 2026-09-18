@@ -460,3 +460,41 @@
  .admin-console-shell .admin-stats{grid-template-columns:1fr 1fr!important}
  .admin-console-shell .admin-module-grid{grid-template-columns:1fr 1fr!important}
 }
+
+/* ADMIN TYPOGRAPHY V8 — larger, clearer, friendlier */
+.admin-console-shell .admin-nav-item{font-size:12px!important;font-weight:700!important}
+.admin-console-shell .admin-sidebar-label{font-size:9px!important}
+.admin-console-shell .admin-sidebar-status b{font-size:10px!important}
+.admin-console-shell .admin-sidebar-status small{font-size:8px!important}
+.admin-console-shell .admin-return-minimal{font-size:10px!important}
+.admin-console-shell .admin-console-nav-title{font-size:9px!important}
+.admin-console-shell .admin-console-user{font-size:8px!important}
+.admin-console-shell .admin-head .eyebrow{font-size:9px!important}
+.admin-console-shell .admin-head h2{font-size:36px!important}
+.admin-console-shell .admin-head p{font-size:13px!important}
+.admin-console-shell .admin-badge{font-size:9px!important}
+.admin-console-shell .admin-refresh-btn{font-size:11px!important}
+.admin-console-shell .admin-stat small{font-size:8px!important}
+.admin-console-shell .admin-stat strong{font-size:32px!important}
+.admin-console-shell .admin-stat span{font-size:10px!important}
+.admin-console-shell .admin-card-head h3{font-size:16px!important}
+.admin-console-shell .admin-card-head>span{font-size:9px!important}
+.admin-console-shell .admin-table th{font-size:8px!important}
+.admin-console-shell .admin-table td{font-size:11px!important}
+.admin-console-shell .admin-table td small{font-size:9px!important}
+.admin-console-shell .admin-pill{font-size:8px!important}
+.admin-console-shell .admin-action-menu summary{font-size:10px!important}
+.admin-console-shell .admin-action-popover button{font-size:10px!important}
+.admin-console-shell .admin-module-head .admin-panel-kicker{font-size:9px!important}
+.admin-console-shell .admin-module-head h2{font-size:19px!important}
+.admin-console-shell .admin-module-head p{font-size:11px!important}
+.admin-console-shell .admin-module-card span{font-size:8px!important}
+.admin-console-shell .admin-module-card strong{font-size:23px!important}
+.admin-console-shell .admin-module-card small{font-size:9px!important}
+.admin-console-shell .admin-note{font-size:10px!important}
+@media(max-width:760px){
+ .admin-console-shell .admin-head h2{font-size:29px!important}
+ .admin-console-shell .admin-head p{font-size:12px!important}
+ .admin-console-shell .admin-stat strong{font-size:28px!important}
+ .admin-console-shell .admin-table td{font-size:10px!important}
+}
