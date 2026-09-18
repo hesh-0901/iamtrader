@@ -4,3 +4,5 @@
 .iam-module-landing h3{margin:8px 0 6px;font-size:22px}
 .iam-module-landing p{margin:0;max-width:680px;color:#6b7785;line-height:1.65}
 @media(max-width:700px){.iam-module-landing{padding:28px;align-items:flex-start;gap:18px}.iam-module-icon{width:56px;height:56px;border-radius:14px}.iam-module-landing h3{font-size:19px}}
+
+.plan-chip{margin:0 18px 10px;padding:8px 10px;border:1px solid #e2e9ed;border-radius:9px;background:#f7fafb;color:#7a8790;font:800 8px ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em}.plan-chip b{float:right;color:#087b65}.nav-group{margin-top:14px}.nav-title{display:block;margin-bottom:6px}.nav-item{width:100%}
