@@ -69,12 +69,29 @@ app.innerHTML=\`<div class="lp-auth-page"><div class="lp-auth-layout"><div class
 </form><div class="lp-auth-footer"><span>\${isLogin?'Pas encore de compte ?':'Déjà un compte ?'}</span><button data-switch-auth>\${isLogin?'Créer un compte':'Se connecter'}</button></div></div>
 <div class="lp-auth-side"><span class="lp-eyebrow">\${isLogin?'VOTRE ESPACE':'VOTRE ESPACE'}</span><h2>\${isLogin?'Retrouvez votre espace de trading.':plan==='community'?'Un environnement complet pour les membres.':plan==='pro'?'Un Journal plus structuré pour votre routine.':'Commencez par documenter vos décisions.'}</h2><div class="lp-auth-side-list"><span>✓ Compte personnel</span><span>✓ Données organisées par trader</span><span>✓ Accès contrôlé selon votre plan</span><span>✓ Votre Journal accessible après connexion</span></div></div></div></div>\`;
 const form=document.querySelector(\`#\${isLogin?'loginForm':'registerForm'}\`);
-form.onsubmit=e=>{e.preventDefault();const f=new FormData(form),first=String(f.get('firstName')).trim(),pw=String(f.get('password')),msg=document.querySelector('#authMessage');if(first.length<2){msg.textContent='Veuillez renseigner un prénom valide.';msg.className='lp-auth-message show error';return}if(!isLogin){const cp=String(f.get('confirmPassword'));if(pw!==cp){msg.textContent='Les mots de passe ne correspondent pas.';msg.className='lp-auth-message show error';return}}msg.textContent=isLogin?'La connexion sera reliée à votre compte IAMTRADER.':plan==='community'?'Demande préparée. La validation Community sera effectuée par l’administration.':'Votre inscription est prête à être reliée à IAMTRADER.';msg.className='lp-auth-message show success';};
-document.querySelector('[data-back]').onclick=()=>{location.hash='';landing()};
-document.querySelector('[data-switch-auth]').onclick=()=>isLogin?authScreen('register',plan):authScreen('login');
+form.onsubmit=e=>{e.preventDefault();const f=new FormData(form),first=String(f.get('firstName')).trim(),pw=String(f.get('password')),msg=document.querySelector('#authMessage');if(first.length<2){msg.textContent='Veuillez renseigner un prénom valide.';msg.className='lp-auth-message show error';return}if(!isLogin){const cp=String(f.get('confirmPassword'));if(pw!==cp){msg.textContent='Les mots de passe ne correspondent pas.';msg.className='lp-auth-message show error';return}}msg.textContent=isLogin?'Connexion validée visuellement. Le branchement Firebase sera effectué à l’étape d’authentification.':plan==='community'?'Demande validée visuellement. L’activation Community restera soumise à l’approbation de l’administration.':'Inscription validée visuellement. Le compte sera créé lors du branchement Firebase.';msg.className='lp-auth-message show success';};
+document.querySelector('[data-back]').onclick=()=>navigate('');
+document.querySelector('[data-switch-auth]').onclick=()=>navigate(isLogin?'register-'+plan:'login');
+}
+function navigate(route=''){
+const next=route?'#'+route:'#';
+if(location.hash===next) routeApp();
+else location.hash=next;
+}
+function routeApp(){
+const hash=location.hash;
+if(hash==='#app')return;
+if(hash==='#login'){authScreen('login');return}
+if(hash.startsWith('#register-')){
+const plan=hash.replace('#register-','');
+authScreen('register',['free','pro','community'].includes(plan)?plan:'free');
+return;
+}
+landing();
 }
 function bindLanding(){
-document.querySelectorAll('[data-register]').forEach(b=>b.onclick=()=>authScreen(b.dataset.register));
-document.querySelectorAll('[data-login]').forEach(b=>b.onclick=()=>authScreen('login'));
+document.querySelectorAll('[data-register]').forEach(b=>b.onclick=()=>navigate('register-'+(b.dataset.register||'free')));
+document.querySelectorAll('[data-login]').forEach(b=>b.onclick=()=>navigate('login'));
 }
-if(location.hash==='#login')authScreen('login');else if(location.hash.startsWith('#register-'))authScreen('register',location.hash.replace('#register-',''));else if(location.hash!=='#app')landing();
+window.addEventListener('hashchange',routeApp);
+routeApp();
