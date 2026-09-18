@@ -1,0 +1,39 @@
+name: IAMTRADER — Bootstrap Admin
+
+on:
+  workflow_dispatch:
+    inputs:
+      uid:
+        description: "Firebase User UID à promouvoir administrateur"
+        required: true
+        type: string
+
+jobs:
+  set-admin:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Récupérer IAMTRADER
+        uses: actions/checkout@v4
+
+      - name: Configurer Google Credentials
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_IAMTRADER }}
+
+      - name: Installer Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: admin-tools/package.json
+
+      - name: Installer Firebase Admin SDK
+        working-directory: admin-tools
+        run: npm install --no-package-lock
+
+      - name: Activer le Custom Claim Admin
+        working-directory: admin-tools
+        run: npm run set-admin -- ${{ inputs.uid }}
