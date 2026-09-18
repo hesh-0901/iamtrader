@@ -1,8 +1,7 @@
 (()=>{
-const KEY='iamtrader:v1';
 const esc=v=>String(v??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]));
 const icon=(n,s=16)=>{const p={chart:'<path d="M4 19V5M4 19h16"/><path d="m7 15 3-4 3 2 5-7"/>',external:'<path d="M14 4h6v6M20 4l-9 9"/><path d="M18 13v5a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h5"/>',calendar:'<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M8 2v4M16 2v4M3 9h18"/>',link:'<path d="M10 13a5 5 0 0 0 7.1.1l1.4-1.4a5 5 0 0 0-7.1-7.1L10 5"/><path d="M14 11a5 5 0 0 0-7.1-.1L5.5 12.3a5 5 0 0 0 7.1 7.1L14 19"/>'};return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">${p[n]||p.chart}</svg>`};
-const read=()=>{try{return JSON.parse(localStorage.getItem(KEY))||{}}catch{return {}}};
+const read=()=>window.IAMTRADER?.state||{trades:[],accounts:[],activeAccountId:null};
 function parseModalDate(v){const m=String(v||'').match(/(\d{2})\/(\d{2})\/(\d{4})\s+(\d{2}):(\d{2})(?::(\d{2}))?/);return m?new Date(+m[3],+m[2]-1,+m[1],+m[4],+m[5],+(m[6]||0)):new Date(v)}
 function findTrade(m){const s=read(),ts=s.trades||[],h=m.querySelector('.modal-head h2')?.textContent||'',parts=h.split(/\s*[·•]\s*/),symbol=(parts[0]||'').trim(),dir=(parts[1]||'').trim().toUpperCase(),p=m.querySelector('.modal-head p')?.textContent||'',stamp=parseModalDate(p);return ts.filter(t=>String(t.symbol).toUpperCase()===symbol.toUpperCase()&&(!dir||String(t.direction).toUpperCase()===dir)).sort((a,b)=>Math.abs(new Date(a.date)-stamp)-Math.abs(new Date(b.date)-stamp))[0]||null}
 function urlList(t){const out=[];[['Analyse avant exécution',t.proofBefore],['Analyse après exécution',t.proofAfter],['Graphique',t.chartUrl||t.graphUrl||t.chart]].forEach(x=>{if(x[1]&&!out.some(y=>y[1]===x[1]))out.push(x)});if(!out.length&&t.proof)out.push(['Graphique',t.proof]);return out}
