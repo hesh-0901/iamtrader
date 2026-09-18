@@ -233,30 +233,50 @@ async function bootFirebaseSession(){
       }
 
       const claims=await getAuthClaims(true);
-      const [profile,cloud]=await Promise.all([
-        getCurrentProfile(),
-        getUserData(user.uid)
-      ]);
+
+      // Le claim admin doit rester disponible même si une extension,
+      // un bloqueur ou un problème réseau empêche temporairement Firestore.
+      let profile=null;
+      let cloud={accounts:[],trades:[]};
+
+      try{
+        [profile,cloud]=await Promise.all([
+          getCurrentProfile(),
+          getUserData(user.uid)
+        ]);
+      }catch(error){
+        console.warn('IAMTRADER Firestore indisponible au démarrage:',error);
+      }
+
       state.user={
-        ...(profile||{uid:user.uid,firstName:user.displayName||'',plan:'free',status:'active'}),
+        ...(profile||{
+          uid:user.uid,
+          firstName:state.user?.firstName||user.displayName||'',
+          plan:state.user?.plan||'free',
+          status:state.user?.status||'active'
+        }),
         admin:claims.admin===true,
-        role:profile?.role||'retail'
+        role:profile?.role||state.user?.role||'retail'
       };
-      state.accounts=cloud.accounts||[];
-      state.trades=cloud.trades||[];
+      state.accounts=cloud.accounts||state.accounts||[];
+      state.trades=cloud.trades||state.trades||[];
       state.activeAccountId=state.accounts.some(a=>a.id===state.activeAccountId)?state.activeAccountId:(state.accounts[0]?.id||null);
-      // Après une connexion, toujours ouvrir l'accueil IAMTRADER,
-      // pas la dernière page locale (ex. Journal / onboarding).
-      state.page='dashboard';
       save();
-      if(location.hash==='#app') render();
-      if(location.hash==='#home'||location.hash==='#home-settings'){
+
+      // Toujours rendre la route actuelle après l'authentification.
+      // Cela évite l'écran blanc sur #admin/#home lorsque Firestore est bloqué.
+      if(location.hash==='#app'){
+        state.page='dashboard';
+        render();
+      }else if(location.hash==='#admin'){
+        renderAdminPage({icon,toast});
+      }else if(location.hash==='#home'||location.hash==='#home-settings'){
         document.querySelector('#app').innerHTML=location.hash==='#home-settings'?homeSettings():userHome();
         bindHome();
       }
     }catch(error){
-      console.error('IAMTRADER Firebase profile error',error);
-      if(location.hash==='#app') location.hash='#login';
+      console.error('IAMTRADER Firebase authentication error',error);
+      if(location.hash==='#app'||location.hash==='#admin') location.hash='#login';
     }
   });
 }
