@@ -207,40 +207,27 @@ async function bootFirebaseSession(){
 
       // Le claim admin doit rester disponible même si une extension,
       // un bloqueur ou un problème réseau empêche temporairement Firestore.
+      // Le démarrage de l'interface ne dépend plus d'une lecture Firestore.
+      // Si un bloqueur empêche Firestore, IAMTRADER reste utilisable avec le cache local.
+      // La synchronisation cloud est tentée ensuite, en arrière-plan.
       let profile=null;
-      let cloud={accounts:[],trades:[]};
-
-      try{
-        [profile,cloud]=await Promise.all([
-          getCurrentProfile(),
-          getUserData(user.uid)
-        ]);
-      }catch(error){
-        console.warn('IAMTRADER Firestore indisponible au démarrage:',error);
-      }
+      let cloud=null;
 
       state.user={
-        ...(profile||{
+        ...(state.user||{
           uid:user.uid,
-          firstName:state.user?.firstName||user.displayName||'',
-          plan:state.user?.plan||'free',
-          status:state.user?.status||'active'
+          firstName:user.displayName||'',
+          plan:'free',
+          status:'active'
         }),
+        uid:user.uid,
         admin:claims.admin===true,
-        role:profile?.role||state.user?.role||'retail'
+        role:state.user?.role||'retail'
       };
-      // Ne'écrase jamais les données locales si Firestore est temporairement indisponible.
-      // Le cache local sert de filet de sécurité jusqu'à la prochaine synchronisation réussie.
-      const firestoreLoaded=Array.isArray(cloud.accounts)&&Array.isArray(cloud.trades);
-      if(firestoreLoaded){
-        state.accounts=cloud.accounts;
-        state.trades=cloud.trades;
-      }
       state.activeAccountId=state.accounts.some(a=>a.id===state.activeAccountId)?state.activeAccountId:(state.accounts[0]?.id||null);
       save();
 
-      // Toujours rendre la route actuelle après l'authentification.
-      // Cela évite l'écran blanc sur #admin/#home lorsque Firestore est bloqué.
+      // Toujours rendre la route actuelle immédiatement, même si Firestore est bloqué.
       if(location.hash==='#app'){
         state.page='dashboard';
         render();
@@ -250,6 +237,24 @@ async function bootFirebaseSession(){
           return;
         }
         renderAdminPage({icon,toast});
+      // Synchronisation cloud non bloquante : elle ne doit jamais retarder l'ouverture du workspace.
+      Promise.all([getCurrentProfile(),getUserData(user.uid)]).then(([remoteProfile,remoteData])=>{
+        profile=remoteProfile;
+        cloud=remoteData;
+        if(profile){
+          state.user={...state.user,...profile,admin:claims.admin===true};
+        }
+        if(Array.isArray(cloud?.accounts)&&Array.isArray(cloud?.trades)){
+          state.accounts=cloud.accounts;
+          state.trades=cloud.trades;
+          state.activeAccountId=state.accounts.some(a=>a.id===state.activeAccountId)?state.activeAccountId:(state.accounts[0]?.id||null);
+          save();
+          if(location.hash==='#app') render();
+        }
+      }).catch(error=>{
+        console.warn('IAMTRADER Firestore indisponible — utilisation du cache local:',error);
+      });
+
       }else if(location.hash==='#home'||location.hash==='#home-settings'){
         document.querySelector('#app').innerHTML=location.hash==='#home-settings'?homeSettings():userHome();
         bindHome();
