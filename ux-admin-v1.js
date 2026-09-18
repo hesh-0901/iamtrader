@@ -74,6 +74,31 @@ export async function renderAdminPage({icon,toast,mount=document.querySelector('
   `;
 
   const mountRoot=()=>{
+    const page=root.querySelector('.admin-page');
+    if(page && !root.querySelector('.admin-premium-sidebar')){
+      const sidebar=document.createElement('aside');
+      sidebar.className='admin-premium-sidebar';
+      sidebar.innerHTML=`
+        <div class="admin-sidebar-label">WORKSPACE</div>
+        <button class="admin-nav-item active" data-admin-section="overview"><span class="admin-nav-icon">⌂</span><span>Vue d’ensemble</span></button>
+        <button class="admin-nav-item" data-admin-section="users"><span class="admin-nav-icon">◉</span><span>Utilisateurs</span><em data-side-users>—</em></button>
+        <button class="admin-nav-item" data-admin-section="community"><span class="admin-nav-icon">◇</span><span>Community</span><em data-side-community>—</em></button>
+        <button class="admin-nav-item" data-admin-section="accounts"><span class="admin-nav-icon">◈</span><span>Comptes trading</span><em data-side-accounts>—</em></button>
+        <button class="admin-nav-item" data-admin-section="activity"><span class="admin-nav-icon">◌</span><span>Activité</span><em data-side-trades>—</em></button>
+        <div class="admin-sidebar-spacer"></div>
+        <div class="admin-sidebar-status"><span class="admin-system-dot"></span><div><b>Système opérationnel</b><small>IAMTRADER Cloud</small></div></div>
+        <button class="admin-return-minimal" data-admin-home>← Retour à IAMTRADER</button>`;
+      root.insertBefore(sidebar,page);
+      const grid=page.querySelector('.admin-grid');
+      if(grid){
+        const progress=document.createElement('section');
+        progress.className='admin-progress-card';
+        progress.innerHTML=`
+          <div class="admin-progress-head"><div><span class="admin-eyebrow">CROISSANCE</span><h3>Progression de la plateforme</h3><p>Nouvelles inscriptions au fil du temps</p></div><span class="admin-period-chip">30 JOURS</span></div>
+          <div class="admin-growth-chart" data-growth-chart></div>`;
+        grid.parentNode.insertBefore(progress,grid);
+      }
+    }
     (mount||document.querySelector('#app'))?.replaceChildren(root);
     bind();
     load();
@@ -230,6 +255,18 @@ export async function renderAdminPage({icon,toast,mount=document.querySelector('
       const users=data.users||[],accounts=data.accounts||[],trades=data.trades||[],requests=data.communityRequests||[];
       const active=users.filter(u=>u.status==='active').length;
       const pending=requests.filter(r=>r.status==='pending').length;
+      const chart=root.querySelector('[data-growth-chart]');
+      if(chart){
+        const days=30,now=new Date(),items=[];
+        for(let i=days-1;i>=0;i--){
+          const d=new Date(now);d.setHours(0,0,0,0);d.setDate(d.getDate()-i);
+          const n=new Date(d);n.setDate(n.getDate()+1);
+          const count=users.filter(u=>{const x=u.createdAt?.toDate?u.createdAt.toDate():new Date(u.createdAt);return !Number.isNaN(x.getTime())&&x>=d&&x<n}).length;
+          items.push({d,count});
+        }
+        const max=Math.max(1,...items.map(x=>x.count));
+        chart.innerHTML='<div class="admin-chart-bars">'+items.map(x=>'<div class="admin-bar-col" title="'+adminFormatDate(x.d)+' · '+x.count+' inscription(s)"><span style="height:'+Math.max(7,x.count/max*100)+'%"></span></div>').join('')+'</div><div class="admin-chart-axis"><span>'+adminFormatDate(items[0].d)+'</span><span>'+adminFormatDate(items[14].d)+'</span><span>'+adminFormatDate(items[29].d)+'</span></div>';
+      }
       const moduleAccounts=root.querySelector('[data-module-accounts]');
       const moduleTrades=root.querySelector('[data-module-trades]');
       const modulePending=root.querySelector('[data-module-pending]');
