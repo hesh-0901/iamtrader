@@ -122,8 +122,8 @@ export function watchAuth(callback){
 export async function getUserData(uid){
   const {db}=requireFirebase();
   const [accountsSnap,tradesSnap]=await Promise.all([
-    getDocs(query(collection(db,'accounts'),where('uid','==',uid))),
-    getDocs(query(collection(db,'trades'),where('uid','==',uid)))
+    getDocsFromServer(query(collection(db,'accounts'),where('uid','==',uid))),
+    getDocsFromServer(query(collection(db,'trades'),where('uid','==',uid)))
   ]);
   return {
     accounts:accountsSnap.docs.map(s=>s.data()),
