@@ -64,6 +64,7 @@ export async function registerUser({firstName,password,plan='free',memberCode=''
     uid,
     firstName:String(firstName).trim(),
     username:slugifyName(firstName),
+    role:'retail',
     plan:'free',
     status:'active',
     requestedPlan:['pro','community'].includes(plan)?plan:null,
@@ -98,7 +99,7 @@ export async function loginUser({firstName,password}){
   if(!email) throw new Error('Prénom invalide.');
   const credential=await signInWithEmailAndPassword(auth,email,password);
   const snap=await getDoc(doc(db,'users',credential.user.uid));
-  const profile=snap.exists()?snap.data():{uid:credential.user.uid,firstName:String(firstName).trim(),plan:'free',status:'active'};
+  const profile=snap.exists()?snap.data():{uid:credential.user.uid,firstName:String(firstName).trim(),role:'retail',plan:'free',status:'active'};
   return {user:credential.user,profile};
 }
 
