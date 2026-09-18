@@ -20,16 +20,22 @@ import {
   setDoc,
   deleteDoc
 } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
+import {
+  getFunctions,
+  httpsCallable
+} from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-functions.js';
 import { firebaseConfig, firebaseConfigured } from './firebase-config.js';
 
 let app=null;
 let auth=null;
 let db=null;
+let functions=null;
 
 if(firebaseConfigured){
   app=initializeApp(firebaseConfig);
   auth=getAuth(app);
   db=getFirestore(app);
+  functions=getFunctions(app,'us-central1');
 }
 
 const slugifyName=name=>String(name||'')
@@ -156,6 +162,25 @@ export async function getAuthClaims(forceRefresh=false){
   const token=await user.getIdTokenResult(forceRefresh);
   return token.claims||{};
 }
+
+export async function bootstrapAdminAccess(){
+  const {auth}=requireFirebase();
+  if(!auth.currentUser) throw new Error('Utilisateur non authentifié.');
+  if(!functions) throw new Error('Firebase Functions n’est pas configuré.');
+  const call=httpsCallable(functions,'bootstrapAdmin');
+  const result=await call({});
+  return result.data||{};
+}
+
+export async function setAdminAccess(uid,enabled){
+  const {auth}=requireFirebase();
+  if(!auth.currentUser) throw new Error('Utilisateur non authentifié.');
+  if(!functions) throw new Error('Firebase Functions n’est pas configuré.');
+  const call=httpsCallable(functions,'setAdminAccess');
+  const result=await call({uid:String(uid),enabled:Boolean(enabled)});
+  return result.data||{};
+}
+
 
 export async function getAdminData(){
   const {db,auth}=requireFirebase();
