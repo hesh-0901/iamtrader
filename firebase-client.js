@@ -67,6 +67,7 @@ export async function registerUser({firstName,password,plan='free',memberCode=''
     role:'retail',
     plan:'free',
     status:'active',
+    role:'retail',
     requestedPlan:['pro','community'].includes(plan)?plan:null,
     communityStatus:plan==='community'?'pending':null,
     createdAt:serverTimestamp(),
