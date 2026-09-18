@@ -1,0 +1,6 @@
+# Firebase / local credentials
+serviceAccount*.json
+*-firebase-adminsdk-*.json
+.env
+.env.*
+node_modules/
