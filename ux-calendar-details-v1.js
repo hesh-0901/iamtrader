@@ -1,8 +1,7 @@
 /* IAMTRADER CALENDAR DETAILS V3 — one trade per page + Journal fields */
 (()=>{
-const KEY='iamtrader:v1';
 const esc=v=>String(v??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]));
-const read=()=>{try{return JSON.parse(localStorage.getItem(KEY))||{}}catch{return {}}};
+const read=()=>window.IAMTRADER?.state||{trades:[],accounts:[],activeAccountId:null};
 const dateOnly=s=>{const d=new Date(s);return Number.isNaN(d.getTime())?null:new Date(d.getFullYear(),d.getMonth(),d.getDate())};
 const key=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
 const account=()=>{const s=read();return (s.accounts||[]).find(a=>a.id===s.activeAccountId)||null};
