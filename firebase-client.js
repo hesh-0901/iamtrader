@@ -8,7 +8,7 @@ import {
   onAuthStateChanged
 } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
 import {
-  getFirestore,
+  initializeFirestore,
   doc,
   getDoc,
   getDocs,
@@ -29,7 +29,9 @@ let db=null;
 if(firebaseConfigured){
   app=initializeApp(firebaseConfig);
   auth=getAuth(app);
-  db=getFirestore(app);
+  // Certains navigateurs/extensions bloquent le transport WebChannel de Firestore.
+  // Force le transport long-polling pour éviter les erreurs ERR_BLOCKED_BY_CLIENT.
+  db=initializeFirestore(app,{experimentalForceLongPolling:true});
 }
 
 export const IAMTRADER_BOOTSTRAP_ADMIN_UID='pPIFw9YSgMd4Exp2vobl1CMOqJ3';
