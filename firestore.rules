@@ -16,7 +16,9 @@ service cloud.firestore {
     }
 
     match /users/{uid} {
-      allow create: if isOwner(uid);
+      allow create: if isOwner(uid)
+        && request.resource.data.plan == 'free'
+        && request.resource.data.status == 'active';
       allow read: if isOwner(uid) || isAdmin();
 
       // Users may update their profile, but never self-promote their access level.
@@ -38,7 +40,8 @@ service cloud.firestore {
     }
 
     match /trades/{tradeId} {
-      allow read, create: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow create: if signedIn() && request.resource.data.uid == request.auth.uid;
+      allow read: if signedIn() && resource.data.uid == request.auth.uid;
       allow update, delete: if signedIn() && resource.data.uid == request.auth.uid;
       allow read: if signedIn() && resource.data.uid == request.auth.uid;
       allow write: if isAdmin();
