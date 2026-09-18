@@ -178,7 +178,7 @@ function memberModule(type){const modules={
 'tradingview':['OUTILS TRADING','Indicateurs TradingView','Accédez aux indicateurs TradingView IAMTRADER et à leurs informations d’utilisation.','chart']};const m=modules[type]||modules['member-analysis'];return `<div class="page-head"><div><span class="eyebrow">${m[0]}</span><h2>${m[1]}</h2><p>${m[2]}</p></div></div><section class="card iam-module-landing"><div class="iam-module-icon">${icon(m[3],34)}</div><div><span class="metric-label">MODULE IAMTRADER</span><h3>${m[1]}</h3><p>Cette section est en préparation. Son accès sera relié progressivement aux données et services IAMTRADER.</p></div></section>`}
 function render(){const pages={dashboard,journal,performance:performancePage,psychology:psychologyPage,settings,accounts:accountsPage,calendar:()=>simpleModal('Calendrier','OUTIL','Le calendrier des événements et des sessions sera accessible depuis ce module.','calendar'),export:()=>simpleModal('Exporter / Importer','DONNÉES','Le module est séparé pour éviter d’alourdir les paramètres principaux.','upload'),'member-analysis':()=>memberModule('member-analysis'),'iam-analysis':()=>memberModule('iam-analysis'),'daily-bias':()=>memberModule('daily-bias'),'fundamental':()=>memberModule('fundamental'),'tradingview':()=>memberModule('tradingview'),'trader-score':traderScorePage};if(!canAccess(state.page)){state.page='journal'}document.querySelector('#app').innerHTML=layout((pages[state.page]||journal)());bind();if(state.page==='admin'&&currentRole()==='admin'){renderAdminPage({icon,toast})}}
 function bind(){document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>{const page=b.dataset.page;if(!canAccess(page)){toast('Cette fonctionnalité est réservée aux membres Community.');return}state.page=page;render()});document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{const x=b.dataset.open;if(x==='trade')openTradeModal();else if(x==='account')openAccountModal();else if(x==='instruments'){document.body.insertAdjacentHTML('beforeend',instrumentsModal());bindModal(document.body.lastElementChild)}else if(x==='data')document.body.insertAdjacentHTML('beforeend',simpleModal('Données','GESTION','Import, export et sauvegarde locale seront regroupés ici.','upload'));else if(x==='preferences')document.body.insertAdjacentHTML('beforeend',simpleModal('Préférences','PERSONNALISATION','Les préférences d’affichage seront regroupées ici.','settings'))});const sel=document.querySelector('#accountSelect');if(sel)sel.onchange=()=>{state.activeAccountId=sel.value;save();render()};document.querySelectorAll('[data-menu]').forEach(b=>b.onclick=()=>showTradeMenu(b.dataset.menu));const search=document.querySelector('#journalSearch');if(search)search.oninput=()=>{state.search=search.value;render()};const fa=document.querySelector('#filterAsset');if(fa)fa.onchange=()=>{state.filters.asset=fa.value;render()};const fd=document.querySelector('#filterDirection');if(fd)fd.onchange=()=>{state.filters.direction=fd.value;render()};const fr=document.querySelector('#filterResult');if(fr)fr.onchange=()=>{state.filters.result=fr.value;render()};const clear=document.querySelector('#clearFilters');if(clear)clear.onclick=()=>{state.search='';state.filters={};render()};const af=document.querySelector('#accountForm');if(af)af.onsubmit=createAccount}
-window.IAMTRADER={state,render,saveUserAccount,saveUserTrade,deleteUserTrade,engines:{calculateRisk,pnl,rMultiple,performance,psychologySummary,traderScore,equityCurve},adminBootstrap:async()=>{const result=await bootstrapAdminAccess();const claims=await getAuthClaims(true);if(state.user){state.user.admin=claims.admin===true;save();}return {worker:result,claims:{admin:claims.admin===true,uid:state.user?.uid||null}};}};
+window.IAMTRADER={state,render,saveUserAccount,saveUserTrade,deleteUserTrade,firestoreDiagnostics:async()=>({profile:await getCurrentProfile(),data:await getUserData(state.user?.uid)}),engines:{calculateRisk,pnl,rMultiple,performance,psychologySummary,traderScore,equityCurve},adminBootstrap:async()=>{const result=await bootstrapAdminAccess();const claims=await getAuthClaims(true);if(state.user){state.user.admin=claims.admin===true;save();}return {worker:result,claims:{admin:claims.admin===true,uid:state.user?.uid||null}};}};
 
 async function bootFirebaseSession(){
   if(!firebaseStatus().configured){
@@ -208,7 +208,7 @@ async function bootFirebaseSession(){
       // Le claim admin doit rester disponible même si une extension,
       // un bloqueur ou un problème réseau empêche temporairement Firestore.
       // Le démarrage de l'interface ne dépend plus d'une lecture Firestore.
-      // Si un bloqueur empêche Firestore, IAMTRADER reste utilisable avec le cache local.
+      // L’état mémoire sert uniquement à rendre l’interface; la source persistante reste Firestore.
       // La synchronisation cloud est tentée ensuite, en arrière-plan.
       let profile=null;
       let cloud=null;
@@ -238,7 +238,7 @@ async function bootFirebaseSession(){
         }
         renderAdminPage({icon,toast});
       // Synchronisation cloud non bloquante : elle ne doit jamais retarder l'ouverture du workspace.
-      Promise.all([getCurrentProfile(),getUserData(user.uid)]).then(async ([remoteProfile,remoteData])=>{
+      Promise.race([Promise.all([getCurrentProfile(),getUserData(user.uid)]),new Promise((_,reject)=>setTimeout(()=>reject(Object.assign(new Error('Lecture Firestore trop lente ou bloquée.'),{code:'iamtrader/firestore-read-timeout'})),15000))]).then(async ([remoteProfile,remoteData])=>{
         profile=remoteProfile;
         cloud=remoteData;
         if(profile){
@@ -263,7 +263,8 @@ async function bootFirebaseSession(){
           if(location.hash==='#app') render();
         }
       }).catch(error=>{
-        console.warn('IAMTRADER Firestore indisponible — utilisation du cache local:',error);
+        console.error('[IAMTRADER FIRESTORE] cloud sync failed',{code:error?.code,message:error?.message,error});
+        toast(`Firestore : ${error?.message||'lecture impossible'}`);
       });
 
       }else if(location.hash==='#home'||location.hash==='#home-settings'){
