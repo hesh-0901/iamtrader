@@ -49,35 +49,59 @@ function monthLabel(){return new Date().toLocaleDateString('fr-FR',{month:'short
 function userHome(){
   const firstName=state.user?.firstName||'Trader', plan=currentPlan(), admin=currentRole()==='admin';
   const cards=[
-    ['journal','Journal','Trades · Track Record · Psychologie','book'],
-    ['member-analysis','Analyses des membres','Données · Comportements · Progression','chart'],
-    ['iam-analysis','Analyse IAMTRADER','Tendances · Données agrégées','trophy'],
-    ['daily-bias','Biais Daily','Contexte HTF · Scénarios','target'],
-    ['fundamental','Actu & Analyse Fonda','Macro · Économie · Marchés','chart'],
-    ['tradingview','Indicateurs TradingView','Outils · TradingView','chart']
+    ['journal','Journal','Trades · Track Record · Psychologie','book','workspace-card-main'],
+    ['member-analysis','Analyses des membres','Données · Comportements · Progression','chart',''],
+    ['iam-analysis','Analyse IAMTRADER','Tendances · Données agrégées','trophy',''],
+    ['daily-bias','Biais Daily','Contexte HTF · Scénarios','target',''],
+    ['fundamental','Actu & Analyse Fonda','Macro · Économie · Marchés','chart',''],
+    ['tradingview','Indicateurs TradingView','Outils · TradingView','chart','']
   ].filter(x=>canAccess(x[0]));
-  return `<div class="user-home-shell">
+  return `<div class="user-home-shell user-home-v2">
     <header class="user-home-nav">
       <button class="user-home-brand" data-home-route="home"><span>↗</span>IAM<span>TRADER</span></button>
       <nav><button class="home-nav-active">Accueil</button><button data-home-route="home-settings">Paramètres</button></nav>
       <div class="user-home-profile"><div class="home-avatar">${esc(firstName.charAt(0).toUpperCase())}</div><div><b>${esc(firstName)}</b><small>${admin?'ADMINISTRATEUR':planLabel()}</small></div></div>
     </header>
     <main class="user-home-main">
-      <section class="user-home-hero">
-        <div><span class="home-kicker">VOTRE ESPACE</span><h1>Bonjour, ${esc(firstName)}.</h1><p>Bienvenue dans votre espace IAMTRADER</p></div>
-        <div class="home-hero-badge"><span></span> ESPACE ACTIF</div>
+      <section class="home-command-hero">
+        <div class="home-hero-copy">
+          <div class="home-kicker">TRADING PERFORMANCE SYSTEM <span>•</span> ${planLabel().toUpperCase()}</div>
+          <h1>Bonjour, ${esc(firstName)}.</h1>
+          <p>Votre espace de contrôle pour accéder à vos outils de trading et à vos analyses.</p>
+          <div class="home-hero-actions"><button class="home-hero-cta" data-workspace-page="journal">${icon('book',17)} Ouvrir le Journal <span>↗</span></button><button class="home-hero-secondary" data-home-route="home-settings">Gérer mon espace</button></div>
+        </div>
+        <div class="home-command-panel">
+          <div class="command-panel-top"><span>ESPACE IAMTRADER</span><i></i></div>
+          <div class="command-panel-grid">
+            <div><small>STATUT</small><strong>ACTIF</strong></div>
+            <div><small>PLAN</small><strong>${planLabel().toUpperCase()}</strong></div>
+            <div><small>DONNÉES</small><strong>PRIVÉES</strong></div>
+          </div>
+          <div class="command-panel-foot"><span>Accès sécurisé</span><b>FIREBASE AUTH</b></div>
+        </div>
       </section>
-      <section class="home-primary-grid">
-        ${cards.map((x,i)=>`<button class="home-product-card ${i===0?'featured':''}" data-workspace-page="${x[0]}">
-          <span class="home-card-index">${String(i+1).padStart(2,'0')}</span><span class="home-card-icon">${icon(x[3],22)}</span>
-          <strong>${x[1]}</strong><small>${x[2]}</small><span class="home-card-arrow">↗</span>
+      <section class="home-section-head"><div><span class="home-kicker">VOTRE WORKSPACE</span><h2>Tout ce dont vous avez besoin.</h2></div><span class="home-module-count">${String(cards.length).padStart(2,'0')} MODULES DISPONIBLES</span></section>
+      <section class="home-product-grid-v2">
+        ${cards.map((x,i)=>`<button class="home-product-card-v2 ${x[4]}" data-workspace-page="${x[0]}">
+          <span class="home-card-index">${String(i+1).padStart(2,'0')}</span>
+          <span class="home-card-icon-v2">${icon(x[3],22)}</span>
+          <div class="home-card-content"><strong>${x[1]}</strong><small>${x[2]}</small></div>
+          <span class="home-card-arrow-v2">↗</span>
         </button>`).join('')}
-        <button class="home-product-card settings-card" data-home-route="home-settings"><span class="home-card-index">07</span><span class="home-card-icon">${icon('settings',22)}</span><strong>Paramètres</strong><small>Profil · Abonnement · Sécurité</small><span class="home-card-arrow">↗</span></button>
+        <button class="home-product-card-v2 settings-card-v2" data-home-route="home-settings">
+          <span class="home-card-index">07</span><span class="home-card-icon-v2">${icon('settings',22)}</span>
+          <div class="home-card-content"><strong>Paramètres</strong><small>Profil · Abonnement · Sécurité</small></div><span class="home-card-arrow-v2">↗</span>
+        </button>
       </section>
-      <section class="home-bottom-bar"><div><span class="home-kicker">VOTRE PLAN</span><strong>${planLabel()}</strong><small>${plan==='community'?'Accès complet à l’écosystème IAMTRADER.':plan==='pro'?'Journal et paramètres disponibles.':'Journal disponible pour commencer.'}</small></div><button data-workspace-page="journal">Ouvrir le Journal <span>→</span></button></section>
+      <section class="home-plan-panel">
+        <div class="plan-panel-mark">IAM</div>
+        <div class="plan-panel-copy"><span class="home-kicker">VOTRE PLAN</span><strong>${planLabel()}</strong><p>${plan==='community'?'Accès complet à l’écosystème IAMTRADER.':plan==='pro'?'Journal et paramètres disponibles.':'Journal disponible pour commencer.'}</p></div>
+        <div class="plan-panel-meta"><span>STATUT</span><b>ACTIF</b></div>
+        <button data-workspace-page="journal">Entrer dans le Journal <span>→</span></button>
+      </section>
     </main>
-    <footer class="user-home-footer"><span>IAMTRADER</span><span>PLAN · TRADE · ANALYSE · PROGRÈS</span></footer>
-  </div>`
+    <footer class="user-home-footer"><span>IAMTRADER <b>2026</b></span><span>PLAN · TRADE · ANALYSE · PROGRÈS</span></footer>
+  </div>`;
 }
 function homeSettings(){
   const firstName=state.user?.firstName||'Trader', plan=currentPlan(), admin=currentRole()==='admin';
