@@ -1,0 +1,68 @@
+/* IAMTRADER USER HOME V2 — premium SaaS command center */
+.user-home-v2{background:
+ radial-gradient(circle at 84% 8%,rgba(0,199,150,.055),transparent 28%),
+ radial-gradient(circle at 8% 22%,rgba(10,25,47,.035),transparent 24%),
+ #f6f8fa}
+.user-home-v2 .user-home-nav{height:72px;padding:0 clamp(28px,5vw,72px);background:rgba(255,255,255,.92);backdrop-filter:blur(16px);border-bottom:1px solid #e5ebef;position:sticky;top:0;z-index:10}
+.user-home-v2 .user-home-brand{font-size:19px;gap:10px}
+.user-home-v2 .user-home-brand>span:first-child{width:34px;height:34px;border-radius:10px;box-shadow:0 6px 18px rgba(10,25,47,.16)}
+.user-home-v2 .user-home-nav nav{position:absolute;left:50%;transform:translateX(-50%);background:#f4f6f7;border:1px solid #e7ecef;padding:4px;border-radius:12px}
+.user-home-v2 .user-home-nav nav button{padding:9px 16px;border-radius:9px}
+.user-home-v2 .user-home-nav nav .home-nav-active{background:#fff;box-shadow:0 2px 8px rgba(10,25,47,.06)}
+.user-home-v2 .user-home-profile{min-width:180px}
+.user-home-v2 .home-avatar{width:36px;height:36px;border:1px solid #d9eee8;background:#ecfaf7;box-shadow:inset 0 0 0 4px #fff}
+.user-home-v2 .user-home-main{width:min(1280px,calc(100% - 56px));padding:58px 0 36px}
+.home-command-hero{position:relative;overflow:hidden;display:grid;grid-template-columns:minmax(0,1.45fr) minmax(330px,.75fr);gap:24px;min-height:315px;padding:42px;border-radius:24px;background:#fff;border:1px solid #e0e7eb;box-shadow:0 20px 55px rgba(10,25,47,.07)}
+.home-command-hero:before{content:"";position:absolute;width:420px;height:420px;border-radius:50%;right:-190px;top:-250px;border:1px solid rgba(0,199,150,.16);box-shadow:0 0 0 70px rgba(0,199,150,.025),0 0 0 140px rgba(0,199,150,.018)}
+.home-hero-copy{position:relative;z-index:1;display:flex;flex-direction:column;justify-content:center}
+.home-kicker{font-size:9px;letter-spacing:.18em;font-weight:900;color:#00a982}
+.home-kicker span{color:#c2ccd3;margin:0 5px}
+.home-hero-copy h1{font-size:50px;line-height:.98;letter-spacing:-.055em;margin:14px 0 11px;color:#0a192f}
+.home-hero-copy p{max-width:600px;margin:0;color:#718091;font-size:14px;line-height:1.7}
+.home-hero-actions{display:flex;gap:10px;margin-top:27px}
+.home-hero-cta,.home-hero-secondary{height:44px;border-radius:11px;padding:0 16px;font-size:11px;font-weight:900;cursor:pointer}
+.home-hero-cta{display:flex;align-items:center;gap:9px;border:0;background:#00c796;color:#03271f;box-shadow:0 10px 24px rgba(0,199,150,.2)}
+.home-hero-cta span{font-size:15px;margin-left:8px}
+.home-hero-secondary{border:1px solid #dfe6ea;background:#fff;color:#526171}
+.home-command-panel{align-self:stretch;position:relative;z-index:1;padding:23px;border-radius:17px;background:#0a192f;color:#fff;display:flex;flex-direction:column;justify-content:space-between;box-shadow:0 18px 38px rgba(10,25,47,.16)}
+.command-panel-top{display:flex;justify-content:space-between;align-items:center;font-size:8px;font-weight:900;letter-spacing:.16em;color:#9aaabd}
+.command-panel-top i{width:7px;height:7px;border-radius:50%;background:#00c796;box-shadow:0 0 0 5px rgba(0,199,150,.1)}
+.command-panel-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.command-panel-grid div{padding:14px 0;border-top:1px solid rgba(255,255,255,.11)}
+.command-panel-grid div:last-child{grid-column:1/-1}
+.command-panel-grid small,.plan-panel-meta span{display:block;font-size:8px;letter-spacing:.14em;color:#8191a5;font-weight:900}
+.command-panel-grid strong{display:block;margin-top:6px;font:800 17px ui-monospace,SFMono-Regular,Menlo,monospace;color:#fff}
+.command-panel-grid div:last-child strong{color:#00c796}
+.command-panel-foot{padding-top:14px;border-top:1px solid rgba(255,255,255,.1);display:flex;justify-content:space-between;font-size:8px;color:#8d9caf}
+.command-panel-foot b{color:#b7c2ce;letter-spacing:.08em}
+.home-section-head{display:flex;align-items:end;justify-content:space-between;margin:52px 2px 17px}
+.home-section-head h2{margin:7px 0 0;font-size:25px;letter-spacing:-.035em;color:#0a192f}
+.home-module-count{font:800 9px ui-monospace,SFMono-Regular,Menlo,monospace;color:#8a97a5;letter-spacing:.08em}
+.home-product-grid-v2{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:13px}
+.home-product-card-v2{position:relative;min-height:178px;text-align:left;border:1px solid #e0e7eb;border-radius:17px;background:#fff;padding:23px;cursor:pointer;transition:transform .18s ease,box-shadow .18s ease,border-color .18s ease;box-shadow:0 8px 28px rgba(10,25,47,.035)}
+.home-product-card-v2:hover{transform:translateY(-4px);border-color:#cbd8de;box-shadow:0 17px 38px rgba(10,25,47,.09)}
+.home-product-card-v2:after{content:"";position:absolute;left:0;bottom:0;width:0;height:2px;background:#00c796;transition:width .2s ease}
+.home-product-card-v2:hover:after{width:100%}
+.home-product-card-v2.workspace-card-main{grid-column:span 2;min-height:205px;background:linear-gradient(135deg,#fbfffe,#fff);border-color:#cfe8e1;box-shadow:0 14px 38px rgba(0,150,115,.065)}
+.home-card-index{position:absolute;top:19px;right:20px;color:#a4afb8;font:700 9px ui-monospace,SFMono-Regular,Menlo,monospace}
+.home-card-icon-v2{width:44px;height:44px;border-radius:12px;background:#f2f5f7;color:#0a192f;display:grid;place-items:center;margin-bottom:25px}
+.workspace-card-main .home-card-icon-v2{background:#e9faf6;color:#00a982}
+.home-card-content strong{display:block;font-size:16px;letter-spacing:-.025em;color:#0a192f}
+.home-card-content small{display:block;margin-top:7px;color:#8a96a3;font-size:10px}
+.home-card-arrow-v2{position:absolute;right:20px;bottom:19px;color:#9ca8b3;font-size:16px}
+.home-product-card-v2:hover .home-card-arrow-v2{color:#00a982}
+.settings-card-v2{background:#f9fafb}
+.home-plan-panel{margin-top:15px;display:grid;grid-template-columns:auto 1fr auto auto;align-items:center;gap:19px;padding:20px 22px;border-radius:17px;background:#0a192f;color:#fff;box-shadow:0 16px 38px rgba(10,25,47,.12)}
+.plan-panel-mark{width:45px;height:45px;border-radius:12px;display:grid;place-items:center;background:#122642;color:#00c796;font:900 12px ui-monospace,SFMono-Regular,Menlo,monospace;border:1px solid rgba(0,199,150,.2)}
+.plan-panel-copy strong{display:block;font-size:17px;margin-top:5px}.plan-panel-copy p{margin:4px 0 0;color:#98a8ba;font-size:10px}
+.plan-panel-meta{padding-left:22px;border-left:1px solid rgba(255,255,255,.12)}.plan-panel-meta b{display:block;margin-top:5px;color:#00c796;font-size:10px}
+.home-plan-panel button{height:40px;border:0;border-radius:10px;background:#00c796;color:#03271f;padding:0 15px;font-size:10px;font-weight:900;cursor:pointer}.home-plan-panel button span{margin-left:10px}
+.user-home-v2 .user-home-footer{width:min(1280px,calc(100% - 56px));padding:0 0 27px;color:#99a5b0}.user-home-footer b{font-weight:700;color:#b3bdc5}
+.user-home-v2 .settings-home-main{padding-top:52px}
+.user-home-v2 .settings-home-head h1{font-size:43px}
+.user-home-v2 .settings-home-grid{gap:14px}
+.user-home-v2 .home-setting-card{border-radius:18px;box-shadow:0 10px 30px rgba(10,25,47,.045);padding:27px;min-height:220px}
+.user-home-v2 .home-setting-card:hover{border-color:#d2dde2;box-shadow:0 14px 34px rgba(10,25,47,.07)}
+.user-home-v2 .admin-setting-card{background:linear-gradient(135deg,#fbfffe,#f6fcfa)}
+@media(max-width:900px){.home-command-hero{grid-template-columns:1fr}.home-command-panel{min-height:210px}.home-product-grid-v2{grid-template-columns:repeat(2,minmax(0,1fr))}.workspace-card-main{grid-column:1/-1!important}}
+@media(max-width:700px){.user-home-v2 .user-home-nav{padding:0 18px}.user-home-v2 .user-home-nav nav{display:none}.user-home-v2 .user-home-main{width:calc(100% - 30px);padding-top:34px}.home-command-hero{padding:27px 22px;border-radius:19px}.home-hero-copy h1{font-size:36px}.home-hero-actions{flex-direction:column}.home-product-grid-v2{grid-template-columns:1fr}.home-product-card-v2.workspace-card-main{grid-column:auto!important}.home-section-head{align-items:flex-start;gap:10px;flex-direction:column}.home-plan-panel{grid-template-columns:auto 1fr}.home-plan-panel button{grid-column:1/-1}.plan-panel-meta{display:none}.user-home-v2 .user-home-footer{width:calc(100% - 30px)}}
