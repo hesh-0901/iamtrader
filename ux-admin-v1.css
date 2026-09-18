@@ -33,3 +33,29 @@
 .admin-note b{color:#0a192f}
 @media(max-width:1000px){.admin-stats{grid-template-columns:repeat(2,1fr)}.admin-grid{grid-template-columns:1fr}}
 @media(max-width:620px){.admin-stats{grid-template-columns:1fr}.admin-head{align-items:flex-start;flex-direction:column}.admin-table{min-width:680px}.admin-card{overflow:auto}}
+
+/* IAMTRADER ADMIN CONSOLE V2 — standalone */
+.admin-console-shell{min-height:100vh;background:#f5f7f9;color:#0a192f}
+.admin-console-nav{height:72px;padding:0 clamp(24px,5vw,72px);display:flex;align-items:center;justify-content:space-between;background:#0a192f;color:#fff;box-shadow:0 8px 28px rgba(10,25,47,.16)}
+.admin-console-brand{display:flex;align-items:center;gap:9px;border:0;background:none;color:#fff;font-size:19px;font-weight:900;letter-spacing:-.045em;cursor:pointer}
+.admin-console-brand>span:first-child{width:34px;height:34px;border-radius:10px;background:#102642;color:#00c796;display:grid;place-items:center}
+.admin-console-brand span:last-child{color:#00c796}
+.admin-console-nav-title{position:absolute;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:9px}
+.admin-console-nav-title small{font-size:8px;letter-spacing:.17em;color:#8294a9;font-weight:900}
+.admin-console-nav-title b{font:900 10px ui-monospace,SFMono-Regular,Menlo,monospace;color:#fff;letter-spacing:.08em}
+.admin-console-user{display:flex;align-items:center;gap:8px;font:800 8px ui-monospace,SFMono-Regular,Menlo,monospace;color:#b9c5d1;letter-spacing:.1em}
+.admin-console-user i{width:7px;height:7px;border-radius:50%;background:#00c796;box-shadow:0 0 0 5px rgba(0,199,150,.1)}
+.admin-console-shell .admin-page{width:min(1280px,calc(100% - 56px));margin:0 auto;padding:48px 0 45px;display:grid;gap:22px}
+.admin-console-shell .admin-head{padding:8px 2px 4px;align-items:flex-end}
+.admin-console-shell .admin-head h2{font-size:40px;letter-spacing:-.05em;margin:8px 0}
+.admin-console-shell .admin-head p{font-size:13px;line-height:1.6}
+.admin-console-shell .admin-stats{gap:12px}
+.admin-console-shell .admin-stat{padding:22px;border:1px solid #e0e7eb;border-radius:15px;box-shadow:0 8px 25px rgba(10,25,47,.035)}
+.admin-console-shell .admin-stat strong{font-size:31px}
+.admin-console-shell .admin-grid{gap:15px}
+.admin-console-shell .admin-card{border:1px solid #e0e7eb;border-radius:17px;box-shadow:0 10px 30px rgba(10,25,47,.045);background:#fff}
+.admin-console-shell .admin-card-head{padding:20px 22px}
+.admin-console-shell .admin-table th{padding:13px 18px;background:#f8fafb}
+.admin-console-shell .admin-table td{padding:14px 18px}
+.admin-console-shell .admin-note{border-radius:13px;padding:15px 18px}
+@media(max-width:700px){.admin-console-nav{padding:0 18px}.admin-console-nav-title{display:none}.admin-console-shell .admin-page{width:calc(100% - 30px);padding-top:30px}.admin-console-shell .admin-head h2{font-size:31px}}
