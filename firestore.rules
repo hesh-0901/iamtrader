@@ -11,12 +11,20 @@ service cloud.firestore {
       return signedIn() && request.auth.uid == uid;
     }
 
-    function isAdmin() {
+    // Le rôle de sécurité réel vient du custom claim Firebase.
+    // Le champ role du profil sert à distinguer l'utilisateur dans l'application,
+    // mais ne peut jamais à lui seul donner les privilèges superadmin.
+    function isSuperAdmin() {
       return signedIn() && request.auth.token.admin == true;
+    }
+
+    function isAdmin() {
+      return isSuperAdmin();
     }
 
     match /users/{uid} {
       allow create: if isOwner(uid)
+        && request.resource.data.role == 'retail'
         && request.resource.data.plan == 'free'
         && request.resource.data.status == 'active';
       allow read: if isOwner(uid) || isAdmin();
@@ -24,6 +32,7 @@ service cloud.firestore {
       // Users may update their profile, but never self-promote their access level.
       allow update: if isAdmin()
         || (isOwner(uid)
+          && request.resource.data.role == resource.data.role
           && request.resource.data.plan == resource.data.plan
           && request.resource.data.status == resource.data.status
           && request.resource.data.requestedPlan == resource.data.requestedPlan
