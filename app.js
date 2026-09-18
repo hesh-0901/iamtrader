@@ -3,7 +3,7 @@ import {calculateRisk} from './risk-engine.js';
 import {pnl,rMultiple,performance,equityCurve} from './performance-engine.js';
 import {psychologySummary} from './psychology-engine.js';
 import {traderScore} from './score-engine.js';
-import { watchAuth, firebaseStatus, getCurrentProfile, getUserData, getAuthClaims, bootstrapAdminAccess, IAMTRADER_BOOTSTRAP_ADMIN_UID, logoutUser, saveUserAccount, saveUserTrade, deleteUserTrade, migrateSingleAccountTrades, db } from './firebase-client.js?v=20260918-5';
+import { watchAuth, firebaseStatus, getCurrentProfile, getUserData, getAuthClaims, bootstrapAdminAccess, IAMTRADER_BOOTSTRAP_ADMIN_UID, logoutUser, saveUserAccount, saveUserTrade, deleteUserTrade, migrateSingleAccountTrades, db } from './firebase-client.js?v=20260918-6';
 import { doc, getDocFromServer } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 import { renderAdminPage } from './ux-admin-v1.js';
 
