@@ -210,3 +210,11 @@
 @media(max-width:1100px){.admin-layout{grid-template-columns:180px minmax(0,1fr)}.admin-kpis{grid-template-columns:repeat(2,1fr)}.admin-module-grid{grid-template-columns:repeat(2,1fr)}.admin-content-grid,.admin-lower-grid{grid-template-columns:1fr}}
 @media(max-width:760px){.admin-layout{display:block}.admin-sidebar{display:none}.admin-main{padding:24px 14px 35px}.admin-topbar{align-items:flex-start;flex-direction:column}.admin-top-actions{width:100%}.admin-insight-row{grid-template-columns:1fr}.admin-panel-head{align-items:flex-start;flex-direction:column}.admin-panel-tools{width:100%}.admin-search{flex:1;width:auto}.admin-module-grid{grid-template-columns:1fr 1fr}.admin-mini-metrics{grid-template-columns:1fr 1fr}.admin-mini-metrics>div:nth-child(2){border-right:0}.admin-mini-metrics>div{border-bottom:1px solid #edf1f4}.admin-console-nav{padding:0 14px}}
 @media(max-width:480px){.admin-kpis{grid-template-columns:1fr 1fr}.admin-module-grid{grid-template-columns:1fr}.admin-console-user{display:none}.admin-topbar h1{font-size:25px}}
+
+/* ADMIN ACTION MENU V5 — viewport overlay */
+.admin-action-menu{position:relative;display:inline-block}
+.admin-action-menu .admin-action-popover{position:fixed;right:auto;top:auto;left:auto;width:205px;max-height:none;overflow:visible;padding:6px;background:#fff;border:1px solid #dfe7ed;border-radius:12px;box-shadow:0 18px 45px rgba(10,25,47,.18),0 3px 10px rgba(10,25,47,.06);z-index:10000}
+.admin-action-menu summary{position:relative;z-index:2}
+.admin-action-popover button{min-height:32px;line-height:1.25}
+.admin-action-popover button:focus-visible{outline:2px solid rgba(0,199,150,.35);outline-offset:-2px}
+.admin-action-divider{margin:5px 3px}
