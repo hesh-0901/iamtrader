@@ -3,7 +3,7 @@ import {calculateRisk} from './risk-engine.js';
 import {pnl,rMultiple,performance,equityCurve} from './performance-engine.js';
 import {psychologySummary} from './psychology-engine.js';
 import {traderScore} from './score-engine.js';
-import { watchAuth, firebaseStatus, getCurrentProfile, getUserData, getAuthClaims, bootstrapAdminAccess, IAMTRADER_BOOTSTRAP_ADMIN_UID, logoutUser, saveUserAccount, saveUserTrade, deleteUserTrade, db } from './firebase-client.js?v=20260918-3';
+import { watchAuth, firebaseStatus, getCurrentProfile, getUserData, getAuthClaims, bootstrapAdminAccess, IAMTRADER_BOOTSTRAP_ADMIN_UID, logoutUser, saveUserAccount, saveUserTrade, deleteUserTrade, migrateSingleAccountTrades, db } from './firebase-client.js?v=20260918-4';
 import { doc, getDocFromServer } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 import { renderAdminPage } from './ux-admin-v1.js';
 
@@ -249,6 +249,17 @@ async function bootFirebaseSession(){
           state.accounts=cloud.accounts;
           state.trades=cloud.trades;
           state.activeAccountId=state.accounts.some(a=>a.id===state.activeAccountId)?state.activeAccountId:(state.accounts[0]?.id||null);
+          // Migration prudente des anciens trades : seulement lorsqu'un seul compte cloud
+          // existe pour l'utilisateur. Dans ce cas, tout trade de cet utilisateur doit
+          // être rattaché à ce compte unique. Les autres utilisateurs ne sont pas touchés.
+          if(state.accounts.length===1 && state.trades.some(t=>t.accountId!==state.accounts[0].id)){
+            try{
+              const migration=await migrateSingleAccountTrades(state.accounts[0].id);
+              state.trades=Array.isArray(migration?.trades)?migration.trades:state.trades;
+            }catch(error){
+              console.warn('IAMTRADER: migration des anciens trades impossible:',error);
+            }
+          }
           save();
           if(location.hash==='#app') render();
         }
