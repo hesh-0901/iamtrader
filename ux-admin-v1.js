@@ -1,5 +1,5 @@
 /* IAMTRADER ADMIN V1 — read-only control center */
-import { getAdminData } from './firebase-client.js';
+import { getAdminData } from './admin-data-client.js';
 
 function adminEsc(v){return String(v??'').replace(/[&<>\"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',"'":'&#39;'}[c]))}
 function adminMoney(v){return Number(v||0).toLocaleString('fr-FR',{minimumFractionDigits:2,maximumFractionDigits:2})+' USD'}
