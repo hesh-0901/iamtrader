@@ -1,11 +1,10 @@
 /* IAMTRADER CALENDAR V6 — day details + Ctrl multi-selection */
 (()=>{
-  const KEY='iamtrader:v1';
   const today=new Date();
   const monthStart=d=>new Date(d.getFullYear(),d.getMonth(),1);
   const monthRange=d=>({from:new Date(d.getFullYear(),d.getMonth(),1),to:new Date(d.getFullYear(),d.getMonth()+1,0)});
   const state={month:monthStart(today),range:monthRange(today),preset:'month',selectedDates:new Set(),detailDate:null};
-  const read=()=>{try{return JSON.parse(localStorage.getItem(KEY))||{trades:[],accounts:[],activeAccountId:null}}catch{return {trades:[],accounts:[],activeAccountId:null}}};
+  const read=()=>window.IAMTRADER?.state||{trades:[],accounts:[],activeAccountId:null};
   const pad=n=>String(n).padStart(2,'0');
   const key=d=>`${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
   const dateOnly=s=>{const d=new Date(s);return Number.isNaN(d.getTime())?null:new Date(d.getFullYear(),d.getMonth(),d.getDate())};
