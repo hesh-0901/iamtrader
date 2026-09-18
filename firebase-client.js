@@ -11,9 +11,7 @@ import {
   getFirestore,
   doc,
   getDoc,
-  setDoc,
   serverTimestamp,
-  doc,
   writeBatch
 } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 import { firebaseConfig, firebaseConfigured } from './firebase-config.js';
