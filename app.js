@@ -228,8 +228,13 @@ async function bootFirebaseSession(){
         admin:claims.admin===true,
         role:profile?.role||state.user?.role||'retail'
       };
-      state.accounts=cloud.accounts||state.accounts||[];
-      state.trades=cloud.trades||state.trades||[];
+      // Ne'écrase jamais les données locales si Firestore est temporairement indisponible.
+      // Le cache local sert de filet de sécurité jusqu'à la prochaine synchronisation réussie.
+      const firestoreLoaded=Array.isArray(cloud.accounts)&&Array.isArray(cloud.trades);
+      if(firestoreLoaded){
+        state.accounts=cloud.accounts;
+        state.trades=cloud.trades;
+      }
       state.activeAccountId=state.accounts.some(a=>a.id===state.activeAccountId)?state.activeAccountId:(state.accounts[0]?.id||null);
       save();
 
