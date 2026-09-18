@@ -133,4 +133,10 @@ async function bootFirebaseSession(){
     }
   });
 }
+
+
+// Synchronise la route #app avec la session Firebase, notamment après une connexion.
+window.addEventListener('hashchange',()=>{
+  if(location.hash==='#app' && firebaseStatus().configured && state.user) render();
+});
 bootFirebaseSession();
