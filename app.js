@@ -3,6 +3,7 @@ import {calculateRisk} from './risk-engine.js';
 import {pnl,rMultiple,performance,equityCurve} from './performance-engine.js';
 import {psychologySummary} from './psychology-engine.js';
 import {traderScore} from './score-engine.js';
+import { watchAuth, firebaseStatus, getCurrentProfile } from './firebase-client.js';
 
 const KEY='iamtrader:v1';
 const state=load();
@@ -37,7 +38,7 @@ function icon(name,size=22){const paths={
  bell:'<path d="M18 9a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9M10 21h4"/>',
  menu:'<path d="M5 7h14M5 12h14M5 17h14"/>'
 };return `<svg class="ui-icon" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name]||paths.menu}</svg>`}
-function currentPlan(){const raw=state.plan||state.user?.plan||state.subscription?.plan||state.profile?.plan||'free';const p=String(raw).toLowerCase();return ['community','member','membre'].includes(p)?'community':p==='pro'?'pro':'free'}
+function currentPlan(){const raw=state.user?.plan||state.plan||state.subscription?.plan||state.profile?.plan||'free';const p=String(raw).toLowerCase();return ['community','member','membre'].includes(p)?'community':p==='pro'?'pro':'free'}
 function canAccess(page){const plan=currentPlan();if(plan==='community')return true;if(plan==='pro')return page==='journal'||page==='settings';return page==='journal'}
 function planLabel(){return currentPlan()==='community'?'COMMUNITY':currentPlan()==='pro'?'PRO':'FREE'}
 function nav(){const plan=currentPlan();const groups=[['MON TRADING',[['journal','Journal','book']]],...(plan==='community'?[['INTELLIGENCE TRADER',[['member-analysis','Analyses des membres','chart']]],['INTELLIGENCE IAMTRADER',[['iam-analysis','Analyse IAMTRADER','trophy'],['daily-bias','Biais Daily','target'],['fundamental','Actu & Analyse Fonda','chart']]],['OUTILS',[['tradingview','Indicateurs TradingView','chart']]]]:[]),['COMPTE',[['settings','Paramètres','settings']]]];return `<aside class="sidebar"><div class="brand"><div class="brand-mark">${icon('target',25)}</div><div><strong>IAM<span>TRADER</span></strong><small>PLAN • TRADE • ANALYSE • PROGRÈS</small></div></div><div class="plan-chip">PLAN <b>${planLabel()}</b></div><nav class="nav">${groups.map(([title,items])=>`<div class="nav-group"><span class="nav-title">${title}</span>${items.map(([p,l,i])=>`<button class="nav-item ${state.page===p?'active':''}" data-page="${p}">${icon(i,20)}<span>${l}</span></button>`).join('')}</div>`).join('')}</nav><div class="sidebar-quote">« Un meilleur trader<br><b>chaque jour.</b> »</div></aside>`}
@@ -94,4 +95,26 @@ function memberModule(type){const modules={
 function render(){const pages={dashboard,journal,performance:performancePage,psychology:psychologyPage,settings,accounts:accountsPage,calendar:()=>simpleModal('Calendrier','OUTIL','Le calendrier des événements et des sessions sera accessible depuis ce module.','calendar'),export:()=>simpleModal('Exporter / Importer','DONNÉES','Le module est séparé pour éviter d’alourdir les paramètres principaux.','upload'),'member-analysis':()=>memberModule('member-analysis'),'iam-analysis':()=>memberModule('iam-analysis'),'daily-bias':()=>memberModule('daily-bias'),'fundamental':()=>memberModule('fundamental'),'tradingview':()=>memberModule('tradingview')};if(!canAccess(state.page)){state.page='journal'}document.querySelector('#app').innerHTML=layout((pages[state.page]||journal)());bind()}
 function bind(){document.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>{const page=b.dataset.page;if(!canAccess(page)){toast('Cette fonctionnalité est réservée aux membres Community.');return}state.page=page;render()});document.querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>{const x=b.dataset.open;if(x==='trade')openTradeModal();else if(x==='account')openAccountModal();else if(x==='instruments'){document.body.insertAdjacentHTML('beforeend',instrumentsModal());bindModal(document.body.lastElementChild)}else if(x==='data')document.body.insertAdjacentHTML('beforeend',simpleModal('Données','GESTION','Import, export et sauvegarde locale seront regroupés ici.','upload'));else if(x==='preferences')document.body.insertAdjacentHTML('beforeend',simpleModal('Préférences','PERSONNALISATION','Les préférences d’affichage seront regroupées ici.','settings'))});const sel=document.querySelector('#accountSelect');if(sel)sel.onchange=()=>{state.activeAccountId=sel.value;save();render()};document.querySelectorAll('[data-menu]').forEach(b=>b.onclick=()=>showTradeMenu(b.dataset.menu));const search=document.querySelector('#journalSearch');if(search)search.oninput=()=>{state.search=search.value;render()};const fa=document.querySelector('#filterAsset');if(fa)fa.onchange=()=>{state.filters.asset=fa.value;render()};const fd=document.querySelector('#filterDirection');if(fd)fd.onchange=()=>{state.filters.direction=fd.value;render()};const fr=document.querySelector('#filterResult');if(fr)fr.onchange=()=>{state.filters.result=fr.value;render()};const clear=document.querySelector('#clearFilters');if(clear)clear.onclick=()=>{state.search='';state.filters={};render()};const af=document.querySelector('#accountForm');if(af)af.onsubmit=createAccount}
 window.IAMTRADER={state,engines:{calculateRisk,pnl,rMultiple,performance,psychologySummary,traderScore,equityCurve}};
-if(location.hash==='#app') render();
+
+async function bootFirebaseSession(){
+  if(!firebaseStatus().configured){
+    if(location.hash==='#app') render();
+    return;
+  }
+  watchAuth(async user=>{
+    if(!user){
+      state.user=null;
+      if(location.hash==='#app') location.hash='#login';
+      return;
+    }
+    try{
+      const profile=await getCurrentProfile();
+      state.user=profile||{uid:user.uid,firstName:user.displayName||'',plan:'free',status:'active'};
+      if(location.hash==='#app') render();
+    }catch(error){
+      console.error('IAMTRADER Firebase profile error',error);
+      if(location.hash==='#app') location.hash='#login';
+    }
+  });
+}
+bootFirebaseSession();
