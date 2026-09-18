@@ -190,11 +190,34 @@ export async function renderAdminPage({icon,toast,mount=document.querySelector('
     root.querySelector('[data-admin-modal]').addEventListener('click',e=>{
       if(e.target.matches('[data-admin-modal]')||e.target.closest('[data-admin-modal-close]')) closeModal();
     });
+    root.querySelectorAll('.admin-action-menu').forEach(menu=>{
+      menu.addEventListener('toggle',()=>{
+        if(!menu.open) return;
+        root.querySelectorAll('.admin-action-menu[open]').forEach(other=>{if(other!==menu)other.open=false;});
+        const summary=menu.querySelector('summary');
+        const popover=menu.querySelector('.admin-action-popover');
+        if(!summary||!popover)return;
+        const r=summary.getBoundingClientRect();
+        const width=205;
+        const gap=7;
+        const left=Math.min(Math.max(10,r.right-width),window.innerWidth-width-10);
+        const top=r.bottom+gap;
+        popover.style.left=left+'px';
+        popover.style.top=Math.min(top,window.innerHeight-popover.offsetHeight-10)+'px';
+      });
+    });
     root.addEventListener('click',e=>{
+      const menu=e.target.closest('.admin-action-menu');
+      if(!menu){
+        root.querySelectorAll('.admin-action-menu[open]').forEach(x=>x.open=false);
+      }
       const userBtn=e.target.closest('[data-action]');
       if(userBtn){handleUserAction(userBtn.dataset.action,userBtn.dataset.uid);return;}
       const communityBtn=e.target.closest('[data-community-action]');
       if(communityBtn){handleCommunityAction(communityBtn.dataset.communityAction,communityBtn.dataset.uid);}
+    });
+    root.addEventListener('keydown',e=>{
+      if(e.key==='Escape')root.querySelectorAll('.admin-action-menu[open]').forEach(x=>x.open=false);
     });
   }
 
