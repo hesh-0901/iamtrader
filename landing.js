@@ -1,4 +1,4 @@
-import { registerUser, loginUser, firebaseStatus } from './firebase-client.js?v=20260918-6';
+import { registerUser, loginUser, firebaseStatus } from './firebase-client.js?v=20260918-7';
 /* IAMTRADER PUBLIC EXPERIENCE — landing + account creation */
 const app=document.querySelector('#app');
 const AUTH_TIMEOUT_MS=15000;
