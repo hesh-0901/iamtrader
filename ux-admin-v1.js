@@ -285,6 +285,10 @@ export async function renderAdminPage({icon,toast,mount=document.querySelector('
       ].join('');
 
       root.querySelector('[data-admin-user-count]').textContent=users.length+' profil(s)';
+      const sideUsers=root.querySelector('[data-side-users]'); if(sideUsers)sideUsers.textContent=users.length;
+      const sideCommunity=root.querySelector('[data-side-community]'); if(sideCommunity)sideCommunity.textContent=pending;
+      const sideAccounts=root.querySelector('[data-side-accounts]'); if(sideAccounts)sideAccounts.textContent=accounts.length;
+      const sideTrades=root.querySelector('[data-side-trades]'); if(sideTrades)sideTrades.textContent=trades.length;
 
       root.querySelector('[data-admin-users]').innerHTML=users.length?`
         <div style="overflow:auto"><table class="admin-table">
