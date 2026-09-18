@@ -6,7 +6,7 @@ function adminMoney(v){return Number(v||0).toLocaleString('fr-FR',{minimumFracti
 function adminFormatDate(v){if(!v)return '—';const d=v?.toDate?v.toDate():new Date(v);return Number.isNaN(d.getTime())?'—':d.toLocaleDateString('fr-FR')}
 function adminStat(label,value,sub){return `<div class="card admin-stat"><small>${label}</small><strong>${value}</strong><span>${sub}</span></div>`}
 
-export async function renderAdminPage({icon,toast}){
+export async function renderAdminPage({icon,toast,mount=document.querySelector('#app')}){
   const root=document.createElement('div');
   root.className='admin-page';
   root.innerHTML=`
@@ -79,5 +79,6 @@ export async function renderAdminPage({icon,toast}){
     }
   }
   root.querySelector('[data-admin-refresh]').onclick=load;
-  mount();
+  root.querySelector('[data-admin-home]').onclick=()=>{location.hash='#home-settings'};
+  mountRoot();
 }
