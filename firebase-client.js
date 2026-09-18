@@ -11,8 +11,14 @@ import {
   getFirestore,
   doc,
   getDoc,
+  getDocs,
+  collection,
+  query,
+  where,
   serverTimestamp,
-  writeBatch
+  writeBatch,
+  setDoc,
+  deleteDoc
 } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 import { firebaseConfig, firebaseConfigured } from './firebase-config.js';
 
@@ -104,6 +110,41 @@ export async function logoutUser(){
 export function watchAuth(callback){
   if(!firebaseConfigured)return ()=>{};
   return onAuthStateChanged(auth,callback);
+}
+
+export async function getUserData(uid){
+  const {db}=requireFirebase();
+  const [accountsSnap,tradesSnap]=await Promise.all([
+    getDocs(query(collection(db,'accounts'),where('uid','==',uid))),
+    getDocs(query(collection(db,'trades'),where('uid','==',uid)))
+  ]);
+  return {
+    accounts:accountsSnap.docs.map(s=>s.data()),
+    trades:tradesSnap.docs.map(s=>s.data())
+  };
+}
+
+export async function saveUserAccount(account){
+  const {db,auth}=requireFirebase();
+  const uid=auth.currentUser?.uid;
+  if(!uid) throw new Error('Utilisateur non authentifié.');
+  await setDoc(doc(db,'accounts',account.id),{...account,uid});
+  return {...account,uid};
+}
+
+export async function saveUserTrade(trade){
+  const {db,auth}=requireFirebase();
+  const uid=auth.currentUser?.uid;
+  if(!uid) throw new Error('Utilisateur non authentifié.');
+  await setDoc(doc(db,'trades',trade.id),{...trade,uid});
+  return {...trade,uid};
+}
+
+export async function deleteUserTrade(tradeId){
+  const {db,auth}=requireFirebase();
+  const uid=auth.currentUser?.uid;
+  if(!uid) throw new Error('Utilisateur non authentifié.');
+  await deleteDoc(doc(db,'trades',tradeId));
 }
 
 export async function getCurrentProfile(){
