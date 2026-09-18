@@ -8,8 +8,10 @@ function adminStat(label,value,sub){return `<div class="card admin-stat"><small>
 
 export async function renderAdminPage({icon,toast,mount=document.querySelector('#app')}){
   const root=document.createElement('div');
-  root.className='admin-page';
+  root.className='admin-console-shell';
   root.innerHTML=`
+    <div class="admin-console-nav"><button class="admin-console-brand" data-admin-home><span>↗</span>IAM<span>TRADER</span></button><div class="admin-console-nav-title"><small>IAMTRADER</small><b>ADMIN CONSOLE</b></div><div class="admin-console-user"><i></i><span>ADMINISTRATEUR</span></div></div>
+    <div class="admin-page">
     <div class="admin-head">
       <div>
         <span class="eyebrow">CONTROL CENTER</span>
@@ -38,9 +40,10 @@ export async function renderAdminPage({icon,toast,mount=document.querySelector('
       </section>
     </div>
     <div class="admin-note"><b>Sécurité :</b> ce panneau est protégé par le custom claim Firebase <code>admin: true</code>. Les opérations sensibles comme l'attribution d'un rôle admin ou la gestion des comptes Auth restent côté serveur.</div>
+    </div>
   `;
-  const mount=()=>{
-    document.querySelector('.content')?.replaceChildren(root);
+  const mountRoot=()=>{
+    (mount||document.querySelector('#app'))?.replaceChildren(root);
     load();
   };
   async function load(){
