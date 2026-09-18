@@ -5,7 +5,6 @@ import {psychologySummary} from './psychology-engine.js';
 import {traderScore} from './score-engine.js';
 import { watchAuth, firebaseStatus, getCurrentProfile, getUserData, getAuthClaims, logoutUser, saveUserAccount, saveUserTrade, deleteUserTrade } from './firebase-client.js';
 import { renderAdminPage } from './ux-admin-v1.js';
-import { renderAdminPage } from './ux-admin-v1.js';
 
 const KEY='iamtrader:v1';
 const state=load();
