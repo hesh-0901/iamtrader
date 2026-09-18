@@ -48,6 +48,16 @@ export async function renderAdminPage({icon,toast,mount=document.querySelector('
         </section>
       </div>
 
+      <section class="admin-modules">
+        <div class="admin-module-head"><div><span class="admin-panel-kicker">OPERATIONS</span><h2>Centre de pilotage</h2><p>Les indicateurs essentiels de la plateforme, réunis dans un espace compact.</p></div></div>
+        <div class="admin-module-grid">
+          <article class="admin-module-card"><div class="admin-module-icon">↗</div><span>COMPTES TRADING</span><strong data-module-accounts>—</strong><small>comptes enregistrés</small></article>
+          <article class="admin-module-card"><div class="admin-module-icon">◔</div><span>ACTIVITÉ</span><strong data-module-trades>—</strong><small>opérations enregistrées</small></article>
+          <article class="admin-module-card"><div class="admin-module-icon">◆</div><span>COMMUNITY</span><strong data-module-pending>—</strong><small>demandes en attente</small></article>
+          <article class="admin-module-card"><div class="admin-module-icon">✓</div><span>SÉCURITÉ</span><strong>ACTIVE</strong><small>protection administrateur</small></article>
+        </div>
+      </section>
+
       <div class="admin-note"><b>Sécurité :</b> ce panneau est protégé par le custom claim Firebase <code>admin: true</code>. Les opérations sensibles restent côté serveur.</div>
     </div>
 
@@ -196,6 +206,9 @@ export async function renderAdminPage({icon,toast,mount=document.querySelector('
       const users=data.users||[],accounts=data.accounts||[],trades=data.trades||[],requests=data.communityRequests||[];
       const active=users.filter(u=>u.status==='active').length;
       const pending=requests.filter(r=>r.status==='pending').length;
+      root.querySelector('[data-module-accounts]').textContent=accounts.length;
+      root.querySelector('[data-module-trades]').textContent=trades.length;
+      root.querySelector('[data-module-pending]').textContent=pending;
 
       stats.innerHTML=[
         adminStat('Utilisateurs',users.length,active+' actifs'),
