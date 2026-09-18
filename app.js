@@ -3,7 +3,7 @@ import {calculateRisk} from './risk-engine.js';
 import {pnl,rMultiple,performance,equityCurve} from './performance-engine.js';
 import {psychologySummary} from './psychology-engine.js';
 import {traderScore} from './score-engine.js';
-import { watchAuth, firebaseStatus, getCurrentProfile, getUserData, getAuthClaims, logoutUser, saveUserAccount, saveUserTrade, deleteUserTrade } from './firebase-client.js';
+import { watchAuth, firebaseStatus, getCurrentProfile, getUserData, getAuthClaims, bootstrapAdminAccess, IAMTRADER_BOOTSTRAP_ADMIN_UID, logoutUser, saveUserAccount, saveUserTrade, deleteUserTrade } from './firebase-client.js';
 import { renderAdminPage } from './ux-admin-v1.js';
 
 const KEY='iamtrader:v1';
@@ -221,11 +221,22 @@ async function bootFirebaseSession(){
       return;
     }
     try{
-      const [profile,cloud,claims]=await Promise.all([
+      const [profile,cloud]=await Promise.all([
         getCurrentProfile(),
-        getUserData(user.uid),
-        getAuthClaims(true)
+        getUserData(user.uid)
       ]);
+
+      // Le premier administrateur est bootstrapé côté serveur.
+      // Aucun credential Admin SDK n'est exposé au navigateur.
+      if(user.uid===IAMTRADER_BOOTSTRAP_ADMIN_UID){
+        try{
+          await bootstrapAdminAccess();
+        }catch(error){
+          console.warn('IAMTRADER admin bootstrap indisponible:',error);
+        }
+      }
+
+      const claims=await getAuthClaims(true);
       state.user={
         ...(profile||{uid:user.uid,firstName:user.displayName||'',plan:'free',status:'active'}),
         admin:claims.admin===true,
