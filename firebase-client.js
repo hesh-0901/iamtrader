@@ -38,6 +38,8 @@ if(firebaseConfigured){
   functions=getFunctions(app,'us-central1');
 }
 
+export const IAMTRADER_BOOTSTRAP_ADMIN_UID='pPIFw9YSgMd4Exp2vobl1CMOqJ3';
+
 const slugifyName=name=>String(name||'')
   .normalize('NFD')
   .replace(/[\u0300-\u036f]/g,'')
