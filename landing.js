@@ -75,6 +75,6 @@ document.querySelector('[data-switch-auth]').onclick=()=>isLogin?authScreen('reg
 }
 function bindLanding(){
 document.querySelectorAll('[data-register]').forEach(b=>b.onclick=()=>authScreen(b.dataset.register));
-document.querySelectorAll('[data-login]').forEach(b=>b.onclick=()=>authScreen('free'));
+document.querySelectorAll('[data-login]').forEach(b=>b.onclick=()=>authScreen('login'));
 }
-if(location.hash.startsWith('#register-'))authScreen(location.hash.replace('#register-',''));else if(location.hash!=='#app')landing();
+if(location.hash==='#login')authScreen('login');else if(location.hash.startsWith('#register-'))authScreen('register',location.hash.replace('#register-',''));else if(location.hash!=='#app')landing();
