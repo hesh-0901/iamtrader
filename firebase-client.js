@@ -4,6 +4,7 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
+  deleteUser,
   onAuthStateChanged
 } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js';
 import {
@@ -12,8 +13,8 @@ import {
   getDoc,
   setDoc,
   serverTimestamp,
-  collection,
-  addDoc
+  doc,
+  writeBatch
 } from 'https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js';
 import { firebaseConfig, firebaseConfigured } from './firebase-config.js';
 
@@ -66,16 +67,23 @@ export async function registerUser({firstName,password,plan='free',memberCode=''
     createdAt:serverTimestamp(),
     updatedAt:serverTimestamp()
   };
-  await setDoc(doc(db,'users',uid),profile);
-  if(plan==='community'){
-    await addDoc(collection(db,'communityRequests'),{
-      uid,
-      firstName:String(firstName).trim(),
-      requestedPlan:'community',
-      memberCodeSubmitted:Boolean(String(memberCode||'').trim()),
-      status:'pending',
-      createdAt:serverTimestamp()
-    });
+  try{
+    const batch=writeBatch(db);
+    batch.set(doc(db,'users',uid),profile);
+    if(plan==='community'){
+      batch.set(doc(db,'communityRequests',uid),{
+        uid,
+        firstName:String(firstName).trim(),
+        requestedPlan:'community',
+        memberCodeSubmitted:Boolean(String(memberCode||'').trim()),
+        status:'pending',
+        createdAt:serverTimestamp()
+      });
+    }
+    await batch.commit();
+  }catch(error){
+    try{ await deleteUser(credential.user); }catch(cleanupError){ console.error('IAMTRADER Firebase cleanup error',cleanupError); }
+    throw error;
   }
   return {user:credential.user,profile};
 }
