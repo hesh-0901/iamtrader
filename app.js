@@ -40,6 +40,8 @@ function icon(name,size=22){const paths={
  menu:'<path d="M5 7h14M5 12h14M5 17h14"/>'
 };return `<svg class="ui-icon" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name]||paths.menu}</svg>`}
 function currentRole(){return state.user?.admin===true?'admin':'retail'}
+function profileRole(){const raw=String(state.user?.role||'retail').toLowerCase();return ['admin','administrator','administrateur'].includes(raw)?'admin':'retail'}
+function roleLabel(){return profileRole()==='admin'?'ADMINISTRATEUR':'TRADER'}
 function roleLabel(){return currentRole()==='admin'?'ADMIN':'RETAIL'}
 function currentPlan(){const raw=state.user?.plan||state.plan||state.subscription?.plan||state.profile?.plan||'free';const p=String(raw).toLowerCase();return ['community','member','membre'].includes(p)?'community':p==='pro'?'pro':'free'}
 function canAccess(page){if(currentRole()==='admin')return true;if(page==='dashboard')return true;const plan=currentPlan();if(plan==='community')return true;if(plan==='pro')return page==='journal'||page==='settings';return page==='journal'}
@@ -104,21 +106,32 @@ function userHome(){
   </div>`;
 }
 function homeSettings(){
-  const firstName=state.user?.firstName||'Trader', plan=currentPlan(), admin=currentRole()==='admin';
-  return `<div class="user-home-shell">
-    <header class="user-home-nav"><button class="user-home-brand" data-home-route="home"><span>↗</span>IAM<span>TRADER</span></button><nav><button data-home-route="home">Accueil</button><button class="home-nav-active">Paramètres</button></nav><div class="user-home-profile"><div class="home-avatar">${esc(firstName.charAt(0).toUpperCase())}</div><div><b>${esc(firstName)}</b><small>${admin?'ADMINISTRATEUR':planLabel()}</small></div></div></header>
-    <main class="user-home-main settings-home-main">
-      <div class="settings-home-head"><button class="home-back" data-home-route="home">← Retour à l’accueil</button><span class="home-kicker">PARAMÈTRES</span><h1>Votre compte</h1><p>Profil, abonnement, sécurité et accès administrateur.</p></div>
-      <section class="settings-home-grid">
-        <article class="home-setting-card profile-card"><span class="home-setting-label">PROFIL</span><div class="profile-large"><div class="profile-large-avatar">${esc(firstName.charAt(0).toUpperCase())}</div><div><h3>${esc(firstName)}</h3><p>@${esc(state.user?.username||String(firstName).toLowerCase())}</p></div></div><div class="setting-line"><span>Statut</span><b>Actif</b></div><div class="setting-line"><span>Rôle</span><b>${admin?'Administrateur':'Trader'}</b></div></article>
-        <article class="home-setting-card"><span class="home-setting-label">ABONNEMENT</span><h3>${planLabel()}</h3><p class="setting-description">${plan==='community'?'Accès complet à l’écosystème IAMTRADER.':plan==='pro'?'Accès Pro au Journal et aux paramètres.':'Accès Free au Journal.'}</p><div class="setting-line"><span>Statut</span><b class="status-active">Actif</b></div><button class="settings-action" disabled>Gérer l’abonnement</button></article>
-        <article class="home-setting-card"><span class="home-setting-label">SÉCURITÉ</span><h3>Compte sécurisé</h3><p class="setting-description">Votre mot de passe est géré par Firebase Authentication et n’est jamais enregistré dans IAMTRADER.</p><button class="settings-action" disabled>Modifier le mot de passe</button></article>
-        ${admin?`<article class="home-setting-card admin-setting-card"><span class="home-setting-label">ADMINISTRATION</span><h3>Console Admin</h3><p class="setting-description">Utilisateurs, accès, comptes, trades et demandes Community.</p><button class="settings-action admin-action" data-home-route="admin">Ouvrir la console →</button></article>`:''}
+  const firstName=state.user?.firstName||'Trader', plan=currentPlan(), admin=profileRole()==='admin', authorizedAdmin=currentRole()==='admin';
+  return `<div class="user-home-shell user-home-v2 settings-v2">
+    <header class="user-home-nav">
+      <button class="user-home-brand" data-home-route="home"><span>↗</span>IAM<span>TRADER</span></button>
+      <nav><button data-home-route="home">Accueil</button><button class="home-nav-active">Paramètres</button></nav>
+      <div class="user-home-profile"><div class="home-avatar">${esc(firstName.charAt(0).toUpperCase())}</div><div><b>${esc(firstName)}</b><small>${roleLabel()}</small></div></div>
+    </header>
+    <main class="user-home-main">
+      <section class="settings-command-head">
+        <div><button class="home-back" data-home-route="home">← Retour à l’accueil</button><span class="home-kicker">ACCOUNT CENTER <span>•</span> IAMTRADER</span><h1>Votre espace.</h1><p>Identité, abonnement, sécurité et administration.</p></div>
+        <div class="settings-identity-chip"><span>${esc(firstName.charAt(0).toUpperCase())}</span><div><b>${esc(firstName)}</b><small>${roleLabel()} · ${planLabel()}</small></div></div>
       </section>
-      <button class="home-logout" data-home-logout>Se déconnecter</button>
+      <section class="settings-v2-grid">
+        <article class="settings-profile-hero">
+          <div class="settings-card-top"><span class="home-setting-label">IDENTITÉ</span><span class="settings-live-dot">ACTIF</span></div>
+          <div class="settings-profile-main"><div class="settings-big-avatar">${esc(firstName.charAt(0).toUpperCase())}</div><div><h2>${esc(firstName)}</h2><p>@${esc(state.user?.username||String(firstName).toLowerCase())}</p></div></div>
+          <div class="settings-metrics"><div><small>RÔLE</small><b>${roleLabel()}</b></div><div><small>PLAN</small><b>${planLabel()}</b></div><div><small>STATUT</small><b>ACTIF</b></div></div>
+        </article>
+        <article class="settings-v2-card subscription-v2"><span class="home-setting-label">ABONNEMENT</span><div class="settings-card-title"><h3>${planLabel()}</h3><span>01</span></div><p>${plan==='community'?'Accès complet à l’écosystème IAMTRADER.':plan==='pro'?'Accès Pro au Journal et aux paramètres.':'Accès Free au Journal.'}</p><div class="subscription-line"><span>État du compte</span><b>ACTIF</b></div><button disabled>Gérer l’abonnement</button></article>
+        <article class="settings-v2-card security-v2"><span class="home-setting-label">SÉCURITÉ</span><div class="settings-card-title"><h3>Protection du compte</h3><span>02</span></div><p>Authentification Firebase. Votre mot de passe n’est jamais stocké dans Firestore.</p><div class="security-status"><i></i><span>AUTHENTIFICATION ACTIVE</span></div><button disabled>Modifier le mot de passe</button></article>
+        <article class="settings-v2-card admin-v2 ${admin?'':'admin-muted'}"><span class="home-setting-label">ADMINISTRATION</span><div class="settings-card-title"><h3>Console Admin</h3><span>03</span></div><p>Gestion des utilisateurs, accès, comptes, trades et demandes Community.</p>${authorizedAdmin?'<button class="admin-v2-action" data-home-route="admin">Ouvrir la console <span>↗</span></button>':admin?'<div class="admin-claim-warning">Rôle administrateur détecté dans Firestore. Autorisation Admin Firebase à activer.</div>':'<div class="admin-locked">Accès réservé aux administrateurs.</div>'}</article>
+      </section>
+      <button class="home-logout settings-logout" data-home-logout>Se déconnecter <span>↗</span></button>
     </main>
-    <footer class="user-home-footer"><span>IAMTRADER</span><span>ESPACE PERSONNEL</span></footer>
-  </div>`
+    <footer class="user-home-footer"><span>IAMTRADER <b>2026</b></span><span>ACCOUNT CENTER · ESPACE PERSONNEL</span></footer>
+  </div>`;
 }
 function layout(body){const a=account();return `<div class="shell">${nav()}<main class="main"><header class="topbar"><div class="welcome"><h1>Bonjour Trader <span>👋</span></h1><p>Discipline aujourd’hui. Liberté demain.</p></div><div class="top-actions"><button class="top-select" data-open="account"><span class="top-icon">${icon('wallet',18)}</span><span><small>Compte actif</small><b>${a?esc(a.name):'Aucun compte'}</b></span>${icon('menu',16)}</button><button class="top-select date-select"><span class="top-icon">${icon('calendar',18)}</span><span><small>Période</small><b>${monthLabel()}</b></span>${icon('menu',16)}</button><button class="notification">${icon('bell',22)}<i>${trades().filter(t=>t.exit===''||t.exit===null).length||0}</i></button><div class="profile"><div class="avatar">TR</div><div><b>Trader</b><small>IAMTRADER</small></div></div></div></header><div class="content">${body}</div></main></div>`}
 function kpi(label,value,sub,cls,ic){return `<div class="kpi card"><div class="kpi-top"><span class="metric-label">${label}</span><span class="kpi-icon ${cls}">${icon(ic,25)}</span></div><div class="metric ${cls==='green'?'positive':''}">${value}</div><div class="kpi-sub">${sub}</div></div>`}
@@ -217,7 +230,7 @@ async function bootFirebaseSession(){
       state.user={
         ...(profile||{uid:user.uid,firstName:user.displayName||'',plan:'free',status:'active'}),
         admin:claims.admin===true,
-        role:claims.admin===true?'admin':'retail'
+        role:profile?.role||'retail'
       };
       state.accounts=cloud.accounts||[];
       state.trades=cloud.trades||[];
