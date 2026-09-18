@@ -135,13 +135,13 @@ export async function migrateSingleAccountTrades(accountId){
   const {db,auth}=requireFirebase();
   const uid=auth.currentUser?.uid;
   if(!uid) throw new Error('Utilisateur non authentifié.');
-  const snap=await getDocs(query(collection(db,'trades'),where('uid','==',uid)));
+  const snap=await getDocsFromServer(query(collection(db,'trades'),where('uid','==',uid)));
   const legacy=snap.docs.filter(s=>s.data()?.accountId!==accountId);
   if(!legacy.length) return {migrated:0,trades:snap.docs.map(s=>s.data())};
   const batch=writeBatch(db);
   legacy.forEach(s=>batch.update(s.ref,{accountId}));
   await batch.commit();
-  const verified=await getDocs(query(collection(db,'trades'),where('uid','==',uid)));
+  const verified=await getDocsFromServer(query(collection(db,'trades'),where('uid','==',uid)));
   const trades=verified.docs.map(s=>s.data());
   const remaining=trades.filter(t=>t.accountId!==accountId);
   if(remaining.length) throw new Error('Firestore : migration des trades incomplète.');
