@@ -148,6 +148,9 @@ async function bootFirebaseSession(){
       state.accounts=cloud.accounts||[];
       state.trades=cloud.trades||[];
       state.activeAccountId=state.accounts.some(a=>a.id===state.activeAccountId)?state.activeAccountId:(state.accounts[0]?.id||null);
+      // Après une connexion, toujours ouvrir l'accueil IAMTRADER,
+      // pas la dernière page locale (ex. Journal / onboarding).
+      state.page='dashboard';
       save();
       if(location.hash==='#app') render();
     }catch(error){
