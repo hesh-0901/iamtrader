@@ -95,14 +95,18 @@ export async function renderAdminPage({icon,toast,mount=document.querySelector('
   function userActions(u){
     const uid=adminEsc(u.uid||'');
     return `
-      <div class="admin-row-actions">
-        <button class="admin-action-btn" data-action="profile" data-uid="${uid}">Voir le profil</button>
-        <button class="admin-action-btn" data-action="plan" data-uid="${uid}">Modifier le plan</button>
-        <button class="admin-action-btn" data-action="status" data-uid="${uid}">${u.status==='active'?'Suspendre l’accès':'Réactiver l’accès'}</button>
-        <button class="admin-action-btn" data-action="admin" data-uid="${uid}">${u.role==='admin'?'Retirer les droits admin':'Attribuer les droits admin'}</button>
-        <button class="admin-action-btn" data-action="reset" data-uid="${uid}">Réinitialiser le mot de passe</button>
-        <button class="admin-action-btn danger" data-action="delete" data-uid="${uid}">Supprimer l’utilisateur</button>
-      </div>`;
+      <details class="admin-action-menu">
+        <summary><span>Gérer</span><b>⋯</b></summary>
+        <div class="admin-action-popover">
+          <button data-action="profile" data-uid="${uid}"><span>Voir le profil</span></button>
+          <button data-action="plan" data-uid="${uid}"><span>Modifier le plan</span></button>
+          <button data-action="status" data-uid="${uid}"><span>${u.status==='active'?'Suspendre l’accès':'Réactiver l’accès'}</span></button>
+          <button data-action="admin" data-uid="${uid}"><span>${u.role==='admin'?'Retirer les droits admin':'Attribuer les droits admin'}</span></button>
+          <button data-action="reset" data-uid="${uid}"><span>Réinitialiser le mot de passe</span></button>
+          <div class="admin-action-divider"></div>
+          <button class="danger" data-action="delete" data-uid="${uid}"><span>Supprimer l’utilisateur</span></button>
+        </div>
+      </details>`;
   }
 
   async function handleUserAction(action,uid){
