@@ -24,8 +24,9 @@ export async function renderAdminPage({icon,toast,mount=document.querySelector('
           <p>Vue centrale des utilisateurs, accès, comptes et activité de la plateforme.</p>
         </div>
         <div class="admin-actions">
+          <button class="admin-back-link" data-admin-home>${icon('arrow-left',14)} <span>Retour</span></button>
           <span class="admin-badge"><i></i> ADMINISTRATEUR</span>
-          <button class="btn ghost small" data-admin-refresh>${icon('upload',15)} Actualiser</button>
+          <button class="btn ghost small admin-refresh-btn" data-admin-refresh>${icon('upload',15)} Actualiser</button>
         </div>
       </div>
 
