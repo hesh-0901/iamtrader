@@ -239,7 +239,7 @@ async function bootFirebaseSession(){
         }
         renderAdminPage({icon,toast});
       // Synchronisation cloud non bloquante : elle ne doit jamais retarder l'ouverture du workspace.
-      Promise.all([getCurrentProfile(),getUserData(user.uid)]).then(([remoteProfile,remoteData])=>{
+      Promise.all([getCurrentProfile(),getUserData(user.uid)]).then(async ([remoteProfile,remoteData])=>{
         profile=remoteProfile;
         cloud=remoteData;
         if(profile){
