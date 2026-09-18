@@ -193,7 +193,13 @@ export async function setAdminAccess(uid,enabled){
 
 export async function getAdminData(){
   const {db,auth}=requireFirebase();
-  if(!auth.currentUser) throw new Error('Utilisateur non authentifié.');
+  const user=auth.currentUser;
+  if(!user) throw new Error('Utilisateur non authentifié.');
+  // Les Custom Claims sont portés par l'ID token utilisé par Firestore.
+  // Après une activation admin, force son renouvellement avant les lectures.
+  await user.getIdToken(true);
+  const claims=(await user.getIdTokenResult()).claims||{};
+  if(claims.admin!==true) throw new Error('Autorisation administrateur Firebase absente du token.');
   const [usersSnap,accountsSnap,tradesSnap,requestsSnap]=await Promise.all([
     getDocs(collection(db,'users')),
     getDocs(collection(db,'accounts')),
