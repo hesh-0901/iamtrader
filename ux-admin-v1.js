@@ -262,10 +262,6 @@ export async function renderAdminPage({icon,toast,mount=document.querySelector('
       if(moduleAccounts)moduleAccounts.textContent=accounts.length;
       if(moduleTrades)moduleTrades.textContent=trades.length;
       if(modulePending)modulePending.textContent=pending;
-      root.querySelector('[data-module-accounts]').textContent=accounts.length;
-      root.querySelector('[data-module-trades]').textContent=trades.length;
-      root.querySelector('[data-module-pending]').textContent=pending;
-
       stats.innerHTML=[
         adminStat('Utilisateurs',users.length,active+' actifs'),
         adminStat('Comptes trading',accounts.length,'Tous les comptes'),
