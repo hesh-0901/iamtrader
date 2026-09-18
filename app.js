@@ -42,7 +42,6 @@ function icon(name,size=22){const paths={
 function currentRole(){return state.user?.admin===true?'admin':'retail'}
 function profileRole(){const raw=String(state.user?.role||'retail').toLowerCase();return ['admin','administrator','administrateur'].includes(raw)?'admin':'retail'}
 function roleLabel(){return profileRole()==='admin'?'ADMINISTRATEUR':'TRADER'}
-function roleLabel(){return currentRole()==='admin'?'ADMIN':'RETAIL'}
 function currentPlan(){const raw=state.user?.plan||state.plan||state.subscription?.plan||state.profile?.plan||'free';const p=String(raw).toLowerCase();return ['community','member','membre'].includes(p)?'community':p==='pro'?'pro':'free'}
 function canAccess(page){if(currentRole()==='admin')return true;if(page==='dashboard')return true;const plan=currentPlan();if(plan==='community')return true;if(plan==='pro')return page==='journal'||page==='settings';return page==='journal'}
 function planLabel(){return currentPlan()==='community'?'COMMUNITY':currentPlan()==='pro'?'PRO':'FREE'}
