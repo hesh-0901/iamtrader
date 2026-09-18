@@ -1,0 +1,6 @@
+/* IAMTRADER MEMBER MODULES — shared empty/state layout */
+.iam-module-landing{min-height:280px;display:flex;align-items:center;gap:28px;padding:40px;margin-top:24px;border:1px solid #e4e9ee;background:#fff}
+.iam-module-icon{width:72px;height:72px;display:grid;place-items:center;border-radius:18px;background:#eefaf7;color:#00a981;flex:0 0 auto}
+.iam-module-landing h3{margin:8px 0 6px;font-size:22px}
+.iam-module-landing p{margin:0;max-width:680px;color:#6b7785;line-height:1.65}
+@media(max-width:700px){.iam-module-landing{padding:28px;align-items:flex-start;gap:18px}.iam-module-icon{width:56px;height:56px;border-radius:14px}.iam-module-landing h3{font-size:19px}}
