@@ -206,6 +206,12 @@ export async function renderAdminPage({icon,toast,mount=document.querySelector('
       const users=data.users||[],accounts=data.accounts||[],trades=data.trades||[],requests=data.communityRequests||[];
       const active=users.filter(u=>u.status==='active').length;
       const pending=requests.filter(r=>r.status==='pending').length;
+      const moduleAccounts=root.querySelector('[data-module-accounts]');
+      const moduleTrades=root.querySelector('[data-module-trades]');
+      const modulePending=root.querySelector('[data-module-pending]');
+      if(moduleAccounts)moduleAccounts.textContent=accounts.length;
+      if(moduleTrades)moduleTrades.textContent=trades.length;
+      if(modulePending)modulePending.textContent=pending;
       root.querySelector('[data-module-accounts]').textContent=accounts.length;
       root.querySelector('[data-module-trades]').textContent=trades.length;
       root.querySelector('[data-module-pending]').textContent=pending;
