@@ -57,6 +57,7 @@ const title=isLogin?'Bon retour.':'Commencez simplement.';
 const eyebrow=isLogin?'CONNEXION':'CRÉER VOTRE COMPTE';
 const intro=isLogin?'Connectez-vous à votre espace IAMTRADER pour retrouver votre Journal et vos données.':'Votre compte vous donne accès à votre espace IAMTRADER. Les fonctionnalités disponibles dépendent de votre plan.';
 const submitLabel=isLogin?'Se connecter':(plan==='community'?'Envoyer ma demande':'Créer mon compte');
+const extraFields=isLogin?'':`<div class="lp-field"><label>Confirmation</label><input name="confirmPassword" type="password" autocomplete="new-password" placeholder="Retapez votre mot de passe" required></div>${plan==='community'?'<div class="lp-code-box"><b>Parcours Community</b><p>Votre demande peut être enregistrée avant l’activation. Le code membre est délivré uniquement par l’administration après approbation.</p></div><div class="lp-field"><label>Code membre <span>(si déjà reçu)</span></label><input name="memberCode" placeholder="Code fourni par l’Admin"></div>':''}`;
 app.innerHTML=`<div class="lp-auth-page"><div class="lp-auth-layout"><div class="lp-auth-brand">${brand()}<span>ESPACE MEMBRE</span></div><div class="lp-auth-card">
 <div class="lp-auth-head"><span class="lp-eyebrow">${eyebrow}</span><h1>${title}</h1><p>${intro}</p></div>
 ${isLogin?'':`<div class="lp-auth-plan"><div><small>PLAN SÉLECTIONNÉ</small><b>${p.name}</b></div><strong>${p.price}<small> · ${p.period}</small></strong></div>`}
@@ -64,8 +65,7 @@ ${isLogin?'':`<div class="lp-auth-plan"><div><small>PLAN SÉLECTIONNÉ</small><b
 <form class="lp-form" id="${isLogin?'loginForm':'registerForm'}">
 <div class="lp-field"><label>Prénom</label><input name="firstName" autocomplete="given-name" placeholder="Votre prénom" required></div>
 <div class="lp-field"><label>Mot de passe</label><input name="password" type="password" autocomplete="${isLogin?'current-password':'new-password'}" minlength="6" placeholder="${isLogin?'Votre mot de passe':'Minimum 6 caractères'}" required></div>
-${isLogin?'':`<div class="lp-field"><label>Confirmation</label><input name="confirmPassword" type="password" autocomplete="new-password" placeholder="Retapez votre mot de passe" required></div>
-${plan==='community'?'<div class="lp-code-box"><b>Parcours Community</b><p>Votre demande peut être enregistrée avant l’activation. Le code membre est délivré uniquement par l’administration après approbation.</p></div><div class="lp-field"><label>Code membre <span>(si déjà reçu)</span></label><input name="memberCode" placeholder="Code fourni par l’Admin"></div>':''}`}:''}
+${extraFields}
 <div class="lp-auth-actions"><button type="button" class="lp-btn ghost" data-back>Retour</button><button class="lp-btn primary" type="submit">${submitLabel}</button></div>
 </form><div class="lp-auth-footer"><span>${isLogin?'Pas encore de compte ?':'Déjà un compte ?'}</span><button data-switch-auth>${isLogin?'Créer un compte':'Se connecter'}</button></div></div>
 <div class="lp-auth-side"><span class="lp-eyebrow">${isLogin?'VOTRE ESPACE':'VOTRE ESPACE'}</span><h2>${isLogin?'Retrouvez votre espace de trading.':plan==='community'?'Un environnement complet pour les membres.':plan==='pro'?'Un Journal plus structuré pour votre routine.':'Commencez par documenter vos décisions.'}</h2><div class="lp-auth-side-list"><span>✓ Compte personnel</span><span>✓ Données organisées par trader</span><span>✓ Accès contrôlé selon votre plan</span><span>✓ Votre Journal accessible après connexion</span></div></div></div></div>`;
