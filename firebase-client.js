@@ -149,6 +149,31 @@ export async function deleteUserTrade(tradeId){
   await deleteDoc(doc(db,'trades',tradeId));
 }
 
+export async function getAuthClaims(forceRefresh=false){
+  const {auth}=requireFirebase();
+  const user=auth.currentUser;
+  if(!user)return {};
+  const token=await user.getIdTokenResult(forceRefresh);
+  return token.claims||{};
+}
+
+export async function getAdminData(){
+  const {db,auth}=requireFirebase();
+  if(!auth.currentUser) throw new Error('Utilisateur non authentifié.');
+  const [usersSnap,accountsSnap,tradesSnap,requestsSnap]=await Promise.all([
+    getDocs(collection(db,'users')),
+    getDocs(collection(db,'accounts')),
+    getDocs(collection(db,'trades')),
+    getDocs(collection(db,'communityRequests'))
+  ]);
+  return {
+    users:usersSnap.docs.map(s=>s.data()),
+    accounts:accountsSnap.docs.map(s=>s.data()),
+    trades:tradesSnap.docs.map(s=>s.data()),
+    communityRequests:requestsSnap.docs.map(s=>s.data())
+  };
+}
+
 export async function getCurrentProfile(){
   const {auth,db}=requireFirebase();
   const user=auth.currentUser;
