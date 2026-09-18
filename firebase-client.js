@@ -61,7 +61,7 @@ export async function registerUser({firstName,password,plan='free',memberCode=''
     username:slugifyName(firstName),
     plan:'free',
     status:'active',
-    requestedPlan:plan==='community'?'community':null,
+    requestedPlan:['pro','community'].includes(plan)?plan:null,
     communityStatus:plan==='community'?'pending':null,
     createdAt:serverTimestamp(),
     updatedAt:serverTimestamp()
