@@ -83,3 +83,20 @@
 .admin-form select{width:100%;border:1px solid #dce5eb;border-radius:9px;padding:11px 12px;background:#fff;color:#0a192f;font-size:13px}
 .admin-modal-footer{display:flex;justify-content:flex-end;margin-top:18px}
 @media(max-width:760px){.admin-row-actions{min-width:240px}.admin-profile-grid{grid-template-columns:1fr}}
+
+/* ADMIN ACTION MENU — clean table treatment */
+.admin-row-actions{display:block;min-width:0}
+.admin-action-menu{position:relative;display:inline-block}
+.admin-action-menu summary{list-style:none;display:inline-flex;align-items:center;justify-content:center;gap:8px;min-width:92px;height:34px;padding:0 10px;border:1px solid #dbe4eb;border-radius:8px;background:#fff;color:#0a192f;font-size:11px;font-weight:800;cursor:pointer;user-select:none}
+.admin-action-menu summary::-webkit-details-marker{display:none}
+.admin-action-menu summary b{font-size:17px;line-height:1;color:#64748b;margin-top:-3px}
+.admin-action-menu summary:hover{border-color:#b9c9d5;background:#f8fafb}
+.admin-action-menu[open] summary{border-color:#00c796;box-shadow:0 0 0 3px rgba(0,199,150,.08)}
+.admin-action-popover{position:absolute;right:0;top:calc(100% + 7px);width:220px;padding:6px;background:#fff;border:1px solid #dfe7ed;border-radius:11px;box-shadow:0 14px 34px rgba(10,25,47,.14);z-index:50}
+.admin-action-popover button{width:100%;display:flex;align-items:center;justify-content:flex-start;border:0;background:transparent;border-radius:7px;padding:9px 10px;color:#334155;font-size:11px;font-weight:700;text-align:left;cursor:pointer}
+.admin-action-popover button:hover{background:#f3f7f9;color:#0a192f}
+.admin-action-popover button.danger{color:#b42318}
+.admin-action-popover button.danger:hover{background:#fff4f2;color:#b42318}
+.admin-action-divider{height:1px;background:#edf1f4;margin:5px 3px}
+.admin-table td:last-child{width:110px;white-space:nowrap}
+@media(max-width:760px){.admin-action-popover{right:auto;left:0}.admin-table td:last-child{width:100px}}
