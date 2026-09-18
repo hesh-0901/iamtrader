@@ -221,13 +221,9 @@ async function bootFirebaseSession(){
       return;
     }
     try{
-      const [profile,cloud]=await Promise.all([
-        getCurrentProfile(),
-        getUserData(user.uid)
-      ]);
-
-      // Le premier administrateur est bootstrapé côté serveur.
-      // Aucun credential Admin SDK n'est exposé au navigateur.
+      // Le bootstrap Admin doit être exécuté avant toute lecture Firestore.
+      // Ainsi, une erreur réseau/extension sur Firestore ne peut pas empêcher
+      // l'activation initiale du Custom Claim admin:true.
       if(user.uid===IAMTRADER_BOOTSTRAP_ADMIN_UID){
         try{
           await bootstrapAdminAccess();
@@ -237,6 +233,10 @@ async function bootFirebaseSession(){
       }
 
       const claims=await getAuthClaims(true);
+      const [profile,cloud]=await Promise.all([
+        getCurrentProfile(),
+        getUserData(user.uid)
+      ]);
       state.user={
         ...(profile||{uid:user.uid,firstName:user.displayName||'',plan:'free',status:'active'}),
         admin:claims.admin===true,
