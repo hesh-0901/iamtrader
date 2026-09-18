@@ -498,3 +498,51 @@
  .admin-console-shell .admin-stat strong{font-size:28px!important}
  .admin-console-shell .admin-table td{font-size:10px!important}
 }
+
+/* ADMIN READABILITY + MODULES V9 */
+.admin-console-shell{font-size:14px!important}
+.admin-console-shell .admin-head .eyebrow,
+.admin-console-shell .admin-sidebar-label,
+.admin-console-shell .admin-stat small,
+.admin-console-shell .admin-table th{font-size:10px!important;letter-spacing:.08em!important}
+.admin-console-shell .admin-head h2{font-size:34px!important;letter-spacing:-.04em!important}
+.admin-console-shell .admin-head p{font-size:13px!important}
+.admin-console-shell .admin-stat{min-height:118px!important;padding:20px!important}
+.admin-console-shell .admin-stat strong{font-size:30px!important}
+.admin-console-shell .admin-stat span{font-size:12px!important}
+.admin-console-shell .admin-card-head{padding:19px 21px!important}
+.admin-console-shell .admin-card-head h3{font-size:16px!important}
+.admin-console-shell .admin-card-head>span{font-size:11px!important}
+.admin-console-shell .admin-table th{padding:11px 10px!important}
+.admin-console-shell .admin-table td{font-size:12px!important;padding:14px 10px!important}
+.admin-console-shell .admin-table td small{font-size:10px!important}
+.admin-console-shell .admin-pill{font-size:10px!important;padding:5px 9px!important}
+.admin-console-shell .admin-action-menu summary{font-size:11px!important}
+.admin-console-shell .admin-action-popover button{font-size:11px!important;min-height:35px!important}
+
+/* More breathing room: management information is grouped into clear modules */
+.admin-console-shell .admin-modules{margin-top:24px!important}
+.admin-console-shell .admin-module-head{margin-bottom:14px!important}
+.admin-console-shell .admin-module-head h2{font-size:20px!important}
+.admin-console-shell .admin-module-head p{font-size:12px!important}
+.admin-console-shell .admin-module-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:14px!important}
+.admin-console-shell .admin-module-card{
+ min-height:138px!important;padding:20px!important;border-radius:16px!important;
+ display:flex!important;align-items:center!important;
+}
+.admin-console-shell .admin-module-card strong{font-size:16px!important}
+.admin-console-shell .admin-module-card small{font-size:9px!important}
+.admin-console-shell .admin-module-card p{font-size:11px!important;line-height:1.5!important}
+.admin-console-shell .admin-module-icon{width:38px!important;height:38px!important;flex:0 0 38px!important}
+.admin-console-shell .admin-note{font-size:11px!important;line-height:1.5!important;padding:13px 15px!important}
+@media(max-width:900px){
+ .admin-console-shell .admin-stats{grid-template-columns:repeat(2,1fr)!important}
+ .admin-console-shell .admin-grid{grid-template-columns:1fr!important}
+}
+@media(max-width:600px){
+ .admin-console-shell .admin-head h2{font-size:28px!important}
+ .admin-console-shell .admin-head p{font-size:12px!important}
+ .admin-console-shell .admin-stats{grid-template-columns:1fr!important}
+ .admin-console-shell .admin-module-grid{grid-template-columns:1fr!important}
+ .admin-console-shell .admin-table{font-size:11px!important}
+}
