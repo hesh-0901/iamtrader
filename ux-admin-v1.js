@@ -10,7 +10,7 @@ function adminStat(label,value,sub){return `<div class="card admin-stat"><small>
 export async function renderAdminPage({icon,toast,mount=document.querySelector('#app')}) {
   const root=document.createElement('div');
   root.className='admin-console-shell';
-  root.innerHTML=\`
+  root.innerHTML=`
     <div class="admin-console-nav">
       <button class="admin-console-brand" data-admin-home>${icon("shield",18)} <span>IAM</span>TRADER</button>
       <div class="admin-console-nav-title"><small>IAMTRADER</small><b>ADMIN CONSOLE</b></div>
@@ -65,7 +65,7 @@ export async function renderAdminPage({icon,toast,mount=document.querySelector('
       <div class="admin-modal-head"><div><span class="eyebrow">ADMINISTRATION</span><h3 data-admin-modal-title></h3></div><button class="admin-modal-close" data-admin-modal-close aria-label="Fermer">×</button></div>
       <div data-admin-modal-body></div>
     </div></div>
-  \`;
+  `;
 
 
 
