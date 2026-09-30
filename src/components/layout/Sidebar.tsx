@@ -34,30 +34,30 @@ export function Sidebar({ currentPage, onNavigate, userRole, isMobileOpen, onClo
   ];
 
   const sidebarContent = (
-    <div className="h-full flex flex-col justify-between bg-white border-r border-[#e7eeeb] select-none">
+    <div className="h-full flex flex-col justify-between bg-[#0A192F] border-r border-[#19324D] select-none">
       <div>
-        <div className="h-[78px] flex items-center justify-between px-5 border-b border-[#edf2f0] bg-white">
+        <div className="h-[78px] flex items-center justify-between px-5 border-b border-[#19324D] bg-[#0A192F]">
           <div className="flex items-center gap-3 min-w-0">
             <div className="w-10 h-10 rounded-2xl bg-[#e9faf4] border border-[#c8eee0] text-[#00a86b] flex items-center justify-center shrink-0"><Activity className="w-5 h-5 stroke-[2.4]" /></div>
-            {!isCollapsed && <div className="min-w-0"><div className="font-bold tracking-[-0.03em] text-[#10233a] text-[15px] leading-none">iam<span className="text-[#00a86b]">trader</span></div><div className="text-[9px] text-[#93a1af] font-mono tracking-[.16em] mt-1.5 uppercase">Performance OS</div></div>}
+            {!isCollapsed && <div className="min-w-0"><div className="font-bold tracking-[-0.03em] text-white text-[15px] leading-none">iam<span className="text-[#00a86b]">trader</span></div><div className="text-[9px] text-[#8EA3B8] font-mono tracking-[.16em] mt-1.5 uppercase">Performance OS</div></div>}
           </div>
-          <button onClick={onToggleCollapse} className="hidden lg:flex p-1.5 text-[#8494a5] hover:text-[#10233a] rounded-lg hover:bg-[#f1f6f4] transition-all cursor-pointer" title={isCollapsed ? 'Développer le menu' : 'Réduire le menu'}><ChevronLeft className={`w-4 h-4 transition-transform duration-200 ${isCollapsed ? 'rotate-180' : ''}`} /></button>
-          <button onClick={onCloseMobile} className="lg:hidden p-1.5 text-[#8494a5] hover:text-[#10233a] rounded-lg hover:bg-[#f1f6f4] cursor-pointer" aria-label="Fermer le menu"><X className="w-5 h-5" /></button>
+          <button onClick={onToggleCollapse} className="hidden lg:flex p-1.5 text-[#8EA3B8] hover:text-white rounded-lg hover:bg-[#132B47] transition-all cursor-pointer" title={isCollapsed ? 'Développer le menu' : 'Réduire le menu'}><ChevronLeft className={`w-4 h-4 transition-transform duration-200 ${isCollapsed ? 'rotate-180' : ''}`} /></button>
+          <button onClick={onCloseMobile} className="lg:hidden p-1.5 text-[#8EA3B8] hover:text-white rounded-lg hover:bg-[#132B47] cursor-pointer" aria-label="Fermer le menu"><X className="w-5 h-5" /></button>
         </div>
         <nav className="px-3 py-5 space-y-7 overflow-y-auto max-h-[calc(100vh-150px)]">
           {navSections.map(section => (
             <div key={section.group}>
-              {!isCollapsed && <div className="px-3 mb-2.5 text-[9px] font-bold tracking-[.16em] text-[#a0adb9] uppercase">{section.group}</div>}
+              {!isCollapsed && <div className="px-3 mb-2.5 text-[9px] font-bold tracking-[.16em] text-[#7F96AC] uppercase">{section.group}</div>}
               <div className="space-y-1">
                 {section.items.map(item => {
                   const isActive = currentPage === item.id;
                   const Icon = item.icon;
                   return <button key={item.id} onClick={() => { onNavigate(item.id); onCloseMobile(); }} title={isCollapsed ? item.label : undefined}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[12.5px] font-medium transition-all duration-150 text-left relative cursor-pointer group ${isActive ? 'bg-[#e8faf3] text-[#008f63] border border-[#c9eee1]' : 'text-[#60758d] hover:text-[#203a53] hover:bg-[#f5f9f7] border border-transparent'}`}>
-                    <span className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors ${isActive ? 'bg-white text-[#00a86b] shadow-sm' : 'text-[#71859a] group-hover:text-[#3f5870]'}`}><Icon className="w-4 h-4 stroke-[2]" /></span>
+                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-[12.5px] font-medium transition-all duration-150 text-left relative cursor-pointer group ${isActive ? 'bg-[#123A3A] text-[#5BE2BE] border border-[#1D6659]' : 'text-[#A8BACB] hover:text-white hover:bg-[#102D49] border border-transparent'}`}>
+                    <span className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors ${isActive ? 'bg-[#0F2A42] text-[#00C796] shadow-sm' : 'text-[#8299AF] group-hover:text-white'}`}><Icon className="w-4 h-4 stroke-[2]" /></span>
                     {!isCollapsed && <span className="truncate flex-1">{item.label}</span>}
-                    {!isCollapsed && item.tag && <span className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded border uppercase bg-[#f0faf6] text-[#008f63] border-[#ccecdf]">{item.tag}</span>}
-                    {isActive && <span className="absolute left-0 top-2 bottom-2 w-0.5 rounded-r bg-[#08b77a]" />}
+                    {!isCollapsed && item.tag && <span className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded border uppercase bg-[#123A3A] text-[#5BE2BE] border-[#1D6659]">{item.tag}</span>}
+                    {isActive && <span className="absolute left-0 top-2 bottom-2 w-0.5 rounded-r bg-[#00C796]" />}
                   </button>;
                 })}
               </div>
@@ -65,7 +65,7 @@ export function Sidebar({ currentPage, onNavigate, userRole, isMobileOpen, onClo
           ))}
         </nav>
       </div>
-      {!isCollapsed && <div className="p-3 border-t border-[#edf2f0]"><div className="rounded-xl bg-[#f7fbf9] border border-[#e2ece8] p-3.5"><div className="flex items-center justify-between text-[10px] mb-2"><span className="text-[#71839a] font-medium">Système</span><span className="flex items-center gap-1.5 text-[#00a86b] font-semibold font-mono"><span className="w-1.5 h-1.5 rounded-full bg-[#08b77a] animate-pulse" />OPÉRATIONNEL</span></div><div className="text-[9px] text-[#9aa9b8] font-mono truncate">IAMTRADER / PERFORMANCE OS</div></div></div>}
+      {!isCollapsed && <div className="p-3 border-t border-[#19324D]"><div className="rounded-xl bg-[#102B46] border border-[#1C405F] p-3.5"><div className="flex items-center justify-between text-[10px] mb-2"><span className="text-[#9DB0C2] font-medium">Système</span><span className="flex items-center gap-1.5 text-[#5BE2BE] font-semibold font-mono"><span className="w-1.5 h-1.5 rounded-full bg-[#00C796] animate-pulse" />OPÉRATIONNEL</span></div><div className="text-[9px] text-[#70879D] font-mono truncate">IAMTRADER / PERFORMANCE OS</div></div></div>}
     </div>
   );
 
