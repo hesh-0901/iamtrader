@@ -33,7 +33,7 @@ export async function registerWithEmail(email: string, pass: string, displayName
       email: cred.user.email || email,
       displayName: displayName || email.split('@')[0],
       plan: 'pro', // Default grant during onboarding
-      role: email.includes('admin') || email === 'henochshungu@gmail.com' ? 'admin' : 'trader',
+      role: 'trader',
       status: 'active',
       createdAt: new Date().toISOString(),
       subscriptionStatus: 'pending',
