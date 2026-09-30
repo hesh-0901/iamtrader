@@ -165,9 +165,13 @@ export async function updateUserSettings(
   settings: Partial<NonNullable<UserProfile['settings']>>
 ): Promise<void> {
   const userRef = doc(db, 'users', uid);
-  await updateDoc(userRef, {
-    settings
-  });
+  const updates: Record<string, unknown> = {};
+  if (settings.defaultCurrency !== undefined) updates['settings.defaultCurrency'] = settings.defaultCurrency;
+  if (settings.theme !== undefined) updates['settings.theme'] = settings.theme;
+  if (settings.language !== undefined) updates['settings.language'] = settings.language;
+  if (settings.instruments !== undefined) updates['settings.instruments'] = settings.instruments;
+  if (settings.setups !== undefined) updates['settings.setups'] = settings.setups;
+  await updateDoc(userRef, updates);
 }
 
 export async function updateUserRoleAndPlan(
