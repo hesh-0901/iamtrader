@@ -77,7 +77,7 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
       if (dayNumber < 1 || dayNumber > daysInMonth) return { dayNumber: null as number | null, dayStr: null as string | null, weekIndex: Math.floor(index / 7) };
       return {
         dayNumber,
-        dayStr: \`${year}-${String(month + 1).padStart(2, '0')}-${String(dayNumber).padStart(2, '0')}\`,
+        dayStr: `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNumber).padStart(2, '0')}`,
         weekIndex: Math.floor(index / 7),
       };
     });
