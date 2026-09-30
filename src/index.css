@@ -4,114 +4,142 @@
   :root {
     --font-sans: 'DM Sans', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
-    --iam-green: #108050;
-    --iam-green-bright: #19a66a;
-    --iam-green-soft: rgba(16,128,80,.12);
-    --iam-bg: #080c0a;
-    --iam-surface: #0d1310;
-    --iam-surface-2: #111914;
-    --iam-surface-3: #151f19;
-    --iam-border: #24332b;
-    --iam-border-soft: rgba(116,142,129,.18);
-    --iam-text: #f2f6f3;
-    --iam-muted: #87968e;
-    --iam-dim: #5f6e66;
-    --iam-loss: #ff5d72;
-    --iam-warning: #e7a94b;
+    --iam-primary: #08b77a;
+    --iam-primary-strong: #00a86b;
+    --iam-primary-soft: #e7faf3;
+    --iam-primary-pale: #f1fcf8;
+    --iam-bg: #f7faf9;
+    --iam-surface: #ffffff;
+    --iam-surface-soft: #fbfdfc;
+    --iam-border: #e5ece9;
+    --iam-border-soft: #eef3f1;
+    --iam-text: #10233a;
+    --iam-text-2: #314861;
+    --iam-muted: #71839a;
+    --iam-dim: #9aa9b8;
+    --iam-loss: #f04f63;
+    --iam-loss-soft: #fff0f2;
+    --iam-warning: #d89b28;
+    --iam-blue: #3b82f6;
   }
+
   * { border-color: var(--iam-border); }
   html, body, #root { min-height: 100%; }
   body {
     margin: 0;
     font-family: var(--font-sans);
-    background:
-      radial-gradient(circle at 18% -12%, rgba(16,128,80,.12), transparent 30%),
-      radial-gradient(circle at 88% 0%, rgba(25,166,106,.055), transparent 24%),
-      var(--iam-bg);
+    background: var(--iam-bg);
     color: var(--iam-text);
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
   }
   button, input, select, textarea { font: inherit; }
-  ::selection { background: rgba(25,166,106,.28); color: #fff; }
+  ::selection { background: rgba(8,183,122,.18); color: var(--iam-text); }
   .tabular-nums { font-variant-numeric: tabular-nums; }
 }
 
 .iamtrader-shell { background: var(--iam-bg); color: var(--iam-text); }
 
-/* Translate the existing Tailwind layer into the IAMTRADER dark system. */
-.iamtrader-shell [class*="bg-white"] { background-color: var(--iam-surface) !important; }
-.iamtrader-shell [class*="bg-slate-50"] { background-color: var(--iam-surface) !important; }
-.iamtrader-shell [class*="bg-slate-100"] { background-color: var(--iam-surface-3) !important; }
-.iamtrader-shell [class*="bg-slate-200"] { background-color: #1b2821 !important; }
-.iamtrader-shell [class*="border-slate-200"] { border-color: var(--iam-border) !important; }
-.iamtrader-shell [class*="border-slate-100"] { border-color: rgba(116,142,129,.12) !important; }
-.iamtrader-shell [class*="text-slate-900"] { color: var(--iam-text) !important; }
-.iamtrader-shell [class*="text-slate-800"] { color: #dbe5df !important; }
-.iamtrader-shell [class*="text-slate-700"] { color: #c3d0c8 !important; }
-.iamtrader-shell [class*="text-slate-600"] { color: #aebbb4 !important; }
-.iamtrader-shell [class*="text-slate-500"] { color: var(--iam-muted) !important; }
-.iamtrader-shell [class*="text-slate-400"] { color: var(--iam-dim) !important; }
-.iamtrader-shell [class*="text-blue-"] { color: var(--iam-green-bright) !important; }
-.iamtrader-shell [class*="bg-blue-"] { background-color: var(--iam-green-soft) !important; }
-.iamtrader-shell [class*="border-blue-"] { border-color: rgba(25,166,106,.34) !important; }
-.iamtrader-shell [class*="text-indigo-"] { color: var(--iam-green-bright) !important; }
-.iamtrader-shell [class*="bg-indigo-"] { background-color: var(--iam-green-soft) !important; }
-.iamtrader-shell [class*="border-indigo-"] { border-color: rgba(25,166,106,.34) !important; }
-.iamtrader-shell [class*="text-sky-"] { color: #8ecdb0 !important; }
-.iamtrader-shell [class*="bg-sky-"] { background-color: rgba(80,160,120,.11) !important; }
-.iamtrader-shell [class*="border-sky-"] { border-color: rgba(80,160,120,.28) !important; }
-.iamtrader-shell [class*="text-violet-"] { color: #b8a7e8 !important; }
-.iamtrader-shell [class*="bg-violet-"] { background-color: rgba(139,111,214,.11) !important; }
+/* Existing Tailwind utility classes are kept intact; this layer gives the whole product
+   one coherent white-dominant FinTech visual language without touching business logic. */
+.iamtrader-shell [class*="bg-white"] { background-color: #fff !important; }
+.iamtrader-shell [class*="bg-slate-50"] { background-color: #f8fbfa !important; }
+.iamtrader-shell [class*="bg-slate-100"] { background-color: #f2f6f5 !important; }
+.iamtrader-shell [class*="bg-slate-200"] { background-color: #e8efed !important; }
+.iamtrader-shell [class*="border-slate-200"] { border-color: #e3ebe8 !important; }
+.iamtrader-shell [class*="border-slate-100"] { border-color: #edf2f0 !important; }
+.iamtrader-shell [class*="text-slate-950"] { color: #0d2035 !important; }
+.iamtrader-shell [class*="text-slate-900"] { color: #10233a !important; }
+.iamtrader-shell [class*="text-slate-800"] { color: #1d344d !important; }
+.iamtrader-shell [class*="text-slate-700"] { color: #3b536d !important; }
+.iamtrader-shell [class*="text-slate-600"] { color: #5f748c !important; }
+.iamtrader-shell [class*="text-slate-500"] { color: #74869a !important; }
+.iamtrader-shell [class*="text-slate-400"] { color: #9aa9b8 !important; }
+.iamtrader-shell [class*="text-slate-300"] { color: #aebbc7 !important; }
+.iamtrader-shell [class*="text-blue-400"] { color: #1685e5 !important; }
+.iamtrader-shell [class*="text-blue-500"] { color: #1677d2 !important; }
+.iamtrader-shell [class*="bg-blue-500"] { background-color: #eaf4ff !important; }
+.iamtrader-shell [class*="border-blue-500"] { border-color: #cce4fb !important; }
+.iamtrader-shell [class*="text-indigo-"] { color: #6557c8 !important; }
+.iamtrader-shell [class*="bg-indigo-"] { background-color: #f0efff !important; }
+.iamtrader-shell [class*="text-emerald-400"] { color: var(--iam-primary-strong) !important; }
+.iamtrader-shell [class*="text-emerald-500"] { color: #00a86b !important; }
+.iamtrader-shell [class*="bg-emerald-500"] { background-color: #08b77a !important; }
+.iamtrader-shell [class*="bg-emerald-"] { background-color: var(--iam-primary-soft) !important; }
+.iamtrader-shell [class*="border-emerald-"] { border-color: #bdeedc !important; }
+.iamtrader-shell [class*="text-rose-400"] { color: var(--iam-loss) !important; }
+.iamtrader-shell [class*="text-rose-500"] { color: var(--iam-loss) !important; }
+.iamtrader-shell [class*="bg-rose-500"] { background-color: #ffdfe5 !important; }
+.iamtrader-shell [class*="bg-rose-"] { background-color: var(--iam-loss-soft) !important; }
+.iamtrader-shell [class*="border-rose-"] { border-color: #ffd0d8 !important; }
 
 .card-premium {
-  background: linear-gradient(145deg, rgba(17,25,20,.98), rgba(12,18,14,.98));
+  background: #fff;
   border: 1px solid var(--iam-border);
   border-radius: 18px;
-  box-shadow: 0 18px 50px rgba(0,0,0,.18);
+  box-shadow: 0 8px 28px rgba(25,55,74,.055);
   transition: transform 180ms cubic-bezier(.16,1,.3,1), border-color 180ms ease, box-shadow 180ms ease;
 }
 .card-premium:hover {
   transform: translateY(-1px);
-  border-color: rgba(25,166,106,.28);
-  box-shadow: 0 22px 58px rgba(0,0,0,.25);
+  border-color: #d8e7e2;
+  box-shadow: 0 14px 34px rgba(25,55,74,.08);
 }
+
 .btn-primary {
-  background: linear-gradient(135deg, #0f7a4d 0%, #18a267 100%) !important;
+  background: linear-gradient(135deg, #08b77a 0%, #00a86b 100%) !important;
   color: #fff !important;
   font-weight: 700;
-  border: 1px solid rgba(126,255,196,.18);
-  box-shadow: 0 10px 28px rgba(16,128,80,.22), inset 0 1px 0 rgba(255,255,255,.14);
+  border: 1px solid rgba(0,150,95,.16);
+  box-shadow: 0 8px 20px rgba(8,183,122,.18);
   transition: transform 160ms ease, box-shadow 160ms ease, filter 160ms ease;
 }
-.btn-primary:hover { filter: brightness(1.08); transform: translateY(-1px); box-shadow: 0 14px 32px rgba(16,128,80,.3), inset 0 1px 0 rgba(255,255,255,.18); }
+.btn-primary:hover {
+  filter: brightness(1.04);
+  transform: translateY(-1px);
+  box-shadow: 0 12px 25px rgba(8,183,122,.24);
+}
 .btn-primary:active { transform: translateY(0); }
+
 .btn-secondary {
-  background: var(--iam-surface-2) !important;
-  border: 1px solid var(--iam-border) !important;
-  color: #d9e3dd !important;
+  background: #fff !important;
+  border: 1px solid #dfe9e5 !important;
+  color: var(--iam-text-2) !important;
   font-weight: 650;
-  box-shadow: 0 5px 18px rgba(0,0,0,.14);
+  box-shadow: 0 4px 14px rgba(25,55,74,.045);
   transition: all 160ms ease;
 }
-.btn-secondary:hover { background: var(--iam-surface-3) !important; border-color: rgba(25,166,106,.3) !important; transform: translateY(-1px); }
+.btn-secondary:hover {
+  background: #f7fbf9 !important;
+  border-color: #cce4dc !important;
+  transform: translateY(-1px);
+}
+
 .btn-ghost { background: transparent; color: var(--iam-muted); transition: all 160ms ease; }
-.btn-ghost:hover { background: rgba(255,255,255,.04); color: var(--iam-text); }
+.btn-ghost:hover { background: #f1f6f4; color: var(--iam-text); }
+
 .saas-surface {
-  background: rgba(17,25,20,.88);
+  background: rgba(255,255,255,.92);
   border: 1px solid var(--iam-border);
-  box-shadow: 0 12px 38px rgba(0,0,0,.18);
-  backdrop-filter: blur(18px);
+  box-shadow: 0 8px 26px rgba(25,55,74,.055);
+  backdrop-filter: blur(16px);
 }
-.iamtrader-shell main { max-width: 1440px !important; }
-.iamtrader-shell table thead tr { background: rgba(255,255,255,.018); }
-.iamtrader-shell table tbody tr { border-color: rgba(116,142,129,.12) !important; }
-.iamtrader-shell table tbody tr:hover { background: rgba(25,166,106,.045) !important; }
+
+.iamtrader-shell main { max-width: 1480px !important; }
+.iamtrader-shell table thead tr { background: #f8fbfa; }
+.iamtrader-shell table tbody tr { border-color: #edf2f0 !important; }
+.iamtrader-shell table tbody tr:hover { background: #f5fbf8 !important; }
+
 .iamtrader-shell input, .iamtrader-shell select, .iamtrader-shell textarea {
-  background: #0b120e !important; color: var(--iam-text) !important; border-color: var(--iam-border) !important;
+  background: #fff !important;
+  color: var(--iam-text) !important;
+  border-color: #dfe9e5 !important;
 }
-.iamtrader-shell input::placeholder, .iamtrader-shell textarea::placeholder { color: #536159 !important; }
-.iamtrader-shell option { background: #101812; color: #f2f6f3; }
+.iamtrader-shell input::placeholder, .iamtrader-shell textarea::placeholder { color: #9aa9b8 !important; }
+.iamtrader-shell option { background: #fff; color: var(--iam-text); }
+
+.iamtrader-shell [stroke="rgba(255,255,255,0.05)"] { stroke: #e6efec !important; }
+.iamtrader-shell [stroke="rgba(255,255,255,0.06)"] { stroke: #e3ece9 !important; }
 
 .dashboard-kpi-grid { grid-template-columns: repeat(12, minmax(0,1fr)) !important; }
 .dashboard-kpi-grid > * { grid-column: span 4 / span 4; }
@@ -123,10 +151,14 @@
   .dashboard-kpi-grid { grid-template-columns: 1fr !important; }
   .dashboard-kpi-grid > * { grid-column: span 1 / span 1; }
 }
+
 ::-webkit-scrollbar { width: 7px; height: 7px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: #2a3a31; border-radius: 999px; }
-::-webkit-scrollbar-thumb:hover { background: #3a5145; }
-button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid rgba(25,166,106,.42); outline-offset: 2px; }
+::-webkit-scrollbar-thumb { background: #d4e0dc; border-radius: 999px; }
+::-webkit-scrollbar-thumb:hover { background: #b9ccc5; }
+button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-visible {
+  outline: 2px solid rgba(8,183,122,.36);
+  outline-offset: 2px;
+}
 .font-mono { letter-spacing: -0.01em; }
-.iam-brand-glow { box-shadow: 0 0 0 1px rgba(25,166,106,.18), 0 12px 35px rgba(16,128,80,.18); }
+.iam-brand-glow { box-shadow: 0 6px 18px rgba(8,183,122,.14); }
