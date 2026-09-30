@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Trade, TradingAccount, TradeDirection, TradeResult, TradingSession } from '../types';
 import { DirectionBadge, ResultBadge, EmotionTag } from '../components/common/Badge';
 import { EmptyState } from '../components/common/EmptyState';
@@ -16,7 +16,9 @@ import {
   FileSpreadsheet, 
   BookOpen, 
   FilterX,
-  SlidersHorizontal
+  SlidersHorizontal,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 
 interface JournalProps {
@@ -47,6 +49,8 @@ export function Journal({
   // Sorting
   const [sortBy, setSortBy] = useState<'date' | 'pnl' | 'rMultiple'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   // Distinct setups from trades
   const uniqueSetups = useMemo(() => {
@@ -96,6 +100,13 @@ export function Journal({
       return sortOrder === 'desc' ? valB - valA : valA - valB;
     });
   }, [trades, filterAccount, filterDirection, filterResult, filterSession, filterSetup, searchQuery, sortBy, sortOrder]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredTrades.length / itemsPerPage));
+  const paginatedTrades = filteredTrades.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, filterAccount, filterDirection, filterResult, filterSession, filterSetup, sortBy, sortOrder]);
 
   // Aggregate stats of filtered trades
   const filterStats = useMemo(() => {
@@ -323,6 +334,7 @@ export function Journal({
               <table className="w-full text-left text-xs border-collapse">
                 <thead>
                   <tr className="border-b border-slate-200 bg-white text-[10px] font-semibold text-slate-500 uppercase tracking-wider select-none">
+                    <th className="py-2.5 px-2 w-10 text-center">#</th>
                     <th className="py-2.5 px-3">Symbol</th>
                     <th className="py-2.5 px-3">Direction</th>
                     <th className="py-2.5 px-3">Entry</th>
@@ -360,7 +372,7 @@ export function Journal({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/60">
-                  {filteredTrades.map((trade) => {
+                  {paginatedTrades.map((trade, index) => {
                     const account = accounts.find(a => a.id === trade.accountId);
                     return (
                       <tr
@@ -368,6 +380,7 @@ export function Journal({
                         onClick={() => onSelectTrade(trade)}
                         className="hover:bg-slate-100/35 transition-colors cursor-pointer group"
                       >
+                        <td className="py-2.5 px-2 text-center font-mono text-[10px] text-slate-400 tabular-nums">{(currentPage - 1) * itemsPerPage + index + 1}</td>
                         <td className="py-2.5 px-3">
                           <div className="flex items-center gap-2">
                             <span className="font-mono font-bold text-slate-900 text-xs">{trade.symbol}</span>
@@ -417,7 +430,7 @@ export function Journal({
 
             {/* Mobile / Tablet Cards View */}
             <div className="lg:hidden divide-y divide-slate-800/60">
-              {filteredTrades.map((trade) => (
+              {paginatedTrades.map((trade, index) => (
                 <div
                   key={trade.id}
                   onClick={() => onSelectTrade(trade)}
@@ -425,6 +438,7 @@ export function Journal({
                 >
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-mono text-slate-400 tabular-nums w-5">#{(currentPage - 1) * itemsPerPage + index + 1}</span>
                       <span className="font-mono font-bold text-slate-900 text-xs">{trade.symbol}</span>
                       <DirectionBadge direction={trade.direction} />
                       <ResultBadge result={trade.result} />
@@ -447,6 +461,13 @@ export function Journal({
                   </div>
                 </div>
               ))}
+            </div>
+            <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 bg-white">
+              <span className="text-[10px] text-slate-500 font-mono">Page {currentPage}/{totalPages}</span>
+              <div className="flex items-center gap-1">
+                <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed"><ChevronLeft className="w-3.5 h-3.5" /></button>
+                <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="p-1.5 rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed"><ChevronRight className="w-3.5 h-3.5" /></button>
+              </div>
             </div>
           </>
         ) : (
