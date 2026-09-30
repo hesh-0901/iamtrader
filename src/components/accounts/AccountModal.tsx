@@ -42,11 +42,11 @@ export function AccountModal({ isOpen, onClose, userId, onSaveGuestAccount }: Ac
         currency,
         initialBalance: initialBalance ? parseFloat(initialBalance) : 0,
         currentBalance: currentBalance ? parseFloat(currentBalance) : 0,
-        targetProfit: targetProfit ? parseFloat(targetProfit) : undefined,
-        maxDrawdownLimit: maxDrawdownLimit ? parseFloat(maxDrawdownLimit) : undefined,
-        riskPerTradePercent: riskPerTradePercent ? parseFloat(riskPerTradePercent) : undefined,
         status: 'Active',
-        createdAt: new Date().toISOString()
+        createdAt: new Date().toISOString(),
+        ...(targetProfit ? { targetProfit: parseFloat(targetProfit) } : {}),
+        ...(maxDrawdownLimit ? { maxDrawdownLimit: parseFloat(maxDrawdownLimit) } : {}),
+        ...(riskPerTradePercent ? { riskPerTradePercent: parseFloat(riskPerTradePercent) } : {})
       };
 
       if (userId === 'guest-trader-id') {
@@ -126,7 +126,6 @@ export function AccountModal({ isOpen, onClose, userId, onSaveGuestAccount }: Ac
                 setCurrentBalance(e.target.value);
               }}
               className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-neutral-100 font-mono"
-              required
             />
           </div>
 
