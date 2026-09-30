@@ -79,7 +79,7 @@ export function AdminConsole() {
     } catch (error: any) {
       setUsers([]);
       setLoadError(error?.code === 'permission-denied'
-        ? 'Accès Firestore refusé. Le compte administrateur doit disposer du custom claim admin.'
+        ? 'Accès Firestore refusé. Le compte doit avoir le rôle admin dans Firestore.'
         : error?.message || 'Impossible de charger les utilisateurs.');
     } finally {
       setIsLoading(false);
