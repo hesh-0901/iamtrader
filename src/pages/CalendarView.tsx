@@ -74,11 +74,11 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
     const totalCells = Math.ceil((startDay + daysInMonth) / 7) * 7;
     return Array.from({ length: totalCells }, (_, index) => {
       const dayNumber = index - startDay + 1;
-      if (dayNumber < 1 || dayNumber > daysInMonth) return { dayNumber: null as number | null, dayStr: null as string | null, weekIndex: Math.floor(index / 7) };
+      if (dayNumber < 1 || dayNumber > daysInMonth) return { dayNumber: null as number | null, dayStr: null as string | null };
       return {
         dayNumber,
         dayStr: `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNumber).padStart(2, '0')}`,
-        weekIndex: Math.floor(index / 7),
+        ,
       };
     });
   }, [startDay, daysInMonth, year, month]);
@@ -87,7 +87,7 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
   return (
     <div className="space-y-4">
       {/* Compact trading calendar */}
-      <div className="mx-auto w-full max-w-[1120px] rounded-xl overflow-hidden border border-[#dfe8e4] bg-white text-[#10233a] shadow-[0_8px_28px_rgba(16,35,58,0.06)]">
+      <div className="mx-auto w-full max-w-[980px] rounded-xl overflow-hidden border border-[#dfe8e4] bg-white text-[#10233a] shadow-[0_8px_28px_rgba(16,35,58,0.06)]">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2 px-3 py-2.5 border-b border-[#edf2f0]">
           <div className="flex items-center gap-3">
             <div className="w-7 h-7 rounded-lg bg-[#eef5ff] border border-[#d9e7ff] flex items-center justify-center text-[#3b82f6]">
@@ -124,13 +124,13 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
             const isProfitable = hasTrades && dayData.netPnl > 0;
             const isLoss = hasTrades && dayData.netPnl < 0;
             const isSelected = cell.dayStr === selectedDayKey;
-            const cellTone = isProfitable ? 'bg-[#e1faf1] hover:bg-[#d4f6e8]' : isLoss ? 'bg-[#ffeaed] hover:bg-[#ffe0e4]' : 'bg-white hover:bg-[#f8faf9]';
+            const cellTone = isProfitable ? 'bg-[#dcf8ed] hover:bg-[#cef3e2]' : isLoss ? 'bg-[#ffe3e7] hover:bg-[#ffd7dc]' : 'bg-white hover:bg-[#f8faf9]';
 
             return (
               <div
                 key={cell.dayStr || `empty-${index}`}
                 onClick={() => cell.dayStr && hasTrades && setSelectedDayKey(cell.dayStr)}
-                className={`relative min-h-[76px] sm:min-h-[84px] p-1 border-r border-b border-[#e8eeec] transition-colors ${cell.dayStr ? cellTone : 'bg-[#fbfcfc]'} ${hasTrades ? 'cursor-pointer' : ''} ${isSelected ? 'ring-1 ring-inset ring-[#3b82f6] z-10' : ''}`}
+                className={`relative min-h-[88px] sm:min-h-[96px] p-1 border-r border-b border-[#e8eeec] transition-colors ${cell.dayStr ? cellTone : 'bg-[#fbfcfc]'} ${hasTrades ? 'cursor-pointer' : ''} ${isSelected ? 'ring-1 ring-inset ring-[#3b82f6] z-10' : ''}`}
               >
                 {cell.dayNumber && (
                   <>
@@ -140,7 +140,7 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
                     </div>
                     {hasTrades && (
                       <div className="mt-2">
-                        <div className={`mt-2 text-[17px] sm:text-[18px] leading-none font-mono font-black tabular-nums tracking-tight ${isProfitable ? 'text-[#007d59]' : isLoss ? 'text-[#c93649]' : 'text-[#60758d]'}`}>{formatCurrency(dayData.netPnl)}</div>
+                        <div className={`mt-3 inline-block text-[20px] sm:text-[22px] leading-none font-mono font-black tabular-nums tracking-tight ${isProfitable ? 'text-[#007a56]' : isLoss ? 'text-[#c72f43]' : 'text-[#60758d]'}`}>{formatCurrency(dayData.netPnl)}</div>
                         <div className="text-[6px] text-[#8796a3] font-mono mt-1"><span className="text-[#008f63] font-semibold">{dayData.winCount}W</span><span> / </span><span className="text-[#d83f50] font-semibold">{dayData.lossCount}L</span></div>
                       </div>
                     )}
