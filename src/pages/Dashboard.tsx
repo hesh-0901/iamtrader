@@ -38,7 +38,6 @@ interface DashboardProps {
   onOpenNewTrade: () => void;
   onSelectTrade: (trade: Trade) => void;
   onNavigateToJournal: () => void;
-  onSeedData: () => void;
 }
 
 export function Dashboard({
@@ -49,7 +48,6 @@ export function Dashboard({
   onOpenNewTrade,
   onSelectTrade,
   onNavigateToJournal,
-  onSeedData
 }: DashboardProps) {
   const currentAccount = accounts.find(a => a.id === selectedAccountId);
 
@@ -328,14 +326,7 @@ export function Dashboard({
         </div>
 
         <div className="flex items-center gap-2 self-start sm:self-auto">
-          {trades.length === 0 && (
-            <button
-              onClick={onSeedData}
-              className="btn-secondary px-3 py-2 rounded-lg text-xs cursor-pointer"
-            >
-              Charger démo
-            </button>
-          )}
+)}
           <button
             onClick={onOpenNewTrade}
             className="btn-primary flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs cursor-pointer"
@@ -355,8 +346,6 @@ export function Dashboard({
             description="Enregistrez vos premières opérations pour activer la courbe d'equity continue, les ratios de rentabilité et le Trader Score institutionnel."
             actionLabel="+ Enregistrer un premier trade"
             onAction={onOpenNewTrade}
-            secondaryLabel="Explorer avec des trades exemples"
-            onSecondaryAction={onSeedData}
             accentColor="emerald"
           />
         </div>
