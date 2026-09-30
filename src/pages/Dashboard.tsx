@@ -59,7 +59,6 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
           <h1 className="text-2xl font-bold tracking-tight text-[#10233a]">Bonjour {userProfile?.displayName || 'Trader'}</h1>
           <p className="text-xs text-[#71839a] mt-1">Capital, performance, risque et activité récente en une seule lecture.</p>
         </div>
-        <button onClick={onOpenNewTrade} className="px-3.5 py-2 rounded-xl bg-[#10233a] text-white text-xs font-semibold hover:bg-[#193653] transition-colors cursor-pointer">Nouveau trade</button>
       </div>
       <div className="grid grid-cols-2 lg:grid-cols-5 gap-2.5 mt-5">
         <Metric label="Equity" value={formatCurrency(equity)} sub={`${roi >= 0 ? '+' : ''}${roi.toFixed(2)}%`} />
