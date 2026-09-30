@@ -1,34 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { Trade, TradingAccount, UserProfile } from '../types';
-import { calculatePerformance, calculateTraderScore, formatCurrency, formatPercent } from '../utils/calculations';
+import { calculatePerformance, calculateTraderScore, formatCurrency } from '../utils/calculations';
 import { ResultBadge, DirectionBadge } from '../components/common/Badge';
-import { Tooltip } from '../components/common/Tooltip';
-import { EmptyState } from '../components/common/EmptyState';
-import { 
-  TrendingUp, 
-  TrendingDown, 
-  Percent, 
-  Target, 
-  ShieldCheck, 
-  BarChart3, 
-  ArrowUpRight, 
-  ArrowDownRight, 
-  ChevronRight,
-  Plus,
-  Compass,
-  Award,
-  Clock,
-  Zap,
-  CheckCircle2,
-  Wallet,
-  Activity,
-  Layers,
-  ArrowRight,
-  Shield,
-  LayoutGrid,
-  Focus,
-  Minimize2
-} from 'lucide-react';
+import { Activity, BarChart3, ChevronRight, Focus, Layers, LayoutGrid, Minimize2, Percent, ShieldCheck, Target, TrendingUp } from 'lucide-react';
 
 interface DashboardProps {
   trades: Trade[];
@@ -40,727 +14,106 @@ interface DashboardProps {
   onNavigateToJournal: () => void;
 }
 
-export function Dashboard({
-  trades,
-  accounts,
-  selectedAccountId,
-  userProfile,
-  onOpenNewTrade,
-  onSelectTrade,
-  onNavigateToJournal,
-}: DashboardProps) {
-  const currentAccount = accounts.find(a => a.id === selectedAccountId);
+type Mode = 'standard' | 'focus' | 'analysis' | 'compact';
 
-  const initialCapital = useMemo(() => {
-    if (currentAccount) return currentAccount.initialBalance;
-    if (accounts.length > 0) return accounts.reduce((acc, a) => acc + a.initialBalance, 0);
-    return 0;
-  }, [currentAccount, accounts]);
+const modes: Array<[Mode, string, React.ElementType]> = [
+  ['standard', 'Standard', LayoutGrid],
+  ['focus', 'Focus Trading', Focus],
+  ['analysis', 'Analyse', Activity],
+  ['compact', 'Compacte', Minimize2],
+];
 
-  const metrics = useMemo(() => {
-    return calculatePerformance(trades, initialCapital);
-  }, [trades, initialCapital]);
+export function Dashboard({ trades, accounts, selectedAccountId, userProfile, onOpenNewTrade, onSelectTrade, onNavigateToJournal }: DashboardProps) {
+  const account = accounts.find(item => item.id === selectedAccountId);
+  const capital = account ? account.initialBalance : accounts.reduce((sum, item) => sum + item.initialBalance, 0);
+  const metrics = useMemo(() => calculatePerformance(trades, capital), [trades, capital]);
+  const score = useMemo(() => calculateTraderScore(trades), [trades]);
+  const equity = capital + metrics.totalPnl;
+  const roi = capital > 0 ? (metrics.totalPnl / capital) * 100 : 0;
+  const [mode, setMode] = useState<Mode>(() => typeof window === 'undefined' ? 'standard' : (localStorage.getItem('iamtrader-dashboard-mode') as Mode) || 'standard');
+  const [hover, setHover] = useState<number | null>(null);
 
-  const traderScore = useMemo(() => {
-    return calculateTraderScore(trades);
-  }, [trades]);
-
-  const currentEquity = initialCapital + metrics.totalPnl;
-  const currentBalance = currentEquity;
-  const roiPercent = initialCapital > 0 ? (metrics.totalPnl / initialCapital) * 100 : 0;
-
-  // Breakdown by instrument
-  const instrumentBreakdown = useMemo(() => {
-    const map: Record<string, { count: number; pnl: number; wins: number }> = {};
-    trades.forEach(t => {
-      if (!map[t.symbol]) map[t.symbol] = { count: 0, pnl: 0, wins: 0 };
-      map[t.symbol].count++;
-      map[t.symbol].pnl += Number(t.pnl) || 0;
-      if (t.result === 'WIN') map[t.symbol].wins++;
-    });
-    return Object.entries(map).sort((a, b) => b[1].pnl - a[1].pnl);
-  }, [trades]);
-
-  // Breakdown by session
-  const sessionBreakdown = useMemo(() => {
-    const map: Record<string, { count: number; pnl: number; wins: number }> = {
-      'London': { count: 0, pnl: 0, wins: 0 },
-      'New York': { count: 0, pnl: 0, wins: 0 },
-      'Asia': { count: 0, pnl: 0, wins: 0 },
-      'Overlap': { count: 0, pnl: 0, wins: 0 }
-    };
-    trades.forEach(t => {
-      if (map[t.session]) {
-        map[t.session].count++;
-        map[t.session].pnl += Number(t.pnl) || 0;
-        if (t.result === 'WIN') map[t.session].wins++;
-      }
-    });
-    return map;
-  }, [trades]);
-
-  // Equity Curve SVG calculation
-  const svgWidth = 800;
-  const svgHeight = 220;
-  const padding = 25;
-
-  const points = useMemo(() => {
-    if (metrics.equityCurve.length <= 1) return '';
-    const balances = metrics.equityCurve.map(pt => pt.balance);
-    const minVal = Math.min(...balances) * 0.995;
-    const maxVal = Math.max(...balances) * 1.005;
-    const range = maxVal - minVal || 1;
-
-    return metrics.equityCurve.map((pt, i) => {
-      const x = padding + (i / (metrics.equityCurve.length - 1)) * (svgWidth - padding * 2);
-      const y = svgHeight - padding - ((pt.balance - minVal) / range) * (svgHeight - padding * 2);
-      return `${x},${y}`;
-    }).join(' ');
-  }, [metrics.equityCurve, svgWidth, svgHeight, padding]);
-
-  // Mini sparkline for KPI
-  const miniSparklinePoints = useMemo(() => {
-    if (metrics.equityCurve.length <= 1) return '0,15 30,15 60,15';
-    const balances = metrics.equityCurve.map(pt => pt.balance);
-    const minVal = Math.min(...balances);
-    const maxVal = Math.max(...balances);
-    const range = maxVal - minVal || 1;
-
-    return metrics.equityCurve.slice(-8).map((pt, i, arr) => {
-      const x = (i / (arr.length - 1 || 1)) * 64;
-      const y = 20 - ((pt.balance - minVal) / range) * 16;
-      return `${x},${y}`;
-    }).join(' ');
+  const curve = useMemo(() => {
+    if (metrics.equityCurve.length < 2) return [];
+    const values = metrics.equityCurve.map(item => item.balance);
+    const min = Math.min(...values);
+    const max = Math.max(...values);
+    const range = max - min || 1;
+    return metrics.equityCurve.map((item, index) => ({
+      ...item,
+      x: 24 + (index / (metrics.equityCurve.length - 1)) * 752,
+      y: 190 - 24 - ((item.balance - min) / range) * 142,
+    }));
   }, [metrics.equityCurve]);
 
-  const userName = userProfile?.displayName || 'Hénoch';
-
-  type DashboardMode = 'standard' | 'focus' | 'analysis' | 'compact';
-  const [equityHoverIndex, setEquityHoverIndex] = useState<number | null>(null);
-
-  const equityChartPoints = useMemo(() => {
-    if (metrics.equityCurve.length <= 1) return [];
-    const balances = metrics.equityCurve.map(pt => pt.balance);
-    const minVal = Math.min(...balances) * 0.995;
-    const maxVal = Math.max(...balances) * 1.005;
-    const range = maxVal - minVal || 1;
-    return metrics.equityCurve.map((pt, i) => {
-      const x = padding + (i / (metrics.equityCurve.length - 1)) * (svgWidth - padding * 2);
-      const y = svgHeight - padding - ((pt.balance - minVal) / range) * (svgHeight - padding * 2);
-      return { x, y, ...pt };
-    });
-  }, [metrics.equityCurve, svgWidth, svgHeight, padding]);
-
-  const equityPeriodLabels = useMemo(() => {
-    if (!metrics.equityCurve.length) return [];
-    const count = Math.min(5, metrics.equityCurve.length);
-    return Array.from({ length: count }, (_, i) => {
-      const index = count === 1 ? 0 : Math.round((i / (count - 1)) * (metrics.equityCurve.length - 1));
-      const point = metrics.equityCurve[index];
-      return { index, label: new Date(point.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }) };
-    });
-  }, [metrics.equityCurve]);
-
-  const [dashboardMode, setDashboardMode] = useState<DashboardMode>(() => {
-    if (typeof window === 'undefined') return 'standard';
-    return (localStorage.getItem('iamtrader-dashboard-mode') as DashboardMode) || 'standard';
-  });
-
-  const changeDashboardMode = (mode: DashboardMode) => {
-    setDashboardMode(mode);
-    if (typeof window !== 'undefined') localStorage.setItem('iamtrader-dashboard-mode', mode);
+  const setDashboardMode = (value: Mode) => {
+    setMode(value);
+    localStorage.setItem('iamtrader-dashboard-mode', value);
   };
 
-  const DashboardIntro = ({ compact = false }: { compact?: boolean }) => (
-    <div className={`flex ${compact ? 'flex-col' : 'flex-col lg:flex-row'} lg:items-center justify-between gap-4`}>
-      <div>
-        <div className="flex items-center gap-2 mb-1.5">
-          <span className="inline-flex items-center gap-1.5 text-[10px] font-semibold text-[#008f63] bg-[#e7faf3] border border-[#c9eee1] px-2.5 py-1 rounded-full">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#08b77a]" /> Espace actif
-          </span>
-          <span className="text-[11px] text-[#9aa9b8]">·</span>
-          <span className="text-[11px] text-[#71839a]">{currentAccount?.name || 'Tous les comptes'}</span>
-        </div>
-        <h1 className={`${compact ? 'text-xl' : 'text-2xl'} font-bold tracking-tight text-[#10233a]`}>
-          Bonjour {userName}
-        </h1>
-        {!compact && <p className="text-xs text-[#71839a] mt-1">Une vue claire de votre performance, de votre risque et de vos dernières décisions.</p>}
-      </div>
-      <div />
-    </div>
-  );
-
-  const MiniKpi = ({ label, value, sub, tone = 'neutral' }: { label: string; value: string; sub?: string; tone?: 'neutral'|'positive'|'negative' }) => (
-    <div className="p-4 rounded-2xl card-premium">
-      <div className="text-[10px] font-semibold uppercase tracking-wider text-[#8a9aab]">{label}</div>
-      <div className={`mt-2 text-xl font-bold font-mono tabular-nums ${tone === 'positive' ? 'text-[#00a86b]' : tone === 'negative' ? 'text-[#f04f63]' : 'text-[#10233a]'}`}>{value}</div>
-      {sub && <div className="mt-1 text-[10px] text-[#8a9aab]">{sub}</div>}
-    </div>
-  );
-
-  if (dashboardMode === 'focus') {
-    return (
-      <div className="space-y-5">
-        <DashboardIntro />
-        <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
-          <MiniKpi label="Solde actuel" value={formatCurrency(currentBalance)} sub={`${roiPercent >= 0 ? '+' : ''}${roiPercent.toFixed(2)}% depuis le départ`} tone={roiPercent >= 0 ? 'positive' : 'negative'} />
-          <MiniKpi label="P&L total" value={formatCurrency(metrics.totalPnl)} sub={`${metrics.totalTrades} trades enregistrés`} tone={metrics.totalPnl >= 0 ? 'positive' : 'negative'} />
-          <MiniKpi label="Win rate" value={`${metrics.winRate.toFixed(1)}%`} sub={`${metrics.winningTrades} gains · ${metrics.losingTrades} pertes`} tone="positive" />
-          <MiniKpi label="Drawdown" value={`-${metrics.maxDrawdownPercent.toFixed(1)}%`} sub="Surveillance du risque" tone={metrics.maxDrawdownPercent > 5 ? 'negative' : 'neutral'} />
-        </div>
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-          <div className="xl:col-span-2 p-5 rounded-2xl card-premium">
-            <div className="flex items-center justify-between mb-4">
-              <div><h2 className="text-sm font-bold text-[#10233a]">Courbe d'equity</h2><p className="text-[11px] text-[#8a9aab] mt-1">Lecture rapide de votre progression</p></div>
-              <span className="text-[10px] px-2 py-1 rounded-full bg-[#e7faf3] text-[#008f63] font-semibold">Performance</span>
-            </div>
-            <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="w-full h-56 bg-[#fbfdfc] rounded-xl border border-[#edf2f0] p-2">
-              {metrics.equityCurve.length > 1 ? <>
-                <line x1={padding} y1={padding} x2={svgWidth-padding} y2={padding} stroke="#e8efed" strokeDasharray="4 4" />
-                <line x1={padding} y1={svgHeight/2} x2={svgWidth-padding} y2={svgHeight/2} stroke="#e8efed" strokeDasharray="4 4" />
-                <line x1={padding} y1={svgHeight-padding} x2={svgWidth-padding} y2={svgHeight-padding} stroke="#e8efed" strokeDasharray="4 4" />
-                <polyline fill="none" stroke="#08b77a" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" points={points} />
-              </> : <text x="50%" y="50%" textAnchor="middle" fill="#8a9aab" fontSize="12">Ajoutez des trades pour afficher la courbe</text>}
-            </svg>
-          </div>
-          <div className="p-5 rounded-2xl card-premium">
-            <div className="flex items-center justify-between mb-4"><h2 className="text-sm font-bold text-[#10233a]">À surveiller</h2><ShieldCheck className="w-4 h-4 text-[#08b77a]" /></div>
-            <div className="space-y-3">
-              {[
-                ['Risque maximal', `${metrics.maxDrawdownPercent.toFixed(1)}%`, metrics.maxDrawdownPercent <= 5],
-                ['Profit Factor', metrics.profitFactor.toFixed(2), metrics.profitFactor >= 1],
-                ['Trade moyen', metrics.totalTrades ? formatCurrency(metrics.totalPnl / metrics.totalTrades) : '$0', metrics.totalPnl >= 0],
-                ['Trader Score', traderScore.isSufficientData ? `${traderScore.overallScore}/100` : '—', traderScore.isSufficientData]
-              ].map(([label,value,ok]) => <div key={String(label)} className="flex items-center justify-between p-3 rounded-xl bg-[#f8fbfa] border border-[#edf2f0]"><span className="text-xs text-[#5f748c]">{label}</span><span className={`text-xs font-bold font-mono ${ok ? 'text-[#00a86b]' : 'text-[#f04f63]'}`}>{String(value)}</span></div>)}
-            </div>
-          </div>
-        </div>
-        <div className="p-5 rounded-2xl card-premium">
-          <div className="flex items-center justify-between mb-3"><div><h2 className="text-sm font-bold text-[#10233a]">Derniers trades</h2><p className="text-[11px] text-[#8a9aab] mt-1">Les informations essentielles, sans surcharge</p></div><button onClick={onNavigateToJournal} className="text-xs font-semibold text-[#008f63]">Voir le journal</button></div>
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-            {trades.slice(0,6).map(t => <button key={t.id} onClick={() => onSelectTrade(t)} className="text-left p-3.5 rounded-xl border border-[#e8efed] hover:border-[#bdeedc] hover:bg-[#f7fcfa] transition-all cursor-pointer">
-              <div className="flex items-center justify-between"><span className="font-bold text-sm text-[#10233a]">{t.symbol}</span><DirectionBadge direction={t.direction}/></div>
-              <div className="flex items-center justify-between mt-2"><span className="text-[10px] text-[#8a9aab]">{t.setup} · {t.session}</span><span className={`text-xs font-bold font-mono ${t.pnl >= 0 ? 'text-[#00a86b]' : 'text-[#f04f63]'}`}>{formatCurrency(t.pnl)}</span></div>
-            </button>)}
-            {trades.length === 0 && <div className="md:col-span-2 xl:col-span-3 py-10 text-center text-xs text-[#8a9aab]">Aucun trade. Commencez par enregistrer votre première opération.</div>}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (dashboardMode === 'analysis') {
-    const topInstruments = instrumentBreakdown.slice(0, 5);
-    return (
-      <div className="space-y-5">
-        <DashboardIntro />
-        <div className="grid grid-cols-2 xl:grid-cols-5 gap-3">
-          <MiniKpi label="Trades" value={String(metrics.totalTrades)} sub="Total" />
-          <MiniKpi label="Win rate" value={`${metrics.winRate.toFixed(1)}%`} sub="Trades gagnants" tone="positive" />
-          <MiniKpi label="Profit Factor" value={metrics.profitFactor.toFixed(2)} sub="Gains / pertes" />
-          <MiniKpi label="Expectancy" value={formatCurrency(metrics.expectancy)} sub="Par trade" tone={metrics.expectancy >= 0 ? 'positive' : 'negative'} />
-          <MiniKpi label="Avg R:R" value={metrics.avgRR.toFixed(2)} sub="Ratio moyen" />
-        </div>
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-          <div className="xl:col-span-2 p-5 rounded-2xl card-premium">
-            <div className="flex items-center justify-between mb-4"><div><h2 className="text-sm font-bold text-[#10233a]">Performance par instrument</h2><p className="text-[11px] text-[#8a9aab] mt-1">Identifiez rapidement où votre edge est concentré.</p></div><BarChart3 className="w-4 h-4 text-[#08b77a]" /></div>
-            <div className="space-y-3">
-              {topInstruments.length ? topInstruments.map(([name,data]) => {
-                const max = Math.max(...topInstruments.map(([,d]) => Math.abs(d.pnl)), 1);
-                return <div key={name}><div className="flex justify-between text-xs mb-1.5"><span className="font-semibold text-[#314861]">{name}</span><span className={(data.pnl >= 0 ? "font-mono font-bold text-[#00a86b]" : "font-mono font-bold text-[#f04f63]")}>{formatCurrency(data.pnl)}</span></div><div className="h-2 rounded-full bg-[#eef3f1] overflow-hidden"><div className={(data.pnl >= 0 ? "h-full rounded-full bg-[#08b77a]" : "h-full rounded-full bg-[#f04f63]")} style={{ width: String(Math.max((Math.abs(data.pnl) / max) * 100, 6)) + "%" }} /></div></div>
-              }) : <div className="py-12 text-center text-xs text-[#8a9aab]">Les analyses apparaîtront après vos premiers trades.</div>}
-            </div>
-          </div>
-          <div className="p-5 rounded-2xl card-premium">
-            <h2 className="text-sm font-bold text-[#10233a] mb-4">Sessions</h2>
-            <div className="space-y-3">{Object.entries(sessionBreakdown).map(([name,data]) => <div key={name} className="flex items-center justify-between p-3 rounded-xl bg-[#f8fbfa] border border-[#edf2f0]"><div><div className="text-xs font-semibold text-[#314861]">{name}</div><div className="text-[10px] text-[#8a9aab]">{data.count} trade{data.count>1?'s':''}</div></div><div className={`text-xs font-bold font-mono ${data.pnl >= 0 ? 'text-[#00a86b]' : 'text-[#f04f63]'}`}>{formatCurrency(data.pnl)}</div></div>)}</div>
-          </div>
-        </div>
-        <div className="p-5 rounded-2xl card-premium">
-          <div className="flex items-center justify-between mb-3"><h2 className="text-sm font-bold text-[#10233a]">Dernières opérations</h2><button onClick={onNavigateToJournal} className="text-xs font-semibold text-[#008f63]">Ouvrir le journal</button></div>
-          <div className="overflow-x-auto"><table className="w-full text-left text-xs"><thead><tr className="text-[10px] uppercase tracking-wider text-[#8a9aab] border-b border-[#edf2f0]"><th className="py-2.5 px-2">Date</th><th className="py-2.5 px-2">Actif</th><th className="py-2.5 px-2">Setup</th><th className="py-2.5 px-2">Session</th><th className="py-2.5 px-2 text-right">P&L</th></tr></thead><tbody>{trades.slice(0,8).map(t=><tr key={t.id} onClick={()=>onSelectTrade(t)} className="border-b border-[#edf2f0] hover:bg-[#f8fbfa] cursor-pointer"><td className="py-3 px-2 text-[#71839a]">{new Date(t.entryDate).toLocaleDateString('fr-FR')}</td><td className="py-3 px-2 font-semibold text-[#10233a]">{t.symbol}</td><td className="py-3 px-2 text-[#5f748c]">{t.setup}</td><td className="py-3 px-2 text-[#5f748c]">{t.session}</td><td className={`py-3 px-2 text-right font-mono font-bold ${t.pnl>=0?'text-[#00a86b]':'text-[#f04f63]'}`}>{formatCurrency(t.pnl)}</td></tr>)}</tbody></table></div>
-        </div>
-      </div>
-    );
-  }
-
-  if (dashboardMode === 'compact') {
-    return (
-      <div className="space-y-4">
-        <DashboardIntro compact />
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-          <MiniKpi label="Solde" value={formatCurrency(currentBalance)} />
-          <MiniKpi label="P&L" value={formatCurrency(metrics.totalPnl)} tone={metrics.totalPnl >= 0 ? 'positive' : 'negative'} />
-          <MiniKpi label="Win rate" value={`${metrics.winRate.toFixed(1)}%`} tone="positive" />
-          <MiniKpi label="DD" value={`-${metrics.maxDrawdownPercent.toFixed(1)}%`} tone={metrics.maxDrawdownPercent > 5 ? 'negative' : 'neutral'} />
-          <MiniKpi label="Score" value={traderScore.isSufficientData ? String(traderScore.overallScore) : '—'} />
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
-          <div className="lg:col-span-2 p-4 rounded-2xl card-premium"><div className="flex justify-between mb-3"><h2 className="text-sm font-bold text-[#10233a]">Equity</h2><span className="text-[10px] text-[#8a9aab]">{metrics.totalTrades} trades</span></div><svg viewBox={`0 0 ${svgWidth} 160`} className="w-full h-40"><polyline fill="none" stroke="#08b77a" strokeWidth="3" strokeLinecap="round" points={points || "25,135 200,120 400,125 600,90 775,100"} /></svg></div>
-          <div className="p-4 rounded-2xl card-premium"><h2 className="text-sm font-bold text-[#10233a] mb-3">Activité récente</h2><div className="space-y-2">{trades.slice(0,5).map(t=><button key={t.id} onClick={()=>onSelectTrade(t)} className="w-full flex items-center justify-between gap-2 p-2.5 rounded-xl hover:bg-[#f7fbf9] text-left cursor-pointer"><span className="text-xs font-semibold text-[#203a53]">{t.symbol}</span><span className={`text-[11px] font-mono font-bold ${t.pnl>=0?'text-[#00a86b]':'text-[#f04f63]'}`}>{formatCurrency(t.pnl)}</span></button>)}</div></div>
-        </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="space-y-7">
-      {/* 1. Header with Trader Situation */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-3 border-b border-slate-200/80">
+  const situation = (
+    <div className="rounded-2xl bg-white border border-[#dce7e3] p-5 shadow-[0_8px_24px_rgba(16,35,58,0.04)]">
+      <div className="flex items-start justify-between gap-4">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded font-semibold">
-              Espace de trading
-            </span>
-            <span className="text-slate-400">·</span>
-            <span className="text-[11px] text-slate-500 font-mono">
-              Compte : {currentAccount ? currentAccount.name : 'Portefeuille Global'}
-            </span>
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-            Bonjour {userName}
-          </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Votre capital sous gestion est stable avec une exposition au risque sous contrôle strict.
-          </p>
+          <div className="flex items-center gap-2 mb-1.5"><span className="text-[9px] font-semibold uppercase tracking-wider text-[#087b59] bg-[#e7faf3] border border-[#c9eee1] px-2 py-1 rounded-full">Situation actuelle</span><span className="text-[11px] text-[#71839a]">· {account?.name || 'Tous les comptes'}</span></div>
+          <h1 className="text-2xl font-bold tracking-tight text-[#10233a]">Bonjour {userProfile?.displayName || 'Trader'}</h1>
+          <p className="text-xs text-[#71839a] mt-1">Capital, performance, risque et activité récente en une seule lecture.</p>
         </div>
-
-        <div className="flex items-center gap-2 self-start sm:self-auto">
-          <button
-            onClick={onOpenNewTrade}
-            className="btn-primary flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
-            <span>Nouveau Trade</span>
-          </button>
-        </div>
+        <button onClick={onOpenNewTrade} className="px-3.5 py-2 rounded-xl bg-[#10233a] text-white text-xs font-semibold hover:bg-[#193653] transition-colors cursor-pointer">Nouveau trade</button>
       </div>
-
-      {/* Empty State Banner if no trades */}
-      {trades.length === 0 && (
-        <div className="rounded-xl card-premium overflow-hidden p-6 border-slate-200">
-          <EmptyState
-            icon={Compass}
-            title="Aucune transaction dans votre journal"
-            description="Enregistrez vos premières opérations pour activer la courbe d'equity continue, les ratios de rentabilité et le Trader Score institutionnel."
-            actionLabel="+ Enregistrer un premier trade"
-            onAction={onOpenNewTrade}
-            accentColor="emerald"
-          />
-        </div>
-      )}
-
-      {/* 2. Structured Primary KPIs Grid (Balance, Equity, P&L, Win Rate, Drawdown, Profit Factor) */}
-      <div className="dashboard-kpi-grid grid gap-4">
-        {/* Card 1: Balance */}
-        <div className="p-5 rounded-2xl card-premium flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Balance</span>
-            <div className="w-6 h-6 rounded bg-slate-100 border border-slate-200 text-slate-500 flex items-center justify-center">
-              <Wallet className="w-3.5 h-3.5" />
-            </div>
-          </div>
-          <div className="my-2.5">
-            <div className="text-xl sm:text-2xl font-bold font-mono text-slate-900 tabular-nums tracking-tight">
-              ${currentBalance.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </div>
-            <div className="flex items-center gap-1 text-[11px] font-mono mt-1 text-slate-500">
-              <span className="text-slate-500">Init: ${initialCapital.toLocaleString()}</span>
-            </div>
-          </div>
-          <div className="pt-2 border-t border-slate-200/80 text-[10px] text-slate-500 font-mono flex justify-between">
-            <span>Variation :</span>
-            <span className={metrics.totalPnl >= 0 ? 'text-emerald-400 font-semibold' : 'text-rose-400 font-semibold'}>
-              {metrics.totalPnl >= 0 ? `+${metrics.totalPnl.toFixed(0)}$` : `${metrics.totalPnl.toFixed(0)}$`}
-            </span>
-          </div>
-        </div>
-
-        {/* Card 2: Equity */}
-        <div className="p-5 rounded-2xl card-premium flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Equity</span>
-            <div className="w-6 h-6 rounded bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center">
-              <Layers className="w-3.5 h-3.5" />
-            </div>
-          </div>
-          <div className="my-2.5">
-            <div className="text-xl sm:text-2xl font-bold font-mono text-slate-900 tabular-nums tracking-tight">
-              ${currentEquity.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-            </div>
-            <div className="flex items-center gap-1 text-[11px] font-mono mt-1 text-slate-500">
-              <span className="text-slate-500">Temps réel</span>
-            </div>
-          </div>
-          <div className="pt-2 border-t border-slate-200/80 flex items-center justify-between">
-            <span className="text-[10px] text-slate-500 font-mono">Tendance</span>
-            <svg width="60" height="18" className="overflow-visible">
-              <polyline
-                fill="none"
-                stroke={metrics.totalPnl >= 0 ? '#10b981' : '#f43f5e'}
-                strokeWidth="1.75"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                points={miniSparklinePoints}
-              />
-            </svg>
-          </div>
-        </div>
-
-        {/* Card 3: P&L Net */}
-        <div className="p-5 rounded-2xl card-premium flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1">
-              <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">P&L Net</span>
-              <Tooltip content="Profit ou perte nette réalisée sur les positions clôturées." />
-            </div>
-            <div className={`w-6 h-6 rounded flex items-center justify-center border ${
-              metrics.totalPnl >= 0 ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400' : 'bg-rose-500/10 border-rose-500/20 text-rose-400'
-            }`}>
-              {metrics.totalPnl >= 0 ? <ArrowUpRight className="w-3.5 h-3.5 stroke-[2.5]" /> : <ArrowDownRight className="w-3.5 h-3.5 stroke-[2.5]" />}
-            </div>
-          </div>
-          <div className="my-2.5">
-            <div className={`text-xl sm:text-2xl font-bold font-mono tabular-nums tracking-tight ${
-              metrics.totalPnl > 0 ? 'text-emerald-400' : metrics.totalPnl < 0 ? 'text-rose-400' : 'text-slate-600'
-            }`}>
-              {formatCurrency(metrics.totalPnl)}
-            </div>
-            <div className={`flex items-center gap-1 text-[11px] font-mono mt-1 font-semibold ${
-              roiPercent >= 0 ? 'text-emerald-400' : 'text-rose-400'
-            }`}>
-              <span>{formatPercent(roiPercent)} ROI</span>
-            </div>
-          </div>
-          <div className="pt-2 border-t border-slate-200/80 text-[10px] text-slate-500 font-mono flex justify-between">
-            <span>Moy/trade :</span>
-            <span className="text-slate-400 font-semibold tabular-nums">
-              {metrics.totalTrades > 0 ? formatCurrency(metrics.totalPnl / metrics.totalTrades) : '$0'}
-            </span>
-          </div>
-        </div>
-
-        {/* Card 4: Win Rate */}
-        <div className="p-5 rounded-2xl card-premium flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1">
-              <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Win Rate</span>
-              <Tooltip content="Pourcentage de trades clôturés avec un profit positif." />
-            </div>
-            <div className="w-6 h-6 rounded bg-slate-100 border border-slate-200 text-slate-400 flex items-center justify-center">
-              <Percent className="w-3.5 h-3.5" />
-            </div>
-          </div>
-          <div className="my-2.5">
-            <div className="text-xl sm:text-2xl font-bold font-mono text-slate-900 tabular-nums tracking-tight">
-              {metrics.winRate.toFixed(1)}%
-            </div>
-            <div className="flex items-center gap-1.5 text-[11px] font-mono mt-1">
-              <span className="text-emerald-400 font-semibold">{metrics.winningTrades}W</span>
-              <span className="text-slate-400">/</span>
-              <span className="text-rose-400 font-semibold">{metrics.losingTrades}L</span>
-              <span className="text-slate-400">/</span>
-              <span className="text-slate-500">{metrics.breakevenTrades}BE</span>
-            </div>
-          </div>
-          <div className="pt-2 border-t border-slate-200/80">
-            <div className="w-full h-1.5 rounded bg-slate-100 overflow-hidden flex">
-              <div style={{ width: `${metrics.winRate}%` }} className="bg-emerald-500 rounded-l" />
-              <div style={{ width: `${100 - metrics.winRate}%` }} className="bg-rose-500/70 rounded-r" />
-            </div>
-          </div>
-        </div>
-
-        {/* Card 5: Drawdown */}
-        <div className="p-5 rounded-2xl card-premium flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1">
-              <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Drawdown</span>
-              <Tooltip content="Perte maximale en pourcentage par rapport au sommet historique du compte." />
-            </div>
-            <div className="w-6 h-6 rounded bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center">
-              <TrendingDown className="w-3.5 h-3.5" />
-            </div>
-          </div>
-          <div className="my-2.5">
-            <div className="text-xl sm:text-2xl font-bold font-mono text-rose-400 tabular-nums tracking-tight">
-              -{metrics.maxDrawdownPercent.toFixed(1)}%
-            </div>
-            <div className="flex items-center gap-1 text-[11px] font-mono mt-1 text-slate-500">
-              <span>Montant : </span>
-              <span className="text-rose-400 font-semibold tabular-nums">-${metrics.maxDrawdownAmount.toFixed(0)}</span>
-            </div>
-          </div>
-          <div className="pt-2 border-t border-slate-200/80 text-[10px] text-slate-500 font-mono flex justify-between">
-            <span>Règle max 5% :</span>
-            <span className={metrics.maxDrawdownPercent <= 5 ? 'text-emerald-400 font-semibold' : 'text-rose-400 font-semibold'}>
-              {metrics.maxDrawdownPercent <= 5 ? 'Conforme' : 'Alerte'}
-            </span>
-          </div>
-        </div>
-
-        {/* Card 6: Profit Factor */}
-        <div className="p-5 rounded-2xl card-premium flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1">
-              <span className="text-[11px] font-medium text-slate-500 uppercase tracking-wider">Profit Factor</span>
-              <Tooltip content="Gains bruts divisés par pertes brutes. Un PF supérieur à 1.5 indique une stratégie robuste." />
-            </div>
-            <div className="w-6 h-6 rounded bg-slate-100 border border-slate-200 text-slate-400 flex items-center justify-center">
-              <BarChart3 className="w-3.5 h-3.5" />
-            </div>
-          </div>
-          <div className="my-2.5">
-            <div className="text-xl sm:text-2xl font-bold font-mono text-slate-900 tabular-nums tracking-tight">
-              {metrics.profitFactor > 0 ? metrics.profitFactor.toFixed(2) : '0.00'}
-            </div>
-            <div className="flex items-center gap-1 text-[11px] font-mono mt-1 text-slate-500">
-              <span>Gain : </span>
-              <span className="text-emerald-400 font-semibold tabular-nums">+${metrics.avgWin.toFixed(0)}</span>
-            </div>
-          </div>
-          <div className="pt-2 border-t border-slate-200/80 text-[10px] text-slate-500 font-mono flex justify-between">
-            <span>Perte :</span>
-            <span className="text-rose-400 font-semibold tabular-nums">-${metrics.avgLoss.toFixed(0)}</span>
-          </div>
-        </div>
-      </div>
-
-      {/* 3. Equity Curve Chart & Trader Score */}
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
-        {/* Equity Curve (2 columns) */}
-        <div className="xl:col-span-2 p-6 rounded-2xl card-premium flex flex-col justify-between">
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-slate-900 tracking-tight">Courbe d'Equity</h3>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#eaf9f3] text-[#008f63] border border-[#c9eee1] font-semibold">
-                  Performance Réalisée
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-500 mt-0.5">Évolution du solde sur chaque position clôturée</p>
-            </div>
-            <div className="flex items-center gap-3 text-xs font-mono">
-              <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded bg-white border border-slate-200">
-                <span className="w-2 h-0.5 rounded bg-blue-500"></span>
-                <span className="text-slate-400 text-[11px]">Capital</span>
-              </div>
-            </div>
-          </div>
-
-          {/* SVG Chart with discreet grid lines */}
-          <div className="w-full overflow-hidden bg-white rounded-lg border border-slate-200/80 p-3">
-            {metrics.equityCurve.length > 1 && points ? (
-              <div className="relative">
-                <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="w-full h-44 sm:h-52 overflow-visible"
-                  onMouseLeave={() => setEquityHoverIndex(null)}
-                  onMouseMove={(event) => {
-                    const rect = event.currentTarget.getBoundingClientRect();
-                    const x = ((event.clientX - rect.left) / rect.width) * svgWidth;
-                    const nearest = equityChartPoints.reduce((best, point, index) =>
-                      Math.abs(point.x - x) < Math.abs(equityChartPoints[best].x - x) ? index : best, 0);
-                    setEquityHoverIndex(nearest);
-                  }}>
-                  <defs>
-                    <linearGradient id="fintechEquityGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                      <stop offset="0%" stopColor="#19a66a" stopOpacity="0.22" />
-                      <stop offset="100%" stopColor="#19a66a" stopOpacity="0.00" />
-                    </linearGradient>
-                  </defs>
-                  <line x1={padding} y1={padding} x2={svgWidth - padding} y2={padding} stroke="#e6efec" strokeDasharray="3 3" />
-                  <line x1={padding} y1={svgHeight / 2} x2={svgWidth - padding} y2={svgHeight / 2} stroke="#e6efec" strokeDasharray="3 3" />
-                  <line x1={padding} y1={svgHeight - padding} x2={svgWidth - padding} y2={svgHeight - padding} stroke="#e6efec" strokeDasharray="3 3" />
-                  <polygon points={`${padding},${svgHeight - padding} ${points} ${svgWidth - padding},${svgHeight - padding}`} fill="url(#fintechEquityGrad)" />
-                  <polyline fill="none" stroke="#19a66a" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" points={points} />
-                  {equityHoverIndex !== null && equityChartPoints[equityHoverIndex] && (
-                    <>
-                      <line x1={equityChartPoints[equityHoverIndex].x} y1={padding} x2={equityChartPoints[equityHoverIndex].x} y2={svgHeight - padding} stroke="#b8cfc6" strokeDasharray="3 4" />
-                      <circle cx={equityChartPoints[equityHoverIndex].x} cy={equityChartPoints[equityHoverIndex].y} r="4.5" fill="#ffffff" stroke="#19a66a" strokeWidth="2.5" />
-                    </>
-                  )}
-                </svg>
-                <div className="flex justify-between px-1 mt-1 text-[9px] font-mono text-slate-400">
-                  {equityPeriodLabels.map(period => <span key={period.index}>{period.label}</span>)}
-                </div>
-                {equityHoverIndex !== null && equityChartPoints[equityHoverIndex] && (
-                  <div className="absolute top-2 pointer-events-none px-3 py-2 rounded-lg bg-white/95 border border-slate-200 shadow-sm text-[10px] font-mono"
-                    style={{ left: `${Math.min(Math.max((equityChartPoints[equityHoverIndex].x / svgWidth) * 100, 12), 82)}%`, transform: 'translateX(-50%)' }}>
-                    <div className="font-semibold text-slate-700">{new Date(equityChartPoints[equityHoverIndex].date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
-                    <div className="text-[#19a66a] font-bold mt-0.5">{formatCurrency(equityChartPoints[equityHoverIndex].balance)}</div>
-                    {equityChartPoints[equityHoverIndex].pnl !== 0 && <div className={equityChartPoints[equityHoverIndex].pnl >= 0 ? 'text-emerald-600' : 'text-rose-500'}>P&L {formatCurrency(equityChartPoints[equityHoverIndex].pnl)}</div>}
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="h-44 sm:h-52 flex items-center justify-center text-xs text-slate-500 font-mono">
-                Enregistrez au moins 2 trades pour afficher la courbe d'equity.
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Trader Score Widget */}
-        <div className="p-6 rounded-2xl card-premium flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center">
-                <ShieldCheck className="w-3.5 h-3.5" />
-              </div>
-              <h3 className="text-sm font-bold text-slate-900">Trader Score</h3>
-            </div>
-            <span className="text-[10px] font-mono uppercase text-blue-400 px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20 font-semibold">
-              Indice de performance
-            </span>
-          </div>
-
-          {/* Radial score */}
-          <div className="my-4 flex flex-col items-center text-center">
-            <div className="relative w-32 h-32 flex items-center justify-center">
-              <svg className="w-full h-full -rotate-90 transform" viewBox="0 0 100 100">
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="40"
-                  stroke="#e3ece9"
-                  strokeWidth="7"
-                  fill="transparent"
-                />
-                <circle
-                  cx="50"
-                  cy="50"
-                  r="40"
-                  stroke="#19a66a"
-                  strokeWidth="7"
-                  strokeDasharray={`${2 * Math.PI * 40}`}
-                  strokeDashoffset={`${2 * Math.PI * 40 * (1 - (traderScore.isSufficientData ? traderScore.overallScore / 100 : 0))}`}
-                  strokeLinecap="round"
-                  fill="transparent"
-                  className="transition-all duration-700 ease-out"
-                />
-              </svg>
-              <div className="absolute flex flex-col items-center">
-                <span className="text-3xl font-bold font-mono text-slate-900 tabular-nums">
-                  {traderScore.isSufficientData ? traderScore.overallScore : '—'}
-                </span>
-                <span className="text-[9px] text-slate-500 font-mono uppercase tracking-wider">sur 100</span>
-              </div>
-            </div>
-
-            <div className="text-xs font-semibold text-slate-600 mt-2 font-mono">
-              {traderScore.isSufficientData ? (
-                traderScore.overallScore >= 80 ? 'Profil Élite' : 'Profil Solide'
-              ) : 'Min 5 trades requis'}
-            </div>
-          </div>
-
-          {/* 2 subscores */}
-          <div className="space-y-2 pt-3 border-t border-slate-200/80 text-xs">
-            <div className="flex items-center justify-between text-[11px]">
-              <span className="text-slate-500">Gestion du Risque</span>
-              <span className="font-mono font-semibold text-slate-600">
-                {traderScore.isSufficientData ? `${traderScore.riskManagementScore}/100` : '—'}
-              </span>
-            </div>
-            <div className="w-full h-1 rounded bg-slate-100 overflow-hidden">
-              <div style={{ width: `${traderScore.riskManagementScore}%` }} className="bg-blue-500 h-full rounded" />
-            </div>
-
-            <div className="flex items-center justify-between text-[11px] pt-1">
-              <span className="text-slate-500">Discipline Opérationnelle</span>
-              <span className="font-mono font-semibold text-slate-600">
-                {traderScore.isSufficientData ? `${traderScore.disciplineScore}/100` : '—'}
-              </span>
-            </div>
-            <div className="w-full h-1 rounded bg-slate-100 overflow-hidden">
-              <div style={{ width: `${traderScore.disciplineScore}%` }} className="bg-emerald-500 h-full rounded" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 4. Recent Trades Table (Clean FinTech Layout) */}
-      <div className="p-6 rounded-2xl card-premium space-y-3">
-        <div className="flex items-center justify-between pb-2 border-b border-slate-200/80">
-          <div>
-            <h3 className="text-sm font-bold text-slate-900">Dernières Opérations</h3>
-            <p className="text-[11px] text-slate-500 mt-0.5">Historique récent synchronisé en direct</p>
-          </div>
-          <button
-            onClick={onNavigateToJournal}
-            className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 font-semibold transition-colors cursor-pointer"
-          >
-            <span>Voir tout le journal</span>
-            <ChevronRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
-
-        {trades.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="border-b border-slate-200/80 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-                  <th className="py-2.5 px-3">Date</th>
-                  <th className="py-2.5 px-3">Symbol</th>
-                  <th className="py-2.5 px-3">Direction</th>
-                  <th className="py-2.5 px-3">Entrée</th>
-                  <th className="py-2.5 px-3">Sortie</th>
-                  <th className="py-2.5 px-3">Lot</th>
-                  <th className="py-2.5 px-3">Risque</th>
-                  <th className="py-2.5 px-3 text-right">P&L ($)</th>
-                  <th className="py-2.5 px-3 text-right">R:R</th>
-                  <th className="py-2.5 px-3 text-right">Statut</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/50">
-                {trades.slice(0, 6).map(trade => (
-                  <tr
-                    key={trade.id}
-                    onClick={() => onSelectTrade(trade)}
-                    className="hover:bg-slate-100/30 transition-colors cursor-pointer"
-                  >
-                    <td className="py-2.5 px-3 font-mono text-slate-500 whitespace-nowrap text-[11px]">
-                      {new Date(trade.entryDate).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })}
-                    </td>
-                    <td className="py-2.5 px-3 font-mono font-bold text-slate-900 text-xs">
-                      {trade.symbol}
-                    </td>
-                    <td className="py-2.5 px-3">
-                      <DirectionBadge direction={trade.direction} />
-                    </td>
-                    <td className="py-2.5 px-3 font-mono text-slate-400 tabular-nums text-[11px]">
-                      {trade.entryPrice ? trade.entryPrice.toLocaleString() : '—'}
-                    </td>
-                    <td className="py-2.5 px-3 font-mono text-slate-400 tabular-nums text-[11px]">
-                      {trade.exitPrice ? trade.exitPrice.toLocaleString() : '—'}
-                    </td>
-                    <td className="py-2.5 px-3 font-mono text-slate-500 tabular-nums text-[11px]">
-                      {trade.positionSize || '1'}
-                    </td>
-                    <td className="py-2.5 px-3 font-mono text-slate-500 tabular-nums text-[11px]">
-                      {trade.riskAmount ? `$${trade.riskAmount}` : '—'}
-                    </td>
-                    <td className={`py-2.5 px-3 text-right font-mono font-bold tabular-nums text-xs ${
-                      trade.pnl > 0 ? 'text-emerald-400' : trade.pnl < 0 ? 'text-rose-400' : 'text-slate-500'
-                    }`}>
-                      {formatCurrency(trade.pnl)}
-                    </td>
-                    <td className="py-2.5 px-3 text-right font-mono text-slate-400 tabular-nums text-[11px]">
-                      {trade.rMultiple !== undefined ? `${trade.rMultiple > 0 ? `+${trade.rMultiple}R` : `${trade.rMultiple}R`}` : '—'}
-                    </td>
-                    <td className="py-2.5 px-3 text-right">
-                      <ResultBadge result={trade.result} />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <div className="py-6 text-center text-xs text-slate-500 font-mono">
-            Aucun trade récent à afficher.
-          </div>
-        )}
+      <div className="grid grid-cols-2 lg:grid-cols-5 gap-2.5 mt-5">
+        <Metric label="Equity" value={formatCurrency(equity)} sub={`${roi >= 0 ? '+' : ''}${roi.toFixed(2)}%`} />
+        <Metric label="P&L" value={formatCurrency(metrics.totalPnl)} sub={`${metrics.totalTrades} trades`} tone={metrics.totalPnl >= 0 ? 'positive' : 'negative'} />
+        <Metric label="Win rate" value={`${metrics.winRate.toFixed(1)}%`} sub={`${metrics.winningTrades}W · ${metrics.losingTrades}L`} />
+        <Metric label="Drawdown" value={`-${metrics.maxDrawdownPercent.toFixed(1)}%`} sub={metrics.maxDrawdownPercent > 5 ? 'À surveiller' : 'Sous contrôle'} tone={metrics.maxDrawdownPercent > 5 ? 'negative' : 'positive'} />
+        <Metric label="Trader Score" value={score.isSufficientData ? `${score.overallScore}/100` : '—'} sub={score.isSufficientData ? 'Indice global' : 'Min. 5 trades'} />
       </div>
     </div>
   );
+
+  const chart = (
+    <div className="relative">
+      {curve.length > 1 ? (
+        <>
+          <svg viewBox="0 0 800 190" className="w-full h-56 overflow-visible" onMouseLeave={() => setHover(null)} onMouseMove={event => {
+            const rect = event.currentTarget.getBoundingClientRect();
+            const x = ((event.clientX - rect.left) / rect.width) * 800;
+            const index = curve.reduce((best, point, i) => Math.abs(point.x - x) < Math.abs(curve[best].x - x) ? i : best, 0);
+            setHover(index);
+          }}>
+            <defs><linearGradient id="iam-equity-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#08b77a" stopOpacity=".20" /><stop offset="100%" stopColor="#08b77a" stopOpacity="0" /></linearGradient></defs>
+            <line x1="24" y1="24" x2="776" y2="24" stroke="#edf2f0" strokeDasharray="3 5" />
+            <line x1="24" y1="95" x2="776" y2="95" stroke="#edf2f0" strokeDasharray="3 5" />
+            <line x1="24" y1="166" x2="776" y2="166" stroke="#edf2f0" strokeDasharray="3 5" />
+            <polygon points={`24,166 ${curve.map(p => `${p.x},${p.y}`).join(' ')} 776,166`} fill="url(#iam-equity-fill)" />
+            <polyline points={curve.map(p => `${p.x},${p.y}`).join(' ')} fill="none" stroke="#08b77a" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+            {hover !== null && curve[hover] && <><line x1={curve[hover].x} y1="24" x2={curve[hover].x} y2="166" stroke="#b8cfc6" strokeDasharray="3 4" /><circle cx={curve[hover].x} cy={curve[hover].y} r="5" fill="white" stroke="#08b77a" strokeWidth="2.5" /></>}
+          </svg>
+          <div className="flex justify-between text-[9px] text-[#94a2ad] font-mono"><span>{new Date(curve[0].date).toLocaleDateString('fr-FR', {day:'2-digit',month:'short'})}</span><span>{new Date(curve[curve.length-1].date).toLocaleDateString('fr-FR', {day:'2-digit',month:'short'})}</span></div>
+          {hover !== null && curve[hover] && <div className="absolute top-1 pointer-events-none px-3 py-2 rounded-xl bg-[#10233a]/95 text-white text-[10px] font-mono shadow-lg" style={{left:`${Math.min(Math.max(curve[hover].x / 8, 12), 88)}%`,transform:'translateX(-50%)'}}><div className="text-white/60">{new Date(curve[hover].date).toLocaleDateString('fr-FR')}</div><div className="font-bold">{formatCurrency(curve[hover].balance)}</div><div className={curve[hover].pnl >= 0 ? 'text-emerald-300' : 'text-rose-300'}>P&L {formatCurrency(curve[hover].pnl)}</div></div>}
+        </>
+      ) : <div className="h-56 flex flex-col items-center justify-center rounded-xl bg-[#fbfdfc] border border-[#edf2f0]"><Activity className="w-5 h-5 text-[#a6b4bf] mb-2" /><span className="text-xs font-semibold text-[#62788d]">Courbe disponible après 2 trades</span><span className="text-[10px] text-[#98a7b3] mt-1">Votre progression apparaîtra automatiquement ici.</span></div>}
+    </div>
+  );
+
+  const recentTrades = (limit: number) => (
+    <div className="rounded-2xl bg-white border border-[#dce7e3] shadow-[0_8px_24px_rgba(16,35,58,0.04)] overflow-hidden">
+      <div className="flex items-center justify-between px-5 py-4 border-b border-[#e7efec]"><div><h2 className="text-sm font-bold text-[#10233a]">Trades récents</h2><p className="text-[11px] text-[#8798a8] mt-0.5">Même lecture que le Journal.</p></div><button onClick={onNavigateToJournal} className="text-xs font-semibold text-[#087b59] inline-flex items-center gap-1 cursor-pointer">Journal <ChevronRight className="w-3.5 h-3.5" /></button></div>
+      {trades.length ? <div className="overflow-x-auto"><table className="w-full min-w-[850px] text-left text-xs"><thead><tr className="bg-[#fbfdfc] border-b border-[#e7efec] text-[9px] uppercase tracking-wider text-[#7f91a1]"><th className="py-3 px-4">Date</th><th className="py-3 px-4">Symbol</th><th className="py-3 px-4">Direction</th><th className="py-3 px-4">Entrée</th><th className="py-3 px-4">Sortie</th><th className="py-3 px-4">Lot</th><th className="py-3 px-4">Risque</th><th className="py-3 px-4 text-right">P&L</th><th className="py-3 px-4 text-right">R</th><th className="py-3 px-4 text-right">Résultat</th></tr></thead><tbody>{trades.slice(0,limit).map(trade => <tr key={trade.id} onClick={() => onSelectTrade(trade)} className="border-b border-[#edf2f0] hover:bg-[#f7fbf9] cursor-pointer"><td className="py-3 px-4 font-mono text-[10px] text-[#71839a]">{new Date(trade.entryDate).toLocaleDateString('fr-FR',{day:'2-digit',month:'short'})}</td><td className="py-3 px-4 font-mono font-bold text-[#10233a]">{trade.symbol}</td><td className="py-3 px-4"><DirectionBadge direction={trade.direction} /></td><td className="py-3 px-4 font-mono text-[#5f748c]">{trade.entryPrice || '—'}</td><td className="py-3 px-4 font-mono text-[#5f748c]">{trade.exitPrice || '—'}</td><td className="py-3 px-4 font-mono text-[#71839a]">{trade.positionSize || '—'}</td><td className="py-3 px-4 font-mono text-[#71839a]">{trade.riskAmount ? formatCurrency(trade.riskAmount) : '—'}</td><td className={`py-3 px-4 text-right font-mono font-bold ${trade.pnl > 0 ? 'text-[#008f63]' : trade.pnl < 0 ? 'text-[#e14d5d]' : 'text-[#71839a]'}`}>{formatCurrency(trade.pnl)}</td><td className="py-3 px-4 text-right font-mono text-[#5f748c]">{trade.rMultiple !== undefined ? `${trade.rMultiple > 0 ? '+' : ''}${trade.rMultiple}R` : '—'}</td><td className="py-3 px-4 text-right"><ResultBadge result={trade.result} /></td></tr>)}</tbody></table></div> : <div className="py-10 text-center text-xs text-[#8798a8]">Aucun trade récent.</div>}
+    </div>
+  );
+
+  const modeBar = <div className="flex flex-wrap gap-1.5 rounded-xl bg-white border border-[#dce7e3] p-1.5 shadow-[0_5px_18px_rgba(16,35,58,0.03)]">{modes.map(([value,label,Icon]) => <button key={value} onClick={() => setDashboardMode(value)} className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-semibold cursor-pointer transition-all ${mode === value ? 'bg-[#10233a] text-white' : 'text-[#71839a] hover:bg-[#f3f7f5]'}`}><Icon className="w-3.5 h-3.5" />{label}</button>)}</div>;
+
+  if (mode === 'focus') return <div className="space-y-5">{situation}{modeBar}<div className="grid grid-cols-1 xl:grid-cols-3 gap-4"><div className="xl:col-span-2 p-5 rounded-2xl card-premium"><div className="flex justify-between mb-2"><div><h2 className="text-sm font-bold text-[#10233a]">Equity</h2><p className="text-[10px] text-[#8798a8]">Progression du compte.</p></div><TrendingUp className="w-4 h-4 text-[#08b77a]" /></div>{chart}</div><div className="p-5 rounded-2xl card-premium"><h2 className="text-sm font-bold text-[#10233a] mb-3">À surveiller</h2><Metric label="Profit Factor" value={metrics.profitFactor.toFixed(2)} sub={metrics.profitFactor >= 1 ? 'Positif' : 'À travailler'} tone={metrics.profitFactor >= 1 ? 'positive' : 'negative'} /><Metric label="Expectancy" value={formatCurrency(metrics.expectancy)} sub="Par trade" tone={metrics.expectancy >= 0 ? 'positive' : 'negative'} /></div></div>{recentTrades(6)}</div>;
+
+  if (mode === 'analysis') return <div className="space-y-5">{situation}{modeBar}<div className="grid grid-cols-2 xl:grid-cols-5 gap-3"><Metric label="Trades" value={String(metrics.totalTrades)} sub="Total" /><Metric label="Win rate" value={`${metrics.winRate.toFixed(1)}%`} sub="Gagnants" tone="positive" /><Metric label="Profit Factor" value={metrics.profitFactor.toFixed(2)} sub="Gains / pertes" /><Metric label="Expectancy" value={formatCurrency(metrics.expectancy)} sub="Par trade" tone={metrics.expectancy >= 0 ? 'positive' : 'negative'} /><Metric label="Avg R" value={metrics.avgRR.toFixed(2)} sub="Ratio moyen" /></div><div className="p-5 rounded-2xl card-premium"><h2 className="text-sm font-bold text-[#10233a] mb-1">Analyse de l'equity</h2><p className="text-[10px] text-[#8798a8] mb-2">Survolez pour lire chaque étape.</p>{chart}</div><div className="grid grid-cols-1 xl:grid-cols-2 gap-4"><div className="p-5 rounded-2xl card-premium"><h2 className="text-sm font-bold text-[#10233a] mb-4">Performance par instrument</h2>{Object.entries(trades.reduce<Record<string,number>>((map,t)=>{map[t.symbol]=(map[t.symbol]||0)+(Number(t.pnl)||0);return map;},{})).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([symbol,pnl])=><div key={symbol} className="mb-3"><div className="flex justify-between text-xs mb-1"><span className="font-semibold text-[#314861]">{symbol}</span><span className={pnl>=0?'text-[#008f63]':'text-[#e14d5d]'}>{formatCurrency(pnl)}</span></div><div className="h-2 rounded-full bg-[#eef3f1]"><div className={`h-full rounded-full ${pnl>=0?'bg-[#08b77a]':'bg-[#e14d5d]'}`} style={{width:'100%'}} /></div></div>)}</div><div className="p-5 rounded-2xl card-premium"><h2 className="text-sm font-bold text-[#10233a] mb-4">Sessions</h2><div className="grid grid-cols-2 gap-2">{['Asia','London','Overlap','New York'].map(session=>{const list=trades.filter(t=>t.session===session);const pnl=list.reduce((s,t)=>s+(Number(t.pnl)||0),0);return <div key={session} className="p-3 rounded-xl bg-[#f8fbfa] border border-[#e7efec]"><div className="text-[11px] font-semibold text-[#314861]">{session}</div><div className={`text-sm font-bold font-mono mt-1 ${pnl>=0?'text-[#008f63]':'text-[#e14d5d]'}`}>{formatCurrency(pnl)}</div><div className="text-[9px] text-[#94a2ad]">{list.length} trade{list.length>1?'s':''}</div></div>})}</div></div></div>{recentTrades(8)}</div>;
+
+  if (mode === 'compact') return <div className="space-y-4">{situation}{modeBar}<div className="p-4 rounded-2xl card-premium">{chart}</div>{recentTrades(5)}</div>;
+
+  return <div className="space-y-5">{situation}{modeBar}<div className="grid grid-cols-1 xl:grid-cols-3 gap-4"><div className="xl:col-span-2 p-5 rounded-2xl card-premium"><div className="flex justify-between mb-2"><div><h2 className="text-sm font-bold text-[#10233a]">Courbe d'equity</h2><p className="text-[10px] text-[#8798a8]">Votre progression en un coup d'œil.</p></div><span className="text-[10px] px-2 py-1 rounded-full bg-[#e7faf3] text-[#087b59]">Dynamique</span></div>{chart}</div><div className="p-5 rounded-2xl card-premium"><div className="flex items-center gap-2 mb-4"><ShieldCheck className="w-4 h-4 text-[#2f6bff]" /><h2 className="text-sm font-bold text-[#10233a]">Trader Score</h2></div><div className="text-4xl font-bold font-mono text-[#10233a] text-center py-4">{score.isSufficientData?score.overallScore:'—'}<span className="text-xs text-[#8798a8]">/100</span></div><div className="text-[10px] text-[#71839a] text-center">{score.isSufficientData?'Indice global de discipline':'Min. 5 trades requis'}</div></div></div><div className="grid grid-cols-1 xl:grid-cols-2 gap-4"><div className="p-5 rounded-2xl card-premium"><h2 className="text-sm font-bold text-[#10233a] mb-4">Risque & contrôle</h2><Metric label="Drawdown" value={`-${metrics.maxDrawdownPercent.toFixed(1)}%`} sub={metrics.maxDrawdownPercent>5?'À surveiller':'Sous contrôle'} tone={metrics.maxDrawdownPercent>5?'negative':'positive'} /><Metric label="Profit Factor" value={metrics.profitFactor.toFixed(2)} sub="Gains / pertes" /><Metric label="Expectancy" value={formatCurrency(metrics.expectancy)} sub="Par trade" tone={metrics.expectancy>=0?'positive':'negative'} /></div><div className="p-5 rounded-2xl card-premium"><h2 className="text-sm font-bold text-[#10233a] mb-4">Lecture pratique</h2><div className="grid grid-cols-2 gap-2.5"><Metric label="Trade moyen" value={metrics.totalTrades?formatCurrency(metrics.totalPnl/metrics.totalTrades):'$0'} sub="P&L moyen" /><Metric label="Avg R" value={metrics.avgRR.toFixed(2)} sub="Ratio moyen" /><Metric label="Gains moyens" value={formatCurrency(metrics.avgWin)} sub={`${metrics.winningTrades} gagnants`} /><Metric label="Pertes moyennes" value={formatCurrency(metrics.avgLoss)} sub={`${metrics.losingTrades} pertes`} /></div></div></div>{recentTrades(6)}</div>;
+}
+
+function Metric({ label, value, sub, tone = 'neutral' }: { label: string; value: string; sub?: string; tone?: 'neutral'|'positive'|'negative' }) {
+  return <div className="p-3 rounded-xl bg-[#f8fbfa] border border-[#e7efec] mb-2"><div className="text-[9px] uppercase tracking-wider font-semibold text-[#8a9aab]">{label}</div><div className={`mt-1 text-sm font-bold font-mono ${tone==='positive'?'text-[#008f63]':tone==='negative'?'text-[#e14d5d]':'text-[#10233a]'}`}>{value}</div>{sub && <div className="text-[9px] text-[#94a2ad] mt-0.5">{sub}</div>}</div>;
 }
