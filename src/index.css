@@ -4,23 +4,10 @@
   :root {
     --font-sans: 'DM Sans', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
-    --iam-primary: #08b77a;
-    --iam-primary-strong: #00a86b;
-    --iam-primary-soft: #e7faf3;
-    --iam-primary-pale: #f1fcf8;
-    --iam-bg: #f7faf9;
-    --iam-surface: #ffffff;
-    --iam-surface-soft: #fbfdfc;
-    --iam-border: #e5ece9;
-    --iam-border-soft: #eef3f1;
-    --iam-text: #10233a;
-    --iam-text-2: #314861;
-    --iam-muted: #71839a;
-    --iam-dim: #9aa9b8;
-    --iam-loss: #f04f63;
-    --iam-loss-soft: #fff0f2;
-    --iam-warning: #d89b28;
-    --iam-blue: #3b82f6;
+    --iam-primary: #00C796; --iam-primary-strong: #00A982; --iam-primary-soft: #DFFBF3; --iam-primary-pale: #F3FFFB;
+    --iam-bg: #F4F7FA; --iam-surface: #FFFFFF; --iam-surface-soft: #F8FAFC; --iam-border: #DCE5EC; --iam-border-soft: #EAF0F4;
+    --iam-text: #0A192F; --iam-text-2: #263B55; --iam-muted: #60758D; --iam-dim: #8A9AAF;
+    --iam-loss: #EF476F; --iam-loss-soft: #FFF0F4; --iam-warning: #D99020; --iam-blue: #2F6BFF; --iam-navy: #0A192F; --iam-violet: #6D5CE7;
   }
 
   * { border-color: var(--iam-border); }
@@ -42,36 +29,32 @@
 
 /* Existing Tailwind utility classes are kept intact; this layer gives the whole product
    one coherent white-dominant FinTech visual language without touching business logic. */
-.iamtrader-shell [class*="bg-white"] { background-color: #fff !important; }
-.iamtrader-shell [class*="bg-slate-50"] { background-color: #f8fbfa !important; }
-.iamtrader-shell [class*="bg-slate-100"] { background-color: #f2f6f5 !important; }
-.iamtrader-shell [class*="bg-slate-200"] { background-color: #e8efed !important; }
-.iamtrader-shell [class*="border-slate-200"] { border-color: #e3ebe8 !important; }
-.iamtrader-shell [class*="border-slate-100"] { border-color: #edf2f0 !important; }
-.iamtrader-shell [class*="text-slate-950"] { color: #0d2035 !important; }
-.iamtrader-shell [class*="text-slate-900"] { color: #10233a !important; }
-.iamtrader-shell [class*="text-slate-800"] { color: #1d344d !important; }
-.iamtrader-shell [class*="text-slate-700"] { color: #3b536d !important; }
-.iamtrader-shell [class*="text-slate-600"] { color: #5f748c !important; }
-.iamtrader-shell [class*="text-slate-500"] { color: #74869a !important; }
-.iamtrader-shell [class*="text-slate-400"] { color: #9aa9b8 !important; }
-.iamtrader-shell [class*="text-slate-300"] { color: #aebbc7 !important; }
-.iamtrader-shell [class*="text-blue-400"] { color: #1685e5 !important; }
-.iamtrader-shell [class*="text-blue-500"] { color: #1677d2 !important; }
-.iamtrader-shell [class*="bg-blue-500"] { background-color: #eaf4ff !important; }
-.iamtrader-shell [class*="border-blue-500"] { border-color: #cce4fb !important; }
-.iamtrader-shell [class*="text-indigo-"] { color: #6557c8 !important; }
-.iamtrader-shell [class*="bg-indigo-"] { background-color: #f0efff !important; }
-.iamtrader-shell [class*="text-emerald-400"] { color: var(--iam-primary-strong) !important; }
-.iamtrader-shell [class*="text-emerald-500"] { color: #00a86b !important; }
-.iamtrader-shell [class*="bg-emerald-500"] { background-color: #08b77a !important; }
-.iamtrader-shell [class*="bg-emerald-"] { background-color: var(--iam-primary-soft) !important; }
-.iamtrader-shell [class*="border-emerald-"] { border-color: #bdeedc !important; }
-.iamtrader-shell [class*="text-rose-400"] { color: var(--iam-loss) !important; }
-.iamtrader-shell [class*="text-rose-500"] { color: var(--iam-loss) !important; }
-.iamtrader-shell [class*="bg-rose-500"] { background-color: #ffdfe5 !important; }
-.iamtrader-shell [class*="bg-rose-"] { background-color: var(--iam-loss-soft) !important; }
-.iamtrader-shell [class*="border-rose-"] { border-color: #ffd0d8 !important; }
+.iamtrader-shell [class*="bg-white"] { background-color:#fff !important; }
+.iamtrader-shell [class*="bg-slate-50"] { background-color:#F4F7FA !important; }
+.iamtrader-shell [class*="bg-slate-100"] { background-color:#EEF3F7 !important; }
+.iamtrader-shell [class*="bg-slate-200"] { background-color:#E3EAF0 !important; }
+.iamtrader-shell [class*="border-slate-200"] { border-color:#DCE5EC !important; }
+.iamtrader-shell [class*="border-slate-100"] { border-color:#EAF0F4 !important; }
+.iamtrader-shell [class*="text-slate-950"],.iamtrader-shell [class*="text-slate-900"] { color:#0A192F !important; }
+.iamtrader-shell [class*="text-slate-800"] { color:#19324D !important; }
+.iamtrader-shell [class*="text-slate-700"] { color:#334D68 !important; }
+.iamtrader-shell [class*="text-slate-600"] { color:#526B84 !important; }
+.iamtrader-shell [class*="text-slate-500"] { color:#60758D !important; }
+.iamtrader-shell [class*="text-slate-400"] { color:#7F91A4 !important; }
+.iamtrader-shell [class*="text-slate-300"] { color:#9BAABA !important; }
+.iamtrader-shell [class*="text-blue-400"],.iamtrader-shell [class*="text-blue-500"] { color:#2F6BFF !important; }
+.iamtrader-shell [class*="bg-blue-500"] { background-color:#E8F0FF !important; }
+.iamtrader-shell [class*="border-blue-500"] { border-color:#BFD3FF !important; }
+.iamtrader-shell [class*="text-indigo-"] { color:#5E52D5 !important; }
+.iamtrader-shell [class*="bg-indigo-"] { background-color:#EFEDFF !important; }
+.iamtrader-shell [class*="text-emerald-400"],.iamtrader-shell [class*="text-emerald-500"] { color:#00A982 !important; }
+.iamtrader-shell [class*="bg-emerald-500"] { background-color:#00C796 !important; }
+.iamtrader-shell [class*="bg-emerald-"] { background-color:#DFFBF3 !important; }
+.iamtrader-shell [class*="border-emerald-"] { border-color:#A8EBD9 !important; }
+.iamtrader-shell [class*="text-rose-400"],.iamtrader-shell [class*="text-rose-500"] { color:#EF476F !important; }
+.iamtrader-shell [class*="bg-rose-500"] { background-color:#FFE1E9 !important; }
+.iamtrader-shell [class*="bg-rose-"] { background-color:#FFF0F4 !important; }
+.iamtrader-shell [class*="border-rose-"] { border-color:#FFC5D3 !important; }
 
 .card-premium {
   background: #fff;
@@ -162,3 +145,11 @@ button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-
 }
 .font-mono { letter-spacing: -0.01em; }
 .iam-brand-glow { box-shadow: 0 6px 18px rgba(8,183,122,.14); }
+
+
+.iamtrader-shell .text-\[\#10233a\],.iamtrader-shell .text-\[\#0A192F\]{color:#0A192F!important}
+.iamtrader-shell .bg-\[\#10233a\],.iamtrader-shell .bg-\[\#0A192F\]{background-color:#0A192F!important}
+.iamtrader-shell .text-\[\#00a86b\],.iamtrader-shell .text-\[\#008f63\]{color:#00A982!important}
+.iamtrader-shell .bg-\[\#e7faf3\]{background-color:#DFFBF3!important}
+.iamtrader-shell .bg-\[\#f7fbf9\]{background-color:#F5F9FC!important}
+.iamtrader-shell .border-\[\#e5ece9\],.iamtrader-shell .border-\[\#edf2f0\]{border-color:#DCE5EC!important}
