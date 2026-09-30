@@ -10,7 +10,8 @@ import {
   getDocs,
   setDoc,
   orderBy,
-  limit
+  limit,
+  deleteField
 } from 'firebase/firestore';
 import { db, auth } from '../firebase/config';
 import { Trade, TradingAccount, UserProfile } from '../types';
@@ -391,8 +392,8 @@ export async function confirmUserPlan(
 ): Promise<void> {
   await updateUserRoleAndPlan(uid, {
     plan,
-    pendingPlan: undefined,
-    planChangeRequestedAt: undefined,
+    pendingPlan: deleteField(),
+    planChangeRequestedAt: deleteField(),
     planChangeConfirmedAt: new Date().toISOString(),
     paymentDate,
     subscriptionStartAt,
