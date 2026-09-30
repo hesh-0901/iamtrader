@@ -248,23 +248,7 @@ function MainAppContent() {
 
         {/* Content Viewport */}
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
-          {/* Guest Mode Indicator */}
-          {isGuestMode && (
-            <div className="mb-6 p-3.5 rounded-xl bg-blue-500/10 border border-blue-500/25 text-xs text-slate-400 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
-              <div className="flex items-center gap-2.5">
-                <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></span>
-                <span>
-                  <strong className="text-slate-900">Environnement de Démonstration :</strong> Vous explorez IAMTRADER avec le portefeuille de simulation Prop Firm.
-                </span>
-              </div>
-              <button
-                onClick={() => handleOpenAuth('register')}
-                className="btn-primary px-3.5 py-1.5 text-xs rounded-lg cursor-pointer shrink-0 self-start sm:self-auto"
-              >
-                Créer mon compte
-              </button>
-            </div>
-          )}
+
 
           {/* Page Routing */}
           {currentPage === 'dashboard' && (
@@ -356,7 +340,7 @@ function MainAppContent() {
           setIsTradeModalOpen(false);
           setTradeToEdit(null);
         }}
-        userId={userProfile?.uid || 'guest-trader-id'}
+        userId={currentUser?.uid || ''}
         accounts={accounts}
         selectedAccountId={selectedAccountId}
         tradeToEdit={tradeToEdit}
