@@ -10,7 +10,9 @@ import {
   ShieldCheck,
   UserCheck,
   Users,
-  XCircle
+  XCircle,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { SubscriptionPlan, UserProfile, UserStatus } from '../types';
 import {
@@ -69,6 +71,8 @@ export function AdminConsole() {
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [busyUid, setBusyUid] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const loadUsers = async () => {
     setIsLoading(true);
@@ -131,6 +135,13 @@ export function AdminConsole() {
       return matchesSearch && matchesFilter;
     });
   }, [users, search, filter]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / itemsPerPage));
+  const paginatedUsers = filteredUsers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, filter]);
 
   const patchUser = (uid: string, patch: Partial<UserProfile>) => {
     setUsers(previous => previous.map(user => user.uid === uid ? { ...user, ...patch } : user));
@@ -328,6 +339,7 @@ export function AdminConsole() {
             <table className="w-full min-w-[1050px] text-left text-xs">
               <thead className="bg-[#f8fafb]">
                 <tr className="text-[10px] uppercase tracking-wider text-[#8091a2] border-b border-[#edf2f0]">
+                  <th className="px-2 py-3 w-10 text-center">#</th>
                   <th className="px-5 py-3">Utilisateur</th>
                   <th className="px-3 py-3">Plan</th>
                   <th className="px-3 py-3">Paiement</th>
@@ -338,7 +350,7 @@ export function AdminConsole() {
                 </tr>
               </thead>
               <tbody>
-                {filteredUsers.map(user => {
+                {paginatedUsers.map((user, index) => {
                   const days = getDaysLeft(user);
                   const expiring = days !== null && days >= 0 && days <= 5;
                   const expired = days !== null && days < 0;
@@ -346,6 +358,7 @@ export function AdminConsole() {
 
                   return (
                     <tr key={user.uid} className="border-b border-[#edf2f0] last:border-0 hover:bg-[#fbfdfc]">
+                      <td className="px-2 py-4 text-center font-mono text-[10px] text-[#8a9aab] tabular-nums">{(currentPage - 1) * itemsPerPage + index + 1}</td>
                       <td className="px-5 py-4">
                         <button onClick={() => setSelectedUser(user)} className="text-left">
                           <div className="font-semibold text-[#203a53]">{user.displayName || 'Sans nom'}</div>
@@ -415,6 +428,13 @@ export function AdminConsole() {
                 })}
               </tbody>
             </table>
+            <div className="flex items-center justify-between px-5 py-3 border-t border-[#edf2f0] bg-white">
+              <span className="text-[10px] text-[#8091a2] font-mono">Page {currentPage}/{totalPages}</span>
+              <div className="flex items-center gap-1">
+                <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-1.5 rounded-lg border border-[#e0e8e5] text-[#71839a] hover:bg-[#f8fafb] disabled:opacity-30 disabled:cursor-not-allowed"><ChevronLeft className="w-3.5 h-3.5" /></button>
+                <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="p-1.5 rounded-lg border border-[#e0e8e5] text-[#71839a] hover:bg-[#f8fafb] disabled:opacity-30 disabled:cursor-not-allowed"><ChevronRight className="w-3.5 h-3.5" /></button>
+              </div>
+            </div>
           </div>
         )}
       </section>
