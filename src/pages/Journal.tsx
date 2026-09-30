@@ -387,7 +387,7 @@ export function Journal({
                           {trade.positionSize || '1'}
                         </td>
                         <td className="py-2.5 px-3 font-mono text-slate-500 tabular-nums text-[11px]">
-                          {trade.riskAmount ? `$${trade.riskAmount}` : '—'}
+                          {trade.riskAmount ? formatCurrency(trade.riskAmount) : '—'}
                         </td>
                         <td className={`py-2.5 px-3 text-right font-mono font-bold tabular-nums whitespace-nowrap text-xs ${
                           trade.pnl > 0 ? 'text-emerald-400' : trade.pnl < 0 ? 'text-rose-400' : 'text-slate-500'
