@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Trade, TradingAccount, UserProfile } from '../types';
 import { calculatePerformance, calculateTraderScore, formatCurrency } from '../utils/calculations';
 import { ResultBadge, DirectionBadge } from '../components/common/Badge';
-import { Activity, BarChart3, ChevronRight, Focus, Layers, LayoutGrid, Minimize2, Percent, ShieldCheck, Target, TrendingUp } from 'lucide-react';
+import { Activity, ChevronRight, Focus, LayoutGrid, Minimize2, ShieldCheck, TrendingUp } from 'lucide-react';
 
 interface DashboardProps {
   trades: Trade[];
