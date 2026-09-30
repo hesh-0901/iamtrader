@@ -192,7 +192,7 @@ export function Dashboard({
       )}
 
       {/* 2. Structured Primary KPIs Grid (Balance, Equity, P&L, Win Rate, Drawdown, Profit Factor) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="dashboard-kpi-grid grid gap-4">
         {/* Card 1: Balance */}
         <div className="p-5 rounded-2xl card-premium flex flex-col justify-between">
           <div className="flex items-center justify-between">
@@ -375,7 +375,7 @@ export function Dashboard({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-sm font-bold text-slate-900 tracking-tight">Courbe d'Equity</h3>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 font-semibold">
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#103322] text-[#46d494] border border-[#2d6c4d] font-semibold">
                   Performance Réalisée
                 </span>
               </div>
@@ -395,8 +395,8 @@ export function Dashboard({
               <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="w-full h-44 sm:h-52 overflow-visible">
                 <defs>
                   <linearGradient id="fintechEquityGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="#2563eb" stopOpacity="0.25" />
-                    <stop offset="100%" stopColor="#2563eb" stopOpacity="0.00" />
+                    <stop offset="0%" stopColor="#19a66a" stopOpacity="0.25" />
+                    <stop offset="100%" stopColor="#19a66a" stopOpacity="0.00" />
                   </linearGradient>
                 </defs>
                 {/* Horizontal guide lines */}
@@ -412,7 +412,7 @@ export function Dashboard({
                 {/* Line */}
                 <polyline
                   fill="none"
-                  stroke="#3b82f6"
+                  stroke="#19a66a"
                   strokeWidth="2.2"
                   strokeLinecap="round"
                   strokeLinejoin="round"
@@ -457,7 +457,7 @@ export function Dashboard({
                   cx="50"
                   cy="50"
                   r="40"
-                  stroke="#2563eb"
+                  stroke="#19a66a"
                   strokeWidth="7"
                   strokeDasharray={`${2 * Math.PI * 40}`}
                   strokeDashoffset={`${2 * Math.PI * 40 * (1 - (traderScore.isSufficientData ? traderScore.overallScore / 100 : 0))}`}
