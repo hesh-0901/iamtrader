@@ -375,7 +375,7 @@ export function Dashboard({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-sm font-bold text-slate-900 tracking-tight">Courbe d'Equity</h3>
-                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#103322] text-[#46d494] border border-[#2d6c4d] font-semibold">
+                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-[#eaf9f3] text-[#008f63] border border-[#c9eee1] font-semibold">
                   Performance Réalisée
                 </span>
               </div>
@@ -400,9 +400,9 @@ export function Dashboard({
                   </linearGradient>
                 </defs>
                 {/* Horizontal guide lines */}
-                <line x1={padding} y1={padding} x2={svgWidth - padding} y2={padding} stroke="rgba(255,255,255,0.05)" strokeDasharray="3 3" />
-                <line x1={padding} y1={svgHeight / 2} x2={svgWidth - padding} y2={svgHeight / 2} stroke="rgba(255,255,255,0.05)" strokeDasharray="3 3" />
-                <line x1={padding} y1={svgHeight - padding} x2={svgWidth - padding} y2={svgHeight - padding} stroke="rgba(255,255,255,0.05)" strokeDasharray="3 3" />
+                <line x1={padding} y1={padding} x2={svgWidth - padding} y2={padding} stroke="#e6efec" strokeDasharray="3 3" />
+                <line x1={padding} y1={svgHeight / 2} x2={svgWidth - padding} y2={svgHeight / 2} stroke="#e6efec" strokeDasharray="3 3" />
+                <line x1={padding} y1={svgHeight - padding} x2={svgWidth - padding} y2={svgHeight - padding} stroke="#e6efec" strokeDasharray="3 3" />
 
                 {/* Fill Area */}
                 <polygon
@@ -449,7 +449,7 @@ export function Dashboard({
                   cx="50"
                   cy="50"
                   r="40"
-                  stroke="rgba(255,255,255,0.06)"
+                  stroke="#e3ece9"
                   strokeWidth="7"
                   fill="transparent"
                 />
