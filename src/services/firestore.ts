@@ -159,6 +159,18 @@ export async function getAllUsers(): Promise<UserProfile[]> {
   return users;
 }
 
+
+export async function updateUserSettings(
+  uid: string,
+  settings: Partial<NonNullable<UserProfile['settings']>>
+): Promise<void> {
+  const userRef = doc(db, 'users', uid);
+  await updateDoc(userRef, {
+    settings,
+    updatedAt: new Date().toISOString()
+  });
+}
+
 export async function updateUserRoleAndPlan(
   uid: string,
   data: {
