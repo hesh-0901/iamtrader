@@ -16,14 +16,14 @@ export function AccountModal({ isOpen, onClose, userId, onSaveGuestAccount }: Ac
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [name, setName] = useState('');
-  const [broker, setBroker] = useState('FTMO');
+  const [broker, setBroker] = useState('');
   const [type, setType] = useState<AccountType>('Prop Firm Funded');
   const [currency, setCurrency] = useState<CurrencyCode>('USD');
-  const [initialBalance, setInitialBalance] = useState('50000');
-  const [currentBalance, setCurrentBalance] = useState('50000');
-  const [targetProfit, setTargetProfit] = useState('5000');
-  const [maxDrawdownLimit, setMaxDrawdownLimit] = useState('2500');
-  const [riskPerTradePercent, setRiskPerTradePercent] = useState('1.0');
+  const [initialBalance, setInitialBalance] = useState('');
+  const [currentBalance, setCurrentBalance] = useState('');
+  const [targetProfit, setTargetProfit] = useState('');
+  const [maxDrawdownLimit, setMaxDrawdownLimit] = useState('');
+  const [riskPerTradePercent, setRiskPerTradePercent] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,11 +40,11 @@ export function AccountModal({ isOpen, onClose, userId, onSaveGuestAccount }: Ac
         broker: broker.trim(),
         type,
         currency,
-        initialBalance: parseFloat(initialBalance) || 0,
-        currentBalance: parseFloat(currentBalance) || parseFloat(initialBalance) || 0,
+        initialBalance: initialBalance ? parseFloat(initialBalance) : 0,
+        currentBalance: currentBalance ? parseFloat(currentBalance) : 0,
         targetProfit: targetProfit ? parseFloat(targetProfit) : undefined,
         maxDrawdownLimit: maxDrawdownLimit ? parseFloat(maxDrawdownLimit) : undefined,
-        riskPerTradePercent: parseFloat(riskPerTradePercent) || 1.0,
+        riskPerTradePercent: riskPerTradePercent ? parseFloat(riskPerTradePercent) : undefined,
         status: 'Active',
         createdAt: new Date().toISOString()
       };
