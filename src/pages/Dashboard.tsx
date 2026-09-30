@@ -307,7 +307,6 @@ export function Dashboard({
         </div>
 
         <div className="flex items-center gap-2 self-start sm:self-auto">
-          <ModeSwitcher />
           {trades.length === 0 && (
             <button
               onClick={onSeedData}
