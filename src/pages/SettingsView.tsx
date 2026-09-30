@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { resetUserPassword } from '../services/auth';
 import { useToast } from '../components/common/Toast';
+import { TradingJournalSettings } from '../components/settings/TradingJournalSettings';
 
 interface SettingsViewProps {
   userProfile: UserProfile | null;
@@ -23,7 +24,7 @@ interface SettingsViewProps {
 
 export function SettingsView({ userProfile, onUpdatePlan }: SettingsViewProps) {
   const { showToast } = useToast();
-  const [activeTab, setActiveTab] = useState<'profile' | 'subscription' | 'security' | 'preferences'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'subscription' | 'security' | 'preferences' | 'journal'>('profile');
   const [displayName, setDisplayName] = useState(userProfile?.displayName || '');
   const [defaultCurrency, setDefaultCurrency] = useState('USD');
   const [theme, setTheme] = useState<'light'>('light');
@@ -107,6 +108,23 @@ export function SettingsView({ userProfile, onUpdatePlan }: SettingsViewProps) {
           <span>Préférences Interface</span>
         </button>
       </div>
+
+        <button
+          onClick={() => setActiveTab('journal')}
+          className={`flex items-center gap-2 px-3.5 py-2 rounded transition-all whitespace-nowrap cursor-pointer ${
+            activeTab === 'journal'
+              ? 'bg-blue-600/15 text-blue-400 border border-blue-500/30 font-semibold'
+              : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'
+          }`}
+        >
+          <Sliders className="w-3.5 h-3.5" />
+          <span>Journal & Calculs</span>
+        </button>
+
+      {/* Tab: Journal */}
+      {activeTab === 'journal' && (
+        <TradingJournalSettings userProfile={userProfile} />
+      )}
 
       {/* Tab: Profile */}
       {activeTab === 'profile' && (
