@@ -14,7 +14,7 @@ interface NavbarProps {
   currentPageTitle: string;
 }
 
-export function Navbar({ userProfile, accounts, selectedAccountId, onSelectAccount, onOpenNewTrade, onToggleSidebar, currentPageTitle }: NavbarProps) {
+export function Navbar({ userProfile, accounts, selectedAccountId, onSelectAccount, onOpenNewTrade, onLogout, onToggleSidebar, currentPageTitle }: NavbarProps) {
   return (
     <header className="h-16 border-b border-[#e7eeeb] bg-white px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30 select-none">
       <div className="flex items-center gap-3 min-w-0">
