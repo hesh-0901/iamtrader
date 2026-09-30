@@ -32,15 +32,16 @@ export async function registerWithEmail(email: string, pass: string, displayName
       uid: cred.user.uid,
       email: cred.user.email || email,
       displayName: displayName || email.split('@')[0],
-      plan: 'pro', // Default grant during onboarding
+      plan: 'free', // New accounts start on Starter
       role: 'trader',
       status: 'active',
       createdAt: new Date().toISOString(),
-      subscriptionStatus: 'pending',
+      subscriptionStatus: 'active',
+      subscriptionStartAt: new Date().toISOString(),
       paymentStatus: 'unpaid',
       settings: {
         defaultCurrency: 'USD',
-        theme: 'dark',
+        theme: 'light',
         language: 'fr'
       }
     };
