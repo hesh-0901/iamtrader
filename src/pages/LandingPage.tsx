@@ -17,10 +17,9 @@ import {
 
 interface LandingPageProps {
   onOpenAuth: (mode: 'login' | 'register') => void;
-  onEnterGuestDemo: () => void;
 }
 
-export function LandingPage({ onOpenAuth, onEnterGuestDemo }: LandingPageProps) {
+export function LandingPage({ onOpenAuth }: LandingPageProps) {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col selection:bg-blue-500/20 selection:text-blue-300">
       {/* Top Header */}
