@@ -3,7 +3,24 @@ export type TradeResult = 'WIN' | 'LOSS' | 'BREAKEVEN' | 'OPEN';
 export type TradingSession = 'Asia' | 'London' | 'New York' | 'Overlap';
 export type TradingTimeframe = '1m' | '5m' | '15m' | '1h' | '4h' | '1D';
 
-export type EmotionalState = 
+export type TradingInstrumentCategory = 'forex' | 'metal' | 'index' | 'futures' | 'crypto' | 'stock' | 'other';
+
+export interface TradingInstrument {
+  id: string;
+  symbol: string;
+  name: string;
+  category: TradingInstrumentCategory;
+  priceStep: number | string;
+  valuePerPriceUnit: number | string;
+  defaultPositionSize?: number | string;
+}
+
+export interface TradingSetup {
+  id: string;
+  name: string;
+}
+
+export type EmotionalState =
   | 'Calm'
   | 'Disciplined'
   | 'Focused'
@@ -19,18 +36,18 @@ export interface Trade {
   accountId: string;
   symbol: string;
   direction: TradeDirection;
-  entryDate: string; // ISO string
-  exitDate?: string; // ISO string
+  entryDate: string;
+  exitDate?: string;
   entryPrice: number;
   exitPrice?: number;
   stopLoss?: number;
   takeProfit?: number;
-  positionSize: number; // Contracts / Lots
-  riskAmount?: number; // In currency
+  positionSize: number;
+  riskAmount?: number;
   result: TradeResult;
-  pnl: number; // Net Profit & Loss in $
-  rMultiple?: number; // e.g. +2.5R, -1.0R
-  setup: string; // e.g. "Breakout", "Liquidity Sweep", "Order Block", "FVG"
+  pnl: number;
+  rMultiple?: number;
+  setup: string;
   session: TradingSession;
   timeframe: TradingTimeframe;
   notes?: string;
@@ -49,7 +66,7 @@ export interface TradingAccount {
   id: string;
   userId: string;
   name: string;
-  broker: string; // e.g. "FTMO", "Apex", "Interactive Brokers"
+  broker: string;
   type: AccountType;
   initialBalance: number;
   currentBalance: number;
@@ -88,6 +105,8 @@ export interface UserProfile {
     defaultCurrency: CurrencyCode;
     theme: 'dark' | 'light';
     language: string;
+    instruments?: TradingInstrument[];
+    setups?: TradingSetup[];
   };
 }
 
@@ -110,7 +129,7 @@ export interface PerformanceMetrics {
   winningTrades: number;
   losingTrades: number;
   breakevenTrades: number;
-  winRate: number; // Percentage
+  winRate: number;
   totalPnl: number;
   avgWin: number;
   avgLoss: number;
