@@ -347,26 +347,76 @@ export async function deleteAccount(accountId: string): Promise<void> {
 // ==========================================
 
 export async function getAllUsers(): Promise<UserProfile[]> {
-  try {
-    const usersRef = collection(db, 'users');
-    const snapshot = await getDocs(query(usersRef, limit(100)));
-    const users: UserProfile[] = [];
-    snapshot.forEach(docSnap => {
-      users.push(docSnap.data() as UserProfile);
-    });
-    return users;
-  } catch (err: any) {
-    console.warn("Notice: Firestore users collection read notice:", err.message);
-    return [];
-  }
+  const usersRef = collection(db, 'users');
+  const snapshot = await getDocs(query(usersRef, limit(200)));
+  const users: UserProfile[] = [];
+  snapshot.forEach(docSnap => {
+    users.push({
+      uid: docSnap.id,
+      ...docSnap.data()
+    } as UserProfile);
+  });
+  return users;
 }
 
 export async function updateUserRoleAndPlan(
-  uid: string, 
-  data: { role?: 'trader' | 'admin'; plan?: 'free' | 'pro' | 'community'; status?: 'active' | 'suspended' }
+  uid: string,
+  data: {
+    role?: 'trader' | 'admin';
+    plan?: 'free' | 'pro' | 'community';
+    status?: 'active' | 'suspended';
+    paymentDate?: string;
+    subscriptionStartAt?: string;
+    subscriptionExpiresAt?: string;
+    subscriptionStatus?: 'pending' | 'active' | 'expired';
+    paymentStatus?: 'unpaid' | 'paid' | 'refunded';
+    pendingPlan?: 'free' | 'pro' | 'community';
+    planChangeRequestedAt?: string;
+    planChangeConfirmedAt?: string;
+  }
 ): Promise<void> {
   const userRef = doc(db, 'users', uid);
-  await updateDoc(userRef, data);
+  await updateDoc(userRef, {
+    ...data,
+    updatedAt: new Date().toISOString()
+  });
+}
+
+export async function confirmUserPlan(
+  uid: string,
+  plan: 'free' | 'pro' | 'community',
+  paymentDate: string,
+  subscriptionStartAt: string,
+  subscriptionExpiresAt: string
+): Promise<void> {
+  await updateUserRoleAndPlan(uid, {
+    plan,
+    pendingPlan: undefined,
+    planChangeRequestedAt: undefined,
+    planChangeConfirmedAt: new Date().toISOString(),
+    paymentDate,
+    subscriptionStartAt,
+    subscriptionExpiresAt,
+    subscriptionStatus: 'active',
+    paymentStatus: 'paid'
+  });
+}
+
+export async function extendUserSubscription(
+  uid: string,
+  plan: 'free' | 'pro' | 'community',
+  paymentDate: string,
+  subscriptionStartAt: string,
+  subscriptionExpiresAt: string
+): Promise<void> {
+  await updateUserRoleAndPlan(uid, {
+    plan,
+    paymentDate,
+    subscriptionStartAt,
+    subscriptionExpiresAt,
+    subscriptionStatus: 'active',
+    paymentStatus: 'paid'
+  });
 }
 
 // ==========================================
