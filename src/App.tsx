@@ -3,10 +3,7 @@ import { User } from 'firebase/auth';
 import { subscribeToAuth, logoutUser, getUserProfile, checkIsAdmin } from './services/auth';
 import { 
   subscribeUserTrades, 
-  subscribeUserAccounts, 
-  seedStarterTradingData,
-  DEMO_ACCOUNTS,
-  DEMO_TRADES 
+  subscribeUserAccounts
 } from './services/firestore';
 import { Trade, TradingAccount, UserProfile, SubscriptionPlan } from './types';
 import { ToastProvider, useToast } from './components/common/Toast';
@@ -34,7 +31,6 @@ function MainAppContent() {
   // Auth & User Profile State
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
-  const [isGuestMode, setIsGuestMode] = useState<boolean>(false);
   const [isAuthLoading, setIsAuthLoading] = useState<boolean>(true);
 
   // Navigation State
@@ -61,7 +57,6 @@ function MainAppContent() {
     const unsubscribe = subscribeToAuth(async (user) => {
       setCurrentUser(user);
       if (user) {
-        setIsGuestMode(false);
         try {
           const profile = await getUserProfile(user.uid);
           const isAdmin = await checkIsAdmin(user);
@@ -86,17 +81,15 @@ function MainAppContent() {
           console.warn("User profile fetch notice:", err.message);
         }
       } else {
-        if (!isGuestMode) {
-          setUserProfile(null);
-          setAccounts([]);
-          setTrades([]);
-        }
+        setUserProfile(null);
+        setAccounts([]);
+        setTrades([]);
       }
       setIsAuthLoading(false);
     });
 
     return () => unsubscribe();
-  }, [isGuestMode]);
+  }, []);
 
   // 2. Data Subscriptions for Authenticated User
   useEffect(() => {
@@ -128,72 +121,10 @@ function MainAppContent() {
     };
   }, [currentUser, selectedAccountId]);
 
-  // Guest Demo Initializer (In-Memory Sandbox)
-  const handleEnterGuestDemo = () => {
-    setIsGuestMode(true);
-    setUserProfile({
-      uid: 'guest-trader-id',
-      email: 'demo.trader@iamtrader.com',
-      displayName: 'Trader Démo Pro',
-      plan: 'pro',
-      role: 'admin',
-      status: 'active',
-      createdAt: new Date().toISOString()
-    });
-    setAccounts(DEMO_ACCOUNTS);
-    setTrades(DEMO_TRADES);
-    showToast('Espace Démo FinTech initialisé avec succès', 'info');
-  };
-
-  const handleSaveGuestTrade = (trade: Trade) => {
-    setTrades(prev => {
-      const idx = prev.findIndex(t => t.id === trade.id);
-      if (idx >= 0) {
-        const copy = [...prev];
-        copy[idx] = trade;
-        return copy;
-      }
-      return [trade, ...prev];
-    });
-  };
-
-  const handleDeleteGuestTrade = (tradeId: string) => {
-    setTrades(prev => prev.filter(t => t.id !== tradeId));
-  };
-
-  const handleSaveGuestAccount = (acc: TradingAccount) => {
-    setAccounts(prev => [acc, ...prev]);
-  };
-
   const handleLogout = async () => {
-    if (isGuestMode) {
-      setIsGuestMode(false);
-      setUserProfile(null);
-      setAccounts([]);
-      setTrades([]);
-      showToast('Déconnexion du mode démo', 'info');
-    } else {
-      await logoutUser();
-      showToast('Vous avez été déconnecté', 'info');
-    }
+    await logoutUser();
+    showToast('Vous avez été déconnecté', 'info');
     setCurrentPage('dashboard');
-  };
-
-  const handleSeedData = async () => {
-    if (!currentUser) {
-      // In guest mode, reset to standard demo dataset
-      setAccounts(DEMO_ACCOUNTS);
-      setTrades(DEMO_TRADES);
-      showToast('Données démo rechargées', 'info');
-      return;
-    }
-    try {
-      showToast('Génération des transactions en cours sur Firestore...', 'info');
-      await seedStarterTradingData(currentUser.uid);
-      showToast('Données démo synchronisées avec Firestore !', 'success');
-    } catch (err: any) {
-      showToast(`Erreur de génération : ${err.message}`, 'error');
-    }
   };
 
   const handleOpenAuth = (mode: 'login' | 'register') => {
@@ -232,13 +163,12 @@ function MainAppContent() {
     );
   }
 
-  // Not authenticated & not in guest mode -> Landing Page
-  if (!currentUser && !isGuestMode) {
+  // Not authenticated -> Landing Page
+  if (!currentUser) {
     return (
       <>
         <LandingPage
           onOpenAuth={handleOpenAuth}
-          onEnterGuestDemo={handleEnterGuestDemo}
         />
         <AuthModal
           isOpen={isAuthModalOpen}
@@ -349,7 +279,6 @@ function MainAppContent() {
               }}
               onSelectTrade={(t) => setInspectingTrade(t)}
               onNavigateToJournal={() => setCurrentPage('journal')}
-              onSeedData={handleSeedData}
             />
           )}
 
@@ -431,7 +360,6 @@ function MainAppContent() {
         accounts={accounts}
         selectedAccountId={selectedAccountId}
         tradeToEdit={tradeToEdit}
-        onSaveGuestTrade={handleSaveGuestTrade}
       />
 
       <TradeDetailModal
@@ -444,14 +372,12 @@ function MainAppContent() {
           setTradeToEdit(t);
           setIsTradeModalOpen(true);
         }}
-        onDeleteGuestTrade={handleDeleteGuestTrade}
       />
 
       <AccountModal
         isOpen={isAccountModalOpen}
         onClose={() => setIsAccountModalOpen(false)}
         userId={userProfile?.uid || 'guest-trader-id'}
-        onSaveGuestAccount={handleSaveGuestAccount}
       />
 
       <AuthModal
