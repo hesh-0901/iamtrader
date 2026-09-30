@@ -326,7 +326,6 @@ export function Dashboard({
         </div>
 
         <div className="flex items-center gap-2 self-start sm:self-auto">
-)}
           <button
             onClick={onOpenNewTrade}
             className="btn-primary flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs cursor-pointer"
