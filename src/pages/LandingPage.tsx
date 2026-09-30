@@ -85,12 +85,6 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
             <ArrowRight className="w-4 h-4" />
           </button>
 
-          <button
-            onClick={onEnterGuestDemo}
-            className="btn-secondary px-6 py-2.5 text-xs sm:text-sm font-semibold rounded-lg cursor-pointer"
-          >
-            Explorer la démo interactive
-          </button>
         </div>
 
         {/* Hero Interactive Terminal Mock Preview */}
