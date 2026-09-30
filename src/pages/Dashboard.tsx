@@ -148,31 +148,6 @@ export function Dashboard({
     if (typeof window !== 'undefined') localStorage.setItem('iamtrader-dashboard-mode', mode);
   };
 
-  const ModeSwitcher = () => null;
-    <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-2xl bg-white border border-[#e4ece9] shadow-sm">
-      {([
-        ['standard', 'Standard', LayoutGrid],
-        ['focus', 'Focus Trading', Focus],
-        ['analysis', 'Analyse', BarChart3],
-        ['compact', 'Compacte', Minimize2]
-      ] as const).map(([mode, label, Icon]) => (
-        <button
-          key={mode}
-          type="button"
-          onClick={() => changeDashboardMode(mode)}
-          className={`flex items-center gap-1.5 px-3 py-2 rounded-xl text-[11px] font-semibold transition-all cursor-pointer ${
-            dashboardMode === mode
-              ? 'bg-[#e7faf3] text-[#008f63] shadow-sm'
-              : 'text-[#71839a] hover:bg-[#f5f9f7] hover:text-[#203a53]'
-          }`}
-        >
-          <Icon className="w-3.5 h-3.5" />
-          <span className="hidden sm:inline">{label}</span>
-        </button>
-      ))}
-    </div>
-  );
-
   const DashboardIntro = ({ compact = false }: { compact?: boolean }) => (
     <div className={`flex ${compact ? 'flex-col' : 'flex-col lg:flex-row'} lg:items-center justify-between gap-4`}>
       <div>
