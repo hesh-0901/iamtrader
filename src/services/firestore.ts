@@ -26,7 +26,7 @@ export function subscribeUserTrades(
   accountId?: string
 ) {
   // Only query Firestore if a real authenticated user is signed in
-  if (!userId || userId === 'guest-trader-id' || !auth.currentUser) {
+  if (!userId || !auth.currentUser) {
     callback([]);
     return () => {};
   }
