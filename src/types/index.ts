@@ -64,6 +64,8 @@ export interface TradingAccount {
 export type SubscriptionPlan = 'free' | 'pro' | 'community';
 export type UserRole = 'trader' | 'admin';
 export type UserStatus = 'active' | 'suspended';
+export type SubscriptionStatus = 'pending' | 'active' | 'expired';
+export type PaymentStatus = 'unpaid' | 'paid' | 'refunded';
 
 export interface UserProfile {
   uid: string;
@@ -74,6 +76,14 @@ export interface UserProfile {
   role: UserRole;
   status: UserStatus;
   createdAt: string;
+  paymentDate?: string;
+  subscriptionStartAt?: string;
+  subscriptionExpiresAt?: string;
+  subscriptionStatus?: SubscriptionStatus;
+  paymentStatus?: PaymentStatus;
+  pendingPlan?: SubscriptionPlan;
+  planChangeRequestedAt?: string;
+  planChangeConfirmedAt?: string;
   settings?: {
     defaultCurrency: CurrencyCode;
     theme: 'dark' | 'light';
