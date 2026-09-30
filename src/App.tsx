@@ -361,7 +361,7 @@ function MainAppContent() {
       <AccountModal
         isOpen={isAccountModalOpen}
         onClose={() => setIsAccountModalOpen(false)}
-        userId={userProfile?.uid || 'guest-trader-id'}
+        userId={currentUser?.uid || ''}
       />
 
       <AuthModal
