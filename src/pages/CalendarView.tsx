@@ -78,7 +78,6 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
       return {
         dayNumber,
         dayStr: `${year}-${String(month + 1).padStart(2, '0')}-${String(dayNumber).padStart(2, '0')}`,
-        ,
       };
     });
   }, [startDay, daysInMonth, year, month]);
