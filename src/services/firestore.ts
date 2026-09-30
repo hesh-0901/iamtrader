@@ -166,8 +166,7 @@ export async function updateUserSettings(
 ): Promise<void> {
   const userRef = doc(db, 'users', uid);
   await updateDoc(userRef, {
-    settings,
-    updatedAt: new Date().toISOString()
+    settings
   });
 }
 
