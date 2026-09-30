@@ -24,7 +24,7 @@ export function formatPercent(value: number): string {
   return `0.0%`;
 }
 
-export function calculatePerformance(trades: Trade[], initialCapital: number = 50000): PerformanceMetrics {
+export function calculatePerformance(trades: Trade[], initialCapital: number = 0): PerformanceMetrics {
   const closedTrades = trades
     .filter(t => t.result !== 'OPEN')
     .sort((a, b) => new Date(a.entryDate).getTime() - new Date(b.entryDate).getTime());
