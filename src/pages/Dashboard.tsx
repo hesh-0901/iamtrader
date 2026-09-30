@@ -238,7 +238,7 @@ export function Dashboard({
                 ['Profit Factor', metrics.profitFactor.toFixed(2), metrics.profitFactor >= 1],
                 ['Trade moyen', metrics.totalTrades ? formatCurrency(metrics.totalPnl / metrics.totalTrades) : '$0', metrics.totalPnl >= 0],
                 ['Trader Score', traderScore.isSufficientData ? `${traderScore.overallScore}/100` : '—', traderScore.isSufficientData]
-              ].map(([label,value,ok]) => <div key={String(label)} className="flex items-center justify-between p-3 rounded-xl bg-[#f8fbfa] border border-[#edf2f0]"><span className="text-xs text-[#5f748c]">{label}</span><span className={`text-xs font-bold font-mono ${ok ? 'text-[#00a86b]' : 'text-[#f04f63]}`}>{String(value)}</span></div>)}
+              ].map(([label,value,ok]) => <div key={String(label)} className="flex items-center justify-between p-3 rounded-xl bg-[#f8fbfa] border border-[#edf2f0]"><span className="text-xs text-[#5f748c]">{label}</span><span className={`text-xs font-bold font-mono ${ok ? 'text-[#00a86b]' : 'text-[#f04f63]'}`}>{String(value)}</span></div>)}
             </div>
           </div>
         </div>
@@ -247,7 +247,7 @@ export function Dashboard({
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
             {trades.slice(0,6).map(t => <button key={t.id} onClick={() => onSelectTrade(t)} className="text-left p-3.5 rounded-xl border border-[#e8efed] hover:border-[#bdeedc] hover:bg-[#f7fcfa] transition-all cursor-pointer">
               <div className="flex items-center justify-between"><span className="font-bold text-sm text-[#10233a]">{t.symbol}</span><DirectionBadge direction={t.direction}/></div>
-              <div className="flex items-center justify-between mt-2"><span className="text-[10px] text-[#8a9aab]">{t.setup} · {t.session}</span><span className={`text-xs font-bold font-mono ${t.pnl >= 0 ? 'text-[#00a86b]' : 'text-[#f04f63]}`}>{formatCurrency(t.pnl)}</span></div>
+              <div className="flex items-center justify-between mt-2"><span className="text-[10px] text-[#8a9aab]">{t.setup} · {t.session}</span><span className={`text-xs font-bold font-mono ${t.pnl >= 0 ? 'text-[#00a86b]' : 'text-[#f04f63]'}`}>{formatCurrency(t.pnl)}</span></div>
             </button>)}
             {trades.length === 0 && <div className="md:col-span-2 xl:col-span-3 py-10 text-center text-xs text-[#8a9aab]">Aucun trade. Commencez par enregistrer votre première opération.</div>}
           </div>
@@ -274,18 +274,18 @@ export function Dashboard({
             <div className="space-y-3">
               {topInstruments.length ? topInstruments.map(([name,data]) => {
                 const max = Math.max(...topInstruments.map(([,d]) => Math.abs(d.pnl)), 1);
-                return <div key={name}><div className="flex justify-between text-xs mb-1.5"><span className="font-semibold text-[#314861]">{name}</span><span className={`font-mono font-bold ${data.pnl >= 0 ? 'text-[#00a86b]' : 'text-[#f04f63]}`}>{formatCurrency(data.pnl)}</span></div><div className="h-2 rounded-full bg-[#eef3f1] overflow-hidden"><div className={`h-full rounded-full ${data.pnl >= 0 ? 'bg-[#08b77a]' : 'bg-[#f04f63']}`} style={{width:`${Math.max((Math.abs(data.pnl)/max)*100,6)}%`}} /></div></div>
+                return <div key={name}><div className="flex justify-between text-xs mb-1.5"><span className="font-semibold text-[#314861]">{name}</span><span className={`font-mono font-bold ${data.pnl >= 0 ? 'text-[#00a86b]' : 'text-[#f04f63]'}`}>{formatCurrency(data.pnl)}</span></div><div className="h-2 rounded-full bg-[#eef3f1] overflow-hidden"><div className={`h-full rounded-full ${data.pnl >= 0 ? 'bg-[#08b77a]' : 'bg-[#f04f63]}`} style={{width:`${Math.max((Math.abs(data.pnl)/max)*100,6)}%`}} /></div></div>
               }) : <div className="py-12 text-center text-xs text-[#8a9aab]">Les analyses apparaîtront après vos premiers trades.</div>}
             </div>
           </div>
           <div className="p-5 rounded-2xl card-premium">
             <h2 className="text-sm font-bold text-[#10233a] mb-4">Sessions</h2>
-            <div className="space-y-3">{Object.entries(sessionBreakdown).map(([name,data]) => <div key={name} className="flex items-center justify-between p-3 rounded-xl bg-[#f8fbfa] border border-[#edf2f0]"><div><div className="text-xs font-semibold text-[#314861]">{name}</div><div className="text-[10px] text-[#8a9aab]">{data.count} trade{data.count>1?'s':''}</div></div><div className={`text-xs font-bold font-mono ${data.pnl >= 0 ? 'text-[#00a86b]' : 'text-[#f04f63]}`}>{formatCurrency(data.pnl)}</div></div>)}</div>
+            <div className="space-y-3">{Object.entries(sessionBreakdown).map(([name,data]) => <div key={name} className="flex items-center justify-between p-3 rounded-xl bg-[#f8fbfa] border border-[#edf2f0]"><div><div className="text-xs font-semibold text-[#314861]">{name}</div><div className="text-[10px] text-[#8a9aab]">{data.count} trade{data.count>1?'s':''}</div></div><div className={`text-xs font-bold font-mono ${data.pnl >= 0 ? 'text-[#00a86b]' : 'text-[#f04f63]'}`}>{formatCurrency(data.pnl)}</div></div>)}</div>
           </div>
         </div>
         <div className="p-5 rounded-2xl card-premium">
           <div className="flex items-center justify-between mb-3"><h2 className="text-sm font-bold text-[#10233a]">Dernières opérations</h2><button onClick={onNavigateToJournal} className="text-xs font-semibold text-[#008f63]">Ouvrir le journal</button></div>
-          <div className="overflow-x-auto"><table className="w-full text-left text-xs"><thead><tr className="text-[10px] uppercase tracking-wider text-[#8a9aab] border-b border-[#edf2f0]"><th className="py-2.5 px-2">Date</th><th className="py-2.5 px-2">Actif</th><th className="py-2.5 px-2">Setup</th><th className="py-2.5 px-2">Session</th><th className="py-2.5 px-2 text-right">P&L</th></tr></thead><tbody>{trades.slice(0,8).map(t=><tr key={t.id} onClick={()=>onSelectTrade(t)} className="border-b border-[#edf2f0] hover:bg-[#f8fbfa] cursor-pointer"><td className="py-3 px-2 text-[#71839a]">{new Date(t.entryDate).toLocaleDateString('fr-FR')}</td><td className="py-3 px-2 font-semibold text-[#10233a]">{t.symbol}</td><td className="py-3 px-2 text-[#5f748c]">{t.setup}</td><td className="py-3 px-2 text-[#5f748c]">{t.session}</td><td className={`py-3 px-2 text-right font-mono font-bold ${t.pnl>=0?'text-[#00a86b]':'text-[#f04f63]}`}>{formatCurrency(t.pnl)}</td></tr>)}</tbody></table></div>
+          <div className="overflow-x-auto"><table className="w-full text-left text-xs"><thead><tr className="text-[10px] uppercase tracking-wider text-[#8a9aab] border-b border-[#edf2f0]"><th className="py-2.5 px-2">Date</th><th className="py-2.5 px-2">Actif</th><th className="py-2.5 px-2">Setup</th><th className="py-2.5 px-2">Session</th><th className="py-2.5 px-2 text-right">P&L</th></tr></thead><tbody>{trades.slice(0,8).map(t=><tr key={t.id} onClick={()=>onSelectTrade(t)} className="border-b border-[#edf2f0] hover:bg-[#f8fbfa] cursor-pointer"><td className="py-3 px-2 text-[#71839a]">{new Date(t.entryDate).toLocaleDateString('fr-FR')}</td><td className="py-3 px-2 font-semibold text-[#10233a]">{t.symbol}</td><td className="py-3 px-2 text-[#5f748c]">{t.setup}</td><td className="py-3 px-2 text-[#5f748c]">{t.session}</td><td className={`py-3 px-2 text-right font-mono font-bold ${t.pnl>=0?'text-[#00a86b]':'text-[#f04f63]'}`}>{formatCurrency(t.pnl)}</td></tr>)}</tbody></table></div>
         </div>
       </div>
     );
@@ -304,7 +304,7 @@ export function Dashboard({
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
           <div className="lg:col-span-2 p-4 rounded-2xl card-premium"><div className="flex justify-between mb-3"><h2 className="text-sm font-bold text-[#10233a]">Equity</h2><span className="text-[10px] text-[#8a9aab]">{metrics.totalTrades} trades</span></div><svg viewBox={`0 0 ${svgWidth} 160`} className="w-full h-40"><polyline fill="none" stroke="#08b77a" strokeWidth="3" strokeLinecap="round" points={points || "25,135 200,120 400,125 600,90 775,100"} /></svg></div>
-          <div className="p-4 rounded-2xl card-premium"><h2 className="text-sm font-bold text-[#10233a] mb-3">Activité récente</h2><div className="space-y-2">{trades.slice(0,5).map(t=><button key={t.id} onClick={()=>onSelectTrade(t)} className="w-full flex items-center justify-between gap-2 p-2.5 rounded-xl hover:bg-[#f7fbf9] text-left cursor-pointer"><span className="text-xs font-semibold text-[#203a53]">{t.symbol}</span><span className={`text-[11px] font-mono font-bold ${t.pnl>=0?'text-[#00a86b]':'text-[#f04f63]}`}>{formatCurrency(t.pnl)}</span></button>)}</div></div>
+          <div className="p-4 rounded-2xl card-premium"><h2 className="text-sm font-bold text-[#10233a] mb-3">Activité récente</h2><div className="space-y-2">{trades.slice(0,5).map(t=><button key={t.id} onClick={()=>onSelectTrade(t)} className="w-full flex items-center justify-between gap-2 p-2.5 rounded-xl hover:bg-[#f7fbf9] text-left cursor-pointer"><span className="text-xs font-semibold text-[#203a53]">{t.symbol}</span><span className={`text-[11px] font-mono font-bold ${t.pnl>=0?'text-[#00a86b]':'text-[#f04f63]'}`}>{formatCurrency(t.pnl)}</span></button>)}</div></div>
         </div>
       </div>
     );
