@@ -18,7 +18,7 @@ interface SettingsViewProps {
   onRequestPlan: (plan: 'pro' | 'community') => void;
 }
 
-const starterLimit = 50;
+const starterLimit = 5;
 
 function formatDate(value?: string) {
   if (!value) return '—';
@@ -96,101 +96,52 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
       </div>
 
       {activeTab === 'subscription' && (
-        <div className="space-y-5">
-          <section className="rounded-2xl bg-white border border-slate-200 p-5 sm:p-6">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
+        <div className="space-y-6">
+          <section className="relative overflow-hidden rounded-[28px] border border-slate-200 bg-white p-6 sm:p-7 shadow-[0_18px_60px_rgba(37,52,75,0.07)]">
+            <div className="absolute -right-16 -top-20 h-48 w-48 rounded-full bg-violet-200/45 blur-3xl" />
+            <div className="absolute right-20 -bottom-24 h-40 w-40 rounded-full bg-cyan-200/40 blur-3xl" />
+            <div className="relative flex flex-col xl:flex-row xl:items-end xl:justify-between gap-7">
               <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="text-[10px] uppercase tracking-wider font-semibold text-slate-500">Abonnement</span>
-                  <span className="px-2 py-0.5 rounded-full bg-[#edf9f5] text-[#14866f] text-[10px] font-semibold">Actif</span>
-                </div>
-                <div className="flex items-end gap-3">
-                  <h2 className="text-xl font-bold text-slate-900">{isStarter ? 'Starter' : userProfile?.plan === 'pro' ? 'Plus' : 'Community'}</h2>
-                  <span className="text-xs text-slate-400 mb-1">Votre plan actuel</span>
-                </div>
-                <p className="text-xs text-slate-500 mt-1.5 max-w-xl">Les informations essentielles de votre accès sont regroupées ici, sans éléments inutiles.</p>
+                <div className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.14em] text-white"><Sparkles className="h-3.5 w-3.5 text-cyan-300" /> IAMTRADER Account</div>
+                <div className="mt-5 flex flex-wrap items-center gap-3"><h2 className="text-3xl font-black tracking-tight text-slate-950">{isStarter ? 'Starter' : userProfile?.plan === 'pro' ? 'Plus' : 'Community'}</h2><span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Actif</span></div>
+                <p className="mt-2 max-w-xl text-sm leading-6 text-slate-500">Votre espace personnel pour suivre votre accès, votre compte de trading et votre utilisation IAMTRADER.</p>
               </div>
-              <div className="grid grid-cols-2 gap-2 min-w-[280px]">
-                <div className="rounded-xl bg-[#f7fafb] border border-slate-200 px-4 py-3">
-                  <div className="text-[10px] uppercase tracking-wider text-slate-400">Activé le</div>
-                  <div className="text-sm font-semibold text-slate-900 mt-1">{formatDate(activationDate)}</div>
-                </div>
-                <div className="rounded-xl bg-[#f7fafb] border border-slate-200 px-4 py-3">
-                  <div className="text-[10px] uppercase tracking-wider text-slate-400">État</div>
-                  <div className="text-sm font-semibold text-[#14866f] mt-1">Actif</div>
-                </div>
+              <div className="grid grid-cols-2 gap-3 xl:min-w-[340px]">
+                <div className="rounded-2xl bg-gradient-to-br from-indigo-50 to-violet-50 p-4 ring-1 ring-indigo-100"><div className="text-[10px] font-bold uppercase tracking-wider text-indigo-500">Activé le</div><div className="mt-1.5 text-sm font-bold text-slate-900">{formatDate(activationDate)}</div></div>
+                <div className="rounded-2xl bg-gradient-to-br from-cyan-50 to-emerald-50 p-4 ring-1 ring-cyan-100"><div className="text-[10px] font-bold uppercase tracking-wider text-emerald-600">Accès</div><div className="mt-1.5 text-sm font-bold text-slate-900">{isStarter ? 'Starter actif' : (daysRemaining ?? 0) + ' jours'}</div></div>
               </div>
             </div>
           </section>
-
-          <section className="grid lg:grid-cols-[1.15fr_0.85fr] gap-5">
-            <div className="rounded-2xl bg-white border border-slate-200 p-5 sm:p-6">
-              <div className="flex items-center justify-between">
-                <div><h3 className="text-sm font-bold text-slate-900">Votre période d’accès</h3><p className="text-xs text-slate-500 mt-1">Une lecture simple de votre abonnement.</p></div>
-                <Clock3 className="w-4 h-4 text-slate-400" />
+          <section className="grid gap-5 lg:grid-cols-[1.05fr_0.95fr]">
+            <div className="relative overflow-hidden rounded-[26px] bg-gradient-to-br from-indigo-600 via-violet-600 to-fuchsia-500 p-[1px] shadow-[0_18px_50px_rgba(99,74,190,0.16)]">
+              <div className="relative h-full rounded-[25px] bg-white p-6">
+                <div className="flex items-start justify-between gap-4"><div><div className="text-[10px] font-bold uppercase tracking-[0.14em] text-violet-500">Votre accès</div><h3 className="mt-1.5 text-lg font-black text-slate-950">Période d’abonnement</h3></div><div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-violet-50 text-violet-600"><Clock3 className="h-4 w-4" /></div></div>
+                {isStarter ? (
+                  <div className="mt-7 rounded-2xl bg-gradient-to-r from-violet-50 to-cyan-50 p-4 ring-1 ring-violet-100"><div className="flex items-center justify-between gap-4"><div><div className="text-xs font-bold text-slate-900">Accès Starter actif</div><div className="mt-1 text-[11px] text-slate-500">Votre formule gratuite reste active sans expiration.</div></div><div className="rounded-xl bg-white px-3 py-2 text-right shadow-sm"><div className="text-[9px] font-bold uppercase text-slate-400">Statut</div><div className="text-xs font-black text-emerald-600">ACTIF</div></div></div></div>
+                ) : (
+                  <div className="mt-7"><div className="flex items-end justify-between gap-3"><div><div className="text-[10px] text-slate-400">Du</div><div className="text-xs font-bold text-slate-800">{formatDate(activationDate)}</div></div><div className="text-right"><div className="text-[10px] text-slate-400">Au</div><div className="text-xs font-bold text-slate-800">{formatDate(userProfile?.subscriptionExpiresAt)}</div></div></div><div className="mt-4 h-3 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-gradient-to-r from-indigo-500 via-violet-500 to-fuchsia-500" style={{width: Math.max(4, Math.min(100, ((daysRemaining || 0) / 30) * 100)) + '%'}} /></div><div className="mt-3 flex items-center justify-between"><span className="text-xs text-slate-500">Temps restant</span><span className="text-sm font-black text-slate-950">{(daysRemaining ?? 0) + ' jours'}</span></div></div>
+                )}
               </div>
-              {isStarter ? (
-                <div className="mt-6 flex items-center gap-4">
-                  <div className="w-2.5 h-2.5 rounded-full bg-[#55bda5] ring-4 ring-[#edf9f5]" />
-                  <div><div className="text-xs font-semibold text-slate-800">Accès Starter actif</div><div className="text-xs text-slate-500 mt-1">Sans date d’expiration. Vos limites Starter s’appliquent.</div></div>
-                </div>
-              ) : (
-                <div className="mt-6">
-                  <div className="flex items-center justify-between text-xs mb-2"><span className="text-slate-500">{formatDate(activationDate)}</span><span className="text-slate-500">{formatDate(userProfile?.subscriptionExpiresAt)}</span></div>
-                  <div className="relative h-2 rounded-full bg-slate-100 overflow-hidden"><div className="h-full rounded-full bg-[#6e9fe8]" style={{width: `${Math.max(4, Math.min(100, ((daysRemaining || 0) / 30) * 100))}%`}} /></div>
-                  <div className="flex items-center justify-between mt-3"><span className="text-xs text-slate-500">Temps restant</span><span className="text-sm font-bold text-slate-900">{daysRemaining ?? 0} jours</span></div>
-                </div>
-              )}
             </div>
-
-            <div className="rounded-2xl bg-white border border-slate-200 p-5 sm:p-6">
-              <div className="flex items-center justify-between">
-                <div><h3 className="text-sm font-bold text-slate-900">Compte actif</h3><p className="text-xs text-slate-500 mt-1">Le compte utilisé actuellement.</p></div>
-                <WalletCards className="w-4 h-4 text-slate-400" />
-              </div>
+            <div className="rounded-[26px] border border-slate-200 bg-white p-6 shadow-[0_14px_45px_rgba(37,52,75,0.05)]">
+              <div className="flex items-start justify-between"><div><div className="text-[10px] font-bold uppercase tracking-[0.14em] text-cyan-600">Trading</div><h3 className="mt-1.5 text-lg font-black text-slate-950">Compte actif</h3></div><div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-cyan-50 text-cyan-600"><WalletCards className="h-4 w-4" /></div></div>
               {currentAccount ? (
-                <div className="mt-5">
-                  <div className="flex items-start justify-between gap-3">
-                    <div><h4 className="text-base font-bold text-slate-900">{currentAccount.name}</h4><p className="text-xs text-slate-500 mt-1">{currentAccount.broker} · {currentAccount.currency}</p></div>
-                    <span className="text-[10px] font-semibold text-[#14866f] bg-[#edf9f5] px-2 py-1 rounded-full">{currentAccount.type}</span>
-                  </div>
-                  <div className="mt-4 grid grid-cols-2 gap-2">
-                    <div className="rounded-xl bg-[#f8fafb] p-3"><div className="text-[10px] text-slate-400">Solde</div><div className="text-sm font-bold text-slate-900 mt-1">{formatCurrency(currentAccount.currentBalance, currentAccount.currency)}</div></div>
-                    <div className="rounded-xl bg-[#f8fafb] p-3"><div className="text-[10px] text-slate-400">Capital initial</div><div className="text-sm font-bold text-slate-900 mt-1">{formatCurrency(currentAccount.initialBalance, currentAccount.currency)}</div></div>
-                  </div>
-                </div>
-              ) : <div className="mt-5 text-xs text-slate-500">Aucun compte de trading sélectionné.</div>}
+                <div className="mt-6"><div className="flex items-start justify-between gap-3"><div><h4 className="text-base font-black text-slate-950">{currentAccount.name}</h4><p className="mt-1 text-xs text-slate-500">{currentAccount.broker || 'Broker non renseigné'} · {currentAccount.currency}</p></div><span className="rounded-full bg-cyan-50 px-2.5 py-1 text-[10px] font-bold text-cyan-700">{currentAccount.type}</span></div><div className="mt-5 grid grid-cols-2 gap-3"><div className="rounded-2xl bg-slate-50 p-4"><div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Solde actuel</div><div className="mt-1.5 text-lg font-black text-slate-950">{formatCurrency(currentAccount.currentBalance, currentAccount.currency)}</div></div><div className="rounded-2xl bg-gradient-to-br from-emerald-50 to-cyan-50 p-4"><div className="text-[10px] font-semibold uppercase tracking-wider text-emerald-600">Capital initial</div><div className="mt-1.5 text-lg font-black text-slate-950">{formatCurrency(currentAccount.initialBalance, currentAccount.currency)}</div></div></div></div>
+              ) : <div className="mt-6 rounded-2xl bg-slate-50 p-4 text-xs text-slate-500">Aucun compte de trading sélectionné.</div>}
             </div>
           </section>
-
           {isStarter && (
-            <section className="rounded-2xl bg-white border border-slate-200 p-5 sm:p-6">
-              <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-5">
-                <div>
-                  <div className="text-[10px] uppercase tracking-wider text-slate-400">Starter</div>
-                  <h3 className="text-base font-bold text-slate-900 mt-1">Votre utilisation</h3>
-                  <p className="text-xs text-slate-500 mt-1">Vous disposez de {Math.max(0, starterLimit - monthlyTrades)} trades restants ce mois-ci.</p>
-                </div>
-                <div className="w-full md:w-72">
-                  <div className="flex justify-between text-[10px] text-slate-400 mb-2"><span>{monthlyTrades} utilisés</span><span>{starterLimit} au total</span></div>
-                  <div className="h-1.5 rounded-full bg-slate-100"><div className="h-full rounded-full bg-[#9dbeb5]" style={{width: `${Math.min(100, monthlyTrades / starterLimit * 100)}%`}} /></div>
-                </div>
+            <section className="rounded-[26px] border border-slate-200 bg-white p-6 shadow-[0_14px_45px_rgba(37,52,75,0.05)]">
+              <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+                <div><div className="inline-flex rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-700">Starter</div><h3 className="mt-2 text-lg font-black text-slate-950">Votre quota mensuel</h3><p className="mt-1 text-xs text-slate-500">Vous pouvez enregistrer jusqu’à <strong className="text-slate-700">{starterLimit} trades</strong> par mois.</p></div>
+                <div className="w-full md:w-[330px]"><div className="mb-2.5 flex items-end justify-between"><span className="text-xs font-semibold text-slate-500">{monthlyTrades} / {starterLimit} utilisés</span><span className="text-sm font-black text-slate-950">{Math.max(0, starterLimit - monthlyTrades)} <span className="text-[10px] font-medium text-slate-400">restants</span></span></div><div className="h-3 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-gradient-to-r from-cyan-400 via-teal-400 to-emerald-400 transition-all" style={{width: Math.min(100, monthlyTrades / starterLimit * 100) + '%'}} /></div><div className="mt-2 flex justify-between text-[10px] text-slate-400"><span>Début du mois</span><span>{Math.min(100, Math.round(monthlyTrades / starterLimit * 100))}% utilisé</span></div></div>
               </div>
             </section>
           )}
-
-          <section className="grid md:grid-cols-2 gap-4">
-            <div className="rounded-2xl bg-white border border-slate-200 p-5">
-              <div className="text-[10px] uppercase tracking-wider text-slate-400">Upgrade</div>
-              <h3 className="text-base font-bold text-slate-900 mt-1">Plus</h3>
-              <p className="text-xs text-slate-500 mt-2 leading-relaxed">Pour trader sans la limite Starter et accéder aux analyses avancées.</p>
-              <div className="flex items-center justify-between mt-5"><span className="text-sm font-bold text-slate-900">$9.99 <span className="text-[10px] font-normal text-slate-400">/ mois</span></span><button onClick={() => onRequestPlan('pro')} disabled={pendingUpgrade === 'pro'} className="px-3.5 py-2 rounded-lg bg-[#173b59] text-white text-xs font-semibold hover:bg-[#123149] disabled:opacity-50 cursor-pointer">{pendingUpgrade === 'pro' ? 'Demande envoyée' : 'Passer à Plus'} <ArrowRight className="inline w-3.5 h-3.5 ml-1" /></button></div>
-            </div>
-            <div className="rounded-2xl bg-[#f7fafb] border border-slate-200 p-5">
-              <div className="text-[10px] uppercase tracking-wider text-slate-400">Programme</div>
-              <h3 className="text-base font-bold text-slate-900 mt-1">Community · 6 mois</h3>
-              <p className="text-xs text-slate-500 mt-2 leading-relaxed">Outils, formations, cours et accompagnement pendant 6 mois.</p>
-              <div className="flex items-center justify-between mt-5"><span className="text-sm font-bold text-slate-900">$89.99 <span className="text-[10px] font-normal text-slate-400">/ 6 mois</span></span><button onClick={() => onRequestPlan('community')} disabled={pendingUpgrade === 'community'} className="px-3.5 py-2 rounded-lg border border-slate-300 bg-white text-slate-700 text-xs font-semibold hover:bg-slate-50 disabled:opacity-50 cursor-pointer">{pendingUpgrade === 'community' ? 'Demande envoyée' : 'Découvrir Community'} <ChevronRight className="inline w-3.5 h-3.5 ml-1" /></button></div>
+          <section><div className="mb-4"><div className="text-[10px] font-bold uppercase tracking-[0.14em] text-violet-500">Évolution</div><h3 className="mt-1 text-xl font-black tracking-tight text-slate-950">Débloquez plus avec IAMTRADER</h3><p className="mt-1 text-xs text-slate-500">Passez à une formule supérieure lorsque votre journal grandit.</p></div>
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="group relative overflow-hidden rounded-[26px] border border-indigo-100 bg-gradient-to-br from-indigo-50 via-white to-violet-50 p-6 shadow-[0_14px_45px_rgba(79,70,229,0.08)]"><div className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-indigo-200/40 blur-2xl transition-transform group-hover:scale-125" /><div className="relative"><span className="inline-flex rounded-full bg-indigo-100 px-2.5 py-1 text-[10px] font-bold text-indigo-700">PLUS</span><h4 className="mt-3 text-xl font-black text-slate-950">$9.99 <span className="text-xs font-semibold text-slate-400">/ mois</span></h4><p className="mt-2 max-w-sm text-xs leading-5 text-slate-500">Pour dépasser la limite Starter et accéder aux analyses avancées.</p><button onClick={() => onRequestPlan('pro')} disabled={pendingUpgrade === 'pro'} className="mt-5 inline-flex items-center rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-indigo-200 transition hover:-translate-y-0.5 disabled:opacity-50 cursor-pointer">{pendingUpgrade === 'pro' ? 'Demande envoyée' : 'Passer à Plus'} <ArrowRight className="ml-1.5 h-3.5 w-3.5" /></button></div></div>
+              <div className="group relative overflow-hidden rounded-[26px] border border-cyan-100 bg-gradient-to-br from-cyan-50 via-white to-emerald-50 p-6 shadow-[0_14px_45px_rgba(20,184,166,0.07)]"><div className="absolute -right-10 -top-10 h-28 w-28 rounded-full bg-cyan-200/40 blur-2xl transition-transform group-hover:scale-125" /><div className="relative"><span className="inline-flex rounded-full bg-cyan-100 px-2.5 py-1 text-[10px] font-bold text-cyan-700">COMMUNITY · 6 MOIS</span><h4 className="mt-3 text-xl font-black text-slate-950">$89.99 <span className="text-xs font-semibold text-slate-400">/ 6 mois</span></h4><p className="mt-2 max-w-sm text-xs leading-5 text-slate-500">Outils, formations, cours et accompagnement pendant 6 mois.</p><button onClick={() => onRequestPlan('community')} disabled={pendingUpgrade === 'community'} className="mt-5 inline-flex items-center rounded-xl bg-white px-4 py-2.5 text-xs font-bold text-slate-800 ring-1 ring-cyan-200 shadow-sm transition hover:-translate-y-0.5 disabled:opacity-50 cursor-pointer">{pendingUpgrade === 'community' ? 'Demande envoyée' : 'Découvrir Community'} <ChevronRight className="ml-1.5 h-3.5 w-3.5 text-cyan-600" /></button></div></div>
             </div>
           </section>
         </div>
