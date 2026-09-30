@@ -102,34 +102,34 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
   return (
     <div className="space-y-4">
       {/* Compact trading calendar */}
-      <div className="rounded-2xl overflow-hidden border border-[#25364f] bg-[#101d30] text-white shadow-[0_14px_35px_rgba(16,35,58,0.12)]">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 px-4 py-3 border-b border-white/[0.06]">
+      <div className="rounded-xl overflow-hidden border border-[#dfe8e4] bg-white text-[#10233a] shadow-[0_8px_28px_rgba(16,35,58,0.06)]">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2 px-3 py-2.5 border-b border-[#edf2f0]">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-lg bg-[#1d3150] border border-white/[0.08] flex items-center justify-center text-[#68a7ff]">
-              <CalendarDays className="w-4 h-4" />
+            <div className="w-7 h-7 rounded-lg bg-[#eef5ff] border border-[#d9e7ff] flex items-center justify-center text-[#3b82f6]">
+              <CalendarDays className="w-3.5 h-3.5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h2 className="text-base font-bold tracking-tight">{monthNames[month]} {year}</h2>
-                <button onClick={() => setCurrentDate(new Date())} className="text-[8px] px-1.5 py-0.5 rounded bg-white/[0.07] text-slate-300 hover:bg-white/[0.12] transition-colors cursor-pointer">Today</button>
+                <h2 className="text-sm font-bold tracking-tight">{monthNames[month]} {year}</h2>
+                <button onClick={() => setCurrentDate(new Date())} className="text-[8px] px-1.5 py-0.5 rounded-md bg-[#f3f6f5] text-[#6f8090] border border-[#e3ebe8] hover:bg-[#eaf0ee] transition-colors cursor-pointer">Today</button>
               </div>
-              <p className="text-[9px] text-slate-400 mt-0.5">Calendrier de rentabilité quotidienne</p>
+              <p className="text-[8px] text-[#91a0ad] mt-0.5">Calendrier de rentabilité quotidienne</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <div className="hidden sm:block px-2.5 py-1.5 rounded-lg bg-white/[0.04] border border-white/[0.07] text-[9px] font-mono">
-              <span className="text-slate-400 font-sans">Mois </span>
+            <div className="hidden sm:block px-2 py-1 rounded-md bg-[#f8faf9] border border-[#e4ece9] text-[8px] font-mono">
+              <span className="text-[#8a99a6] font-sans">Mois </span>
               <span className={`font-bold ${monthStats.monthlyPnl > 0 ? 'text-[#42d3a1]' : monthStats.monthlyPnl < 0 ? 'text-[#ff7180]' : 'text-slate-300'}`}>{formatCurrency(monthStats.monthlyPnl)}</span>
             </div>
-            <div className="flex items-center gap-1 bg-white/[0.04] p-1 rounded-lg border border-white/[0.07]">
-              <button onClick={prevMonth} className="w-7 h-7 rounded-md text-slate-400 hover:text-white hover:bg-white/[0.08] flex items-center justify-center transition-colors cursor-pointer" aria-label="Mois précédent"><ChevronLeft className="w-3.5 h-3.5" /></button>
-              <button onClick={nextMonth} className="w-7 h-7 rounded-md text-slate-400 hover:text-white hover:bg-white/[0.08] flex items-center justify-center transition-colors cursor-pointer" aria-label="Mois suivant"><ChevronRight className="w-3.5 h-3.5" /></button>
+            <div className="flex items-center gap-1 bg-[#f8faf9] p-0.5 rounded-md border border-[#e4ece9]">
+              <button onClick={prevMonth} className="w-6 h-6 rounded-md text-[#71839a] hover:text-[#10233a] hover:bg-[#edf2f0] flex items-center justify-center transition-colors cursor-pointer" aria-label="Mois précédent"><ChevronLeft className="w-3.5 h-3.5" /></button>
+              <button onClick={nextMonth} className="w-6 h-6 rounded-md text-[#71839a] hover:text-[#10233a] hover:bg-[#edf2f0] flex items-center justify-center transition-colors cursor-pointer" aria-label="Mois suivant"><ChevronRight className="w-3.5 h-3.5" /></button>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-7 border-b border-white/[0.07] bg-[#14243a] text-center">
-          {weekDayLabels.map(day => <div key={day} className="py-2 text-[8px] font-semibold uppercase tracking-wider text-slate-400">{day}</div>)}
+        <div className="grid grid-cols-7 border-b border-[#e7eeeb] bg-[#fbfcfc] text-center">
+          {weekDayLabels.map(day => <div key={day} className="py-1.5 text-[7px] font-semibold uppercase tracking-wider text-[#8796a3]">{day}</div>)}
         </div>
 
         <div className="grid grid-cols-7">
@@ -142,30 +142,30 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
             const isSunday = index % 7 === 6;
             const stats = weekStats[cell.weekIndex];
             const weekHasTrades = !!stats && stats.trades > 0;
-            const cellTone = isProfitable ? 'bg-[#123c3d] hover:bg-[#16504d]' : isLoss ? 'bg-[#3b293b] hover:bg-[#4a3045]' : 'bg-[#132239] hover:bg-[#172a43]';
+            const cellTone = isProfitable ? 'bg-[#e7faf3] hover:bg-[#dcf7ed]' : isLoss ? 'bg-[#fff0f1] hover:bg-[#ffe6e8]' : 'bg-white hover:bg-[#f8faf9]';
 
             return (
               <div
                 key={cell.dayStr || `empty-${index}`}
                 onClick={() => cell.dayStr && hasTrades && setSelectedDayKey(cell.dayStr)}
-                className={`relative min-h-[74px] sm:min-h-[82px] p-1.5 border-r border-b border-white/[0.07] transition-colors ${cell.dayStr ? cellTone : 'bg-[#0f1c2d]'} ${hasTrades ? 'cursor-pointer' : ''} ${isSelected ? 'ring-1 ring-inset ring-[#69a9ff] z-10' : ''}`}
+                className={`relative min-h-[58px] sm:min-h-[64px] p-1 border-r border-b border-[#e8eeec] transition-colors ${cell.dayStr ? cellTone : 'bg-[#fbfcfc]'} ${hasTrades ? 'cursor-pointer' : ''} ${isSelected ? 'ring-1 ring-inset ring-[#3b82f6] z-10' : ''}`}
               >
                 {cell.dayNumber && (
                   <>
                     <div className="flex items-start justify-between gap-1">
-                      <span className={`text-[9px] font-mono ${hasTrades ? 'text-white font-semibold' : 'text-slate-500'}`}>{cell.dayNumber}</span>
-                      {hasTrades && <span className="text-[7px] font-mono text-slate-300 bg-black/15 px-1 py-0.5 rounded">{dayData.trades.length}T</span>}
+                      <span className={`text-[8px] font-mono ${hasTrades ? 'text-[#10233a] font-semibold' : 'text-[#a0adb7]'}`}>{cell.dayNumber}</span>
+                      {hasTrades && <span className="text-[6px] font-mono text-[#7d8d99] bg-white px-1 py-0.5 rounded border border-[#e1e9e6]">{dayData.trades.length}T</span>}
                     </div>
                     {hasTrades && (
-                      <div className="mt-3">
-                        <div className={`text-[11px] font-mono font-bold tabular-nums ${isProfitable ? 'text-[#42d3a1]' : isLoss ? 'text-[#ff7180]' : 'text-slate-300'}`}>{formatCurrency(dayData.netPnl)}</div>
-                        <div className="text-[7px] text-slate-500 font-mono mt-0.5"><span className="text-[#42d3a1]">{dayData.winCount}W</span><span> / </span><span className="text-[#ff7180]">{dayData.lossCount}L</span></div>
+                      <div className="mt-2">
+                        <div className={`text-[10px] font-mono font-extrabold tabular-nums tracking-tight ${isProfitable ? 'text-[#008f63]' : isLoss ? 'text-[#d83f50]' : 'text-[#71839a]' }`}>{formatCurrency(dayData.netPnl)}</div>
+                        <div className="text-[6px] text-[#8796a3] font-mono mt-0.5"><span className="text-[#008f63] font-semibold">{dayData.winCount}W</span><span> / </span><span className="text-[#d83f50] font-semibold">{dayData.lossCount}L</span></div>
                       </div>
                     )}
                     {isSunday && (
-                      <div className="absolute right-1 bottom-1 text-right">
-                        <div className="text-[7px] text-slate-500 uppercase tracking-wide">Week {cell.weekIndex + 1}</div>
-                        <div className={`text-[8px] font-mono font-semibold ${weekHasTrades ? (stats.pnl >= 0 ? 'text-[#42d3a1]' : 'text-[#ff7180]') : 'text-slate-600'}`}>{weekHasTrades ? formatCurrency(stats.pnl) : '$0.00'}</div>
+                      <div className="absolute right-1 bottom-1 text-right opacity-80">
+                        <div className="text-[6px] text-[#98a5af] uppercase tracking-wide">Week {cell.weekIndex + 1}</div>
+                        <div className={`text-[7px] font-mono font-bold ${weekHasTrades ? (stats.pnl >= 0 ? 'text-[#008f63]' : 'text-[#d83f50]') : 'text-[#a8b3bb]'}`}>{weekHasTrades ? formatCurrency(stats.pnl) : '$0.00'}</div>
                       </div>
                     )}
                   </>
@@ -175,12 +175,12 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
           })}
         </div>
 
-        <div className="flex items-center justify-between px-3 py-2 bg-[#0d1929] border-t border-white/[0.06]">
-          <div className="flex items-center gap-3 text-[8px] text-slate-500">
-            <span><i className="inline-block w-2 h-2 rounded-sm bg-[#123c3d] mr-1" />Jour positif</span>
-            <span><i className="inline-block w-2 h-2 rounded-sm bg-[#3b293b] mr-1" />Jour négatif</span>
+        <div className="flex items-center justify-between px-2.5 py-1.5 bg-[#fbfcfc] border-t border-[#e7eeeb]">
+          <div className="flex items-center gap-3 text-[7px] text-[#8796a3]">
+            <span><i className="inline-block w-2 h-2 rounded-sm bg-[#32b58a] mr-1" />Gain</span>
+            <span><i className="inline-block w-2 h-2 rounded-sm bg-[#e35b68] mr-1" />Perte</span>
           </div>
-          <span className="text-[8px] text-slate-600">{monthStats.monthlyTrades} trade{monthStats.monthlyTrades > 1 ? 's' : ''} · {monthStats.greenDays} vertes · {monthStats.redDays} rouges</span>
+          <span className="text-[7px] text-[#9aa7b0]">{monthStats.monthlyTrades} trade{monthStats.monthlyTrades > 1 ? 's' : ''} · {monthStats.greenDays} vertes · {monthStats.redDays} rouges</span>
         </div>
       </div>
 
@@ -206,7 +206,7 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
               <table className="w-full min-w-[760px] text-left text-xs border-collapse">
                 <thead className="sticky top-0 bg-white z-10">
                   <tr className="border-b border-slate-200 text-[9px] font-semibold text-slate-500 uppercase tracking-wider">
-                    <th className="py-2.5 px-4">Heure</th><th className="py-2.5 px-4">Symbol</th><th className="py-2.5 px-4">Direction</th><th className="py-2.5 px-4">Entrée</th><th className="py-2.5 px-4">Sortie</th><th className="py-2.5 px-4 text-right">P&L</th><th className="py-2.5 px-4 text-right">R:R</th><th className="py-2.5 px-4 text-right">Résultat</th>
+                    <th className="py-2.5 px-4">Heure</th><th className="py-2.5 px-4">Symbol</th><th className="py-2.5 px-4">Direction</th><th className="py-2.5 px-4">Entrée</th><th className="py-2.5 px-4">Sortie</th><th className="py-2.5 px-4 text-right text-[#10233a]">P&L</th><th className="py-2.5 px-4 text-right">R:R</th><th className="py-2.5 px-4 text-right">Résultat</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -217,7 +217,7 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
                       <td className="py-2.5 px-4"><DirectionBadge direction={trade.direction} /></td>
                       <td className="py-2.5 px-4 font-mono text-[#5f748c] tabular-nums text-[10px]">{trade.entryPrice ? trade.entryPrice.toLocaleString() : '—'}</td>
                       <td className="py-2.5 px-4 font-mono text-[#5f748c] tabular-nums text-[10px]">{trade.exitPrice ? trade.exitPrice.toLocaleString() : '—'}</td>
-                      <td className={`py-2.5 px-4 text-right font-mono font-bold tabular-nums text-xs ${trade.pnl > 0 ? 'text-[#008f63]' : trade.pnl < 0 ? 'text-[#e14d5d]' : 'text-[#71839a]'}`}>{formatCurrency(trade.pnl)}</td>
+                      <td className={`py-2.5 px-4 text-right font-mono font-extrabold tabular-nums text-sm tracking-tight ${trade.pnl > 0 ? 'text-[#008f63] bg-[#ecfbf5]' : trade.pnl < 0 ? 'text-[#d83f50] bg-[#fff1f2]' : 'text-[#71839a]'}`}>{formatCurrency(trade.pnl)}</td>
                       <td className="py-2.5 px-4 text-right font-mono text-[#5f748c] tabular-nums text-[10px]">{trade.rMultiple !== undefined ? `${trade.rMultiple > 0 ? '+' : ''}${trade.rMultiple}R` : '—'}</td>
                       <td className="py-2.5 px-4 text-right"><ResultBadge result={trade.result} /></td>
                     </tr>
