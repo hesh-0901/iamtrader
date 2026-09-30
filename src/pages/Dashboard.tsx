@@ -56,7 +56,7 @@ export function Dashboard({
   const initialCapital = useMemo(() => {
     if (currentAccount) return currentAccount.initialBalance;
     if (accounts.length > 0) return accounts.reduce((acc, a) => acc + a.initialBalance, 0);
-    return 50000;
+    return 0;
   }, [currentAccount, accounts]);
 
   const metrics = useMemo(() => {
@@ -138,6 +138,31 @@ export function Dashboard({
   const userName = userProfile?.displayName || 'Hénoch';
 
   type DashboardMode = 'standard' | 'focus' | 'analysis' | 'compact';
+  const [equityHoverIndex, setEquityHoverIndex] = useState<number | null>(null);
+
+  const equityChartPoints = useMemo(() => {
+    if (metrics.equityCurve.length <= 1) return [];
+    const balances = metrics.equityCurve.map(pt => pt.balance);
+    const minVal = Math.min(...balances) * 0.995;
+    const maxVal = Math.max(...balances) * 1.005;
+    const range = maxVal - minVal || 1;
+    return metrics.equityCurve.map((pt, i) => {
+      const x = padding + (i / (metrics.equityCurve.length - 1)) * (svgWidth - padding * 2);
+      const y = svgHeight - padding - ((pt.balance - minVal) / range) * (svgHeight - padding * 2);
+      return { x, y, ...pt };
+    });
+  }, [metrics.equityCurve, svgWidth, svgHeight, padding]);
+
+  const equityPeriodLabels = useMemo(() => {
+    if (!metrics.equityCurve.length) return [];
+    const count = Math.min(5, metrics.equityCurve.length);
+    return Array.from({ length: count }, (_, i) => {
+      const index = count === 1 ? 0 : Math.round((i / (count - 1)) * (metrics.equityCurve.length - 1));
+      const point = metrics.equityCurve[index];
+      return { index, label: new Date(point.date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' }) };
+    });
+  }, [metrics.equityCurve]);
+
   const [dashboardMode, setDashboardMode] = useState<DashboardMode>(() => {
     if (typeof window === 'undefined') return 'standard';
     return (localStorage.getItem('iamtrader-dashboard-mode') as DashboardMode) || 'standard';
@@ -163,11 +188,7 @@ export function Dashboard({
         </h1>
         {!compact && <p className="text-xs text-[#71839a] mt-1">Une vue claire de votre performance, de votre risque et de vos dernières décisions.</p>}
       </div>
-      <div className="flex items-center gap-2">
-        <button onClick={onOpenNewTrade} className="btn-primary flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs cursor-pointer">
-          <Plus className="w-3.5 h-3.5" /> Nouveau trade
-        </button>
-      </div>
+      <div />
     </div>
   );
 
@@ -542,39 +563,47 @@ export function Dashboard({
           {/* SVG Chart with discreet grid lines */}
           <div className="w-full overflow-hidden bg-white rounded-lg border border-slate-200/80 p-3">
             {metrics.equityCurve.length > 1 && points ? (
-              <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="w-full h-44 sm:h-52 overflow-visible">
-                <defs>
-                  <linearGradient id="fintechEquityGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                    <stop offset="0%" stopColor="#19a66a" stopOpacity="0.25" />
-                    <stop offset="100%" stopColor="#19a66a" stopOpacity="0.00" />
-                  </linearGradient>
-                </defs>
-                {/* Horizontal guide lines */}
-                <line x1={padding} y1={padding} x2={svgWidth - padding} y2={padding} stroke="#e6efec" strokeDasharray="3 3" />
-                <line x1={padding} y1={svgHeight / 2} x2={svgWidth - padding} y2={svgHeight / 2} stroke="#e6efec" strokeDasharray="3 3" />
-                <line x1={padding} y1={svgHeight - padding} x2={svgWidth - padding} y2={svgHeight - padding} stroke="#e6efec" strokeDasharray="3 3" />
-
-                {/* Fill Area */}
-                <polygon
-                  points={`${padding},${svgHeight - padding} ${points} ${svgWidth - padding},${svgHeight - padding}`}
-                  fill="url(#fintechEquityGrad)"
-                />
-                {/* Line */}
-                <polyline
-                  fill="none"
-                  stroke="#19a66a"
-                  strokeWidth="2.2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  points={points}
-                />
-              </svg>
-            ) : (
-              <div className="h-44 sm:h-52 flex flex-col items-center justify-center text-xs text-slate-500 font-mono space-y-1">
-                <span>Enregistrez au moins 2 trades pour afficher la courbe d'equity.</span>
+              <div className="relative">
+                <svg viewBox={`0 0 ${svgWidth} ${svgHeight}`} className="w-full h-44 sm:h-52 overflow-visible"
+                  onMouseLeave={() => setEquityHoverIndex(null)}
+                  onMouseMove={(event) => {
+                    const rect = event.currentTarget.getBoundingClientRect();
+                    const x = ((event.clientX - rect.left) / rect.width) * svgWidth;
+                    const nearest = equityChartPoints.reduce((best, point, index) =>
+                      Math.abs(point.x - x) < Math.abs(equityChartPoints[best].x - x) ? index : best, 0);
+                    setEquityHoverIndex(nearest);
+                  }}>
+                  <defs>
+                    <linearGradient id="fintechEquityGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                      <stop offset="0%" stopColor="#19a66a" stopOpacity="0.22" />
+                      <stop offset="100%" stopColor="#19a66a" stopOpacity="0.00" />
+                    </linearGradient>
+                  </defs>
+                  <line x1={padding} y1={padding} x2={svgWidth - padding} y2={padding} stroke="#e6efec" strokeDasharray="3 3" />
+                  <line x1={padding} y1={svgHeight / 2} x2={svgWidth - padding} y2={svgHeight / 2} stroke="#e6efec" strokeDasharray="3 3" />
+                  <line x1={padding} y1={svgHeight - padding} x2={svgWidth - padding} y2={svgHeight - padding} stroke="#e6efec" strokeDasharray="3 3" />
+                  <polygon points={`${padding},${svgHeight - padding} ${points} ${svgWidth - padding},${svgHeight - padding}`} fill="url(#fintechEquityGrad)" />
+                  <polyline fill="none" stroke="#19a66a" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" points={points} />
+                  {equityHoverIndex !== null && equityChartPoints[equityHoverIndex] && (
+                    <>
+                      <line x1={equityChartPoints[equityHoverIndex].x} y1={padding} x2={equityChartPoints[equityHoverIndex].x} y2={svgHeight - padding} stroke="#b8cfc6" strokeDasharray="3 4" />
+                      <circle cx={equityChartPoints[equityHoverIndex].x} cy={equityChartPoints[equityHoverIndex].y} r="4.5" fill="#ffffff" stroke="#19a66a" strokeWidth="2.5" />
+                    </>
+                  )}
+                </svg>
+                <div className="flex justify-between px-1 mt-1 text-[9px] font-mono text-slate-400">
+                  {equityPeriodLabels.map(period => <span key={period.index}>{period.label}</span>)}
+                </div>
+                {equityHoverIndex !== null && equityChartPoints[equityHoverIndex] && (
+                  <div className="absolute top-2 pointer-events-none px-3 py-2 rounded-lg bg-white/95 border border-slate-200 shadow-sm text-[10px] font-mono"
+                    style={{ left: `${Math.min(Math.max((equityChartPoints[equityHoverIndex].x / svgWidth) * 100, 12), 82)}%`, transform: 'translateX(-50%)' }}>
+                    <div className="font-semibold text-slate-700">{new Date(equityChartPoints[equityHoverIndex].date).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+                    <div className="text-[#19a66a] font-bold mt-0.5">{formatCurrency(equityChartPoints[equityHoverIndex].balance)}</div>
+                    {equityChartPoints[equityHoverIndex].pnl !== 0 && <div className={equityChartPoints[equityHoverIndex].pnl >= 0 ? 'text-emerald-600' : 'text-rose-500'}>P&L {formatCurrency(equityChartPoints[equityHoverIndex].pnl)}</div>}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            )}          </div>
         </div>
 
         {/* Trader Score Widget */}
