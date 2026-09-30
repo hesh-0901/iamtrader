@@ -603,7 +603,12 @@ export function Dashboard({
                   </div>
                 )}
               </div>
-            )}          </div>
+            ) : (
+              <div className="h-44 sm:h-52 flex items-center justify-center text-xs text-slate-500 font-mono">
+                Enregistrez au moins 2 trades pour afficher la courbe d'equity.
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Trader Score Widget */}
