@@ -71,7 +71,7 @@ function MainAppContent() {
               uid: user.uid,
               email: user.email || '',
               displayName: user.displayName || user.email?.split('@')[0] || 'Trader',
-              plan: 'pro',
+              plan: 'free',
               role: isAdmin ? 'admin' : 'trader',
               status: 'active',
               createdAt: new Date().toISOString()
@@ -120,6 +120,44 @@ function MainAppContent() {
       unsubTrades();
     };
   }, [currentUser, selectedAccountId]);
+
+  const currentMonthTradeCount = trades.filter((trade) => {
+    const date = new Date(trade.entryDate);
+    const now = new Date();
+    return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
+  }).length;
+
+  const starterTradeLimit = 50;
+
+  const handleOpenNewTrade = () => {
+    if (userProfile?.plan === 'free' && currentMonthTradeCount >= starterTradeLimit) {
+      showToast('Votre limite Starter de 50 trades ce mois-ci est atteinte. Passez à Plus pour continuer sans limite.', 'info');
+      setCurrentPage('settings');
+      return;
+    }
+    setTradeToEdit(null);
+    setIsTradeModalOpen(true);
+  };
+
+  const handleOpenNewAccount = () => {
+    if (userProfile?.plan === 'free' && accounts.length >= 1) {
+      showToast('Le plan Starter est limité à 1 compte. Passez à Plus pour ajouter d’autres comptes.', 'info');
+      setCurrentPage('settings');
+      return;
+    }
+    setIsAccountModalOpen(true);
+  };
+
+  const handleRequestPlan = async (plan: 'pro' | 'community') => {
+    if (!userProfile) return;
+    try {
+      await requestUserPlanChange(userProfile.uid, plan);
+      setUserProfile({ ...userProfile, pendingPlan: plan, planChangeRequestedAt: new Date().toISOString() });
+      showToast('Votre demande d’upgrade a été transmise.', 'success');
+    } catch (err: any) {
+      showToast('Impossible d’envoyer la demande pour le moment.', 'error');
+    }
+  };
 
   const handleLogout = async () => {
     await logoutUser();
@@ -236,11 +274,8 @@ function MainAppContent() {
           accounts={accounts}
           selectedAccountId={selectedAccountId}
           onSelectAccount={(accId) => setSelectedAccountId(accId)}
-          onOpenNewTrade={() => {
-            setTradeToEdit(null);
-            setIsTradeModalOpen(true);
-          }}
-          onOpenNewAccount={() => setIsAccountModalOpen(true)}
+          onOpenNewTrade={handleOpenNewTrade}
+          onOpenNewAccount={handleOpenNewAccount}
           onLogout={handleLogout}
           onToggleSidebar={() => setIsMobileSidebarOpen(true)}
           currentPageTitle={pageTitles[currentPage]}
@@ -257,10 +292,7 @@ function MainAppContent() {
               accounts={accounts}
               selectedAccountId={selectedAccountId}
               userProfile={userProfile}
-              onOpenNewTrade={() => {
-                setTradeToEdit(null);
-                setIsTradeModalOpen(true);
-              }}
+              onOpenNewTrade={handleOpenNewTrade}
               onSelectTrade={(t) => setInspectingTrade(t)}
               onNavigateToJournal={() => setCurrentPage('journal')}
             />
@@ -314,7 +346,7 @@ function MainAppContent() {
             <AccountsView
               accounts={accounts}
               trades={trades}
-              onOpenNewAccount={() => setIsAccountModalOpen(true)}
+              onOpenNewAccount={handleOpenNewAccount}
               selectedAccountId={selectedAccountId}
               onSelectAccount={(id) => setSelectedAccountId(id)}
             />
@@ -323,7 +355,10 @@ function MainAppContent() {
           {currentPage === 'settings' && (
             <SettingsView
               userProfile={userProfile}
-              onUpdatePlan={handleUpdatePlan}
+              accounts={accounts}
+              trades={trades}
+              selectedAccountId={selectedAccountId}
+              onRequestPlan={handleRequestPlan}
             />
           )}
 
