@@ -12,7 +12,6 @@ interface TradeModalProps {
   accounts: TradingAccount[];
   selectedAccountId?: string;
   tradeToEdit?: Trade | null;
-  onSaveGuestTrade?: (trade: Trade) => void;
 }
 
 type Step = 1 | 2 | 3 | 4;
@@ -30,8 +29,7 @@ export function TradeModal({
   userId,
   accounts,
   selectedAccountId,
-  tradeToEdit,
-  onSaveGuestTrade
+  tradeToEdit
 }: TradeModalProps) {
   const { showToast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -168,10 +166,7 @@ export function TradeModal({
         screenshotAfterUrl: screenshotAfterUrl.trim() || undefined,
       };
 
-      if (userId === 'guest-trader-id') {
-        onSaveGuestTrade?.({ id: tradeToEdit ? tradeToEdit.id : `guest-trade-${Date.now()}`, ...tradeData });
-        showToast(tradeToEdit ? 'Trade mis à jour' : 'Trade enregistré', 'success');
-      } else if (tradeToEdit) {
+      if (tradeToEdit) {
         await updateTrade(tradeToEdit.id, tradeData);
         showToast('Trade mis à jour dans Firestore', 'success');
       } else {
