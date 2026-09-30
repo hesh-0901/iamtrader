@@ -303,10 +303,7 @@ function MainAppContent() {
               trades={trades}
               accounts={accounts}
               selectedAccountId={selectedAccountId}
-              onOpenNewTrade={() => {
-                setTradeToEdit(null);
-                setIsTradeModalOpen(true);
-              }}
+              onOpenNewTrade={handleOpenNewTrade}
               onSelectTrade={(t) => setInspectingTrade(t)}
               onEditTrade={(t) => {
                 setTradeToEdit(t);
