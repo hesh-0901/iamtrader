@@ -24,7 +24,10 @@ import {
   Activity,
   Layers,
   ArrowRight,
-  Shield
+  Shield,
+  LayoutGrid,
+  Focus,
+  Minimize2
 } from 'lucide-react';
 
 interface DashboardProps {
