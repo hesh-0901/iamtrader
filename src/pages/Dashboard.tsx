@@ -148,7 +148,7 @@ export function Dashboard({
     if (typeof window !== 'undefined') localStorage.setItem('iamtrader-dashboard-mode', mode);
   };
 
-  const ModeSwitcher = () => (
+  const ModeSwitcher = () => null;
     <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-2xl bg-white border border-[#e4ece9] shadow-sm">
       {([
         ['standard', 'Standard', LayoutGrid],
@@ -189,7 +189,6 @@ export function Dashboard({
         {!compact && <p className="text-xs text-[#71839a] mt-1">Une vue claire de votre performance, de votre risque et de vos dernières décisions.</p>}
       </div>
       <div className="flex items-center gap-2">
-        <ModeSwitcher />
         <button onClick={onOpenNewTrade} className="btn-primary flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs cursor-pointer">
           <Plus className="w-3.5 h-3.5" /> Nouveau trade
         </button>
