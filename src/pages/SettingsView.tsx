@@ -26,7 +26,9 @@ export function SettingsView({ userProfile, onUpdatePlan }: SettingsViewProps) {
   const [activeTab, setActiveTab] = useState<'profile' | 'subscription' | 'security' | 'preferences'>('profile');
   const [displayName, setDisplayName] = useState(userProfile?.displayName || '');
   const [defaultCurrency, setDefaultCurrency] = useState('USD');
-  const [theme, setTheme] = useState<'dark' | 'light'>('dark');
+  const [theme, setTheme] = useState<'light'>('light');
+  const [dashboardMode, setDashboardMode] = useState<'standard' | 'focus' | 'analysis' | 'compact'>(() => (localStorage.getItem('iamtrader-dashboard-mode') as any) || 'standard');
+  const changeDashboardMode = (mode: 'standard' | 'focus' | 'analysis' | 'compact') => { setDashboardMode(mode); localStorage.setItem('iamtrader-dashboard-mode', mode); };
 
   const handlePasswordReset = async () => {
     if (!userProfile?.email) return;
@@ -383,8 +385,19 @@ export function SettingsView({ userProfile, onUpdatePlan }: SettingsViewProps) {
                 onChange={(e) => setTheme(e.target.value as any)}
                 className="w-full bg-white border border-slate-200 hover:border-slate-700 focus:border-blue-500 rounded-lg px-3 py-2 text-xs text-slate-900 focus:outline-none cursor-pointer transition-colors"
               >
-                <option value="dark">FinTech Dark (Standard FTMO / FundedNext)</option>
+                <option value="light">IAMTRADER Light Cockpit</option>
               </select>
+            </div>
+
+            <div>
+              <label className="block text-[10px] font-semibold text-slate-500 uppercase tracking-wider mb-2">Affichage du Dashboard</label>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {([['standard','Standard','Vue complète'],['focus','Focus Trading','Décisions rapides'],['analysis','Analyse','Lecture détaillée'],['compact','Compacte','Densité maximale']] as const).map(([value,label,desc]) => (
+                  <button type="button" key={value} onClick={() => changeDashboardMode(value)} className={`p-3 rounded-xl border text-left transition-all ${dashboardMode === value ? 'border-[#00C796] bg-[#DFFBF3] text-[#007F60]' : 'border-[#DCE5EC] bg-white text-[#60758D] hover:border-[#BFD3FF]'}`}>
+                    <span className="block text-xs font-bold">{label}</span><span className="block text-[10px] mt-1 opacity-75">{desc}</span>
+                  </button>
+                ))}
+              </div>
             </div>
 
             <button
