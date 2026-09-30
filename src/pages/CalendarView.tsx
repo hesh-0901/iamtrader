@@ -70,6 +70,7 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
 
   const selectedDayTrades = selectedDayKey && tradesByDay[selectedDayKey] ? tradesByDay[selectedDayKey].trades : [];
 
+  // Compact calendar: daily P&L is the primary visual signal.
   const calendarCells = useMemo(() => {
     const totalCells = Math.ceil((startDay + daysInMonth) / 7) * 7;
     return Array.from({ length: totalCells }, (_, index) => {
