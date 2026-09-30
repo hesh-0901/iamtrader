@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Trade, TradingAccount } from '../types';
 import { groupTradesByDay, formatCurrency } from '../utils/calculations';
 import { DirectionBadge, ResultBadge } from '../components/common/Badge';
-import { ChevronLeft, ChevronRight, CalendarDays, Clock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CalendarDays, X } from 'lucide-react';
 
 interface CalendarViewProps {
   trades: Trade[];
@@ -71,23 +71,23 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
   const selectedDayTrades = selectedDayKey && tradesByDay[selectedDayKey] ? tradesByDay[selectedDayKey].trades : [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Month Navigation & Stats Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-xl card-premium border-slate-200">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-2xl card-premium border-slate-200">
         <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
+          <div className="w-8 h-8 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400">
             <CalendarDays className="w-4 h-4" />
           </div>
           <div>
-            <h2 className="text-lg font-bold text-slate-900 tracking-tight">
+            <h2 className="text-base font-bold text-slate-900 tracking-tight">
               {monthNames[month]} {year}
             </h2>
-            <p className="text-xs text-slate-500 mt-0.5">Calendrier de rentabilité quotidienne & constance</p>
+            <p className="text-xs text-slate-500 mt-0.5">Rentabilité quotidienne & constance</p>
           </div>
         </div>
 
         {/* Monthly Summary Badges */}
-        <div className="flex items-center gap-2.5 text-xs font-mono">
+        <div className="flex items-center gap-2 text-[11px] font-mono">
           <div className="px-3 py-1.5 rounded-lg bg-white border border-slate-200">
             <span className="text-slate-500 font-sans">P&L Mois : </span>
             <span className={`font-bold tabular-nums ${
@@ -125,9 +125,9 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
       </div>
 
       {/* Calendar Grid Card */}
-      <div className="rounded-xl card-premium overflow-hidden border-slate-200">
+      <div className="rounded-2xl card-premium overflow-hidden border-slate-200">
         {/* Days of week header */}
-        <div className="grid grid-cols-7 border-b border-slate-200 bg-white text-center text-[10px] font-semibold text-slate-500 uppercase tracking-wider py-2.5">
+        <div className="grid grid-cols-7 border-b border-slate-200 bg-white text-center text-[9px] font-semibold text-slate-500 uppercase tracking-wider py-2">
           {weekDayLabels.map(day => (
             <div key={day}>{day}</div>
           ))}
@@ -137,7 +137,7 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
         <div className="grid grid-cols-7 divide-x divide-y divide-slate-800/60">
           {/* Empty cells before start day */}
           {Array.from({ length: startDay }).map((_, i) => (
-            <div key={`empty-${i}`} className="min-h-[95px] p-2 bg-white/40"></div>
+            <div key={`empty-${i}`} className="min-h-[72px] p-1.5 bg-white/40"></div>
           ))}
 
           {/* Month days */}
@@ -154,7 +154,7 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
               <div
                 key={dayStr}
                 onClick={() => hasTrades && setSelectedDayKey(dayStr)}
-                className={`min-h-[95px] p-2 flex flex-col justify-between transition-all ${
+                className={`min-h-[72px] p-1.5 flex flex-col justify-between transition-all ${
                   hasTrades 
                     ? isProfitable
                       ? 'bg-emerald-500/[0.04] hover:bg-emerald-500/[0.08] cursor-pointer'
@@ -169,7 +169,7 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
                     {dayNum}
                   </span>
                   {hasTrades && (
-                    <span className="text-[9px] font-mono text-slate-500 bg-white px-1 py-0.2 rounded border border-slate-200">
+                    <span className="text-[8px] font-mono text-slate-500 bg-white px-1 py-0.5 rounded border border-slate-200">
                       {dayData.trades.length}T
                     </span>
                   )}
@@ -177,12 +177,12 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
 
                 {hasTrades ? (
                   <div className="mt-1 space-y-0.5">
-                    <div className={`text-xs font-mono font-bold tabular-nums ${
+                    <div className={`text-[11px] font-mono font-bold tabular-nums ${
                       isProfitable ? 'text-emerald-400' : isLoss ? 'text-rose-400' : 'text-slate-400'
                     }`}>
                       {formatCurrency(dayData.netPnl)}
                     </div>
-                    <div className="text-[9px] text-slate-500 font-mono">
+                    <div className="text-[8px] text-slate-500 font-mono">
                       <span className="text-emerald-400">{dayData.winCount}W</span>
                       <span className="text-slate-400"> / </span>
                       <span className="text-rose-400">{dayData.lossCount}L</span>
@@ -197,80 +197,51 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
         </div>
       </div>
 
-      {/* Selected Day Drill-down Drawer */}
+      {/* Selected Day Details Modal */}
       {selectedDayKey && tradesByDay[selectedDayKey] && (
-        <div className="p-5 rounded-xl card-premium border-blue-500/30 space-y-3">
-          <div className="flex items-center justify-between pb-2 border-b border-slate-200">
-            <div>
-              <h3 className="text-sm font-bold text-slate-900 tracking-tight">
-                Détail de la Séance : {new Date(selectedDayKey).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
-              </h3>
-              <p className="text-[11px] text-slate-500 mt-0.5">
-                {selectedDayTrades.length} trade{selectedDayTrades.length > 1 ? 's' : ''} clôturé{selectedDayTrades.length > 1 ? 's' : ''} sur cette journée
-              </p>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#10233a]/20 backdrop-blur-[3px] p-4" onClick={() => setSelectedDayKey(null)}>
+          <div className="w-full max-w-4xl max-h-[82vh] overflow-hidden rounded-2xl bg-white border border-[#dce7e3] shadow-[0_24px_70px_rgba(16,35,58,0.18)]" onClick={event => event.stopPropagation()}>
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[#e7efec]">
+              <div>
+                <h3 className="text-sm font-bold text-[#10233a] tracking-tight">
+                  {new Date(selectedDayKey).toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+                </h3>
+                <p className="text-[10px] text-[#8798a8] mt-0.5">
+                  {selectedDayTrades.length} trade{selectedDayTrades.length > 1 ? 's' : ''} clôturé{selectedDayTrades.length > 1 ? 's' : ''} · P&L journalier
+                  <span className={tradesByDay[selectedDayKey].netPnl >= 0 ? 'text-[#008f63] font-bold ml-1' : 'text-[#e14d5d] font-bold ml-1'}>{formatCurrency(tradesByDay[selectedDayKey].netPnl)}</span>
+                </p>
+              </div>
+              <button onClick={() => setSelectedDayKey(null)} className="w-8 h-8 rounded-lg border border-[#dce7e3] text-[#71839a] hover:bg-[#f3f7f5] hover:text-[#10233a] flex items-center justify-center transition-colors cursor-pointer" aria-label="Fermer les détails du jour">
+                <X className="w-4 h-4" />
+              </button>
             </div>
-            <div className="font-mono text-sm font-bold tabular-nums">
-              <span className="text-slate-500 text-xs font-sans mr-2">P&L Journalier :</span>
-              <span className={tradesByDay[selectedDayKey].netPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}>
-                {formatCurrency(tradesByDay[selectedDayKey].netPnl)}
-              </span>
-            </div>
-          </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="border-b border-slate-200 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-                  <th className="py-2 px-3">Heure</th>
-                  <th className="py-2 px-3">Symbol</th>
-                  <th className="py-2 px-3">Direction</th>
-                  <th className="py-2 px-3">Entrée</th>
-                  <th className="py-2 px-3">Sortie</th>
-                  <th className="py-2 px-3 text-right">P&L ($)</th>
-                  <th className="py-2 px-3 text-right">R:R</th>
-                  <th className="py-2 px-3 text-right">Résultat</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60">
-                {selectedDayTrades.map(trade => (
-                  <tr
-                    key={trade.id}
-                    onClick={() => onSelectTrade(trade)}
-                    className="hover:bg-slate-100 transition-colors cursor-pointer"
-                  >
-                    <td className="py-2 px-3 font-mono text-slate-500 text-[11px]">
-                      {new Date(trade.entryDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                    </td>
-                    <td className="py-2 px-3 font-mono font-bold text-slate-900 text-xs">
-                      {trade.symbol}
-                    </td>
-                    <td className="py-2 px-3">
-                      <DirectionBadge direction={trade.direction} />
-                    </td>
-                    <td className="py-2 px-3 font-mono text-slate-400 tabular-nums text-[11px]">
-                      {trade.entryPrice ? trade.entryPrice.toLocaleString() : '—'}
-                    </td>
-                    <td className="py-2 px-3 font-mono text-slate-400 tabular-nums text-[11px]">
-                      {trade.exitPrice ? trade.exitPrice.toLocaleString() : '—'}
-                    </td>
-                    <td className={`py-2 px-3 text-right font-mono font-bold tabular-nums text-xs ${
-                      trade.pnl > 0 ? 'text-emerald-400' : trade.pnl < 0 ? 'text-rose-400' : 'text-slate-500'
-                    }`}>
-                      {formatCurrency(trade.pnl)}
-                    </td>
-                    <td className="py-2 px-3 text-right font-mono text-slate-400 tabular-nums text-[11px]">
-                      {trade.rMultiple !== undefined ? `${trade.rMultiple > 0 ? `+${trade.rMultiple}R` : `${trade.rMultiple}R`}` : '—'}
-                    </td>
-                    <td className="py-2 px-3 text-right">
-                      <ResultBadge result={trade.result} />
-                    </td>
+            <div className="overflow-auto max-h-[calc(82vh-76px)]">
+              <table className="w-full min-w-[760px] text-left text-xs border-collapse">
+                <thead className="sticky top-0 bg-white z-10">
+                  <tr className="border-b border-slate-200 text-[9px] font-semibold text-slate-500 uppercase tracking-wider">
+                    <th className="py-2.5 px-4">Heure</th><th className="py-2.5 px-4">Symbol</th><th className="py-2.5 px-4">Direction</th><th className="py-2.5 px-4">Entrée</th><th className="py-2.5 px-4">Sortie</th><th className="py-2.5 px-4 text-right">P&L</th><th className="py-2.5 px-4 text-right">R:R</th><th className="py-2.5 px-4 text-right">Résultat</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {selectedDayTrades.map(trade => (
+                    <tr key={trade.id} onClick={() => onSelectTrade(trade)} className="hover:bg-[#f7fbf9] transition-colors cursor-pointer">
+                      <td className="py-2.5 px-4 font-mono text-[#71839a] text-[10px]">{new Date(trade.entryDate).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</td>
+                      <td className="py-2.5 px-4 font-mono font-bold text-[#10233a] text-xs">{trade.symbol}</td>
+                      <td className="py-2.5 px-4"><DirectionBadge direction={trade.direction} /></td>
+                      <td className="py-2.5 px-4 font-mono text-[#5f748c] tabular-nums text-[10px]">{trade.entryPrice ? trade.entryPrice.toLocaleString() : '—'}</td>
+                      <td className="py-2.5 px-4 font-mono text-[#5f748c] tabular-nums text-[10px]">{trade.exitPrice ? trade.exitPrice.toLocaleString() : '—'}</td>
+                      <td className={`py-2.5 px-4 text-right font-mono font-bold tabular-nums text-xs ${trade.pnl > 0 ? 'text-[#008f63]' : trade.pnl < 0 ? 'text-[#e14d5d]' : 'text-[#71839a]'}`}>{formatCurrency(trade.pnl)}</td>
+                      <td className="py-2.5 px-4 text-right font-mono text-[#5f748c] tabular-nums text-[10px]">{trade.rMultiple !== undefined ? `${trade.rMultiple > 0 ? '+' : ''}${trade.rMultiple}R` : '—'}</td>
+                      <td className="py-2.5 px-4 text-right"><ResultBadge result={trade.result} /></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
+
     </div>
   );
 }
