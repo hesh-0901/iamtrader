@@ -233,3 +233,11 @@ export async function extendUserSubscription(
     paymentStatus: 'paid'
   });
 }
+export async function requestUserPlanChange(uid: string, plan: 'pro' | 'community'): Promise<void> {
+  const userRef = doc(db, 'users', uid);
+  await updateDoc(userRef, {
+    pendingPlan: plan,
+    planChangeRequestedAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  });
+}
