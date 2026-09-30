@@ -36,6 +36,8 @@ export async function registerWithEmail(email: string, pass: string, displayName
       role: email.includes('admin') || email === 'henochshungu@gmail.com' ? 'admin' : 'trader',
       status: 'active',
       createdAt: new Date().toISOString(),
+      subscriptionStatus: 'pending',
+      paymentStatus: 'unpaid',
       settings: {
         defaultCurrency: 'USD',
         theme: 'dark',
