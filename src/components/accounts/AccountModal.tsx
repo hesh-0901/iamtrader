@@ -8,10 +8,9 @@ interface AccountModalProps {
   isOpen: boolean;
   onClose: () => void;
   userId: string;
-  onSaveGuestAccount?: (acc: TradingAccount) => void;
 }
 
-export function AccountModal({ isOpen, onClose, userId, onSaveGuestAccount }: AccountModalProps) {
+export function AccountModal({ isOpen, onClose, userId }: AccountModalProps) {
   const { showToast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -49,15 +48,8 @@ export function AccountModal({ isOpen, onClose, userId, onSaveGuestAccount }: Ac
         ...(riskPerTradePercent ? { riskPerTradePercent: parseFloat(riskPerTradePercent) } : {})
       };
 
-      if (userId === 'guest-trader-id') {
-        if (onSaveGuestAccount) {
-          onSaveGuestAccount({ id: `guest-account-${Date.now()}`, ...accData });
-        }
-        showToast('Compte créé (Mode Démo)', 'success');
-      } else {
-        await addAccount(accData);
-        showToast('Compte de trading ajouté avec succès à Firestore', 'success');
-      }
+      await addAccount(accData);
+      showToast('Compte de trading ajouté avec succès à Firestore', 'success');
 
       onClose();
     } catch (err: any) {
