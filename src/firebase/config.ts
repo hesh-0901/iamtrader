@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { getAuth, setPersistence, browserLocalPersistence } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
 // Existing production Firebase Configuration
@@ -16,4 +16,10 @@ export const firebaseConfig = {
 // Initialize Firebase safely
 export const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 export const auth = getAuth(app);
+
+// Keep the Firebase session across normal page refreshes and browser restarts.
+void setPersistence(auth, browserLocalPersistence).catch((error) => {
+  console.warn("Firebase auth persistence notice:", error);
+});
+
 export const db = getFirestore(app);
