@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { Plus, Trash2, Save, Settings2 } from 'lucide-react';
 import { TradingInstrument, TradingSetup, UserProfile } from '../types';
-import { updateUserSettings } from '../services/firestore';
-import { useToast } from '../components/common/Toast';
+import { updateUserSettings } from '../../services/firestore';
+import { useToast } from '../common/Toast';
 
 interface TradingJournalSettingsProps {
   userProfile: UserProfile | null;
