@@ -107,8 +107,6 @@ export function SettingsView({ userProfile, onUpdatePlan }: SettingsViewProps) {
           <Sliders className="w-3.5 h-3.5" />
           <span>Préférences Interface</span>
         </button>
-      </div>
-
         <button
           onClick={() => setActiveTab('journal')}
           className={`flex items-center gap-2 px-3.5 py-2 rounded transition-all whitespace-nowrap cursor-pointer ${
@@ -120,6 +118,7 @@ export function SettingsView({ userProfile, onUpdatePlan }: SettingsViewProps) {
           <Sliders className="w-3.5 h-3.5" />
           <span>Journal & Calculs</span>
         </button>
+      </div>
 
       {/* Tab: Journal */}
       {activeTab === 'journal' && (
