@@ -83,26 +83,11 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
     });
   }, [startDay, daysInMonth, year, month]);
 
-  const weekStats = useMemo(() => {
-    const stats: Record<number, { pnl: number; trades: number; green: number; red: number }> = {};
-    calendarCells.forEach(cell => {
-      if (!cell.dayStr) return;
-      const data = tradesByDay[cell.dayStr];
-      if (!data) return;
-      if (!stats[cell.weekIndex]) stats[cell.weekIndex] = { pnl: 0, trades: 0, green: 0, red: 0 };
-      stats[cell.weekIndex].pnl += data.netPnl;
-      stats[cell.weekIndex].trades += data.trades.length;
-      if (data.netPnl > 0) stats[cell.weekIndex].green++;
-      if (data.netPnl < 0) stats[cell.weekIndex].red++;
-    });
-    return stats;
-  }, [calendarCells, tradesByDay]);
-
 
   return (
     <div className="space-y-4">
       {/* Compact trading calendar */}
-      <div className="mx-2 rounded-xl overflow-hidden border border-[#dfe8e4] bg-white text-[#10233a] shadow-[0_8px_28px_rgba(16,35,58,0.06)]">
+      <div className="mx-auto w-full max-w-[1120px] rounded-xl overflow-hidden border border-[#dfe8e4] bg-white text-[#10233a] shadow-[0_8px_28px_rgba(16,35,58,0.06)]">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2 px-3 py-2.5 border-b border-[#edf2f0]">
           <div className="flex items-center gap-3">
             <div className="w-7 h-7 rounded-lg bg-[#eef5ff] border border-[#d9e7ff] flex items-center justify-center text-[#3b82f6]">
@@ -139,16 +124,13 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
             const isProfitable = hasTrades && dayData.netPnl > 0;
             const isLoss = hasTrades && dayData.netPnl < 0;
             const isSelected = cell.dayStr === selectedDayKey;
-            const isSunday = index % 7 === 6;
-            const stats = weekStats[cell.weekIndex];
-            const weekHasTrades = !!stats && stats.trades > 0;
-            const cellTone = isProfitable ? 'bg-[#e7faf3] hover:bg-[#dcf7ed]' : isLoss ? 'bg-[#fff0f1] hover:bg-[#ffe6e8]' : 'bg-white hover:bg-[#f8faf9]';
+            const cellTone = isProfitable ? 'bg-[#e1faf1] hover:bg-[#d4f6e8]' : isLoss ? 'bg-[#ffeaed] hover:bg-[#ffe0e4]' : 'bg-white hover:bg-[#f8faf9]';
 
             return (
               <div
                 key={cell.dayStr || `empty-${index}`}
                 onClick={() => cell.dayStr && hasTrades && setSelectedDayKey(cell.dayStr)}
-                className={`relative min-h-[66px] sm:min-h-[72px] p-1 border-r border-b border-[#e8eeec] transition-colors ${cell.dayStr ? cellTone : 'bg-[#fbfcfc]'} ${hasTrades ? 'cursor-pointer' : ''} ${isSelected ? 'ring-1 ring-inset ring-[#3b82f6] z-10' : ''}`}
+                className={`relative min-h-[76px] sm:min-h-[84px] p-1 border-r border-b border-[#e8eeec] transition-colors ${cell.dayStr ? cellTone : 'bg-[#fbfcfc]'} ${hasTrades ? 'cursor-pointer' : ''} ${isSelected ? 'ring-1 ring-inset ring-[#3b82f6] z-10' : ''}`}
               >
                 {cell.dayNumber && (
                   <>
@@ -158,14 +140,8 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
                     </div>
                     {hasTrades && (
                       <div className="mt-2">
-                        <div className={`inline-flex items-center mt-1 px-1.5 py-0.5 rounded-md text-[13px] leading-none font-mono font-black tabular-nums tracking-tight ${isProfitable ? 'text-[#007d59] bg-[#d7f7ea]' : isLoss ? 'text-[#c93649] bg-[#ffe0e4]' : 'text-[#60758d] bg-[#f1f4f3]'}`}>{formatCurrency(dayData.netPnl)}</div>
+                        <div className={`mt-2 text-[17px] sm:text-[18px] leading-none font-mono font-black tabular-nums tracking-tight ${isProfitable ? 'text-[#007d59]' : isLoss ? 'text-[#c93649]' : 'text-[#60758d]'}`}>{formatCurrency(dayData.netPnl)}</div>
                         <div className="text-[6px] text-[#8796a3] font-mono mt-1"><span className="text-[#008f63] font-semibold">{dayData.winCount}W</span><span> / </span><span className="text-[#d83f50] font-semibold">{dayData.lossCount}L</span></div>
-                      </div>
-                    )}
-                    {isSunday && (
-                      <div className="absolute right-1 bottom-1 text-right opacity-80">
-                        <div className="text-[6px] text-[#98a5af] uppercase tracking-wide">Week {cell.weekIndex + 1}</div>
-                        <div className={`text-[8px] font-mono font-black ${weekHasTrades ? (stats.pnl >= 0 ? 'text-[#007d59]' : 'text-[#c93649]') : 'text-[#a8b3bb]'}`}>{weekHasTrades ? formatCurrency(stats.pnl) : '$0.00'}</div>
                       </div>
                     )}
                   </>
@@ -180,7 +156,7 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
             <span><i className="inline-block w-2 h-2 rounded-sm bg-[#32b58a] mr-1" />Gain</span>
             <span><i className="inline-block w-2 h-2 rounded-sm bg-[#e35b68] mr-1" />Perte</span>
           </div>
-          <span className="text-[7px] text-[#9aa7b0]">{monthStats.monthlyTrades} trade{monthStats.monthlyTrades > 1 ? 's' : ''} · {monthStats.greenDays} vertes · {monthStats.redDays} rouges</span>
+          <span className="text-[7px] text-[#9aa7b0]">{monthStats.monthlyTrades} trade{monthStats.monthlyTrades > 1 ? 's' : ''} · {monthStats.greenDays} gains · {monthStats.redDays} pertes</span>
         </div>
       </div>
 
