@@ -252,7 +252,7 @@ export function AdminConsole() {
           disabled={isLoading}
           className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-white border border-[#dce6e2] text-xs font-semibold text-[#314861] hover:border-[#bcd9cf] transition-colors"
         >
-          <RefreshCw className={\`w-3.5 h-3.5 \${isLoading ? 'animate-spin' : ''}\`} />
+          <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
           Actualiser
         </button>
       </section>
@@ -269,7 +269,7 @@ export function AdminConsole() {
           <div key={String(label)} className="p-4 rounded-2xl bg-white border border-[#e0e9e5] shadow-sm">
             <div className="flex items-center justify-between">
               <span className="text-[10px] uppercase tracking-wider font-semibold text-[#8091a2]">{label}</span>
-              <Icon className={\`w-4 h-4 \${color}\`} />
+              <Icon className={`w-4 h-4 ${color}`} />
             </div>
             <div className="text-2xl font-bold text-[#10233a] mt-2">{value}</div>
           </div>
@@ -353,7 +353,7 @@ export function AdminConsole() {
                         </button>
                       </td>
                       <td className="px-3 py-4">
-                        <span className={\`inline-flex px-2.5 py-1 rounded-lg border text-[10px] font-bold \${planClass(user.plan)}\`}>
+                        <span className={`inline-flex px-2.5 py-1 rounded-lg border text-[10px] font-bold ${planClass(user.plan)}`}>
                           {planLabel(user.plan)}
                         </span>
                         {pending && <div className="text-[9px] text-[#315fc7] mt-1">→ {planLabel(user.pendingPlan!)}</div>}
@@ -363,7 +363,7 @@ export function AdminConsole() {
                         <div className="text-[9px] text-[#8a9aab] mt-0.5">{user.paymentStatus === 'paid' ? 'Confirmé' : 'Non confirmé'}</div>
                       </td>
                       <td className="px-3 py-4">
-                        <div className={\`font-medium \${expired ? 'text-[#ef476f]' : expiring ? 'text-[#d99020]' : 'text-[#314861]'}\`}>
+                        <div className={`font-medium ${expired ? 'text-[#ef476f]' : expiring ? 'text-[#d99020]' : 'text-[#314861]'}`}>
                           {formatDate(user.subscriptionExpiresAt)}
                         </div>
                       </td>
@@ -373,14 +373,14 @@ export function AdminConsole() {
                         ) : expired ? (
                           <span className="font-semibold text-[#ef476f]">Expiré depuis {Math.abs(days)} j</span>
                         ) : (
-                          <span className={\`font-semibold \${expiring ? 'text-[#d99020]' : 'text-[#00a86b]'}\`}>
+                          <span className={`font-semibold ${expiring ? 'text-[#d99020]' : 'text-[#00a86b]'}`}>
                             {days} jour{days > 1 ? 's' : ''}
                           </span>
                         )}
                       </td>
                       <td className="px-3 py-4">
-                        <span className={\`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-semibold \${user.status === 'active' ? 'bg-[#e9faf3] text-[#008f63]' : 'bg-[#fff0f3] text-[#d9365a]'}\`}>
-                          <span className={\`w-1.5 h-1.5 rounded-full \${user.status === 'active' ? 'bg-[#08b77a]' : 'bg-[#ef476f]'}\`} />
+                        <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-semibold ${user.status === 'active' ? 'bg-[#e9faf3] text-[#008f63]' : 'bg-[#fff0f3] text-[#d9365a]'}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${user.status === 'active' ? 'bg-[#08b77a]' : 'bg-[#ef476f]'}`} />
                           {user.status === 'active' ? 'Actif' : 'Suspendu'}
                         </span>
                       </td>
@@ -467,7 +467,7 @@ export function AdminConsole() {
                     key={plan}
                     onClick={() => handlePlanRequest(selectedUser, plan)}
                     disabled={busyUid === selectedUser.uid}
-                    className={\`py-2.5 rounded-xl border text-xs font-semibold \${selectedUser.plan === plan ? planClass(plan) : 'bg-white border-[#e0e8e5] text-[#52677c]'}\`}
+                    className={`py-2.5 rounded-xl border text-xs font-semibold ${selectedUser.plan === plan ? planClass(plan) : 'bg-white border-[#e0e8e5] text-[#52677c]'}`}
                   >
                     {planLabel(plan)}
                   </button>
@@ -479,7 +479,7 @@ export function AdminConsole() {
               <button
                 onClick={() => handleStatus(selectedUser)}
                 disabled={busyUid === selectedUser.uid}
-                className={\`px-3 py-2 rounded-xl text-xs font-semibold \${selectedUser.status === 'active' ? 'bg-[#fff1f3] text-[#d9365a]' : 'bg-[#e9faf3] text-[#008f63]'}\`}
+                className={`px-3 py-2 rounded-xl text-xs font-semibold ${selectedUser.status === 'active' ? 'bg-[#fff1f3] text-[#d9365a]' : 'bg-[#e9faf3] text-[#008f63]'}`}
               >
                 {selectedUser.status === 'active' ? 'Suspendre' : 'Réactiver'}
               </button>
