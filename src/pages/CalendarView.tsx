@@ -102,7 +102,7 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
   return (
     <div className="space-y-4">
       {/* Compact trading calendar */}
-      <div className="rounded-xl overflow-hidden border border-[#dfe8e4] bg-white text-[#10233a] shadow-[0_8px_28px_rgba(16,35,58,0.06)]">
+      <div className="mx-2 rounded-xl overflow-hidden border border-[#dfe8e4] bg-white text-[#10233a] shadow-[0_8px_28px_rgba(16,35,58,0.06)]">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-2 px-3 py-2.5 border-b border-[#edf2f0]">
           <div className="flex items-center gap-3">
             <div className="w-7 h-7 rounded-lg bg-[#eef5ff] border border-[#d9e7ff] flex items-center justify-center text-[#3b82f6]">
@@ -119,7 +119,7 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
           <div className="flex items-center gap-2">
             <div className="hidden sm:block px-2 py-1 rounded-md bg-[#f8faf9] border border-[#e4ece9] text-[8px] font-mono">
               <span className="text-[#8a99a6] font-sans">Mois </span>
-              <span className={`font-bold ${monthStats.monthlyPnl > 0 ? 'text-[#42d3a1]' : monthStats.monthlyPnl < 0 ? 'text-[#ff7180]' : 'text-slate-300'}`}>{formatCurrency(monthStats.monthlyPnl)}</span>
+              <span className={`text-[11px] font-black ${monthStats.monthlyPnl > 0 ? 'text-[#008f63]' : monthStats.monthlyPnl < 0 ? 'text-[#d83f50]' : 'text-[#60758d]'}`}>{formatCurrency(monthStats.monthlyPnl)}</span>
             </div>
             <div className="flex items-center gap-1 bg-[#f8faf9] p-0.5 rounded-md border border-[#e4ece9]">
               <button onClick={prevMonth} className="w-6 h-6 rounded-md text-[#71839a] hover:text-[#10233a] hover:bg-[#edf2f0] flex items-center justify-center transition-colors cursor-pointer" aria-label="Mois précédent"><ChevronLeft className="w-3.5 h-3.5" /></button>
@@ -148,7 +148,7 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
               <div
                 key={cell.dayStr || `empty-${index}`}
                 onClick={() => cell.dayStr && hasTrades && setSelectedDayKey(cell.dayStr)}
-                className={`relative min-h-[58px] sm:min-h-[64px] p-1 border-r border-b border-[#e8eeec] transition-colors ${cell.dayStr ? cellTone : 'bg-[#fbfcfc]'} ${hasTrades ? 'cursor-pointer' : ''} ${isSelected ? 'ring-1 ring-inset ring-[#3b82f6] z-10' : ''}`}
+                className={`relative min-h-[66px] sm:min-h-[72px] p-1 border-r border-b border-[#e8eeec] transition-colors ${cell.dayStr ? cellTone : 'bg-[#fbfcfc]'} ${hasTrades ? 'cursor-pointer' : ''} ${isSelected ? 'ring-1 ring-inset ring-[#3b82f6] z-10' : ''}`}
               >
                 {cell.dayNumber && (
                   <>
@@ -158,14 +158,14 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
                     </div>
                     {hasTrades && (
                       <div className="mt-2">
-                        <div className={`text-[10px] font-mono font-extrabold tabular-nums tracking-tight ${isProfitable ? 'text-[#008f63]' : isLoss ? 'text-[#d83f50]' : 'text-[#71839a]' }`}>{formatCurrency(dayData.netPnl)}</div>
-                        <div className="text-[6px] text-[#8796a3] font-mono mt-0.5"><span className="text-[#008f63] font-semibold">{dayData.winCount}W</span><span> / </span><span className="text-[#d83f50] font-semibold">{dayData.lossCount}L</span></div>
+                        <div className={`inline-flex items-center mt-1 px-1.5 py-0.5 rounded-md text-[13px] leading-none font-mono font-black tabular-nums tracking-tight ${isProfitable ? 'text-[#007d59] bg-[#d7f7ea]' : isLoss ? 'text-[#c93649] bg-[#ffe0e4]' : 'text-[#60758d] bg-[#f1f4f3]'}`}>{formatCurrency(dayData.netPnl)}</div>
+                        <div className="text-[6px] text-[#8796a3] font-mono mt-1"><span className="text-[#008f63] font-semibold">{dayData.winCount}W</span><span> / </span><span className="text-[#d83f50] font-semibold">{dayData.lossCount}L</span></div>
                       </div>
                     )}
                     {isSunday && (
                       <div className="absolute right-1 bottom-1 text-right opacity-80">
                         <div className="text-[6px] text-[#98a5af] uppercase tracking-wide">Week {cell.weekIndex + 1}</div>
-                        <div className={`text-[7px] font-mono font-bold ${weekHasTrades ? (stats.pnl >= 0 ? 'text-[#008f63]' : 'text-[#d83f50]') : 'text-[#a8b3bb]'}`}>{weekHasTrades ? formatCurrency(stats.pnl) : '$0.00'}</div>
+                        <div className={`text-[8px] font-mono font-black ${weekHasTrades ? (stats.pnl >= 0 ? 'text-[#007d59]' : 'text-[#c93649]') : 'text-[#a8b3bb]'}`}>{weekHasTrades ? formatCurrency(stats.pnl) : '$0.00'}</div>
                       </div>
                     )}
                   </>
