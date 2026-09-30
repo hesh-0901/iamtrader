@@ -1,0 +1,6 @@
+{
+  "name": "IAMTRADER",
+  "description": "Plateforme FinTech SaaS de gestion de performance et journal de trading pour traders professionnels.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
