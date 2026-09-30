@@ -274,7 +274,7 @@ export function Dashboard({
             <div className="space-y-3">
               {topInstruments.length ? topInstruments.map(([name,data]) => {
                 const max = Math.max(...topInstruments.map(([,d]) => Math.abs(d.pnl)), 1);
-                return <div key={name}><div className="flex justify-between text-xs mb-1.5"><span className="font-semibold text-[#314861]">{name}</span><span className={`font-mono font-bold ${data.pnl >= 0 ? 'text-[#00a86b]' : 'text-[#f04f63]'}`}>{formatCurrency(data.pnl)}</span></div><div className="h-2 rounded-full bg-[#eef3f1] overflow-hidden"><div className={`h-full rounded-full ${data.pnl >= 0 ? 'bg-[#08b77a]' : 'bg-[#f04f63]}`} style={{ width: `${Math.max((Math.abs(data.pnl) / max) * 100, 6)}%` }} /></div></div>
+                return <div key={name}><div className="flex justify-between text-xs mb-1.5"><span className="font-semibold text-[#314861]">{name}</span><span className={`font-mono font-bold ${data.pnl >= 0 ? 'text-[#00a86b]' : 'text-[#f04f63]'}`}>{formatCurrency(data.pnl)}</span></div><div className="h-2 rounded-full bg-[#eef3f1] overflow-hidden"><div className={`h-full rounded-full ${data.pnl >= 0 ? 'bg-[#08b77a]' : 'bg-[#f04f63]}`} style={{ width: String(Math.max((Math.abs(data.pnl) / max) * 100, 6)) + "%" }} /></div></div>
               }) : <div className="py-12 text-center text-xs text-[#8a9aab]">Les analyses apparaîtront après vos premiers trades.</div>}
             </div>
           </div>
