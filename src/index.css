@@ -29,7 +29,7 @@
 
 /* Existing Tailwind utility classes are kept intact; this layer gives the whole product
    one coherent white-dominant FinTech visual language without touching business logic. */
-.iamtrader-shell [class*="bg-white"] { background-color:#fff !important; }
+.iamtrader-shell .bg-white { background-color:#fff !important; }
 .iamtrader-shell [class*="bg-slate-50"] { background-color:#F4F7FA !important; }
 .iamtrader-shell [class*="bg-slate-100"] { background-color:#EEF3F7 !important; }
 .iamtrader-shell [class*="bg-slate-200"] { background-color:#E3EAF0 !important; }
