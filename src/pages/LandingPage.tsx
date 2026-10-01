@@ -551,7 +551,7 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
                   </form>
                   <p className="mt-2 text-center text-[9px] font-medium text-[#9aa9b5]">L’assistant IA sera connecté au moteur IAMTRADER.</p>
                 </div>
-              </div>              </div>
+              </div>
             </div>
           </div>
         </section>
