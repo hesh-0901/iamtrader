@@ -117,27 +117,52 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
     'Quels sont les plans disponibles ?',
   ];
 
-  const handleAiSubmit = (event: React.FormEvent<HTMLFormElement>, preset?: string) => {
+  const handleAiSubmit = async (event: React.FormEvent<HTMLFormElement>, preset?: string) => {
     event.preventDefault();
     const text = (preset ?? aiInput).trim();
     if (!text || isAiTyping) return;
 
-    setAiMessages((messages) => [...messages, { role: 'user', text }]);
+    const userMessage = { role: 'user' as const, text };
+    const nextMessages = [...aiMessages, userMessage];
+
+    setAiMessages(nextMessages);
     setAiInput('');
     setIsAiTyping(true);
 
-    // Le moteur IA sera branché ici. Le frontend est volontairement prêt à recevoir
-    // la réponse du backend sans modifier l’architecture de la page.
-    window.setTimeout(() => {
+    try {
+      const response = await fetch('/api/ai-chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: nextMessages.map((message) => ({
+            role: message.role,
+            content: message.text,
+          })),
+        }),
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok || typeof data.reply !== 'string') {
+        throw new Error(typeof data.error === 'string' ? data.error : 'Réponse IA indisponible.');
+      }
+
+      setAiMessages((messages) => [
+        ...messages,
+        { role: 'assistant', text: data.reply },
+      ]);
+    } catch (error) {
+      console.error('AI assistant request failed:', error);
       setAiMessages((messages) => [
         ...messages,
         {
           role: 'assistant',
-          text: 'Je suis prêt à répondre à cette question dès que le moteur IA IAMTRADER sera connecté.',
+          text: 'Je rencontre actuellement un problème de connexion. Vous pouvez réessayer dans quelques instants ou contacter notre équipe via le support e-mail.',
         },
       ]);
+    } finally {
       setIsAiTyping(false);
-    }, 450);
+    }
   };
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [modalContactForm, setModalContactForm] = useState({ name: '', email: '', subject: '', message: '' });
