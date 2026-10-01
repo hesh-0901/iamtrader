@@ -52,13 +52,32 @@ export function AdminConsole() {
   const perPage = 10;
 
   async function load() {
-    setLoading(true); setError('');
+    setLoading(true);
+    setError('');
+    setLogs([]);
     try {
-      const result = await Promise.all([getAllUsers(), getAdminLogs(60)]);
-      setUsers(result[0]); setLogs(result[1]);
+      const userData = await getAllUsers();
+      setUsers(userData);
     } catch (e: any) {
-      setError(e?.code === 'permission-denied' ? 'Accès Firestore refusé. Le compte doit avoir le rôle admin.' : (e?.message || 'Impossible de charger les données.'));
-    } finally { setLoading(false); }
+      console.error('IAMTRADER Admin users load error:', e);
+      const code = e?.code || 'unknown';
+      const message = e?.message || 'Erreur inconnue';
+      setUsers([]);
+      setError('Lecture des utilisateurs refusée par Firestore. Code: ' + code + '. ' + message);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const logData = await getAdminLogs(60);
+      setLogs(logData);
+    } catch (e: any) {
+      console.error('IAMTRADER Admin logs load error:', e);
+      // L'historique ne doit jamais empêcher l'Admin Console de fonctionner.
+      setLogs([]);
+    } finally {
+      setLoading(false);
+    }
   }
   useEffect(() => { load(); }, []);
 
