@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Activity, AlertTriangle, BellRing, ChevronLeft, ChevronRight, CreditCard, Edit3, History, RefreshCw, Search, ShieldCheck, UserCheck, UserX, Users, X, XCircle } from 'lucide-react';
+import { Activity, AlertTriangle, BellRing, CheckCircle2, ChevronLeft, ChevronRight, Clock3, CreditCard, Edit3, History, Mail, RefreshCw, Search, ShieldCheck, Trash2, UserCheck, UserX, Users, X, XCircle } from 'lucide-react';
 import { AdminLog, SubscriptionPlan, UserProfile, UserStatus, TradingAccount, Trade } from '../types';
-import { addAdminLog, getAdminLogs, getAllAccounts, getAllTrades, getAllUsers, subscribeAllUsers, updateUserRoleAndPlan } from '../services/firestore';
+import { addAdminLog, deleteContactMessage, getAdminLogs, getAllAccounts, getAllTrades, getAllUsers, subscribeAllUsers, subscribeContactMessages, updateContactMessage, updateUserRoleAndPlan } from '../services/firestore';
 import { useToast } from '../components/common/Toast';
 import { auth } from '../firebase/config';
 
@@ -52,6 +52,11 @@ export function AdminConsole() {
   const [expiry, setExpiry] = useState('');
   const [days, setDays] = useState('');
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [contactMessages, setContactMessages] = useState<import('../services/firestore').ContactMessage[]>([]);
+  const [selectedMessage, setSelectedMessage] = useState<import('../services/firestore').ContactMessage | null>(null);
+  const [contactFilter, setContactFilter] = useState<'all' | 'new' | 'in_progress' | 'resolved'>('all');
+  const [contactNote, setContactNote] = useState('');
+  const [contactBusy, setContactBusy] = useState(false);
   const perPage = 10;
 
   async function load() {
@@ -95,10 +100,13 @@ export function AdminConsole() {
   }
   useEffect(() => {
     let unsubscribeUsers: (() => void) | undefined;
+    let unsubscribeContacts: (() => void) | undefined;
 
     const unsubscribeAuth = auth.onAuthStateChanged((user) => {
       unsubscribeUsers?.();
+      unsubscribeContacts?.();
       unsubscribeUsers = undefined;
+      unsubscribeContacts = undefined;
 
       if (!user) return;
 
@@ -107,10 +115,15 @@ export function AdminConsole() {
         if (realtimeError) return;
         setUsers(nextUsers);
       });
+      unsubscribeContacts = subscribeContactMessages((messages, realtimeError) => {
+        if (realtimeError) return;
+        setContactMessages(messages);
+      });
     });
 
     return () => {
       unsubscribeUsers?.();
+      unsubscribeContacts?.();
       unsubscribeAuth();
     };
   }, []);
@@ -313,10 +326,50 @@ export function AdminConsole() {
         </section>
 
         <section className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-100 p-4 sm:p-5">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600"><Mail className="h-4 w-4" /></div>
+                <div><h2 className="text-sm font-black text-slate-900">Messages de contact</h2><p className="mt-1 text-[10px] text-slate-400">{contactMessages.filter(m => m.status === 'new').length} nouveau(x) · {contactMessages.length} message(s)</p></div>
+              </div>
+              <div className="flex items-center gap-2">
+                {(['all','new','in_progress','resolved'] as const).map(s => <button key={s} onClick={() => setContactFilter(s)} className={'rounded-xl px-3 py-2 text-[10px] font-bold ' + (contactFilter === s ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200')}>{s === 'all' ? 'Tous' : s === 'new' ? 'Nouveaux' : s === 'in_progress' ? 'En cours' : 'Traités'}</button>)}
+              </div>
+            </div>
+          </div>
+          <div className="divide-y divide-slate-100">
+            {contactMessages.filter(m => contactFilter === 'all' || m.status === contactFilter).length === 0 ? <div className="p-10 text-center"><Mail className="mx-auto h-8 w-8 text-slate-300" /><p className="mt-2 text-xs font-bold text-slate-500">Aucun message</p></div> : contactMessages.filter(m => contactFilter === 'all' || m.status === contactFilter).slice(0, 20).map(m => (
+              <button key={m.id} onClick={() => { setSelectedMessage(m); setContactNote(m.adminNote || ''); }} className="flex w-full items-center gap-3 p-4 text-left transition hover:bg-slate-50">
+                <div className={'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ' + (m.status === 'new' ? 'bg-blue-50 text-blue-600' : m.status === 'in_progress' ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600')}>{m.status === 'new' ? <Mail className="h-4 w-4" /> : m.status === 'in_progress' ? <Clock3 className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}</div>
+                <div className="min-w-0 flex-1"><div className="flex items-center gap-2"><b className={'truncate text-xs ' + (m.status === 'new' ? 'text-slate-900' : 'text-slate-700')}>{m.subject}</b>{m.status === 'new' && <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[8px] font-black text-blue-700">NOUVEAU</span>}</div><p className="mt-1 truncate text-[10px] text-slate-400">{m.name} · {m.email}</p></div>
+                <span className="hidden shrink-0 text-[9px] font-semibold text-slate-400 sm:block">{new Date(m.createdAt).toLocaleDateString('fr-FR')}</span>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm">
           <button onClick={() => setHistoryOpen(!historyOpen)} className="flex w-full items-center justify-between p-4 text-left"><span className="flex items-center gap-2"><History className="w-4 h-4 text-blue-600" /><span><b className="block text-sm text-slate-900">Historique administratif</b><small className="block mt-0.5 text-[10px] text-slate-400">Traçabilité des opérations.</small></span></span><span className="text-xs font-bold text-slate-400">{historyOpen ? 'Réduire' : 'Afficher'}</span></button>
           {historyOpen && <div className="divide-y divide-slate-100 border-t border-slate-100">{logs.length ? logs.slice(0, 12).map(l => <div key={l.id} className="flex gap-3 px-5 py-3"><div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600"><History className="w-3.5 h-3.5" /></div><div><b className="text-[11px] text-slate-700">{l.action} · {l.userName}</b><p className="mt-0.5 text-[10px] text-slate-400">{l.details}</p></div></div>) : <div className="p-6 text-xs text-slate-400">Aucune action.</div>}</div>}
         </section>
       </div>
+
+      {selectedMessage && <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm" onClick={() => setSelectedMessage(null)}>
+        <div className="w-full max-w-2xl overflow-hidden rounded-[28px] border border-white bg-[#f7f9fc] shadow-2xl" onClick={e => e.stopPropagation()}>
+          <div className="flex items-start justify-between border-b border-slate-100 bg-white px-5 py-5 sm:px-7"><div><div className="flex items-center gap-2"><Mail className="h-4 w-4 text-blue-600" /><span className="text-[9px] font-black uppercase tracking-wider text-blue-600">Message de contact</span></div><h2 className="mt-2 text-lg font-black text-slate-900">{selectedMessage.subject}</h2><p className="mt-1 text-[11px] text-slate-400">{selectedMessage.name} · {selectedMessage.email}</p></div><button onClick={() => setSelectedMessage(null)} className="rounded-xl p-2 text-slate-400 hover:bg-slate-100"><X className="h-5 w-5" /></button></div>
+          <div className="space-y-4 p-5 sm:p-7">
+            <div className="rounded-2xl border border-slate-200 bg-white p-5"><p className="whitespace-pre-wrap text-sm leading-7 text-slate-700">{selectedMessage.message}</p><p className="mt-4 text-[9px] text-slate-400">{new Date(selectedMessage.createdAt).toLocaleString('fr-FR')}</p></div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              {(['new','in_progress','resolved'] as const).map(s => <button key={s} disabled={contactBusy} onClick={async () => { setContactBusy(true); try { const adminUid = auth.currentUser?.uid; await updateContactMessage(selectedMessage.id, { status: s, handledBy: adminUid, handledAt: new Date().toISOString(), adminNote: contactNote }); const next = { ...selectedMessage, status: s, handledBy: adminUid, handledAt: new Date().toISOString(), adminNote: contactNote, updatedAt: new Date().toISOString() }; setSelectedMessage(next); showToast(s === 'new' ? 'Message marqué comme nouveau.' : s === 'in_progress' ? 'Message placé en cours.' : 'Message marqué comme traité.', 'success'); } catch (e: any) { showToast(e?.message || 'Impossible de mettre à jour le message.', 'error'); } finally { setContactBusy(false); } }} className={'rounded-xl px-3 py-2.5 text-[10px] font-bold ' + (selectedMessage.status === s ? (s === 'new' ? 'bg-blue-600 text-white' : s === 'in_progress' ? 'bg-amber-500 text-white' : 'bg-emerald-600 text-white') : 'bg-slate-100 text-slate-600 hover:bg-slate-200')}>{s === 'new' ? 'Nouveau' : s === 'in_progress' ? 'En cours' : 'Traité'}</button>)}
+            </div>
+            <label className="block text-[10px] font-bold text-slate-500">Note interne<textarea value={contactNote} onChange={e => setContactNote(e.target.value)} rows={3} placeholder="Note visible uniquement par l'administration..." className="mt-1.5 w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs outline-none focus:border-blue-300" /></label>
+            <div className="flex flex-wrap gap-2">
+              <a href={'mailto:' + selectedMessage.email + '?subject=' + encodeURIComponent('Re: ' + selectedMessage.subject)} className="inline-flex items-center gap-2 rounded-xl bg-[#0b1f35] px-4 py-2.5 text-xs font-bold text-white hover:bg-slate-800"><Mail className="h-4 w-4" />Répondre par e-mail</a>
+              <button disabled={contactBusy} onClick={async () => { if (!window.confirm('Supprimer définitivement ce message ?')) return; setContactBusy(true); try { await deleteContactMessage(selectedMessage.id); setSelectedMessage(null); showToast('Message supprimé.', 'success'); } catch (e: any) { showToast(e?.message || 'Suppression refusée.', 'error'); } finally { setContactBusy(false); } }} className="inline-flex items-center gap-2 rounded-xl bg-rose-50 px-4 py-2.5 text-xs font-bold text-rose-700 hover:bg-rose-100 disabled:opacity-50"><Trash2 className="h-4 w-4" />Supprimer</button>
+            </div>
+          </div>
+        </div>
+      </div>}
 
       {selected && <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm" onClick={() => setSelected(null)}>
         <div className="max-h-[94vh] w-full max-w-3xl overflow-y-auto rounded-[28px] border border-white bg-[#f7f9fc] shadow-2xl" onClick={e => e.stopPropagation()}>
