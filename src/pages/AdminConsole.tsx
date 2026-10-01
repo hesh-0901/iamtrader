@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Activity, AlertTriangle, BellRing, CheckCircle2, ChevronLeft, ChevronRight, Clock3, CreditCard, Edit3, History, Mail, RefreshCw, Search, ShieldCheck, Trash2, UserCheck, UserX, Users, X, XCircle } from 'lucide-react';
+import { Activity, AlertTriangle, BellRing, CheckCircle2, ChevronLeft, ChevronRight, Clock3, CreditCard, Edit3, History, Mail, RefreshCw, Search, Send, ShieldCheck, Trash2, UserCheck, UserX, Users, X, XCircle } from 'lucide-react';
 import { AdminLog, SubscriptionPlan, UserProfile, UserStatus, TradingAccount, Trade } from '../types';
 import { addAdminLog, deleteContactMessage, getAdminLogs, getAllAccounts, getAllTrades, getAllUsers, subscribeAllUsers, subscribeContactMessages, updateContactMessage, updateUserRoleAndPlan } from '../services/firestore';
 import { useToast } from '../components/common/Toast';
@@ -56,7 +56,9 @@ export function AdminConsole() {
   const [selectedMessage, setSelectedMessage] = useState<import('../services/firestore').ContactMessage | null>(null);
   const [contactFilter, setContactFilter] = useState<'all' | 'new' | 'in_progress' | 'resolved'>('all');
   const [contactNote, setContactNote] = useState('');
+  const [replyText, setReplyText] = useState('');
   const [contactBusy, setContactBusy] = useState(false);
+  const [replyBusy, setReplyBusy] = useState(false);
   const perPage = 10;
 
   async function load() {
@@ -339,7 +341,7 @@ export function AdminConsole() {
           </div>
           <div className="divide-y divide-slate-100">
             {contactMessages.filter(m => contactFilter === 'all' || m.status === contactFilter).length === 0 ? <div className="p-10 text-center"><Mail className="mx-auto h-8 w-8 text-slate-300" /><p className="mt-2 text-xs font-bold text-slate-500">Aucun message</p></div> : contactMessages.filter(m => contactFilter === 'all' || m.status === contactFilter).slice(0, 20).map(m => (
-              <button key={m.id} onClick={() => { setSelectedMessage(m); setContactNote(m.adminNote || ''); }} className="flex w-full items-center gap-3 p-4 text-left transition hover:bg-slate-50">
+              <button key={m.id} onClick={() => { setSelectedMessage(m); setContactNote(m.adminNote || ''); setReplyText(''); }} className="flex w-full items-center gap-3 p-4 text-left transition hover:bg-slate-50">
                 <div className={'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ' + (m.status === 'new' ? 'bg-blue-50 text-blue-600' : m.status === 'in_progress' ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600')}>{m.status === 'new' ? <Mail className="h-4 w-4" /> : m.status === 'in_progress' ? <Clock3 className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}</div>
                 <div className="min-w-0 flex-1"><div className="flex items-center gap-2"><b className={'truncate text-xs ' + (m.status === 'new' ? 'text-slate-900' : 'text-slate-700')}>{m.subject}</b>{m.status === 'new' && <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[8px] font-black text-blue-700">NOUVEAU</span>}</div><p className="mt-1 truncate text-[10px] text-slate-400">{m.name} · {m.email}</p></div>
                 <span className="hidden shrink-0 text-[9px] font-semibold text-slate-400 sm:block">{new Date(m.createdAt).toLocaleDateString('fr-FR')}</span>
@@ -363,10 +365,41 @@ export function AdminConsole() {
               {(['new','in_progress','resolved'] as const).map(s => <button key={s} disabled={contactBusy} onClick={async () => { setContactBusy(true); try { const adminUid = auth.currentUser?.uid; await updateContactMessage(selectedMessage.id, { status: s, handledBy: adminUid, handledAt: new Date().toISOString(), adminNote: contactNote }); const next = { ...selectedMessage, status: s, handledBy: adminUid, handledAt: new Date().toISOString(), adminNote: contactNote, updatedAt: new Date().toISOString() }; setSelectedMessage(next); showToast(s === 'new' ? 'Message marqué comme nouveau.' : s === 'in_progress' ? 'Message placé en cours.' : 'Message marqué comme traité.', 'success'); } catch (e: any) { showToast(e?.message || 'Impossible de mettre à jour le message.', 'error'); } finally { setContactBusy(false); } }} className={'rounded-xl px-3 py-2.5 text-[10px] font-bold ' + (selectedMessage.status === s ? (s === 'new' ? 'bg-blue-600 text-white' : s === 'in_progress' ? 'bg-amber-500 text-white' : 'bg-emerald-600 text-white') : 'bg-slate-100 text-slate-600 hover:bg-slate-200')}>{s === 'new' ? 'Nouveau' : s === 'in_progress' ? 'En cours' : 'Traité'}</button>)}
             </div>
             <label className="block text-[10px] font-bold text-slate-500">Note interne<textarea value={contactNote} onChange={e => setContactNote(e.target.value)} rows={3} placeholder="Note visible uniquement par l'administration..." className="mt-1.5 w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs outline-none focus:border-blue-300" /></label>
-            <div className="flex flex-wrap gap-2">
-              <a href={'mailto:' + selectedMessage.email + '?subject=' + encodeURIComponent('Re: ' + selectedMessage.subject)} className="inline-flex items-center gap-2 rounded-xl bg-[#0b1f35] px-4 py-2.5 text-xs font-bold text-white hover:bg-slate-800"><Mail className="h-4 w-4" />Répondre par e-mail</a>
-              <button disabled={contactBusy} onClick={async () => { if (!window.confirm('Supprimer définitivement ce message ?')) return; setContactBusy(true); try { await deleteContactMessage(selectedMessage.id); setSelectedMessage(null); showToast('Message supprimé.', 'success'); } catch (e: any) { showToast(e?.message || 'Suppression refusée.', 'error'); } finally { setContactBusy(false); } }} className="inline-flex items-center gap-2 rounded-xl bg-rose-50 px-4 py-2.5 text-xs font-bold text-rose-700 hover:bg-rose-100 disabled:opacity-50"><Trash2 className="h-4 w-4" />Supprimer</button>
-            </div>
+            <div className="rounded-2xl border border-slate-200 bg-white p-4">
+               <div className="mb-2 flex items-center justify-between">
+                 <div><h3 className="text-xs font-black text-slate-900">Répondre au client</h3><p className="mt-1 text-[10px] text-slate-400">La réponse sera envoyée directement depuis IAMTRADER.</p></div>
+                 <Send className="h-4 w-4 text-blue-600" />
+               </div>
+               <textarea value={replyText} onChange={e => setReplyText(e.target.value)} rows={6} placeholder="Écrivez votre réponse..." className="w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs outline-none focus:border-blue-300" />
+               <div className="mt-3 flex flex-wrap gap-2">
+                 <button disabled={replyBusy || !replyText.trim()} onClick={async () => {
+                   if (!selectedMessage || !replyText.trim()) return;
+                   const currentUser = auth.currentUser;
+                   if (!currentUser) { showToast('Session administrateur introuvable.', 'error'); return; }
+                   setReplyBusy(true);
+                   try {
+                     const idToken = await currentUser.getIdToken();
+                     const response = await fetch('/api/contact-reply', {
+                       method: 'POST',
+                       headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
+                       body: JSON.stringify({ to: selectedMessage.email, subject: selectedMessage.subject, reply: replyText.trim(), originalMessage: selectedMessage.message, name: selectedMessage.name })
+                     });
+                     const payload = await response.json().catch(() => ({}));
+                     if (!response.ok) throw new Error(payload?.error || 'L’envoi de l’e-mail a échoué.');
+                     const now = new Date().toISOString();
+                     await updateContactMessage(selectedMessage.id, { status: 'resolved', handledBy: currentUser.uid, handledAt: now, lastReply: replyText.trim(), repliedAt: now, repliedBy: currentUser.uid });
+                     setSelectedMessage(prev => prev ? { ...prev, status: 'resolved', handledBy: currentUser.uid, handledAt: now, lastReply: replyText.trim(), repliedAt: now, repliedBy: currentUser.uid, updatedAt: now } : prev);
+                     setReplyText('');
+                     showToast('Réponse envoyée au client.', 'success');
+                   } catch (e: any) {
+                     showToast(e?.message || 'Impossible d’envoyer la réponse.', 'error');
+                   } finally {
+                     setReplyBusy(false);
+                   }
+                 }} className="inline-flex items-center gap-2 rounded-xl bg-[#0b1f35] px-4 py-2.5 text-xs font-bold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"><Send className="h-4 w-4" />{replyBusy ? 'Envoi...' : 'Envoyer la réponse'}</button>
+                 <button disabled={contactBusy || replyBusy} onClick={async () => { if (!window.confirm('Supprimer définitivement ce message ?')) return; setContactBusy(true); try { await deleteContactMessage(selectedMessage.id); setSelectedMessage(null); showToast('Message supprimé.', 'success'); } catch (e: any) { showToast(e?.message || 'Suppression refusée.', 'error'); } finally { setContactBusy(false); } }} className="inline-flex items-center gap-2 rounded-xl bg-rose-50 px-4 py-2.5 text-xs font-bold text-rose-700 hover:bg-rose-100 disabled:opacity-50"><Trash2 className="h-4 w-4" />Supprimer</button>
+               </div>
+             </div>
           </div>
         </div>
       </div>}
