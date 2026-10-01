@@ -94,12 +94,25 @@ export function AdminConsole() {
     }
   }
   useEffect(() => {
-    load();
-    const unsubscribe = subscribeAllUsers((nextUsers, realtimeError) => {
-      if (realtimeError) return;
-      setUsers(nextUsers);
+    let unsubscribeUsers: (() => void) | undefined;
+
+    const unsubscribeAuth = auth.onAuthStateChanged((user) => {
+      unsubscribeUsers?.();
+      unsubscribeUsers = undefined;
+
+      if (!user) return;
+
+      load();
+      unsubscribeUsers = subscribeAllUsers((nextUsers, realtimeError) => {
+        if (realtimeError) return;
+        setUsers(nextUsers);
+      });
     });
-    return unsubscribe;
+
+    return () => {
+      unsubscribeUsers?.();
+      unsubscribeAuth();
+    };
   }, []);
 
   const userMetrics = useMemo(() => {
