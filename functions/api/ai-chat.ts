@@ -49,7 +49,7 @@ export async function onRequest(context: { request: Request; env: Env }) {
     return json({ error: 'Méthode non autorisée.' }, 405);
   }
 
-  if (!context.env.GEMINI_API_KEY) {
+  if (!context.env.OPENAI_API_KEY) {
     return json({ error: 'Assistant IA non configuré sur le serveur.' }, 500);
   }
 
@@ -76,7 +76,6 @@ export async function onRequest(context: { request: Request; env: Env }) {
     }))
     .filter((message) => message.content);
 
-  // Gemini conversation history must start with a user turn.
   // The landing page displays an initial assistant greeting, so discard
   // leading assistant messages before sending the conversation upstream.
   while (safeMessages.length && safeMessages[0].role === 'assistant') {
