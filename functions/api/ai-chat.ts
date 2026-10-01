@@ -32,7 +32,23 @@ Règles :
 - Pour les questions de trading ou de finance, donne uniquement des informations générales et éducatives ; ne présente pas une réponse comme une recommandation financière personnalisée.
 - Si la question concerne un problème de compte, de paiement ou de données personnelles, propose de contacter le support IAMTRADER.`;
 
-export async function onRequestPost(context: { request: Request; env: Env }) {
+export async function onRequest(context: { request: Request; env: Env }) {
+  if (context.request.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        Allow: 'POST, OPTIONS',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type',
+      },
+    });
+  }
+
+  if (context.request.method !== 'POST') {
+    return json({ error: 'Méthode non autorisée.' }, 405);
+  }
+
   if (!context.env.GEMINI_API_KEY) {
     return json({ error: 'Assistant IA non configuré sur le serveur.' }, 500);
   }
