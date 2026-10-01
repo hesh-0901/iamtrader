@@ -1,577 +1,257 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import {
-  AlertTriangle,
-  Check,
-  CheckCircle2,
-  Clock3,
-  CreditCard,
-  History,
-  RefreshCw,
-  Search,
-  ShieldCheck,
-  UserCheck,
-  Users,
-  XCircle,
-  ChevronLeft,
-  ChevronRight
-} from 'lucide-react';
+import { Activity, AlertTriangle, CalendarDays, ChevronLeft, ChevronRight, CreditCard, Edit3, History, RefreshCw, Search, ShieldCheck, UserCheck, UserX, Users, X, XCircle } from 'lucide-react';
 import { AdminLog, SubscriptionPlan, UserProfile, UserStatus } from '../types';
-import {
-  addAdminLog,
-  confirmUserPlan,
-  extendUserSubscription,
-  getAdminLogs,
-  getAllUsers,
-  updateUserRoleAndPlan
-} from '../services/firestore';
+import { addAdminLog, getAdminLogs, getAllUsers, updateUserRoleAndPlan } from '../services/firestore';
 import { useToast } from '../components/common/Toast';
 import { auth } from '../firebase/config';
 
-type Filter = 'all' | 'active' | 'expiring' | 'expired' | 'pending';
+type Filter = 'all' | 'active' | 'suspended' | 'expiring' | 'expired' | 'pending';
+const DAY = 86400000;
 
-const DAY = 24 * 60 * 60 * 1000;
+const planLabel = (p: SubscriptionPlan) => p === 'community' ? 'Community' : p === 'pro' ? 'Plus' : 'Starter';
+const planClass = (p: SubscriptionPlan) => p === 'community' ? 'bg-violet-50 text-violet-700 border-violet-100' : p === 'pro' ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-slate-100 text-slate-600 border-slate-200';
 
-function addMonths(date: Date, months: number) {
-  const next = new Date(date);
-  next.setMonth(next.getMonth() + months);
-  return next;
+function expiryOf(u: UserProfile) {
+  if (!u.subscriptionExpiresAt) return null;
+  const d = new Date(u.subscriptionExpiresAt);
+  return Number.isNaN(d.getTime()) ? null : d;
 }
-
-function planDurationMonths(plan: SubscriptionPlan) {
-  return plan === 'community' ? 6 : plan === 'pro' ? 1 : 0;
+function remaining(u: UserProfile) {
+  const d = expiryOf(u);
+  return d ? Math.ceil((d.getTime() - Date.now()) / DAY) : null;
 }
-
-function getExpiry(user: UserProfile) {
-  return user.subscriptionExpiresAt ? new Date(user.subscriptionExpiresAt) : null;
+function fmt(v?: string) {
+  if (!v) return '—';
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? '—' : d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
 }
-
-function getDaysLeft(user: UserProfile) {
-  const expiry = getExpiry(user);
-  if (!expiry || Number.isNaN(expiry.getTime())) return null;
-  return Math.ceil((expiry.getTime() - Date.now()) / DAY);
+function inputDate(v?: string) {
+  if (!v) return '';
+  const d = new Date(v);
+  return Number.isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10);
 }
-
-function formatDate(value?: string) {
-  if (!value) return 'Non renseignée';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Non renseignée';
-  return date.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
-}
-
-function planLabel(plan: SubscriptionPlan) {
-  return plan === 'pro' ? 'Plus' : plan === 'community' ? 'Community' : 'Starter';
-}
-
-function planClass(plan: SubscriptionPlan) {
-  return plan === 'pro'
-    ? 'bg-[#eef4ff] text-[#315fc7] border-[#dbe5ff]'
-    : plan === 'community'
-      ? 'bg-[#f4f1ff] text-[#6852c7] border-[#e6e0ff]'
-      : 'bg-[#f4f6f8] text-[#637386] border-[#e5e9ed]';
-}
+function isoDate(v: string) { return v ? new Date(v + 'T23:59:59').toISOString() : undefined; }
 
 export function AdminConsole() {
   const { showToast } = useToast();
   const [users, setUsers] = useState<UserProfile[]>([]);
+  const [logs, setLogs] = useState<AdminLog[]>([]);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
-  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [loadError, setLoadError] = useState<string | null>(null);
-  const [busyUid, setBusyUid] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [adminLogs, setAdminLogs] = useState<AdminLog[]>([]);
-  const itemsPerPage = 10;
+  const [page, setPage] = useState(1);
+  const [selected, setSelected] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [plan, setPlan] = useState<SubscriptionPlan>('free');
+  const [status, setStatus] = useState<UserStatus>('active');
+  const [payment, setPayment] = useState<'unpaid' | 'paid' | 'refunded'>('unpaid');
+  const [expiry, setExpiry] = useState('');
+  const [days, setDays] = useState('');
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const perPage = 10;
 
-  const loadUsers = async () => {
-    setIsLoading(true);
-    setLoadError(null);
+  async function load() {
+    setLoading(true); setError('');
     try {
-      const data = await getAllUsers();
-      setUsers(data);
-      try { setAdminLogs(await getAdminLogs()); } catch { setAdminLogs([]); }
-    } catch (error: any) {
-      setUsers([]);
-      setLoadError(error?.code === 'permission-denied'
-        ? 'Accès Firestore refusé. Le compte doit avoir le rôle admin dans Firestore.'
-        : error?.message || 'Impossible de charger les utilisateurs.');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+      const result = await Promise.all([getAllUsers(), getAdminLogs(60)]);
+      setUsers(result[0]); setLogs(result[1]);
+    } catch (e: any) {
+      setError(e?.code === 'permission-denied' ? 'Accès Firestore refusé. Le compte doit avoir le rôle admin.' : (e?.message || 'Impossible de charger les données.'));
+    } finally { setLoading(false); }
+  }
+  useEffect(() => { load(); }, []);
 
-  useEffect(() => {
-    loadUsers();
-  }, []);
+  const stats = useMemo(() => ({
+    total: users.length,
+    active: users.filter(u => u.status === 'active').length,
+    paid: users.filter(u => u.paymentStatus === 'paid').length,
+    pending: users.filter(u => !!u.pendingPlan).length,
+    expiring: users.filter(u => { const d = remaining(u); return d !== null && d >= 0 && d <= 5; }).length,
+    expired: users.filter(u => { const d = remaining(u); return d !== null && d < 0; }).length
+  }), [users]);
 
-  const stats = useMemo(() => {
-    const expiring = users.filter(user => {
-      const days = getDaysLeft(user);
-      return days !== null && days >= 0 && days <= 5;
-    }).length;
-    const expired = users.filter(user => {
-      const days = getDaysLeft(user);
-      return days !== null && days < 0;
-    }).length;
-    const pending = users.filter(user => !!user.pendingPlan).length;
-
-    return {
-      total: users.length,
-      active: users.filter(user => user.status === 'active').length,
-      paid: users.filter(user => user.paymentStatus === 'paid').length,
-      expiring,
-      expired,
-      pending
-    };
-  }, [users]);
-
-  const filteredUsers = useMemo(() => {
+  const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-
-    return users.filter(user => {
-      const matchesSearch =
-        !q ||
-        user.email.toLowerCase().includes(q) ||
-        (user.displayName || '').toLowerCase().includes(q);
-
-      const days = getDaysLeft(user);
-      const matchesFilter =
-        filter === 'all' ||
-        (filter === 'active' && user.status === 'active') ||
-        (filter === 'expiring' && days !== null && days >= 0 && days <= 5) ||
-        (filter === 'expired' && days !== null && days < 0) ||
-        (filter === 'pending' && !!user.pendingPlan);
-
-      return matchesSearch && matchesFilter;
+    return users.filter(u => {
+      const d = remaining(u);
+      const text = !q || u.email.toLowerCase().includes(q) || (u.displayName || '').toLowerCase().includes(q);
+      const ok = filter === 'all' ||
+        (filter === 'active' && u.status === 'active') ||
+        (filter === 'suspended' && u.status === 'suspended') ||
+        (filter === 'pending' && !!u.pendingPlan) ||
+        (filter === 'expiring' && d !== null && d >= 0 && d <= 5) ||
+        (filter === 'expired' && d !== null && d < 0);
+      return text && ok;
     });
   }, [users, search, filter]);
 
-  const totalPages = Math.max(1, Math.ceil(filteredUsers.length / itemsPerPage));
-  const paginatedUsers = filteredUsers.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
+  const visible = filtered.slice((page - 1) * perPage, page * perPage);
+  useEffect(() => { setPage(1); }, [search, filter]);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [search, filter]);
+  function patch(uid: string, changes: Partial<UserProfile>) {
+    setUsers(prev => prev.map(u => u.uid === uid ? { ...u, ...changes } : u));
+    setSelected(prev => prev?.uid === uid ? { ...prev, ...changes } : prev);
+  }
 
-  const patchUser = (uid: string, patch: Partial<UserProfile>) => {
-    setUsers(previous => previous.map(user => user.uid === uid ? { ...user, ...patch } : user));
-    setSelectedUser(previous => previous?.uid === uid ? { ...previous, ...patch } : previous);
-  };
-
-  const logAction = async (action: string, user: UserProfile, details: string) => {
+  async function audit(user: UserProfile, action: string, details: string) {
     const adminUid = auth.currentUser?.uid;
     if (!adminUid) return;
-    const log = { adminUid, action, userUid: user.uid, userName: user.displayName || user.email, details, createdAt: new Date().toISOString() };
-    try { await addAdminLog(log); setAdminLogs(previous => [{ id: `local-${Date.now()}`, ...log }, ...previous].slice(0, 40)); } catch { /* action itself already succeeded */ }
-  };
-
-  const handleStatus = async (user: UserProfile) => {
-    const status: UserStatus = user.status === 'active' ? 'suspended' : 'active';
-    setBusyUid(user.uid);
+    const item = { adminUid, action, userUid: user.uid, userName: user.displayName || user.email, details, createdAt: new Date().toISOString() };
     try {
-      await updateUserRoleAndPlan(user.uid, { status });
-      patchUser(user.uid, { status });
-      await logAction(status === 'active' ? 'Réactivation' : 'Suspension', user, status === 'active' ? 'Compte réactivé.' : 'Compte suspendu.');
-      showToast(status === 'active' ? 'Utilisateur réactivé.' : 'Utilisateur suspendu.', 'success');
-    } catch (error: any) {
-      showToast(error?.message || 'Modification refusée par Firestore.', 'error');
-    } finally {
-      setBusyUid(null);
-    }
-  };
+      await addAdminLog(item);
+      setLogs(prev => [{ id: 'local-' + Date.now(), ...item }, ...prev].slice(0, 60));
+    } catch {}
+  }
 
-  const handleConfirmPlan = async (user: UserProfile) => {
-    const plan = user.pendingPlan || user.plan;
-    const paymentDate = new Date();
-    const start = paymentDate;
-    const duration = planDurationMonths(plan);
-    const expiry = duration ? addMonths(start, duration) : null;
+  function openManage(u: UserProfile) {
+    setSelected(u); setPlan(u.plan); setStatus(u.status); setPayment(u.paymentStatus || 'unpaid'); setExpiry(inputDate(u.subscriptionExpiresAt)); setDays('');
+  }
 
-    setBusyUid(user.uid);
+  async function saveManual() {
+    if (!selected) return;
+    setBusy(true);
     try {
-      await confirmUserPlan(
-        user.uid,
-        plan,
-        paymentDate.toISOString(),
-        start.toISOString(),
-        expiry?.toISOString() || start.toISOString()
-      );
+      const ex = isoDate(expiry);
+      const subStatus = ex && new Date(ex).getTime() >= Date.now() ? 'active' : 'expired';
+      await updateUserRoleAndPlan(selected.uid, { plan, status, paymentStatus: payment, subscriptionExpiresAt: ex, subscriptionStatus: subStatus });
+      patch(selected.uid, { plan, status, paymentStatus: payment, subscriptionExpiresAt: ex, subscriptionStatus: subStatus });
+      await audit(selected, 'Modification manuelle', 'Plan ' + planLabel(plan) + ', statut ' + status + ', échéance ' + (expiry || 'aucune') + '.');
+      showToast('Modifications enregistrées.', 'success');
+    } catch (e: any) { showToast(e?.message || 'Modification refusée par Firestore.', 'error'); }
+    finally { setBusy(false); }
+  }
 
-      patchUser(user.uid, {
-        plan,
-        pendingPlan: undefined,
-        planChangeRequestedAt: undefined,
-        planChangeConfirmedAt: new Date().toISOString(),
-        paymentDate: paymentDate.toISOString(),
-        subscriptionStartAt: start.toISOString(),
-        subscriptionExpiresAt: expiry ? expiry.toISOString() : undefined,
-        subscriptionStatus: 'active',
-        paymentStatus: 'paid'
-      });
-      await logAction('Confirmation de plan', user, `Plan ${planLabel(plan)} confirmé${duration ? ` pour ${duration} mois` : ''}.`);
-      showToast(duration ? `Abonnement confirmé pour ${duration} mois.` : 'Plan Starter confirmé.', 'success');
-    } catch (error: any) {
-      showToast(error?.message || 'Confirmation refusée par Firestore.', 'error');
-    } finally {
-      setBusyUid(null);
-    }
-  };
-
-  const handleExtend = async (user: UserProfile) => {
-    const now = new Date();
-    const currentExpiry = getExpiry(user);
-    const start = currentExpiry && currentExpiry.getTime() > now.getTime() ? currentExpiry : now;
-    const duration = planDurationMonths(user.plan);
-    if (!duration) {
-      showToast('Le plan Starter ne nécessite pas de prolongation payante.', 'error');
-      return;
-    }
-    const expiry = addMonths(start, duration);
-
-    setBusyUid(user.uid);
+  async function adjustDays(amount: number) {
+    if (!selected) return;
+    const current = expiryOf(selected);
+    const base = current && current.getTime() > Date.now() ? current : new Date();
+    const next = new Date(base.getTime() + amount * DAY);
+    const value = next.toISOString();
+    setExpiry(inputDate(value)); setBusy(true);
     try {
-      await extendUserSubscription(
-        user.uid,
-        user.plan,
-        now.toISOString(),
-        now.toISOString(),
-        expiry.toISOString()
-      );
+      await updateUserRoleAndPlan(selected.uid, { subscriptionExpiresAt: value, subscriptionStatus: 'active' });
+      patch(selected.uid, { subscriptionExpiresAt: value, subscriptionStatus: 'active' });
+      await audit(selected, amount >= 0 ? 'Ajout de jours' : 'Retrait de jours', (amount >= 0 ? '+' : '') + amount + ' jour(s). Nouvelle échéance : ' + fmt(value) + '.');
+      showToast((amount >= 0 ? '+' : '') + amount + ' jour(s) appliqué(s).', 'success');
+    } catch (e: any) { showToast(e?.message || 'Impossible de modifier l’échéance.', 'error'); }
+    finally { setBusy(false); }
+  }
 
-      patchUser(user.uid, {
-        paymentDate: now.toISOString(),
-        subscriptionStartAt: now.toISOString(),
-        subscriptionExpiresAt: expiry.toISOString(),
-        subscriptionStatus: 'active',
-        paymentStatus: 'paid'
-      });
-      await logAction('Renouvellement', user, `Abonnement ${planLabel(user.plan)} prolongé de ${duration} mois.`);
-      showToast(`Abonnement prolongé de ${duration} mois.`, 'success');
-    } catch (error: any) {
-      showToast(error?.message || 'Prolongation refusée par Firestore.', 'error');
-    } finally {
-      setBusyUid(null);
-    }
-  };
+  async function customDays() {
+    const n = Number(days);
+    if (!Number.isFinite(n) || n === 0) { showToast('Saisissez un nombre de jours différent de 0.', 'error'); return; }
+    await adjustDays(n); setDays('');
+  }
 
-  const handlePlanRequest = async (user: UserProfile, plan: SubscriptionPlan) => {
-    setBusyUid(user.uid);
+  async function toggleStatus() {
+    if (!selected) return;
+    const next: UserStatus = selected.status === 'active' ? 'suspended' : 'active';
+    setBusy(true);
     try {
-      await updateUserRoleAndPlan(user.uid, {
-        pendingPlan: plan,
-        planChangeRequestedAt: new Date().toISOString()
-      });
-      patchUser(user.uid, {
-        pendingPlan: plan,
-        planChangeRequestedAt: new Date().toISOString()
-      });
-      await logAction('Demande de plan', user, `Plan ${planLabel(plan)} placé en attente de confirmation.`);
-      showToast('Changement de plan enregistré en attente de confirmation.', 'success');
-    } catch (error: any) {
-      showToast(error?.message || 'Impossible d’enregistrer le changement.', 'error');
-    } finally {
-      setBusyUid(null);
-    }
-  };
+      await updateUserRoleAndPlan(selected.uid, { status: next });
+      patch(selected.uid, { status: next });
+      await audit(selected, next === 'active' ? 'Réactivation' : 'Suspension', next === 'active' ? 'Compte réactivé.' : 'Compte suspendu.');
+      showToast(next === 'active' ? 'Compte réactivé.' : 'Compte suspendu.', 'success');
+    } catch (e: any) { showToast(e?.message || 'Action refusée.', 'error'); }
+    finally { setBusy(false); }
+  }
 
   return (
-    <div className="space-y-6">
-      <section className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-4">
-        <div>
-          <div className="flex items-center gap-2 text-[10px] uppercase tracking-[.14em] font-bold text-[#00a86b]">
-            <ShieldCheck className="w-4 h-4" />
-            Centre de contrôle
-          </div>
-          <h2 className="text-2xl font-bold tracking-tight text-[#10233a] mt-1">Administration IAMTRADER</h2>
-          <p className="text-xs text-[#71839a] mt-1">Utilisateurs, abonnements, paiements et échéances depuis un seul espace.</p>
-        </div>
-        <button
-          onClick={loadUsers}
-          disabled={isLoading}
-          className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl bg-white border border-[#dce6e2] text-xs font-semibold text-[#314861] hover:border-[#bcd9cf] transition-colors"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-          Actualiser
-        </button>
-      </section>
-
-      <section className="grid grid-cols-2 lg:grid-cols-6 gap-3">
-        {[
-          ['Utilisateurs', stats.total, Users, 'text-[#315fc7]'],
-          ['Actifs', stats.active, UserCheck, 'text-[#00a86b]'],
-          ['Paiements', stats.paid, CreditCard, 'text-[#6852c7]'],
-          ['À 5 jours', stats.expiring, AlertTriangle, 'text-[#d99020]'],
-          ['Expirés', stats.expired, XCircle, 'text-[#ef476f]'],
-          ['À confirmer', stats.pending, Clock3, 'text-[#315fc7]']
-        ].map(([label, value, Icon, color]) => (
-          <div key={String(label)} className="p-4 rounded-2xl bg-white border border-[#e0e9e5] shadow-sm">
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] uppercase tracking-wider font-semibold text-[#8091a2]">{label}</span>
-              <Icon className={`w-4 h-4 ${color}`} />
-            </div>
-            <div className="text-2xl font-bold text-[#10233a] mt-2">{value}</div>
-          </div>
-        ))}
-      </section>
-
-      <section className="grid gap-4 lg:grid-cols-[1.25fr_0.75fr]">
-        <div className="relative overflow-hidden rounded-2xl border border-[#dce8e3] bg-gradient-to-br from-[#10233a] via-[#173b55] to-[#176b61] p-5 text-white shadow-[0_14px_40px_rgba(16,35,58,0.12)]">
-          <div className="absolute -right-12 -top-12 h-32 w-32 rounded-full bg-cyan-300/15 blur-2xl" />
-          <div className="relative">
-            <div className="flex items-center justify-between gap-3">
-              <div><div className="text-[9px] font-bold uppercase tracking-[0.16em] text-cyan-200">Pilotage administratif</div><h3 className="mt-1 text-lg font-black">Vue opérationnelle</h3><p className="mt-1 text-[11px] leading-5 text-white/70">Les indicateurs qui nécessitent une intervention sont regroupés ici.</p></div>
-              <div className="rounded-xl bg-white/10 p-2.5"><ShieldCheck className="h-4 w-4 text-cyan-200" /></div>
-            </div>
-            <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
-              <div className="rounded-xl bg-white/10 p-3"><div className="text-[9px] font-semibold uppercase text-white/55">À confirmer</div><div className="mt-1 text-xl font-black">{stats.pending}</div><div className="mt-0.5 text-[9px] text-white/60">demandes</div></div>
-              <div className="rounded-xl bg-white/10 p-3"><div className="text-[9px] font-semibold uppercase text-white/55">Échéance</div><div className="mt-1 text-xl font-black">{stats.expiring}</div><div className="mt-0.5 text-[9px] text-white/60">≤ 5 jours</div></div>
-              <div className="rounded-xl bg-white/10 p-3"><div className="text-[9px] font-semibold uppercase text-white/55">Expirés</div><div className="mt-1 text-xl font-black">{stats.expired}</div><div className="mt-0.5 text-[9px] text-white/60">à traiter</div></div>
-              <div className="rounded-xl bg-white/10 p-3"><div className="text-[9px] font-semibold uppercase text-white/55">Paiements</div><div className="mt-1 text-xl font-black">{stats.paid}</div><div className="mt-0.5 text-[9px] text-white/60">confirmés</div></div>
-            </div>
-          </div>
-        </div>
-        <div className="rounded-2xl border border-[#e0e9e5] bg-white p-5 shadow-sm">
-          <div className="flex items-center gap-2"><div className="rounded-xl bg-amber-50 p-2 text-amber-600"><AlertTriangle className="h-4 w-4" /></div><div><div className="text-[9px] font-bold uppercase tracking-[0.14em] text-amber-600">À traiter maintenant</div><h3 className="mt-0.5 text-sm font-black text-[#10233a]">File d’actions</h3></div></div>
-          <div className="mt-4 space-y-2">
-            <button onClick={() => setFilter('pending')} className="flex w-full items-center justify-between rounded-xl bg-[#f7f9fc] px-3 py-2.5 text-left hover:bg-[#eef4ff]"><span className="flex items-center gap-2 text-[11px] font-semibold text-[#314861]"><Clock3 className="h-3.5 w-3.5 text-[#315fc7]" />Plans à confirmer</span><span className="rounded-full bg-[#eaf1ff] px-2 py-0.5 text-[10px] font-black text-[#315fc7]">{stats.pending}</span></button>
-            <button onClick={() => setFilter('expiring')} className="flex w-full items-center justify-between rounded-xl bg-[#fffaf0] px-3 py-2.5 text-left hover:bg-[#fff4d9]"><span className="flex items-center gap-2 text-[11px] font-semibold text-[#5f4b27]"><AlertTriangle className="h-3.5 w-3.5 text-[#d99020]" />Échéances proches</span><span className="rounded-full bg-[#fff0c8] px-2 py-0.5 text-[10px] font-black text-[#9a6a16]">{stats.expiring}</span></button>
-            <button onClick={() => setFilter('expired')} className="flex w-full items-center justify-between rounded-xl bg-[#fff4f6] px-3 py-2.5 text-left hover:bg-[#ffe9ee]"><span className="flex items-center gap-2 text-[11px] font-semibold text-[#7a3041]"><XCircle className="h-3.5 w-3.5 text-[#ef476f]" />Abonnements expirés</span><span className="rounded-full bg-[#ffe2e8] px-2 py-0.5 text-[10px] font-black text-[#d9365a]">{stats.expired}</span></button>
-          </div>
-        </div>
-      </section>
-
-      {loadError && (
-        <div className="p-4 rounded-2xl bg-[#fff8ec] border border-[#f2dfb5] text-xs text-[#7b5a20]">
-          <div className="font-semibold mb-1">Accès administrateur requis</div>
-          {loadError}
-        </div>
-      )}
-
-      <section className="bg-white border border-[#e0e9e5] rounded-2xl shadow-sm overflow-hidden">
-        <div className="p-4 sm:p-5 border-b border-[#edf2f0]">
-          <div className="flex flex-col lg:flex-row lg:items-center gap-3 justify-between">
+    <div className="min-h-full bg-[#f4f7fa] -m-4 lg:-m-6 p-4 lg:p-6">
+      <div className="max-w-[1500px] mx-auto space-y-5">
+        <header className="relative overflow-hidden rounded-[28px] bg-[#0b1f35] p-5 sm:p-7 text-white shadow-[0_20px_60px_rgba(11,31,53,.13)]">
+          <div className="absolute -right-24 -top-28 h-80 w-80 rounded-full bg-emerald-400/10 blur-3xl" />
+          <div className="relative flex flex-col xl:flex-row xl:items-end xl:justify-between gap-5">
             <div>
-              <h3 className="text-sm font-bold text-[#10233a]">Utilisateurs & abonnements</h3>
-              <p className="text-[11px] text-[#8091a2] mt-1">{filteredUsers.length} utilisateur(s) affiché(s)</p>
+              <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.18em] text-emerald-300"><ShieldCheck className="w-4 h-4" />Control Center</div>
+              <h1 className="mt-2 text-2xl sm:text-3xl font-black tracking-tight">Administration IAMTRADER</h1>
+              <p className="mt-2 max-w-2xl text-sm text-white/60">Une console opérationnelle pour gérer les utilisateurs, les plans, les paiements et les échéances.</p>
             </div>
-            <div className="flex flex-col sm:flex-row gap-2">
-              <div className="relative">
-                <Search className="w-3.5 h-3.5 text-[#8da0b1] absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  value={search}
-                  onChange={e => setSearch(e.target.value)}
-                  placeholder="Rechercher un utilisateur..."
-                  className="w-full sm:w-64 bg-[#f8fafb] border border-[#e0e8e5] rounded-xl pl-9 pr-3 py-2.5 text-xs text-[#203a53] outline-none focus:border-[#9fd8c5]"
-                />
-              </div>
-              <select
-                value={filter}
-                onChange={e => setFilter(e.target.value as Filter)}
-                className="bg-[#f8fafb] border border-[#e0e8e5] rounded-xl px-3 py-2.5 text-xs text-[#314861] outline-none"
-              >
-                <option value="all">Tous</option>
-                <option value="active">Actifs</option>
-                <option value="expiring">Échéance ≤ 5 jours</option>
-                <option value="expired">Expirés</option>
-                <option value="pending">Plans à confirmer</option>
-              </select>
-            </div>
+            <button onClick={load} disabled={loading} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-xs font-bold hover:bg-white/15"><RefreshCw className={'w-4 h-4 ' + (loading ? 'animate-spin' : '')} />Actualiser</button>
           </div>
-        </div>
-
-        {isLoading ? (
-          <div className="p-12 text-center text-xs text-[#8091a2]">Chargement des utilisateurs...</div>
-        ) : filteredUsers.length === 0 ? (
-          <div className="p-12 text-center">
-            <Users className="w-8 h-8 mx-auto text-[#b3c0ca]" />
-            <p className="text-sm font-semibold text-[#314861] mt-3">Aucun utilisateur disponible</p>
-            <p className="text-xs text-[#8091a2] mt-1">Vérifiez les droits Firestore si la liste devrait être accessible.</p>
+          <div className="relative mt-7 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-2">
+            {[['Utilisateurs', stats.total, Users], ['Actifs', stats.active, UserCheck], ['Paiements', stats.paid, CreditCard], ['À confirmer', stats.pending, Activity], ['≤ 5 jours', stats.expiring, AlertTriangle], ['Expirés', stats.expired, XCircle]].map(([label, value, Icon]) =>
+              <div key={String(label)} className="rounded-2xl border border-white/[.08] bg-white/[.07] p-3.5"><div className="flex justify-between text-[9px] font-bold uppercase tracking-wider text-white/50"><span>{String(label)}</span><Icon className="w-3.5 h-3.5" /></div><div className="mt-2 text-2xl font-black">{String(value)}</div></div>
+            )}
           </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[1050px] text-left text-xs">
-              <thead className="bg-[#f8fafb]">
-                <tr className="text-[10px] uppercase tracking-wider text-[#8091a2] border-b border-[#edf2f0]">
-                  <th className="px-2 py-3 w-10 text-center">#</th>
-                  <th className="px-5 py-3">Utilisateur</th>
-                  <th className="px-3 py-3">Plan</th>
-                  <th className="px-3 py-3">Paiement</th>
-                  <th className="px-3 py-3">Échéance</th>
-                  <th className="px-3 py-3">Temps restant</th>
-                  <th className="px-3 py-3">Statut</th>
-                  <th className="px-5 py-3 text-right">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paginatedUsers.map((user, index) => {
-                  const days = getDaysLeft(user);
-                  const expiring = days !== null && days >= 0 && days <= 5;
-                  const expired = days !== null && days < 0;
-                  const pending = !!user.pendingPlan;
+        </header>
 
-                  return (
-                    <tr key={user.uid} className="border-b border-[#edf2f0] last:border-0 hover:bg-[#fbfdfc]">
-                      <td className="px-2 py-4 text-center font-mono text-[10px] text-[#8a9aab] tabular-nums">{(currentPage - 1) * itemsPerPage + index + 1}</td>
-                      <td className="px-5 py-4">
-                        <button onClick={() => setSelectedUser(user)} className="text-left">
-                          <div className="font-semibold text-[#203a53]">{user.displayName || 'Sans nom'}</div>
-                          <div className="text-[10px] text-[#8a9aab] mt-0.5">{user.email}</div>
-                        </button>
-                      </td>
-                      <td className="px-3 py-4">
-                        <span className={`inline-flex px-2.5 py-1 rounded-lg border text-[10px] font-bold ${planClass(user.plan)}`}>
-                          {planLabel(user.plan)}
-                        </span>
-                        {pending && <div className="text-[9px] text-[#315fc7] mt-1">→ {planLabel(user.pendingPlan!)}</div>}
-                      </td>
-                      <td className="px-3 py-4">
-                        <div className="font-medium text-[#314861]">{formatDate(user.paymentDate)}</div>
-                        <div className="text-[9px] text-[#8a9aab] mt-0.5">{user.paymentStatus === 'paid' ? 'Confirmé' : 'Non confirmé'}</div>
-                      </td>
-                      <td className="px-3 py-4">
-                        <div className={`font-medium ${expired ? 'text-[#ef476f]' : expiring ? 'text-[#d99020]' : 'text-[#314861]'}`}>
-                          {formatDate(user.subscriptionExpiresAt)}
-                        </div>
-                      </td>
-                      <td className="px-3 py-4">
-                        {days === null ? (
-                          <span className="text-[#8a9aab]">Non calculable</span>
-                        ) : expired ? (
-                          <span className="font-semibold text-[#ef476f]">Expiré depuis {Math.abs(days)} j</span>
-                        ) : (
-                          <span className={`font-semibold ${expiring ? 'text-[#d99020]' : 'text-[#00a86b]'}`}>
-                            {days} jour{days > 1 ? 's' : ''}
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-3 py-4">
-                        <span className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-semibold ${user.status === 'active' ? 'bg-[#e9faf3] text-[#008f63]' : 'bg-[#fff0f3] text-[#d9365a]'}`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${user.status === 'active' ? 'bg-[#08b77a]' : 'bg-[#ef476f]'}`} />
-                          {user.status === 'active' ? 'Actif' : 'Suspendu'}
-                        </span>
-                      </td>
-                      <td className="px-5 py-4">
-                        <div className="flex justify-end items-center gap-1.5">
-                          {pending && (
-                            <button
-                              onClick={() => handleConfirmPlan(user)}
-                              disabled={busyUid === user.uid}
-                              className="px-2.5 py-1.5 rounded-lg bg-[#e9faf3] text-[#008f63] border border-[#ccecdf] text-[10px] font-semibold disabled:opacity-50"
-                            >
-                              <Check className="w-3 h-3 inline mr-1" />Confirmer
-                            </button>
-                          )}
-                          <button
-                            onClick={() => handleExtend(user)}
-                            disabled={busyUid === user.uid}
-                            className="px-2.5 py-1.5 rounded-lg bg-[#f3f6ff] text-[#315fc7] border border-[#dce5ff] text-[10px] font-semibold disabled:opacity-50"
-                          >
-                            +1 mois
-                          </button>
-                          <button
-                            onClick={() => setSelectedUser(user)}
-                            className="px-2.5 py-1.5 rounded-lg bg-[#f7f9fa] text-[#52677c] border border-[#e2e9e6] text-[10px] font-semibold"
-                          >
-                            Gérer
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-            <div className="flex items-center justify-between px-5 py-3 border-t border-[#edf2f0] bg-white">
-              <span className="text-[10px] text-[#8091a2] font-mono">Page {currentPage}/{totalPages}</span>
-              <div className="flex items-center gap-1">
-                <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-1.5 rounded-lg border border-[#e0e8e5] text-[#71839a] hover:bg-[#f8fafb] disabled:opacity-30 disabled:cursor-not-allowed"><ChevronLeft className="w-3.5 h-3.5" /></button>
-                <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="p-1.5 rounded-lg border border-[#e0e8e5] text-[#71839a] hover:bg-[#f8fafb] disabled:opacity-30 disabled:cursor-not-allowed"><ChevronRight className="w-3.5 h-3.5" /></button>
+        {error && <div className="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-xs text-rose-700">{error}</div>}
+
+        <section className="grid lg:grid-cols-[1fr_360px] gap-4">
+          <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+              <div><h2 className="text-sm font-black text-slate-900">Utilisateurs & abonnements</h2><p className="mt-1 text-[11px] text-slate-400">{filtered.length} résultat(s)</p></div>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" /><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Nom ou e-mail..." className="w-full sm:w-64 rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-3 text-xs outline-none focus:border-blue-300" /></div>
+                <select value={filter} onChange={e => setFilter(e.target.value as Filter)} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-semibold text-slate-600 outline-none"><option value="all">Tous</option><option value="active">Actifs</option><option value="suspended">Suspendus</option><option value="pending">À confirmer</option><option value="expiring">Échéance ≤ 5 j</option><option value="expired">Expirés</option></select>
               </div>
             </div>
           </div>
-        )}
-      </section>
-
-      <section className="bg-white border border-[#e0e9e5] rounded-2xl shadow-sm overflow-hidden">
-        <div className="p-4 border-b border-[#edf2f0] flex items-center gap-2"><History className="w-4 h-4 text-[#315fc7]" /><div><h3 className="text-sm font-bold text-[#10233a]">Historique administratif</h3><p className="text-[10px] text-[#8091a2] mt-0.5">Dernières actions effectuées depuis la console.</p></div></div>
-        <div className="divide-y divide-[#edf2f0]">{adminLogs.length === 0 ? <div className="p-6 text-xs text-[#8091a2]">Aucune action enregistrée.</div> : adminLogs.slice(0, 8).map(log => <div key={log.id} className="px-4 py-3 flex items-start gap-3"><div className="mt-0.5 h-7 w-7 rounded-lg bg-[#eef4ff] text-[#315fc7] flex items-center justify-center"><History className="w-3.5 h-3.5" /></div><div className="min-w-0 flex-1"><div className="text-[11px] font-semibold text-[#314861]">{log.action} · {log.userName}</div><div className="text-[10px] text-[#8091a2] mt-0.5">{log.details}</div></div><div className="text-[9px] text-[#9aa9b7] whitespace-nowrap">{formatDate(log.createdAt)}</div></div>)}</div>
-      </section>
-
-      {stats.expiring > 0 && (
-        <section className="p-4 rounded-2xl bg-[#fff8ec] border border-[#f1dfb7] flex items-start gap-3">
-          <AlertTriangle className="w-5 h-5 text-[#d99020] shrink-0" />
-          <div>
-            <div className="text-xs font-bold text-[#7b5a20]">{stats.expiring} abonnement(s) arrivent à échéance dans 5 jours ou moins.</div>
-            <div className="text-[11px] text-[#94713a] mt-1">Utilisez le filtre « Échéance ≤ 5 jours » pour traiter les renouvellements.</div>
+          <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex items-center justify-between"><div><div className="text-[9px] font-bold uppercase tracking-wider text-amber-600">À traiter</div><h2 className="mt-1 text-sm font-black text-slate-900">File opérationnelle</h2></div><Activity className="w-5 h-5 text-emerald-500" /></div>
+            <div className="mt-4 grid grid-cols-3 gap-2">
+              <button onClick={() => setFilter('pending')} className="rounded-xl bg-blue-50 p-3 text-left hover:bg-blue-100"><b className="text-lg text-blue-700">{stats.pending}</b><span className="block text-[9px] font-semibold text-blue-600">Confirmations</span></button>
+              <button onClick={() => setFilter('expiring')} className="rounded-xl bg-amber-50 p-3 text-left hover:bg-amber-100"><b className="text-lg text-amber-700">{stats.expiring}</b><span className="block text-[9px] font-semibold text-amber-600">Échéances</span></button>
+              <button onClick={() => setFilter('expired')} className="rounded-xl bg-rose-50 p-3 text-left hover:bg-rose-100"><b className="text-lg text-rose-700">{stats.expired}</b><span className="block text-[9px] font-semibold text-rose-600">Expirés</span></button>
+            </div>
           </div>
         </section>
-      )}
 
-      {selectedUser && (
-        <div className="fixed inset-0 z-50 bg-[#10233a]/25 backdrop-blur-sm flex items-center justify-center p-4" onClick={() => setSelectedUser(null)}>
-          <div className="w-full max-w-xl bg-white rounded-2xl border border-[#dfe8e4] shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="p-5 border-b border-[#edf2f0] flex items-center justify-between">
-              <div>
-                <div className="text-sm font-bold text-[#10233a]">{selectedUser.displayName || 'Utilisateur'}</div>
-                <div className="text-[11px] text-[#8091a2] mt-1">{selectedUser.email}</div>
-              </div>
-              <button onClick={() => setSelectedUser(null)} className="text-[#8a9aab] hover:text-[#314861] text-lg">×</button>
+        <section className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm">
+          {loading ? <div className="p-16 text-center text-xs text-slate-400">Chargement des utilisateurs...</div> : visible.length === 0 ? <div className="p-16 text-center"><Users className="mx-auto w-9 h-9 text-slate-300" /><p className="mt-3 text-sm font-bold text-slate-600">Aucun utilisateur</p></div> :
+            <><div className="overflow-x-auto"><table className="w-full min-w-[1050px]"><thead className="border-b border-slate-100 bg-slate-50/80"><tr className="text-left text-[9px] font-bold uppercase tracking-[.14em] text-slate-400"><th className="px-5 py-3">Utilisateur</th><th className="px-3 py-3">Plan</th><th className="px-3 py-3">Paiement</th><th className="px-3 py-3">Échéance</th><th className="px-3 py-3">Temps</th><th className="px-3 py-3">Statut</th><th className="px-5 py-3 text-right">Action</th></tr></thead>
+            <tbody>{visible.map(u => {
+              const d = remaining(u); const expired = d !== null && d < 0; const soon = d !== null && d >= 0 && d <= 5;
+              return <tr key={u.uid} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/70"><td className="px-5 py-4"><button onClick={() => openManage(u)} className="text-left"><b className="text-xs text-slate-800 hover:text-blue-700">{u.displayName || 'Sans nom'}</b><span className="mt-1 block text-[10px] text-slate-400">{u.email}</span></button></td><td className="px-3 py-4"><span className={'inline-flex rounded-lg border px-2.5 py-1 text-[10px] font-bold ' + planClass(u.plan)}>{planLabel(u.plan)}</span>{u.pendingPlan && <span className="mt-1 block text-[9px] text-blue-600">→ {planLabel(u.pendingPlan)}</span>}</td><td className="px-3 py-4"><b className="text-[10px] text-slate-700">{u.paymentStatus === 'paid' ? 'Confirmé' : u.paymentStatus === 'refunded' ? 'Remboursé' : 'Non payé'}</b><span className="mt-1 block text-[9px] text-slate-400">{fmt(u.paymentDate)}</span></td><td className={'px-3 py-4 text-[10px] font-semibold ' + (expired ? 'text-rose-600' : soon ? 'text-amber-600' : 'text-slate-600')}>{d === null ? 'Aucune' : fmt(u.subscriptionExpiresAt)}</td><td className="px-3 py-4 text-[10px] font-bold">{d === null ? <span className="text-slate-400">Illimité</span> : <span className={expired ? 'text-rose-600' : soon ? 'text-amber-600' : 'text-emerald-600'}>{expired ? '-' + Math.abs(d) : d} j</span>}</td><td className="px-3 py-4"><span className={'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[9px] font-bold ' + (u.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700')}><span className={'h-1.5 w-1.5 rounded-full ' + (u.status === 'active' ? 'bg-emerald-500' : 'bg-rose-500')} />{u.status === 'active' ? 'Actif' : 'Suspendu'}</span></td><td className="px-5 py-4 text-right"><button onClick={() => openManage(u)} className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-3 py-2 text-[10px] font-bold text-white hover:bg-slate-800"><Edit3 className="w-3.5 h-3.5" />Gérer</button></td></tr>;
+            })}</tbody></table></div><div className="flex items-center justify-between border-t border-slate-100 px-5 py-3"><span className="text-[10px] text-slate-400">Page {page} / {totalPages}</span><div className="flex gap-1"><button disabled={page === 1} onClick={() => setPage(page - 1)} className="rounded-lg border border-slate-200 p-2 disabled:opacity-30"><ChevronLeft className="w-3.5 h-3.5" /></button><button disabled={page === totalPages} onClick={() => setPage(page + 1)} className="rounded-lg border border-slate-200 p-2 disabled:opacity-30"><ChevronRight className="w-3.5 h-3.5" /></button></div></div></>}
+        </section>
+
+        <section className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm">
+          <button onClick={() => setHistoryOpen(!historyOpen)} className="flex w-full items-center justify-between p-4 text-left"><span className="flex items-center gap-2"><History className="w-4 h-4 text-blue-600" /><span><b className="block text-sm text-slate-900">Historique administratif</b><small className="block mt-0.5 text-[10px] text-slate-400">Traçabilité des opérations.</small></span></span><span className="text-xs font-bold text-slate-400">{historyOpen ? 'Réduire' : 'Afficher'}</span></button>
+          {historyOpen && <div className="divide-y divide-slate-100 border-t border-slate-100">{logs.length ? logs.slice(0, 12).map(l => <div key={l.id} className="flex gap-3 px-5 py-3"><div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600"><History className="w-3.5 h-3.5" /></div><div><b className="text-[11px] text-slate-700">{l.action} · {l.userName}</b><p className="mt-0.5 text-[10px] text-slate-400">{l.details}</p></div></div>) : <div className="p-6 text-xs text-slate-400">Aucune action.</div>}</div>}
+        </section>
+      </div>
+
+      {selected && <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm" onClick={() => setSelected(null)}>
+        <div className="max-h-[94vh] w-full max-w-3xl overflow-y-auto rounded-[28px] border border-white bg-[#f7f9fc] shadow-2xl" onClick={e => e.stopPropagation()}>
+          <div className="sticky top-0 z-10 flex items-start justify-between border-b border-slate-100 bg-white/95 px-5 py-5 backdrop-blur sm:px-7"><div className="flex items-center gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#0b1f35] font-black text-white">{(selected.displayName || selected.email).slice(0, 1).toUpperCase()}</div><div><b className="block text-base text-slate-900">{selected.displayName || 'Sans nom'}</b><span className="text-[11px] text-slate-400">{selected.email}</span></div></div><button onClick={() => setSelected(null)} className="rounded-xl p-2 text-slate-400 hover:bg-slate-100"><X className="w-5 h-5" /></button></div>
+          <div className="space-y-5 p-5 sm:p-7">
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+              <div className="rounded-2xl border border-slate-200 bg-white p-4"><small className="text-[9px] font-bold uppercase text-slate-400">Plan</small><b className="mt-2 block text-sm text-slate-800">{planLabel(selected.plan)}</b></div>
+              <div className="rounded-2xl border border-slate-200 bg-white p-4"><small className="text-[9px] font-bold uppercase text-slate-400">Temps</small><b className="mt-2 block text-sm text-emerald-600">{remaining(selected) === null ? 'Illimité' : remaining(selected) + ' j'}</b></div>
+              <div className="rounded-2xl border border-slate-200 bg-white p-4"><small className="text-[9px] font-bold uppercase text-slate-400">Paiement</small><b className="mt-2 block text-sm text-slate-800">{selected.paymentStatus === 'paid' ? 'Confirmé' : selected.paymentStatus === 'refunded' ? 'Remboursé' : 'Non payé'}</b></div>
+              <div className="rounded-2xl border border-slate-200 bg-white p-4"><small className="text-[9px] font-bold uppercase text-slate-400">Échéance</small><b className="mt-2 block text-sm text-slate-800">{fmt(selected.subscriptionExpiresAt)}</b></div>
             </div>
 
-            <div className="p-5 grid grid-cols-2 gap-3">
-              <div className="p-3 rounded-xl bg-[#f8fafb] border border-[#e6ece9]">
-                <div className="text-[9px] uppercase tracking-wider text-[#8a9aab]">Plan actuel</div>
-                <div className="text-sm font-bold text-[#314861] mt-1">{planLabel(selectedUser.plan)}</div>
+            <section className="rounded-2xl border border-slate-200 bg-white p-5">
+              <div className="mb-4 flex items-center justify-between"><div><h3 className="text-sm font-black text-slate-900">Modifier manuellement</h3><p className="mt-1 text-[10px] text-slate-400">L’administrateur contrôle directement les paramètres d’abonnement.</p></div><Edit3 className="w-4 h-4 text-blue-600" /></div>
+              <div className="grid gap-3 md:grid-cols-3">
+                <label className="text-[10px] font-bold text-slate-500">Plan<select value={plan} onChange={e => setPlan(e.target.value as SubscriptionPlan)} className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-semibold"><option value="free">Starter</option><option value="pro">Plus</option><option value="community">Community</option></select></label>
+                <label className="text-[10px] font-bold text-slate-500">Statut<select value={status} onChange={e => setStatus(e.target.value as UserStatus)} className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-semibold"><option value="active">Actif</option><option value="suspended">Suspendu</option></select></label>
+                <label className="text-[10px] font-bold text-slate-500">Paiement<select value={payment} onChange={e => setPayment(e.target.value as any)} className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-semibold"><option value="unpaid">Non payé</option><option value="paid">Payé</option><option value="refunded">Remboursé</option></select></label>
               </div>
-              <div className="p-3 rounded-xl bg-[#f8fafb] border border-[#e6ece9]">
-                <div className="text-[9px] uppercase tracking-wider text-[#8a9aab]">Échéance</div>
-                <div className="text-sm font-bold text-[#314861] mt-1">{formatDate(selectedUser.subscriptionExpiresAt)}</div>
-              </div>
-              <div className="p-3 rounded-xl bg-[#f8fafb] border border-[#e6ece9]">
-                <div className="text-[9px] uppercase tracking-wider text-[#8a9aab]">Dernier paiement</div>
-                <div className="text-sm font-bold text-[#314861] mt-1">{formatDate(selectedUser.paymentDate)}</div>
-              </div>
-              <div className="p-3 rounded-xl bg-[#f8fafb] border border-[#e6ece9]">
-                <div className="text-[9px] uppercase tracking-wider text-[#8a9aab]">Jours restants</div>
-                <div className="text-sm font-bold text-[#00a86b] mt-1">{getDaysLeft(selectedUser) ?? '—'}</div>
-              </div>
-            </div>
+              <label className="mt-3 block text-[10px] font-bold text-slate-500">Date d’échéance exacte<input type="date" value={expiry} onChange={e => setExpiry(e.target.value)} className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-semibold" /></label>
+              <button disabled={busy} onClick={saveManual} className="mt-4 w-full rounded-xl bg-[#0b1f35] py-3 text-xs font-bold text-white disabled:opacity-50">{busy ? 'Enregistrement...' : 'Enregistrer les modifications'}</button>
+            </section>
 
-            <div className="px-5 pb-5">
-              <div className="text-[10px] uppercase tracking-wider font-bold text-[#8091a2] mb-2">Changer le plan</div>
-              <div className="grid grid-cols-3 gap-2">
-                {(['free', 'community', 'pro'] as SubscriptionPlan[]).map(plan => (
-                  <button
-                    key={plan}
-                    onClick={() => handlePlanRequest(selectedUser, plan)}
-                    disabled={busyUid === selectedUser.uid}
-                    className={`py-2.5 rounded-xl border text-xs font-semibold ${selectedUser.plan === plan ? planClass(plan) : 'bg-white border-[#e0e8e5] text-[#52677c]'}`}
-                  >
-                    {planLabel(plan)}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <section className="rounded-2xl border border-slate-200 bg-white p-5">
+              <div className="flex items-center gap-2"><CalendarDays className="w-4 h-4 text-emerald-600" /><div><h3 className="text-sm font-black text-slate-900">Jours d’abonnement</h3><p className="mt-1 text-[10px] text-slate-400">Ajoutez, retirez ou définissez précisément la durée restante.</p></div></div>
+              <div className="mt-4 grid grid-cols-4 gap-2"><button disabled={busy} onClick={() => adjustDays(-30)} className="rounded-xl bg-rose-50 py-2.5 text-[10px] font-bold text-rose-700">−30 j</button><button disabled={busy} onClick={() => adjustDays(-1)} className="rounded-xl border border-rose-100 bg-white py-2.5 text-[10px] font-bold text-rose-600">−1 j</button><button disabled={busy} onClick={() => adjustDays(1)} className="rounded-xl border border-emerald-100 bg-white py-2.5 text-[10px] font-bold text-emerald-700">+1 j</button><button disabled={busy} onClick={() => adjustDays(30)} className="rounded-xl bg-emerald-50 py-2.5 text-[10px] font-bold text-emerald-700">+30 j</button></div>
+              <div className="mt-2 flex gap-2"><button disabled={busy} onClick={() => adjustDays(7)} className="flex-1 rounded-xl border border-emerald-100 bg-white py-2.5 text-[10px] font-bold text-emerald-700">+7 jours</button><button disabled={busy} onClick={() => adjustDays(90)} className="flex-1 rounded-xl border border-emerald-100 bg-white py-2.5 text-[10px] font-bold text-emerald-700">+90 jours</button></div>
+              <div className="mt-3 flex gap-2"><input type="number" value={days} onChange={e => setDays(e.target.value)} placeholder="Ex. 14 ou -3" className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs outline-none" /><button disabled={busy} onClick={customDays} className="rounded-xl bg-blue-600 px-5 text-[10px] font-bold text-white">Appliquer</button></div>
+              <div className="mt-3 flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 p-3"><span className="text-[10px] text-slate-500">Échéance actuelle</span><b className="text-xs text-slate-800">{expiry ? fmt(isoDate(expiry)) : 'Aucune'}</b></div>
+            </section>
 
-            <div className="p-5 border-t border-[#edf2f0] flex flex-wrap justify-end gap-2 bg-[#fbfcfc]">
-              <button
-                onClick={() => handleStatus(selectedUser)}
-                disabled={busyUid === selectedUser.uid}
-                className={`px-3 py-2 rounded-xl text-xs font-semibold ${selectedUser.status === 'active' ? 'bg-[#fff1f3] text-[#d9365a]' : 'bg-[#e9faf3] text-[#008f63]'}`}
-              >
-                {selectedUser.status === 'active' ? 'Suspendre' : 'Réactiver'}
-              </button>
-              <button
-                onClick={() => handleExtend(selectedUser)}
-                disabled={busyUid === selectedUser.uid}
-                className="px-3 py-2 rounded-xl bg-[#315fc7] text-white text-xs font-semibold"
-              >
-                Confirmer paiement +1 mois
-              </button>
-            </div>
+            <section className="rounded-2xl border border-slate-200 bg-white p-5">
+              <div className="flex items-center justify-between"><div><h3 className="text-sm font-black text-slate-900">Accès au compte</h3><p className="mt-1 text-[10px] text-slate-400">Suspendre ou réactiver immédiatement l’utilisateur.</p></div><UserCheck className="w-4 h-4 text-emerald-600" /></div>
+              <button disabled={busy} onClick={toggleStatus} className={'mt-4 inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold ' + (selected.status === 'active' ? 'bg-rose-50 text-rose-700' : 'bg-emerald-50 text-emerald-700')}>{selected.status === 'active' ? <><UserX className="w-4 h-4" />Suspendre</> : <><UserCheck className="w-4 h-4" />Réactiver</>}</button>
+            </section>
           </div>
         </div>
-      )}
+      </div>}
     </div>
   );
 }
