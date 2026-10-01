@@ -276,6 +276,22 @@ export async function requestUserPlanChange(uid: string, plan: 'pro' | 'communit
 }
 
 
+export interface ContactMessage {
+  name: string;
+  email: string;
+  subject: string;
+  message: string;
+}
+
+export async function addContactMessage(data: ContactMessage): Promise<string> {
+  const docRef = await addFirestoreDoc(collection(db, 'contactMessages'), {
+    ...data,
+    status: 'new',
+    createdAt: new Date().toISOString()
+  });
+  return docRef.id;
+}
+
 export async function addAdminLog(log: Omit<AdminLog, 'id'>): Promise<string> {
   const ref = await addFirestoreDoc(collection(db, 'adminLogs'), log);
   return ref.id;
