@@ -451,8 +451,8 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
 
         <section id="contact" className="px-6 sm:px-12 py-20 bg-[#f6f9fc] border-y border-[#dfe8ef] scroll-mt-20">
           <div className="max-w-6xl mx-auto">
-            <div className="grid lg:grid-cols-[1fr_1.15fr] gap-10 items-stretch">
-              <div className="rounded-3xl bg-[#0a192f] text-white p-8 sm:p-10 flex flex-col justify-between">
+            <div className="grid lg:grid-cols-[1fr_1.15fr] gap-10 items-start">
+              <div className="rounded-3xl bg-[#0a192f] text-white p-8 sm:p-10">
                 <div>
                   <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#5ce0c1]">Contact</span>
                   <h2 className="text-3xl sm:text-4xl font-black tracking-tight mt-3">Besoin d’aide ou d’une information ?</h2>
