@@ -11,10 +11,11 @@ import {
   setDoc,
   orderBy,
   limit,
-  deleteField
+  deleteField,
+  addDoc as addFirestoreDoc
 } from 'firebase/firestore';
 import { db, auth } from '../firebase/config';
-import { Trade, TradingAccount, UserProfile } from '../types';
+import { AdminLog, Trade, TradingAccount, UserProfile } from '../types';
 
 // ==========================================
 // TRADES SERVICE
@@ -240,4 +241,16 @@ export async function requestUserPlanChange(uid: string, plan: 'pro' | 'communit
     planChangeRequestedAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   });
+}
+
+
+export async function addAdminLog(log: Omit<AdminLog, 'id'>): Promise<string> {
+  const ref = await addFirestoreDoc(collection(db, 'adminLogs'), log);
+  return ref.id;
+}
+
+export async function getAdminLogs(maxItems = 40): Promise<AdminLog[]> {
+  const logsRef = collection(db, 'adminLogs');
+  const snapshot = await getDocs(query(logsRef, orderBy('createdAt', 'desc'), limit(maxItems)));
+  return snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as AdminLog));
 }
