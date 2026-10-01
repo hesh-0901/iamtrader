@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Activity, AlertTriangle, CalendarDays, ChevronLeft, ChevronRight, CreditCard, Edit3, History, RefreshCw, Search, ShieldCheck, UserCheck, UserX, Users, X, XCircle } from 'lucide-react';
-import { AdminLog, SubscriptionPlan, UserProfile, UserStatus } from '../types';
-import { addAdminLog, getAdminLogs, getAllUsers, updateUserRoleAndPlan } from '../services/firestore';
+import { AdminLog, SubscriptionPlan, UserProfile, UserStatus, TradingAccount, Trade } from '../types';
+import { addAdminLog, getAdminLogs, getAllAccounts, getAllTrades, getAllUsers, updateUserRoleAndPlan } from '../services/firestore';
 import { useToast } from '../components/common/Toast';
 import { auth } from '../firebase/config';
 
@@ -35,6 +35,8 @@ function isoDate(v: string) { return v ? new Date(v + 'T23:59:59').toISOString()
 export function AdminConsole() {
   const { showToast } = useToast();
   const [users, setUsers] = useState<UserProfile[]>([]);
+  const [accounts, setAccounts] = useState<TradingAccount[]>([]);
+  const [trades, setTrades] = useState<Trade[]>([]);
   const [logs, setLogs] = useState<AdminLog[]>([]);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
@@ -56,8 +58,10 @@ export function AdminConsole() {
     setError('');
     setLogs([]);
     try {
-      const userData = await getAllUsers();
+      const [userData, accountData, tradeData] = await Promise.all([getAllUsers(), getAllAccounts(), getAllTrades()]);
       setUsers(userData);
+      setAccounts(accountData);
+      setTrades(tradeData);
     } catch (e: any) {
       console.error('IAMTRADER Admin users load error:', e);
       const code = e?.code || 'unknown';
@@ -81,6 +85,25 @@ export function AdminConsole() {
   }
   useEffect(() => { load(); }, []);
 
+  const userMetrics = useMemo(() => {
+    const map: Record<string, { initialCapital: number; totalPnl: number; tradeCount: number; pnlPercent: number | null; currency: string }> = {};
+    users.forEach(u => {
+      const userAccounts = accounts.filter(a => a.userId === u.uid);
+      const userTrades = trades.filter(t => t.userId === u.uid);
+      const currencies = Array.from(new Set(userAccounts.map(a => a.currency).filter(Boolean)));
+      const initialCapital = userAccounts.reduce((sum, a) => sum + (Number(a.initialBalance) || 0), 0);
+      const totalPnl = userTrades.reduce((sum, t) => sum + (Number(t.pnl) || 0), 0);
+      map[u.uid] = {
+        initialCapital,
+        totalPnl,
+        tradeCount: userTrades.length,
+        pnlPercent: initialCapital > 0 ? (totalPnl / initialCapital) * 100 : null,
+        currency: currencies.length === 1 ? currencies[0] : currencies.length > 1 ? 'MULTI' : 'USD'
+      };
+    });
+    return map;
+  }, [users, accounts, trades]);
+
   const stats = useMemo(() => ({
     total: users.length,
     active: users.filter(u => u.status === 'active').length,
@@ -90,9 +113,14 @@ export function AdminConsole() {
     expired: users.filter(u => { const d = remaining(u); return d !== null && d < 0; }).length
   }), [users]);
 
+  const orderedUsers = useMemo(() => [...users].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()), [users]);
+  const recentCutoff = Date.now() - 7 * DAY;
+  const newUsers = orderedUsers.filter(u => new Date(u.createdAt).getTime() >= recentCutoff);
+  const pendingPlanUsers = orderedUsers.filter(u => !!u.pendingPlan);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return users.filter(u => {
+    return orderedUsers.filter(u => {
       const d = remaining(u);
       const text = !q || u.email.toLowerCase().includes(q) || (u.displayName || '').toLowerCase().includes(q);
       const ok = filter === 'all' ||
@@ -103,7 +131,7 @@ export function AdminConsole() {
         (filter === 'expired' && d !== null && d < 0);
       return text && ok;
     });
-  }, [users, search, filter]);
+  }, [orderedUsers, search, filter]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
   const visible = filtered.slice((page - 1) * perPage, page * perPage);
@@ -199,6 +227,29 @@ export function AdminConsole() {
 
         {error && <div className="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-xs text-rose-700">{error}</div>}
 
+        <section className="grid xl:grid-cols-2 gap-4">
+          <div className="rounded-[24px] border border-emerald-100 bg-emerald-50/70 p-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div><div className="text-[9px] font-bold uppercase tracking-wider text-emerald-700">Nouveaux utilisateurs</div><h2 className="mt-1 text-sm font-black text-slate-900">{newUsers.length} inscription{newUsers.length > 1 ? 's' : ''} récente{newUsers.length > 1 ? 's' : ''}</h2></div>
+              <span className="rounded-full bg-white px-2.5 py-1 text-[9px] font-bold text-emerald-700 border border-emerald-100">7 derniers jours</span>
+            </div>
+            <div className="mt-3 space-y-2">
+              {newUsers.slice(0, 4).map(u => <button key={u.uid} onClick={() => openManage(u)} className="flex w-full items-center justify-between rounded-xl bg-white px-3 py-2 text-left border border-emerald-100 hover:border-emerald-200"><span><b className="block text-[10px] text-slate-800">{u.displayName || 'Sans nom'}</b><span className="text-[9px] text-slate-400">{u.email}</span></span><span className="text-[8px] font-bold text-emerald-700">NOUVEAU</span></button>)}
+              {!newUsers.length && <p className="text-[10px] text-slate-400">Aucune nouvelle inscription sur les 7 derniers jours.</p>}
+            </div>
+          </div>
+          <div className="rounded-[24px] border border-blue-100 bg-blue-50/70 p-4 shadow-sm">
+            <div className="flex items-center justify-between">
+              <div><div className="text-[9px] font-bold uppercase tracking-wider text-blue-700">Demandes de changement de plan</div><h2 className="mt-1 text-sm font-black text-slate-900">{pendingPlanUsers.length} demande{pendingPlanUsers.length > 1 ? 's' : ''} à traiter</h2></div>
+              <button onClick={() => setFilter('pending')} className="rounded-xl bg-white px-3 py-1.5 text-[9px] font-bold text-blue-700 border border-blue-100">Voir tout</button>
+            </div>
+            <div className="mt-3 space-y-2">
+              {pendingPlanUsers.slice(0, 4).map(u => <button key={u.uid} onClick={() => openManage(u)} className="flex w-full items-center justify-between rounded-xl bg-white px-3 py-2 text-left border border-blue-100 hover:border-blue-200"><span><b className="block text-[10px] text-slate-800">{u.displayName || 'Sans nom'}</b><span className="text-[9px] text-slate-400">{u.email}</span></span><span className="text-[9px] font-bold text-blue-700">→ {planLabel(u.pendingPlan!)}</span></button>)}
+              {!pendingPlanUsers.length && <p className="text-[10px] text-slate-400">Aucune demande en attente.</p>}
+            </div>
+          </div>
+        </section>
+
         <section className="grid lg:grid-cols-[1fr_360px] gap-4">
           <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
@@ -221,10 +272,10 @@ export function AdminConsole() {
 
         <section className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm">
           {loading ? <div className="p-16 text-center text-xs text-slate-400">Chargement des utilisateurs...</div> : visible.length === 0 ? <div className="p-16 text-center"><Users className="mx-auto w-9 h-9 text-slate-300" /><p className="mt-3 text-sm font-bold text-slate-600">Aucun utilisateur</p></div> :
-            <><div className="overflow-x-auto"><table className="w-full min-w-[1050px]"><thead className="border-b border-slate-100 bg-slate-50/80"><tr className="text-left text-[9px] font-bold uppercase tracking-[.14em] text-slate-400"><th className="px-5 py-3">Utilisateur</th><th className="px-3 py-3">Plan</th><th className="px-3 py-3">Paiement</th><th className="px-3 py-3">Échéance</th><th className="px-3 py-3">Temps</th><th className="px-3 py-3">Statut</th><th className="px-5 py-3 text-right">Action</th></tr></thead>
-            <tbody>{visible.map(u => {
-              const d = remaining(u); const expired = d !== null && d < 0; const soon = d !== null && d >= 0 && d <= 5;
-              return <tr key={u.uid} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/70"><td className="px-5 py-4"><button onClick={() => openManage(u)} className="text-left"><b className="text-xs text-slate-800 hover:text-blue-700">{u.displayName || 'Sans nom'}</b><span className="mt-1 block text-[10px] text-slate-400">{u.email}</span></button></td><td className="px-3 py-4"><span className={'inline-flex rounded-lg border px-2.5 py-1 text-[10px] font-bold ' + planClass(u.plan)}>{planLabel(u.plan)}</span>{u.pendingPlan && <span className="mt-1 block text-[9px] text-blue-600">→ {planLabel(u.pendingPlan)}</span>}</td><td className="px-3 py-4"><b className="text-[10px] text-slate-700">{u.paymentStatus === 'paid' ? 'Confirmé' : u.paymentStatus === 'refunded' ? 'Remboursé' : 'Non payé'}</b><span className="mt-1 block text-[9px] text-slate-400">{fmt(u.paymentDate)}</span></td><td className={'px-3 py-4 text-[10px] font-semibold ' + (expired ? 'text-rose-600' : soon ? 'text-amber-600' : 'text-slate-600')}>{d === null ? 'Aucune' : fmt(u.subscriptionExpiresAt)}</td><td className="px-3 py-4 text-[10px] font-bold">{d === null ? <span className="text-slate-400">Illimité</span> : <span className={expired ? 'text-rose-600' : soon ? 'text-amber-600' : 'text-emerald-600'}>{expired ? '-' + Math.abs(d) : d} j</span>}</td><td className="px-3 py-4"><span className={'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[9px] font-bold ' + (u.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700')}><span className={'h-1.5 w-1.5 rounded-full ' + (u.status === 'active' ? 'bg-emerald-500' : 'bg-rose-500')} />{u.status === 'active' ? 'Actif' : 'Suspendu'}</span></td><td className="px-5 py-4 text-right"><button onClick={() => openManage(u)} className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-3 py-2 text-[10px] font-bold text-white hover:bg-slate-800"><Edit3 className="w-3.5 h-3.5" />Gérer</button></td></tr>;
+            <><div className="overflow-x-auto"><table className="w-full min-w-[1050px]"><thead className="border-b border-slate-100 bg-slate-50/80"><tr className="text-left text-[9px] font-bold uppercase tracking-[.14em] text-slate-400"><th className="px-3 py-3 text-center">#</th><th className="px-5 py-3">Utilisateur</th><th className="px-3 py-3">Plan</th><th className="px-3 py-3">P&L</th><th className="px-3 py-3">Capital initial</th><th className="px-3 py-3">Trades</th><th className="px-3 py-3">Paiement</th><th className="px-3 py-3">Échéance</th><th className="px-3 py-3">Temps</th><th className="px-3 py-3">Statut</th><th className="px-5 py-3 text-right">Action</th></tr></thead>
+            <tbody>{visible.map((u, index) => {
+              const d = remaining(u); const metrics = userMetrics[u.uid] || { initialCapital: 0, totalPnl: 0, tradeCount: 0, pnlPercent: null, currency: 'USD' }; const expired = d !== null && d < 0; const soon = d !== null && d >= 0 && d <= 5;
+              return <tr key={u.uid} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/70"><td className="px-3 py-4 text-center"><span className="inline-flex h-6 min-w-6 items-center justify-center rounded-lg bg-slate-100 px-1.5 text-[9px] font-black text-slate-500">{(page - 1) * perPage + index + 1}</span></td><td className="px-5 py-4"><button onClick={() => openManage(u)} className="text-left"><b className="text-xs text-slate-800 hover:text-blue-700">{u.displayName || 'Sans nom'}</b><span className="mt-1 block text-[10px] text-slate-400">{u.email}</span></button></td><td className="px-3 py-4"><span className={'inline-flex rounded-lg border px-2.5 py-1 text-[10px] font-bold ' + planClass(u.plan)}>{planLabel(u.plan)}</span>{u.pendingPlan && <span className="mt-1 block text-[9px] text-blue-600">→ {planLabel(u.pendingPlan)}</span>}</td><td className="px-3 py-4"><b className={metrics.pnlPercent !== null ? (metrics.pnlPercent >= 0 ? 'text-[10px] text-emerald-600' : 'text-[10px] text-rose-600') : 'text-[10px] text-slate-400'}>{metrics.pnlPercent !== null ? (metrics.pnlPercent >= 0 ? '+' : '') + metrics.pnlPercent.toFixed(2) + '%' : '—'}</b><span className="mt-1 block text-[9px] text-slate-400">{metrics.totalPnl >= 0 ? '+' : ''}{metrics.totalPnl.toFixed(2)}</span></td><td className="px-3 py-4 text-[10px] font-semibold text-slate-700">{metrics.initialCapital > 0 ? metrics.initialCapital.toLocaleString('fr-FR', { maximumFractionDigits: 2 }) + ' ' + metrics.currency : '—'}</td><td className="px-3 py-4"><span className="inline-flex min-w-8 justify-center rounded-lg bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-700">{metrics.tradeCount}</span></td><td className="px-3 py-4"><b className="text-[10px] text-slate-700">{u.paymentStatus === 'paid' ? 'Confirmé' : u.paymentStatus === 'refunded' ? 'Remboursé' : 'Non payé'}</b><span className="mt-1 block text-[9px] text-slate-400">{fmt(u.paymentDate)}</span></td><td className={'px-3 py-4 text-[10px] font-semibold ' + (expired ? 'text-rose-600' : soon ? 'text-amber-600' : 'text-slate-600')}>{d === null ? 'Aucune' : fmt(u.subscriptionExpiresAt)}</td><td className="px-3 py-4 text-[10px] font-bold">{d === null ? <span className="text-slate-400">Illimité</span> : <span className={expired ? 'text-rose-600' : soon ? 'text-amber-600' : 'text-emerald-600'}>{expired ? '-' + Math.abs(d) : d} j</span>}</td><td className="px-3 py-4"><span className={'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[9px] font-bold ' + (u.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700')}><span className={'h-1.5 w-1.5 rounded-full ' + (u.status === 'active' ? 'bg-emerald-500' : 'bg-rose-500')} />{u.status === 'active' ? 'Actif' : 'Suspendu'}</span></td><td className="px-5 py-4 text-right"><button onClick={() => openManage(u)} className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-3 py-2 text-[10px] font-bold text-white hover:bg-slate-800"><Edit3 className="w-3.5 h-3.5" />Gérer</button></td></tr>;
             })}</tbody></table></div><div className="flex items-center justify-between border-t border-slate-100 px-5 py-3"><span className="text-[10px] text-slate-400">Page {page} / {totalPages}</span><div className="flex gap-1"><button disabled={page === 1} onClick={() => setPage(page - 1)} className="rounded-lg border border-slate-200 p-2 disabled:opacity-30"><ChevronLeft className="w-3.5 h-3.5" /></button><button disabled={page === totalPages} onClick={() => setPage(page + 1)} className="rounded-lg border border-slate-200 p-2 disabled:opacity-30"><ChevronRight className="w-3.5 h-3.5" /></button></div></div></>}
         </section>
 
