@@ -108,10 +108,30 @@ export async function onRequest(context: { request: Request; env: Env }) {
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
+    const providerError =
+      typeof data === 'object' && data && 'error' in data
+        ? (data as { error?: { code?: unknown; status?: unknown; message?: unknown } }).error
+        : undefined;
+
+    console.error('Gemini API error:', {
+      status: response.status,
+      code: providerError?.code,
+      providerStatus: providerError?.status,
+      message: providerError?.message,
+    });
+
     return json(
       {
         error: 'Le service IA n’a pas pu répondre pour le moment.',
-        details: typeof data === 'object' && data && 'error' in data ? (data as { error?: unknown }).error : undefined,
+        details:
+          providerError &&
+          typeof providerError === 'object'
+            ? {
+                code: providerError.code,
+                status: providerError.status,
+                message: providerError.message,
+              }
+            : undefined,
       },
       502
     );
