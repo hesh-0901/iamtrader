@@ -127,6 +127,25 @@ export async function onRequest(context: { request: Request; env: Env }) {
   }
 
   if (!response.ok) {
+    let modelCheckStatus: number | undefined;
+    let modelCheckBody = '';
+
+    try {
+      const modelCheck = await fetch(
+        `https://api.openai.com/v1/models/${encodeURIComponent(model)}`,
+        {
+          method: 'GET',
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+          },
+        }
+      );
+      modelCheckStatus = modelCheck.status;
+      modelCheckBody = (await modelCheck.text()).slice(0, 4000);
+    } catch (error) {
+      console.error('OpenAI model check failed:', error);
+    }
+
     let providerError: {
       message?: unknown;
       type?: unknown;
@@ -162,6 +181,8 @@ export async function onRequest(context: { request: Request; env: Env }) {
           message: providerError?.message,
           param: providerError?.param,
           rawResponse: responseText.slice(0, 4000),
+          modelCheckStatus,
+          modelCheckBody,
         },
       },
       502
