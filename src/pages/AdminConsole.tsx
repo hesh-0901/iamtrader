@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Activity, AlertTriangle, BellRing, CalendarDays, ChevronLeft, ChevronRight, CreditCard, Edit3, History, RefreshCw, Search, ShieldCheck, UserCheck, UserX, Users, X, XCircle } from 'lucide-react';
+import { Activity, AlertTriangle, BellRing, ChevronLeft, ChevronRight, CreditCard, Edit3, History, RefreshCw, Search, ShieldCheck, UserCheck, UserX, Users, X, XCircle } from 'lucide-react';
 import { AdminLog, SubscriptionPlan, UserProfile, UserStatus, TradingAccount, Trade } from '../types';
 import { addAdminLog, getAdminLogs, getAllAccounts, getAllTrades, getAllUsers, subscribeAllUsers, updateUserRoleAndPlan } from '../services/firestore';
 import { useToast } from '../components/common/Toast';
@@ -349,14 +349,6 @@ export function AdminConsole() {
               </div>
               <label className="mt-3 block text-[10px] font-bold text-slate-500">Date d’échéance exacte<input type="date" value={expiry} onChange={e => setExpiry(e.target.value)} className="mt-1.5 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-semibold" /></label>
               <button disabled={busy} onClick={saveManual} className="mt-4 w-full rounded-xl bg-[#0b1f35] py-3 text-xs font-bold text-white disabled:opacity-50">{busy ? 'Enregistrement...' : 'Enregistrer les modifications'}</button>
-            </section>
-
-            <section className="rounded-2xl border border-slate-200 bg-white p-5">
-              <div className="flex items-center gap-2"><CalendarDays className="w-4 h-4 text-emerald-600" /><div><h3 className="text-sm font-black text-slate-900">Jours d’abonnement</h3><p className="mt-1 text-[10px] text-slate-400">Ajoutez, retirez ou définissez précisément la durée restante.</p></div></div>
-              <div className="mt-4 grid grid-cols-4 gap-2"><button disabled={busy} onClick={() => adjustDays(-30)} className="rounded-xl bg-rose-50 py-2.5 text-[10px] font-bold text-rose-700">−30 j</button><button disabled={busy} onClick={() => adjustDays(-1)} className="rounded-xl border border-rose-100 bg-white py-2.5 text-[10px] font-bold text-rose-600">−1 j</button><button disabled={busy} onClick={() => adjustDays(1)} className="rounded-xl border border-emerald-100 bg-white py-2.5 text-[10px] font-bold text-emerald-700">+1 j</button><button disabled={busy} onClick={() => adjustDays(30)} className="rounded-xl bg-emerald-50 py-2.5 text-[10px] font-bold text-emerald-700">+30 j</button></div>
-              <div className="mt-2 flex gap-2"><button disabled={busy} onClick={() => adjustDays(7)} className="flex-1 rounded-xl border border-emerald-100 bg-white py-2.5 text-[10px] font-bold text-emerald-700">+7 jours</button><button disabled={busy} onClick={() => adjustDays(90)} className="flex-1 rounded-xl border border-emerald-100 bg-white py-2.5 text-[10px] font-bold text-emerald-700">+90 jours</button></div>
-              <div className="mt-3 flex gap-2"><input type="number" value={days} onChange={e => setDays(e.target.value)} placeholder="Ex. 14 ou -3" className="flex-1 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs outline-none" /><button disabled={busy} onClick={customDays} className="rounded-xl bg-blue-600 px-5 text-[10px] font-bold text-white">Appliquer</button></div>
-              <div className="mt-3 flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 p-3"><span className="text-[10px] text-slate-500">Échéance actuelle</span><b className="text-xs text-slate-800">{expiry ? fmt(isoDate(expiry)) : 'Aucune'}</b></div>
             </section>
 
             <section className="rounded-2xl border border-slate-200 bg-white p-5">
