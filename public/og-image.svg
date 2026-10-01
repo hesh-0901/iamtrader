@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+<defs>
+ <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#f7faf9"/><stop offset=".55" stop-color="#eef5f8"/><stop offset="1" stop-color="#dfeef2"/></linearGradient>
+ <linearGradient id="accent" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#00a982"/><stop offset="1" stop-color="#2f6bff"/></linearGradient>
+ <filter id="shadow"><feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#10233a" flood-opacity=".16"/></filter>
+</defs>
+<rect width="1200" height="630" rx="36" fill="url(#bg)"/>
+<circle cx="1070" cy="40" r="260" fill="#0b1f35"/>
+<path d="M780 540 C900 410 1020 360 1200 330 L1200 630 L720 630Z" fill="#0b1f35" opacity=".96"/>
+<g transform="translate(76 76)">
+ <path d="M0 46 L55 0 L38 48 L76 48 L18 92 L34 46Z" fill="url(#accent)"/>
+ <text x="104" y="50" font-family="Arial,Helvetica,sans-serif" font-size="54" font-weight="800" fill="#0b1f35">IAM</text>
+ <text x="215" y="50" font-family="Arial,Helvetica,sans-serif" font-size="54" font-weight="800" fill="#1677e8">TRADER</text>
+ <text x="105" y="84" font-family="Arial,Helvetica,sans-serif" font-size="14" letter-spacing="5" fill="#60758d">TRADING JOURNAL &amp; PERFORMANCE ANALYTICS</text>
+ <rect x="0" y="138" width="70" height="6" rx="3" fill="#2f6bff"/>
+ <text x="0" y="205" font-family="Arial,Helvetica,sans-serif" font-size="34" font-weight="800" fill="#10233a">Analysez. Progressez.</text>
+ <text x="0" y="248" font-family="Arial,Helvetica,sans-serif" font-size="34" font-weight="800" fill="#10233a">Devenez un meilleur trader.</text>
+ <text x="0" y="292" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#60758d">Journal de trading, performance, risque et discipline</text>
+ <g transform="translate(0 340)">
+  <rect width="156" height="100" rx="20" fill="#fff" filter="url(#shadow)"/>
+  <rect x="176" width="156" height="100" rx="20" fill="#fff" filter="url(#shadow)"/>
+  <rect x="352" width="156" height="100" rx="20" fill="#fff" filter="url(#shadow)"/>
+  <rect x="528" width="156" height="100" rx="20" fill="#fff" filter="url(#shadow)"/>
+  <text x="24" y="42" font-family="Arial" font-size="20" font-weight="700" fill="#10233a">Journal</text>
+  <text x="24" y="70" font-family="Arial" font-size="13" fill="#60758d">Vos trades</text>
+  <text x="200" y="42" font-family="Arial" font-size="20" font-weight="700" fill="#10233a">Statistiques</text>
+  <text x="200" y="70" font-family="Arial" font-size="13" fill="#60758d">Vos données</text>
+  <text x="376" y="42" font-family="Arial" font-size="20" font-weight="700" fill="#10233a">Objectifs</text>
+  <text x="376" y="70" font-family="Arial" font-size="13" fill="#60758d">Votre progression</text>
+  <text x="552" y="42" font-family="Arial" font-size="20" font-weight="700" fill="#10233a">Performance</text>
+  <text x="552" y="70" font-family="Arial" font-size="13" fill="#60758d">Votre edge</text>
+ </g>
+</g>
+<g transform="translate(760 118)" filter="url(#shadow)">
+ <rect width="360" height="330" rx="24" fill="#fff"/>
+ <rect width="360" height="54" rx="24" fill="#10233a"/>
+ <text x="24" y="34" font-family="Arial" font-size="16" font-weight="700" fill="#fff">IAMTRADER · Dashboard</text>
+ <text x="24" y="91" font-family="Arial" font-size="12" fill="#60758d">Performance</text>
+ <text x="24" y="124" font-family="Arial" font-size="30" font-weight="800" fill="#10233a">+18.4%</text>
+ <path d="M24 250 C65 220 82 235 115 190 S170 205 202 150 S260 165 320 88" fill="none" stroke="#00a982" stroke-width="6"/>
+ <path d="M24 250 C65 220 82 235 115 190 S170 205 202 150 S260 165 320 88 L320 286 L24 286Z" fill="#00a982" opacity=".08"/>
+ <line x1="24" y1="286" x2="320" y2="286" stroke="#dce7e3"/>
+</g>
+<text x="785" y="510" font-family="Arial,Helvetica,sans-serif" font-size="20" font-weight="700" fill="#fff">Une plateforme pensée pour les traders.</text>
+</svg>
