@@ -16,6 +16,8 @@ import {
   ChevronDown,
   Users,
   PlayCircle,
+  Mail,
+  MessageSquare,
 } from 'lucide-react';
 
 interface LandingPageProps {
@@ -116,6 +118,7 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
           <a href="#journal" className="hover:text-[#0a192f] transition-colors">Fonctionnalités</a>
           <a href="#trader-score" className="hover:text-[#0a192f] transition-colors">Trader Score</a>
           <a href="#pricing" className="hover:text-[#0a192f] transition-colors">Tarifs</a>
+          <a href="#contact" className="hover:text-[#0a192f] transition-colors">Contact</a>
         </nav>
 
         <div className="flex items-center gap-2">
@@ -351,6 +354,45 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
           </div>
         </section>
 
+        <section id="contact" className="px-6 sm:px-12 py-20 bg-[#f6f9fc] border-y border-[#dfe8ef] scroll-mt-20">
+          <div className="max-w-6xl mx-auto">
+            <div className="grid lg:grid-cols-[1fr_1.15fr] gap-10 items-stretch">
+              <div className="rounded-3xl bg-[#0a192f] text-white p-8 sm:p-10 flex flex-col justify-between">
+                <div>
+                  <span className="text-[11px] font-bold uppercase tracking-[0.18em] text-[#5ce0c1]">Contact</span>
+                  <h2 className="text-3xl sm:text-4xl font-black tracking-tight mt-3">Besoin d’aide ou d’une information ?</h2>
+                  <p className="mt-5 text-sm text-slate-300 leading-relaxed">
+                    Notre équipe est disponible pour répondre à vos questions concernant IAMTRADER, votre compte, la plateforme ou nos offres.
+                  </p>
+                </div>
+                <a
+                  href="mailto:support@iamtrader.com"
+                  className="mt-8 inline-flex w-fit items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-white hover:bg-white/10 transition-colors"
+                >
+                  <Mail className="w-4 h-4 text-[#5ce0c1]" />
+                  support@iamtrader.com
+                </a>
+              </div>
+
+              <div className="rounded-3xl bg-white border border-[#dfe8ef] p-8 sm:p-10 shadow-[0_12px_40px_rgba(16,35,58,0.05)]">
+                <div className="w-11 h-11 rounded-xl bg-[#e5faf5] text-[#00a982] flex items-center justify-center mb-5">
+                  <MessageSquare className="w-5 h-5" />
+                </div>
+                <h3 className="text-xl font-black">Parlons de votre besoin</h3>
+                <p className="mt-2 text-sm text-[#71839a] leading-relaxed">
+                  Pour nous contacter, utilisez directement notre adresse support. Votre logiciel de messagerie s’ouvrira automatiquement.
+                </p>
+                <a
+                  href="mailto:support@iamtrader.com?subject=Contact%20IAMTRADER"
+                  className="mt-7 inline-flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 rounded-xl bg-[#00a982] text-white text-sm font-bold hover:bg-[#008f70] transition-colors"
+                >
+                  Écrire à IAMTRADER <ArrowRight className="w-4 h-4" />
+                </a>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <section className="px-6 sm:px-12 py-20 bg-[#eafbf6] border-y border-[#ccefe5]">
           <div className="max-w-4xl mx-auto text-center">
             <h2 className="text-3xl sm:text-4xl font-black tracking-tight">Ne vous contentez plus de trader. Comprenez votre trading.</h2>
@@ -368,7 +410,7 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
           </div>
           <div>
             <div className="font-bold mb-3">Plateforme</div>
-            <div className="space-y-2 text-[#71839a]"><a href="#features" className="block hover:text-[#0a192f]">Fonctionnalités</a><a href="#trader-score" className="block hover:text-[#0a192f]">Trader Score</a><a href="#pricing" className="block hover:text-[#0a192f]">Tarifs</a></div>
+            <div className="space-y-2 text-[#71839a]"><a href="#features" className="block hover:text-[#0a192f]">Fonctionnalités</a><a href="#trader-score" className="block hover:text-[#0a192f]">Trader Score</a><a href="#pricing" className="block hover:text-[#0a192f]">Tarifs</a><a href="#contact" className="block hover:text-[#0a192f]">Contact</a></div>
           </div>
           <div>
             <div className="font-bold mb-3">Accès</div>
