@@ -58,10 +58,17 @@ export function AdminConsole() {
     setError('');
     setLogs([]);
     try {
-      const [userData, accountData, tradeData] = await Promise.all([getAllUsers(), getAllAccounts(), getAllTrades()]);
+      const userData = await getAllUsers();
       setUsers(userData);
-      setAccounts(accountData);
-      setTrades(tradeData);
+      try {
+        const [accountData, tradeData] = await Promise.all([getAllAccounts(), getAllTrades()]);
+        setAccounts(accountData);
+        setTrades(tradeData);
+      } catch (metricsError) {
+        console.warn('IAMTRADER Admin performance metrics unavailable:', metricsError);
+        setAccounts([]);
+        setTrades([]);
+      }
     } catch (e: any) {
       console.error('IAMTRADER Admin users load error:', e);
       const code = e?.code || 'unknown';
