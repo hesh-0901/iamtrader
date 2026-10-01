@@ -3,7 +3,7 @@ import { onRequestPost as handleContactReply } from '../functions/api/contact-re
 
 interface Env {
   ASSETS: Fetcher;
-  OPENAI_API_KEY?: string;
+  OPENAI_API_KEY: string;
   OPENAI_MODEL?: string;
   RESEND_API_KEY?: string;
   RESEND_FROM_EMAIL?: string;
