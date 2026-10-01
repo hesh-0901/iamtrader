@@ -290,6 +290,9 @@ export interface ContactMessage {
   handledBy?: string;
   handledAt?: string;
   adminNote?: string;
+  lastReply?: string;
+  repliedAt?: string;
+  repliedBy?: string;
 }
 
 export async function addContactMessage(data: Omit<ContactMessage, 'id' | 'status' | 'createdAt' | 'updatedAt' | 'handledBy' | 'handledAt' | 'adminNote'>): Promise<string> {
@@ -323,7 +326,7 @@ export function subscribeContactMessages(
 
 export async function updateContactMessage(
   messageId: string,
-  data: Partial<Pick<ContactMessage, 'status' | 'adminNote' | 'updatedAt' | 'handledBy' | 'handledAt'>>
+  data: Partial<Pick<ContactMessage, 'status' | 'adminNote' | 'updatedAt' | 'handledBy' | 'handledAt' | 'lastReply' | 'repliedAt' | 'repliedBy'>>
 ): Promise<void> {
   await updateDoc(doc(db, 'contactMessages', messageId), {
     ...data,
