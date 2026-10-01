@@ -105,7 +105,14 @@ export async function onRequest(context: { request: Request; env: Env }) {
     }
   );
 
-  const data = await response.json().catch(() => ({}));
+  const responseText = await response.text();
+
+  let data: unknown = {};
+  try {
+    data = responseText ? JSON.parse(responseText) : {};
+  } catch {
+    data = {};
+  }
 
   if (!response.ok) {
     const providerError =
@@ -118,20 +125,19 @@ export async function onRequest(context: { request: Request; env: Env }) {
       code: providerError?.code,
       providerStatus: providerError?.status,
       message: providerError?.message,
+      rawResponse: responseText.slice(0, 4000),
     });
 
     return json(
       {
         error: 'Le service IA n’a pas pu répondre pour le moment.',
-        details:
-          providerError &&
-          typeof providerError === 'object'
-            ? {
-                code: providerError.code,
-                status: providerError.status,
-                message: providerError.message,
-              }
-            : undefined,
+        details: {
+          httpStatus: response.status,
+          code: providerError?.code,
+          status: providerError?.status,
+          message: providerError?.message,
+          rawResponse: responseText.slice(0, 4000),
+        },
       },
       502
     );
