@@ -1,6 +1,6 @@
 interface Env {
-  OPENAI_API_KEY: string;
-  OPENAI_MODEL?: string;
+  GEMINI_API_KEY: string;
+  GEMINI_MODEL?: string;
 }
 
 type ChatMessage = {
@@ -33,7 +33,7 @@ Règles :
 - Si la question concerne un problème de compte, de paiement ou de données personnelles, propose de contacter le support IAMTRADER.`;
 
 export async function onRequestPost(context: { request: Request; env: Env }) {
-  if (!context.env.OPENAI_API_KEY) {
+  if (!context.env.GEMINI_API_KEY) {
     return json({ error: 'Assistant IA non configuré sur le serveur.' }, 500);
   }
 
@@ -64,24 +64,31 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
     return json({ error: 'Message utilisateur requis.' }, 400);
   }
 
-  const model = context.env.OPENAI_MODEL || 'gpt-5.6-luna';
+  const model = context.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
 
-  const response = await fetch('https://api.openai.com/v1/responses', {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${context.env.OPENAI_API_KEY}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model,
-      instructions: SYSTEM_INSTRUCTIONS,
-      input: safeMessages.map((message) => ({
-        role: message.role,
-        content: [{ type: 'input_text', text: message.content }],
-      })),
-      max_output_tokens: 700,
-    }),
-  });
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+    {
+      method: 'POST',
+      headers: {
+        'x-goog-api-key': context.env.GEMINI_API_KEY,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        systemInstruction: {
+          parts: [{ text: SYSTEM_INSTRUCTIONS }],
+        },
+        contents: safeMessages.map((message) => ({
+          role: message.role === 'assistant' ? 'model' : 'user',
+          parts: [{ text: message.content }],
+        })),
+        generationConfig: {
+          maxOutputTokens: 700,
+          temperature: 0.4,
+        },
+      }),
+    }
+  );
 
   const data = await response.json().catch(() => ({}));
 
@@ -96,15 +103,13 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
   }
 
   const outputText =
-    typeof (data as { output_text?: unknown }).output_text === 'string'
-      ? (data as { output_text: string }).output_text
-      : Array.isArray((data as { output?: unknown[] }).output)
-        ? (data as { output: Array<{ content?: Array<{ type?: string; text?: string }> }> }).output
-            .flatMap((item) => item.content || [])
-            .filter((item) => item.type === 'output_text' && typeof item.text === 'string')
-            .map((item) => item.text)
-            .join('\n')
-        : '';
+    typeof (data as {
+      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
+    }).candidates?.[0]?.content?.parts?.[0]?.text === 'string'
+      ? (data as {
+          candidates: Array<{ content: { parts: Array<{ text: string }> } }>;
+        }).candidates[0].content.parts.map((part) => part.text).join('\n')
+      : '';
 
   if (!outputText.trim()) {
     return json({ error: 'La réponse de l’assistant est vide.' }, 502);
