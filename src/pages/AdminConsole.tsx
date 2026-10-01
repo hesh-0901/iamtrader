@@ -287,6 +287,32 @@ export function AdminConsole() {
         ))}
       </section>
 
+      <section className="grid gap-4 lg:grid-cols-[1.25fr_0.75fr]">
+        <div className="relative overflow-hidden rounded-2xl border border-[#dce8e3] bg-gradient-to-br from-[#10233a] via-[#173b55] to-[#176b61] p-5 text-white shadow-[0_14px_40px_rgba(16,35,58,0.12)]">
+          <div className="absolute -right-12 -top-12 h-32 w-32 rounded-full bg-cyan-300/15 blur-2xl" />
+          <div className="relative">
+            <div className="flex items-center justify-between gap-3">
+              <div><div className="text-[9px] font-bold uppercase tracking-[0.16em] text-cyan-200">Pilotage administratif</div><h3 className="mt-1 text-lg font-black">Vue opérationnelle</h3><p className="mt-1 text-[11px] leading-5 text-white/70">Les indicateurs qui nécessitent une intervention sont regroupés ici.</p></div>
+              <div className="rounded-xl bg-white/10 p-2.5"><ShieldCheck className="h-4 w-4 text-cyan-200" /></div>
+            </div>
+            <div className="mt-5 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <div className="rounded-xl bg-white/10 p-3"><div className="text-[9px] font-semibold uppercase text-white/55">À confirmer</div><div className="mt-1 text-xl font-black">{stats.pending}</div><div className="mt-0.5 text-[9px] text-white/60">demandes</div></div>
+              <div className="rounded-xl bg-white/10 p-3"><div className="text-[9px] font-semibold uppercase text-white/55">Échéance</div><div className="mt-1 text-xl font-black">{stats.expiring}</div><div className="mt-0.5 text-[9px] text-white/60">≤ 5 jours</div></div>
+              <div className="rounded-xl bg-white/10 p-3"><div className="text-[9px] font-semibold uppercase text-white/55">Expirés</div><div className="mt-1 text-xl font-black">{stats.expired}</div><div className="mt-0.5 text-[9px] text-white/60">à traiter</div></div>
+              <div className="rounded-xl bg-white/10 p-3"><div className="text-[9px] font-semibold uppercase text-white/55">Paiements</div><div className="mt-1 text-xl font-black">{stats.paid}</div><div className="mt-0.5 text-[9px] text-white/60">confirmés</div></div>
+            </div>
+          </div>
+        </div>
+        <div className="rounded-2xl border border-[#e0e9e5] bg-white p-5 shadow-sm">
+          <div className="flex items-center gap-2"><div className="rounded-xl bg-amber-50 p-2 text-amber-600"><AlertTriangle className="h-4 w-4" /></div><div><div className="text-[9px] font-bold uppercase tracking-[0.14em] text-amber-600">À traiter maintenant</div><h3 className="mt-0.5 text-sm font-black text-[#10233a]">File d’actions</h3></div></div>
+          <div className="mt-4 space-y-2">
+            <button onClick={() => setFilter('pending')} className="flex w-full items-center justify-between rounded-xl bg-[#f7f9fc] px-3 py-2.5 text-left hover:bg-[#eef4ff]"><span className="flex items-center gap-2 text-[11px] font-semibold text-[#314861]"><Clock3 className="h-3.5 w-3.5 text-[#315fc7]" />Plans à confirmer</span><span className="rounded-full bg-[#eaf1ff] px-2 py-0.5 text-[10px] font-black text-[#315fc7]">{stats.pending}</span></button>
+            <button onClick={() => setFilter('expiring')} className="flex w-full items-center justify-between rounded-xl bg-[#fffaf0] px-3 py-2.5 text-left hover:bg-[#fff4d9]"><span className="flex items-center gap-2 text-[11px] font-semibold text-[#5f4b27]"><AlertTriangle className="h-3.5 w-3.5 text-[#d99020]" />Échéances proches</span><span className="rounded-full bg-[#fff0c8] px-2 py-0.5 text-[10px] font-black text-[#9a6a16]">{stats.expiring}</span></button>
+            <button onClick={() => setFilter('expired')} className="flex w-full items-center justify-between rounded-xl bg-[#fff4f6] px-3 py-2.5 text-left hover:bg-[#ffe9ee]"><span className="flex items-center gap-2 text-[11px] font-semibold text-[#7a3041]"><XCircle className="h-3.5 w-3.5 text-[#ef476f]" />Abonnements expirés</span><span className="rounded-full bg-[#ffe2e8] px-2 py-0.5 text-[10px] font-black text-[#d9365a]">{stats.expired}</span></button>
+          </div>
+        </div>
+      </section>
+
       {loadError && (
         <div className="p-4 rounded-2xl bg-[#fff8ec] border border-[#f2dfb5] text-xs text-[#7b5a20]">
           <div className="font-semibold mb-1">Accès administrateur requis</div>
