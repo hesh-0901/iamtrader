@@ -155,3 +155,151 @@ button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-
 .iamtrader-shell .bg-\[\#e7faf3\]{background-color:#DFFBF3!important}
 .iamtrader-shell .bg-\[\#f7fbf9\]{background-color:#F5F9FC!important}
 .iamtrader-shell .border-\[\#e5ece9\],.iamtrader-shell .border-\[\#edf2f0\]{border-color:#DCE5EC!important}
+
+
+/* =========================================================
+   IAMTRADER 2026 — Friendly Premium SaaS Visual System
+   Palette aligned with the Settings / Subscription experience.
+   Presentation only: no business logic changes.
+   ========================================================= */
+
+.iamtrader-shell {
+  --iam-navy-950: #081B2D;
+  --iam-navy-900: #0B1F35;
+  --iam-navy-800: #102B46;
+  --iam-mint: #08B77A;
+  --iam-mint-strong: #00A982;
+  --iam-mint-soft: #E7FAF3;
+  --iam-cyan: #22C7D6;
+  --iam-cyan-soft: #E9FBFD;
+  --iam-indigo: #4F46E5;
+  --iam-indigo-soft: #EEF0FF;
+  --iam-violet: #7C5CFC;
+  --iam-violet-soft: #F2EEFF;
+  --iam-sky: #3B82F6;
+  --iam-sky-soft: #ECF4FF;
+  --iam-amber: #F59E0B;
+  --iam-amber-soft: #FFF7E5;
+  --iam-rose: #F05A7E;
+  --iam-rose-soft: #FFF0F4;
+}
+
+/* Surfaces */
+.iamtrader-shell .bg-white { background-color:#FFFFFF !important; }
+.iamtrader-shell [class*="bg-slate-50"] { background-color:#F5F8FB !important; }
+.iamtrader-shell [class*="bg-slate-100"] { background-color:#EDF3F7 !important; }
+
+/* Navy */
+.iamtrader-shell .bg-slate-900,
+.iamtrader-shell .bg-[#0b1f35],
+.iamtrader-shell .bg-[#0B1F35],
+.iamtrader-shell .bg-[#0a192f],
+.iamtrader-shell .bg-[#0A192F] {
+  background-color: var(--iam-navy-900) !important;
+  color: #fff !important;
+}
+.iamtrader-shell .text-slate-950,
+.iamtrader-shell .text-slate-900 { color: var(--iam-navy-950) !important; }
+
+/* Mint / primary */
+.iamtrader-shell .bg-emerald-500 {
+  background-color: var(--iam-mint) !important;
+  color: #fff !important;
+}
+.iamtrader-shell .bg-emerald-600 {
+  background-color: var(--iam-mint-strong) !important;
+  color: #fff !important;
+}
+.iamtrader-shell .text-emerald-600,
+.iamtrader-shell .text-emerald-700 { color: var(--iam-mint-strong) !important; }
+
+/* Indigo / Plus */
+.iamtrader-shell .bg-indigo-600 {
+  background-color: var(--iam-indigo) !important;
+  color: #fff !important;
+}
+.iamtrader-shell .bg-indigo-700 {
+  background-color: #4338CA !important;
+  color: #fff !important;
+}
+.iamtrader-shell .text-indigo-600,
+.iamtrader-shell .text-indigo-700 { color: var(--iam-indigo) !important; }
+
+/* Violet / premium analytics */
+.iamtrader-shell .bg-violet-600 {
+  background-color: var(--iam-violet) !important;
+  color: #fff !important;
+}
+.iamtrader-shell .bg-violet-700 {
+  background-color: #6847E8 !important;
+  color: #fff !important;
+}
+.iamtrader-shell .text-violet-600,
+.iamtrader-shell .text-violet-700 { color: #6847E8 !important; }
+
+/* Cyan / Community */
+.iamtrader-shell .bg-cyan-500 {
+  background-color: var(--iam-cyan) !important;
+  color: #07313A !important;
+}
+.iamtrader-shell .bg-cyan-600 {
+  background-color: #13AEBE !important;
+  color: #fff !important;
+}
+.iamtrader-shell .text-cyan-600,
+.iamtrader-shell .text-cyan-700 { color: #0793A3 !important; }
+
+/* Blue / information */
+.iamtrader-shell .bg-blue-600 {
+  background-color: var(--iam-sky) !important;
+  color: #fff !important;
+}
+.iamtrader-shell .bg-blue-700 {
+  background-color: #2563EB !important;
+  color: #fff !important;
+}
+
+/* Soft semantic surfaces */
+.iamtrader-shell [class*="bg-emerald-50"] { background-color: var(--iam-mint-soft) !important; }
+.iamtrader-shell [class*="bg-cyan-50"] { background-color: var(--iam-cyan-soft) !important; }
+.iamtrader-shell [class*="bg-indigo-50"] { background-color: var(--iam-indigo-soft) !important; }
+.iamtrader-shell [class*="bg-violet-50"] { background-color: var(--iam-violet-soft) !important; }
+.iamtrader-shell [class*="bg-blue-50"] { background-color: var(--iam-sky-soft) !important; }
+.iamtrader-shell [class*="bg-amber-50"] { background-color: var(--iam-amber-soft) !important; }
+.iamtrader-shell [class*="bg-rose-50"] { background-color: var(--iam-rose-soft) !important; }
+
+/* Friendly borders */
+.iamtrader-shell [class*="border-emerald-"] { border-color:#B7EBDD !important; }
+.iamtrader-shell [class*="border-cyan-"] { border-color:#B9EEF2 !important; }
+.iamtrader-shell [class*="border-indigo-"] { border-color:#CDD1FF !important; }
+.iamtrader-shell [class*="border-violet-"] { border-color:#DDD3FF !important; }
+.iamtrader-shell [class*="border-blue-"] { border-color:#C9DCFF !important; }
+
+/* Primary actions use the same mint language as the Settings page. */
+.iamtrader-shell .bg-\[\#00C796\],
+.iamtrader-shell .bg-\[\#00c796\] {
+  background-color: var(--iam-mint) !important;
+  color:#fff !important;
+}
+
+/* Premium cards: slightly softer, more dimensional, less "flat SaaS". */
+.iamtrader-shell .card-premium,
+.iamtrader-shell .saas-surface {
+  border-color:#DCE7EE;
+  box-shadow:0 12px 38px rgba(11,31,53,.055);
+}
+
+/* Selection / focus follows the new mint identity. */
+.iamtrader-shell button:focus-visible,
+.iamtrader-shell select:focus-visible,
+.iamtrader-shell input:focus-visible,
+.iamtrader-shell textarea:focus-visible {
+  outline-color:rgba(8,183,122,.42);
+}
+
+/* Subtle page depth */
+.iamtrader-shell main {
+  background:
+    radial-gradient(circle at 92% 0%, rgba(34,199,214,.045), transparent 25rem),
+    radial-gradient(circle at 4% 18%, rgba(124,92,252,.035), transparent 24rem);
+}
