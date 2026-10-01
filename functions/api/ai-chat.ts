@@ -89,11 +89,6 @@ export async function onRequest(context: { request: Request; env: Env }) {
   const model = (context.env.OPENAI_MODEL || 'gpt-5.6-luna').trim();
   const apiKey = context.env.OPENAI_API_KEY.trim();
 
-  const input = safeMessages.map((message) => ({
-    role: message.role,
-    content: message.content,
-  }));
-
   let response: Response;
   try {
     response = await fetch('https://api.openai.com/v1/responses', {
@@ -104,9 +99,7 @@ export async function onRequest(context: { request: Request; env: Env }) {
       },
       body: JSON.stringify({
         model,
-        instructions: SYSTEM_INSTRUCTIONS,
-        input,
-        max_output_tokens: 700,
+        input: safeMessages[safeMessages.length - 1].content,
       }),
     });
   } catch (error) {
