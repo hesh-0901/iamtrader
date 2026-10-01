@@ -1,0 +1,15 @@
+User-agent: *
+Allow: /
+
+# Private application areas
+Disallow: /dashboard
+Disallow: /journal
+Disallow: /calendar
+Disallow: /performance
+Disallow: /psychology
+Disallow: /trader-score
+Disallow: /accounts
+Disallow: /settings
+Disallow: /admin
+
+Sitemap: https://iamtrader.trade/sitemap.xml
