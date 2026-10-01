@@ -283,29 +283,6 @@ export function AdminConsole() {
 
         {!metricsReady && <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-[11px] text-amber-800"><b>Statistiques de trading indisponibles.</b> Publiez les nouvelles règles Firestore afin que l’administrateur puisse lire les comptes et les trades.</div>}
 
-        <section className="grid xl:grid-cols-2 gap-4">
-          <div className="rounded-[24px] border border-emerald-100 bg-emerald-50/70 p-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div><div className="text-[9px] font-bold uppercase tracking-wider text-emerald-700">Nouveaux utilisateurs</div><h2 className="mt-1 text-sm font-black text-slate-900">{newUsers.length} inscription{newUsers.length > 1 ? 's' : ''} récente{newUsers.length > 1 ? 's' : ''}</h2></div>
-              <span className="rounded-full bg-white px-2.5 py-1 text-[9px] font-bold text-emerald-700 border border-emerald-100">7 derniers jours</span>
-            </div>
-            <div className="mt-3 space-y-2">
-              {newUsers.slice(0, 4).map(u => <button key={u.uid} onClick={() => openManage(u)} className="flex w-full items-center justify-between rounded-xl bg-white px-3 py-2 text-left border border-emerald-100 hover:border-emerald-200"><span><b className="block text-[10px] text-slate-800">{u.displayName || 'Sans nom'}</b><span className="text-[9px] text-slate-400">{u.email}</span></span><span className="text-[8px] font-bold text-emerald-700">NOUVEAU</span></button>)}
-              {!newUsers.length && <p className="text-[10px] text-slate-400">Aucune nouvelle inscription sur les 7 derniers jours.</p>}
-            </div>
-          </div>
-          <div className="rounded-[24px] border border-blue-100 bg-blue-50/70 p-4 shadow-sm">
-            <div className="flex items-center justify-between">
-              <div><div className="text-[9px] font-bold uppercase tracking-wider text-blue-700">Demandes de changement de plan</div><h2 className="mt-1 text-sm font-black text-slate-900">{pendingPlanUsers.length} demande{pendingPlanUsers.length > 1 ? 's' : ''} à traiter</h2></div>
-              <button onClick={() => setFilter('pending')} className="rounded-xl bg-white px-3 py-1.5 text-[9px] font-bold text-blue-700 border border-blue-100">Voir tout</button>
-            </div>
-            <div className="mt-3 space-y-2">
-              {pendingPlanUsers.slice(0, 4).map(u => <button key={u.uid} onClick={() => openManage(u)} className="flex w-full items-center justify-between rounded-xl bg-white px-3 py-2 text-left border border-blue-100 hover:border-blue-200"><span><b className="block text-[10px] text-slate-800">{u.displayName || 'Sans nom'}</b><span className="text-[9px] text-slate-400">{u.email}</span></span><span className="text-[9px] font-bold text-blue-700">→ {planLabel(u.pendingPlan!)}</span></button>)}
-              {!pendingPlanUsers.length && <p className="text-[10px] text-slate-400">Aucune demande en attente.</p>}
-            </div>
-          </div>
-        </section>
-
         <section className="grid lg:grid-cols-[1fr_360px] gap-4">
           <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
