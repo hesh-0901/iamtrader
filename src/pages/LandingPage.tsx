@@ -698,11 +698,22 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
                 <span className="text-[10px] font-black uppercase tracking-[0.18em] text-[#00a982]">Support IAMTRADER</span>
                 <h2 id="contact-modal-title" className="mt-1 text-xl font-black text-[#0a192f]">Envoyer un e-mail</h2>
               </div>
-              {isModalContactConfirmed && (
-                <button type="button" onClick={closeContactModal} aria-label="Fermer" className="rounded-xl p-2 text-[#71839a] hover:bg-[#f1f5f8] hover:text-[#0a192f] transition-colors cursor-pointer">
-                  <X className="w-5 h-5" />
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={() => {
+                  if (isModalContactConfirmed) {
+                    closeContactModal();
+                  } else {
+                    setIsContactModalOpen(false);
+                    setModalContactStatus(null);
+                    setModalContactForm({ name: '', email: '', subject: '', message: '' });
+                  }
+                }}
+                aria-label="Fermer"
+                className="rounded-xl p-2 text-[#71839a] hover:bg-[#f1f5f8] hover:text-[#0a192f] transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
             <div className="p-6 sm:p-8">
