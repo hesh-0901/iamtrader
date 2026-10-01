@@ -18,6 +18,8 @@ import {
   PlayCircle,
   Mail,
   MessageSquare,
+  X,
+  CheckCircle2,
 } from 'lucide-react';
 import { addContactMessage } from '../services/firestore';
 
@@ -99,6 +101,53 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
   const [contactForm, setContactForm] = useState({ name: '', email: '', subject: '', message: '' });
   const [isContactSending, setIsContactSending] = useState(false);
   const [contactStatus, setContactStatus] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
+  const [modalContactForm, setModalContactForm] = useState({ name: '', email: '', subject: '', message: '' });
+  const [isModalContactSending, setIsModalContactSending] = useState(false);
+  const [modalContactStatus, setModalContactStatus] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [isModalContactConfirmed, setIsModalContactConfirmed] = useState(false);
+
+  const openContactModal = () => {
+    setModalContactForm({ name: '', email: '', subject: '', message: '' });
+    setModalContactStatus(null);
+    setIsModalContactConfirmed(false);
+    setIsContactModalOpen(true);
+  };
+
+  const closeContactModal = () => {
+    if (!isModalContactConfirmed) return;
+    setIsContactModalOpen(false);
+    setModalContactStatus(null);
+    setIsModalContactConfirmed(false);
+    setModalContactForm({ name: '', email: '', subject: '', message: '' });
+  };
+
+  const handleModalContactSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setModalContactStatus(null);
+
+    if (!modalContactForm.name.trim() || !modalContactForm.email.trim() || !modalContactForm.subject.trim() || !modalContactForm.message.trim()) {
+      setModalContactStatus({ type: 'error', text: 'Veuillez remplir tous les champs.' });
+      return;
+    }
+
+    setIsModalContactSending(true);
+    try {
+      await addContactMessage({
+        name: modalContactForm.name.trim(),
+        email: modalContactForm.email.trim(),
+        subject: modalContactForm.subject.trim(),
+        message: modalContactForm.message.trim(),
+      });
+      setIsModalContactConfirmed(true);
+      setModalContactStatus({ type: 'success', text: 'Votre message a bien été envoyé. Nous avons bien reçu votre demande.' });
+    } catch (error) {
+      console.error('Contact modal submission failed:', error);
+      setModalContactStatus({ type: 'error', text: 'Impossible d’envoyer le message pour le moment. Réessayez dans quelques instants.' });
+    } finally {
+      setIsModalContactSending(false);
+    }
+  };
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -369,13 +418,14 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
                     Notre équipe est disponible pour répondre à vos questions concernant IAMTRADER, votre compte, la plateforme ou nos offres.
                   </p>
                 </div>
-                <a
-                  href="mailto:support@iamtrader.com"
-                  className="mt-8 inline-flex w-fit items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-white hover:bg-white/10 transition-colors"
+                <button
+                  type="button"
+                  onClick={openContactModal}
+                  className="mt-8 inline-flex w-fit items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-white hover:bg-white/10 transition-colors cursor-pointer"
                 >
                   <Mail className="w-4 h-4 text-[#5ce0c1]" />
                   support@iamtrader.com
-                </a>
+                </button>
               </div>
 
               <div className="rounded-3xl bg-white border border-[#dfe8ef] p-8 sm:p-10 shadow-[0_12px_40px_rgba(16,35,58,0.05)]">
@@ -493,6 +543,65 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
         </div>
         <div className="max-w-6xl mx-auto mt-8 pt-6 border-t border-[#e7eef3] text-[11px] text-[#8a9aac] flex flex-col sm:flex-row justify-between gap-2"><span>© 2026 IAMTRADER. Tous droits réservés.</span><span>Données hébergées et sécurisées sur Google Cloud Platform.</span></div>
       </footer>
+
+      {isContactModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#06111f]/70 px-4 py-6 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="contact-modal-title">
+          <div className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl bg-white border border-[#dfe8ef] shadow-[0_30px_100px_rgba(6,17,31,0.3)]">
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-[#e7eef3] bg-white/95 px-6 py-5 backdrop-blur-md sm:px-8">
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-[0.18em] text-[#00a982]">Support IAMTRADER</span>
+                <h2 id="contact-modal-title" className="mt-1 text-xl font-black text-[#0a192f]">Envoyer un e-mail</h2>
+              </div>
+              {isModalContactConfirmed && (
+                <button type="button" onClick={closeContactModal} aria-label="Fermer" className="rounded-xl p-2 text-[#71839a] hover:bg-[#f1f5f8] hover:text-[#0a192f] transition-colors cursor-pointer">
+                  <X className="w-5 h-5" />
+                </button>
+              )}
+            </div>
+
+            <div className="p-6 sm:p-8">
+              {isModalContactConfirmed ? (
+                <div className="py-8 text-center">
+                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#e5faf5] text-[#00a982]">
+                    <CheckCircle2 className="h-7 w-7" />
+                  </div>
+                  <h3 className="mt-5 text-2xl font-black text-[#0a192f]">Message envoyé</h3>
+                  <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-[#60758d]">
+                    Votre demande a bien été enregistrée. Notre équipe pourra vous répondre à l’adresse e-mail indiquée.
+                  </p>
+                  <div className="mt-7 rounded-2xl border border-[#ccefe5] bg-[#eafbf6] px-4 py-3 text-xs font-semibold text-[#168c73]">
+                    Confirmation reçue : votre message a été transmis avec succès.
+                  </div>
+                  <button type="button" onClick={closeContactModal} className="mt-7 inline-flex items-center justify-center rounded-xl bg-[#0a192f] px-6 py-3 text-sm font-bold text-white hover:bg-[#142d49] transition-colors cursor-pointer">
+                    Fermer
+                  </button>
+                </div>
+              ) : (
+                <form className="space-y-4" onSubmit={handleModalContactSubmit}>
+                  <div className="rounded-2xl border border-[#dfe8ef] bg-[#f8fbfd] px-4 py-3 text-xs leading-relaxed text-[#60758d]">
+                    Remplissez ce formulaire pour contacter directement l’équipe IAMTRADER.
+                  </div>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <input type="text" required value={modalContactForm.name} onChange={(event) => setModalContactForm({ ...modalContactForm, name: event.target.value })} placeholder="Votre nom" className="w-full rounded-xl border border-[#d9e4eb] bg-[#fbfdff] px-4 py-3 text-sm outline-none focus:border-[#00a982] focus:ring-2 focus:ring-[#00a982]/10" />
+                    <input type="email" required value={modalContactForm.email} onChange={(event) => setModalContactForm({ ...modalContactForm, email: event.target.value })} placeholder="Votre adresse e-mail" className="w-full rounded-xl border border-[#d9e4eb] bg-[#fbfdff] px-4 py-3 text-sm outline-none focus:border-[#00a982] focus:ring-2 focus:ring-[#00a982]/10" />
+                  </div>
+                  <input type="text" required value={modalContactForm.subject} onChange={(event) => setModalContactForm({ ...modalContactForm, subject: event.target.value })} placeholder="Sujet" className="w-full rounded-xl border border-[#d9e4eb] bg-[#fbfdff] px-4 py-3 text-sm outline-none focus:border-[#00a982] focus:ring-2 focus:ring-[#00a982]/10" />
+                  <textarea required rows={6} value={modalContactForm.message} onChange={(event) => setModalContactForm({ ...modalContactForm, message: event.target.value })} placeholder="Votre message..." className="w-full resize-none rounded-xl border border-[#d9e4eb] bg-[#fbfdff] px-4 py-3 text-sm outline-none focus:border-[#00a982] focus:ring-2 focus:ring-[#00a982]/10" />
+                  {modalContactStatus && (
+                    <div className={`rounded-xl px-4 py-3 text-xs font-semibold ${modalContactStatus.type === 'success' ? 'bg-[#eafbf6] text-[#168c73] border border-[#ccefe5]' : 'bg-rose-50 text-rose-600 border border-rose-100'}`}>
+                      {modalContactStatus.text}
+                    </div>
+                  )}
+                  <button type="submit" disabled={isModalContactSending} className="inline-flex items-center justify-center gap-2 w-full rounded-xl bg-[#00a982] px-6 py-3 text-sm font-bold text-white hover:bg-[#008f70] disabled:opacity-60 disabled:cursor-not-allowed transition-colors">
+                    {isModalContactSending ? 'Envoi en cours...' : 'Envoyer le message'}
+                    {!isModalContactSending && <ArrowRight className="w-4 h-4" />}
+                  </button>
+                </form>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
