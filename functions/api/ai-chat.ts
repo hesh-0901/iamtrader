@@ -1,6 +1,6 @@
 interface Env {
-  GEMINI_API_KEY: string;
-  GEMINI_MODEL?: string;
+  OPENAI_API_KEY: string;
+  OPENAI_MODEL?: string;
 }
 
 type ChatMessage = {
@@ -87,34 +87,31 @@ export async function onRequest(context: { request: Request; env: Env }) {
     return json({ error: 'Message utilisateur requis.' }, 400);
   }
 
-  const model = (context.env.GEMINI_MODEL || 'gemini-3.5-flash-lite').trim();
-  const apiKey = context.env.GEMINI_API_KEY.trim();
+  const model = (context.env.OPENAI_MODEL || 'gpt-5.6-luna').trim();
+  const apiKey = context.env.OPENAI_API_KEY.trim();
+
+  const input = safeMessages.map((message) => ({
+    role: message.role,
+    content: message.content,
+  }));
 
   let response: Response;
   try {
-    response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
-      {
-        method: 'POST',
-        headers: {
-          'x-goog-api-key': apiKey,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: 'user',
-              parts: [{ text: safeMessages[safeMessages.length - 1].content }],
-            },
-          ],
-          generationConfig: {
-            maxOutputTokens: 700,
-          },
-        }),
-      }
-    );
+    response = await fetch('https://api.openai.com/v1/responses', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model,
+        instructions: SYSTEM_INSTRUCTIONS,
+        input,
+        max_output_tokens: 700,
+      }),
+    });
   } catch (error) {
-    console.error('Gemini fetch failed:', error);
+    console.error('OpenAI fetch failed:', error);
     return json(
       {
         error: 'Le service IA n’a pas pu répondre pour le moment.',
@@ -138,40 +135,28 @@ export async function onRequest(context: { request: Request; env: Env }) {
   }
 
   if (!response.ok) {
-    const providerError =
-      typeof data === 'object' && data && 'error' in data
-        ? (data as { error?: { code?: unknown; status?: unknown; message?: unknown } }).error
-        : undefined;
-
-    let modelCheckStatus: number | undefined;
-    let modelCheckBody = '';
+    let providerError: {
+      message?: unknown;
+      type?: unknown;
+      code?: unknown;
+      param?: unknown;
+    } | undefined;
 
     try {
-      const modelCheck = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}`,
-        {
-          method: 'GET',
-          headers: {
-            'x-goog-api-key': apiKey,
-          },
-        }
-      );
-      modelCheckStatus = modelCheck.status;
-      modelCheckBody = (await modelCheck.text()).slice(0, 4000);
-    } catch (error) {
-      console.error('Gemini model check failed:', error);
+      const parsed = JSON.parse(responseText) as { error?: typeof providerError };
+      providerError = parsed.error;
+    } catch {
+      // Keep the raw provider response when it is not JSON.
     }
 
-    console.error('Gemini API error:', {
+    console.error('OpenAI API error:', {
       status: response.status,
-      code: providerError?.code,
-      providerStatus: providerError?.status,
-      message: providerError?.message,
       model,
-      keyPresent: Boolean(apiKey),
+      code: providerError?.code,
+      type: providerError?.type,
+      message: providerError?.message,
+      param: providerError?.param,
       rawResponse: responseText.slice(0, 4000),
-      modelCheckStatus,
-      modelCheckBody,
     });
 
     return json(
@@ -179,28 +164,35 @@ export async function onRequest(context: { request: Request; env: Env }) {
         error: 'Le service IA n’a pas pu répondre pour le moment.',
         details: {
           httpStatus: response.status,
-          code: providerError?.code,
-          status: providerError?.status,
-          message: providerError?.message,
           model,
-          keyPresent: Boolean(apiKey),
+          code: providerError?.code,
+          type: providerError?.type,
+          message: providerError?.message,
+          param: providerError?.param,
           rawResponse: responseText.slice(0, 4000),
-          modelCheckStatus,
-          modelCheckBody,
         },
       },
       502
     );
   }
 
+  const parsed = JSON.parse(responseText) as {
+    output?: Array<{
+      type?: string;
+      content?: Array<{
+        type?: string;
+        text?: string;
+      }>;
+    }>;
+  };
+
   const outputText =
-    typeof (data as {
-      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-    }).candidates?.[0]?.content?.parts?.[0]?.text === 'string'
-      ? (data as {
-          candidates: Array<{ content: { parts: Array<{ text: string }> } }>;
-        }).candidates[0].content.parts.map((part) => part.text).join('\n')
-      : '';
+    parsed.output
+      ?.filter((item) => item.type === 'message')
+      .flatMap((item) => item.content || [])
+      .filter((part) => part.type === 'output_text' && typeof part.text === 'string')
+      .map((part) => part.text as string)
+      .join('\n') || '';
 
   if (!outputText.trim()) {
     return json({ error: 'La réponse de l’assistant est vide.' }, 502);
