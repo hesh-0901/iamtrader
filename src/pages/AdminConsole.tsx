@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Activity, AlertTriangle, CalendarDays, ChevronLeft, ChevronRight, CreditCard, Edit3, History, RefreshCw, Search, ShieldCheck, UserCheck, UserX, Users, X, XCircle } from 'lucide-react';
+import { Activity, AlertTriangle, BellRing, CalendarDays, ChevronLeft, ChevronRight, CreditCard, Edit3, History, RefreshCw, Search, ShieldCheck, UserCheck, UserX, Users, X, XCircle } from 'lucide-react';
 import { AdminLog, SubscriptionPlan, UserProfile, UserStatus, TradingAccount, Trade } from '../types';
-import { addAdminLog, getAdminLogs, getAllAccounts, getAllTrades, getAllUsers, updateUserRoleAndPlan } from '../services/firestore';
+import { addAdminLog, getAdminLogs, getAllAccounts, getAllTrades, getAllUsers, subscribeAllUsers, updateUserRoleAndPlan } from '../services/firestore';
 import { useToast } from '../components/common/Toast';
 import { auth } from '../firebase/config';
 
@@ -93,7 +93,14 @@ export function AdminConsole() {
       setLoading(false);
     }
   }
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    const unsubscribe = subscribeAllUsers((nextUsers, realtimeError) => {
+      if (realtimeError) return;
+      setUsers(nextUsers);
+    });
+    return unsubscribe;
+  }, []);
 
   const userMetrics = useMemo(() => {
     const map: Record<string, { initialCapital: number; totalPnl: number; tradeCount: number; pnlPercent: number | null; currency: string }> = {};
@@ -236,6 +243,30 @@ export function AdminConsole() {
         </header>
 
         {error && <div className="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-xs text-rose-700">{error}</div>}
+
+        {pendingPlanUsers.length > 0 && (
+          <button
+            onClick={() => setFilter('pending')}
+            className="group flex w-full items-center justify-between gap-4 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-left shadow-sm transition hover:border-blue-300 hover:bg-blue-100"
+          >
+            <span className="flex min-w-0 items-center gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white">
+                <BellRing className="h-4 w-4" />
+              </span>
+              <span className="min-w-0">
+                <b className="block text-xs font-black text-blue-950">
+                  Nouvelle demande de changement de plan
+                </b>
+                <span className="mt-0.5 block text-[10px] text-blue-700">
+                  {pendingPlanUsers.length} demande{pendingPlanUsers.length > 1 ? 's' : ''} en attente de traitement.
+                </span>
+              </span>
+            </span>
+            <span className="shrink-0 rounded-xl bg-white px-3 py-2 text-[9px] font-black text-blue-700 ring-1 ring-blue-200 group-hover:bg-blue-50">
+              Voir les demandes
+            </span>
+          </button>
+        )}
 
         {!metricsReady && <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-[11px] text-amber-800"><b>Statistiques de trading indisponibles.</b> Publiez les nouvelles règles Firestore afin que l’administrateur puisse lire les comptes et les trades.</div>}
 
