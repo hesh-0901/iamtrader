@@ -157,6 +157,28 @@ export async function getAllTrades(): Promise<Trade[]> {
   return snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as Trade));
 }
 
+export function subscribeAllUsers(
+  callback: (users: UserProfile[], error?: Error) => void
+) {
+  if (!auth.currentUser) {
+    callback([]);
+    return () => {};
+  }
+
+  const usersRef = collection(db, 'users');
+  const q = query(usersRef, limit(200));
+  return onSnapshot(q, (snapshot) => {
+    const users = snapshot.docs.map(docSnap => ({
+      uid: docSnap.id,
+      ...docSnap.data()
+    } as UserProfile));
+    callback(users);
+  }, (error) => {
+    console.warn('Firestore admin users realtime notice:', error.message);
+    callback([], error);
+  });
+}
+
 export async function getAllUsers(): Promise<UserProfile[]> {
   const usersRef = collection(db, 'users');
   const snapshot = await getDocs(query(usersRef, limit(200)));
