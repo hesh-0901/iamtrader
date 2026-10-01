@@ -76,6 +76,13 @@ export async function onRequest(context: { request: Request; env: Env }) {
     }))
     .filter((message) => message.content);
 
+  // Gemini conversation history must start with a user turn.
+  // The landing page displays an initial assistant greeting, so discard
+  // leading assistant messages before sending the conversation upstream.
+  while (safeMessages.length && safeMessages[0].role === 'assistant') {
+    safeMessages.shift();
+  }
+
   if (!safeMessages.length || safeMessages[safeMessages.length - 1].role !== 'user') {
     return json({ error: 'Message utilisateur requis.' }, 400);
   }
