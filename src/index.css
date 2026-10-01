@@ -303,3 +303,161 @@ button:focus-visible, select:focus-visible, input:focus-visible, textarea:focus-
     radial-gradient(circle at 92% 0%, rgba(34,199,214,.045), transparent 25rem),
     radial-gradient(circle at 4% 18%, rgba(124,92,252,.035), transparent 24rem);
 }
+
+
+/* =========================================================
+   FINAL PRODUCT-WIDE THEME
+   The Settings / Subscription screen is the visual reference.
+   Normalize legacy hard-coded utility colors across every page.
+   ========================================================= */
+
+.iamtrader-shell,
+.iamtrader-shell main,
+.iamtrader-shell .min-h-screen,
+.iamtrader-shell .min-h-full {
+  color: #0B1F35;
+}
+
+.iamtrader-shell [class*="bg-neutral-900"],
+.iamtrader-shell [class*="bg-neutral-950"],
+.iamtrader-shell [class*="bg-gray-900"],
+.iamtrader-shell [class*="bg-gray-950"] {
+  background-color: #0B1F35 !important;
+  color: #fff !important;
+}
+
+.iamtrader-shell [class*="text-neutral-100"],
+.iamtrader-shell [class*="text-neutral-200"],
+.iamtrader-shell [class*="text-gray-100"],
+.iamtrader-shell [class*="text-gray-200"] {
+  color: #F8FAFC !important;
+}
+
+.iamtrader-shell [class*="text-neutral-300"],
+.iamtrader-shell [class*="text-neutral-400"],
+.iamtrader-shell [class*="text-gray-400"],
+.iamtrader-shell [class*="text-gray-500"] {
+  color: #60758D !important;
+}
+
+/* Legacy bright-blue identity -> IAMTRADER indigo/sky identity */
+.iamtrader-shell [class*="text-blue-300"],
+.iamtrader-shell [class*="text-blue-400"] {
+  color: #4F46E5 !important;
+}
+.iamtrader-shell [class*="text-blue-500"] {
+  color: #3B82F6 !important;
+}
+.iamtrader-shell [class*="bg-blue-400"] {
+  background-color: #60A5FA !important;
+}
+.iamtrader-shell [class*="bg-blue-500"] {
+  background-color: #3B82F6 !important;
+  color: #fff !important;
+}
+.iamtrader-shell [class*="bg-blue-600"] {
+  background-color: #4F46E5 !important;
+  color: #fff !important;
+}
+.iamtrader-shell [class*="bg-blue-700"] {
+  background-color: #4338CA !important;
+  color: #fff !important;
+}
+
+/* Legacy green identity -> Settings-page mint */
+.iamtrader-shell [class*="text-green-"],
+.iamtrader-shell [class*="text-emerald-"] {
+  color: #00A982 !important;
+}
+.iamtrader-shell [class*="bg-green-500"],
+.iamtrader-shell [class*="bg-green-600"] {
+  background-color: #08B77A !important;
+  color: #fff !important;
+}
+
+/* Hard-coded colors frequently used by older pages */
+.iamtrader-shell .bg-\[\#0a192f\],
+.iamtrader-shell .bg-\[\#0A192F\],
+.iamtrader-shell .bg-\[\#10233a\],
+.iamtrader-shell .bg-\[\#10233A\] {
+  background-color: #0B1F35 !important;
+  color: #fff !important;
+}
+.iamtrader-shell .text-\[\#0a192f\],
+.iamtrader-shell .text-\[\#0A192F\],
+.iamtrader-shell .text-\[\#10233a\],
+.iamtrader-shell .text-\[\#10233A\] {
+  color: #0B1F35 !important;
+}
+.iamtrader-shell .bg-\[\#00a982\],
+.iamtrader-shell .bg-\[\#00A982\],
+.iamtrader-shell .bg-\[\#00c796\],
+.iamtrader-shell .bg-\[\#00C796\] {
+  background-color: #08B77A !important;
+  color: #fff !important;
+}
+.iamtrader-shell .text-\[\#00a982\],
+.iamtrader-shell .text-\[\#00A982\],
+.iamtrader-shell .text-\[\#00c796\],
+.iamtrader-shell .text-\[\#00C796\] {
+  color: #00A982 !important;
+}
+
+/* Page chrome */
+.iamtrader-shell table thead,
+.iamtrader-shell .bg-slate-50 {
+  background: #F5F8FB !important;
+}
+.iamtrader-shell table tbody tr:hover {
+  background: #F2FAF7 !important;
+}
+.iamtrader-shell hr {
+  border-color: #DCE7EE !important;
+}
+
+/* Friendly interactive states */
+.iamtrader-shell button:hover {
+  transition: background-color 160ms ease, color 160ms ease, border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+.iamtrader-shell button:not(:disabled):hover {
+  transform: translateY(-1px);
+}
+.iamtrader-shell button:disabled {
+  cursor: not-allowed;
+}
+
+/* Keep primary action hierarchy consistent with the Settings screen. */
+.iamtrader-shell .btn-primary,
+.iamtrader-shell [class*="bg-emerald-600"],
+.iamtrader-shell [class*="bg-emerald-500"] {
+  background: linear-gradient(135deg, #08B77A 0%, #00A982 100%) !important;
+  color: #fff !important;
+  border-color: rgba(0,150,95,.18) !important;
+  box-shadow: 0 8px 22px rgba(8,183,122,.16);
+}
+
+/* Premium secondary hierarchy */
+.iamtrader-shell .btn-secondary {
+  background: #fff !important;
+  color: #0B1F35 !important;
+  border-color: #DCE7EE !important;
+}
+
+/* Soft accent labels */
+.iamtrader-shell .bg-violet-100 { background-color:#EEE8FF !important; }
+.iamtrader-shell .bg-indigo-100 { background-color:#E8EAFF !important; }
+.iamtrader-shell .bg-cyan-100 { background-color:#DDF8FB !important; }
+.iamtrader-shell .bg-emerald-100 { background-color:#D9F8EE !important; }
+
+/* Modals and overlays */
+.iamtrader-shell [class*="backdrop-blur"] {
+  --tw-backdrop-blur: blur(12px);
+}
+
+/* Make the global workspace visually match the Settings page. */
+.iamtrader-shell main {
+  max-width: none !important;
+  background:
+    radial-gradient(circle at 88% 0%, rgba(34,199,214,.035), transparent 25rem),
+    radial-gradient(circle at 5% 22%, rgba(124,92,252,.028), transparent 24rem);
+}
