@@ -5,6 +5,7 @@ import {
   CheckCircle2,
   Clock3,
   CreditCard,
+  History,
   RefreshCw,
   Search,
   ShieldCheck,
@@ -14,23 +15,30 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
-import { SubscriptionPlan, UserProfile, UserStatus } from '../types';
+import { AdminLog, SubscriptionPlan, UserProfile, UserStatus } from '../types';
 import {
+  addAdminLog,
   confirmUserPlan,
   extendUserSubscription,
+  getAdminLogs,
   getAllUsers,
   updateUserRoleAndPlan
 } from '../services/firestore';
 import { useToast } from '../components/common/Toast';
+import { auth } from '../firebase/config';
 
 type Filter = 'all' | 'active' | 'expiring' | 'expired' | 'pending';
 
 const DAY = 24 * 60 * 60 * 1000;
 
-function addOneMonth(date: Date) {
+function addMonths(date: Date, months: number) {
   const next = new Date(date);
-  next.setMonth(next.getMonth() + 1);
+  next.setMonth(next.getMonth() + months);
   return next;
+}
+
+function planDurationMonths(plan: SubscriptionPlan) {
+  return plan === 'community' ? 6 : plan === 'pro' ? 1 : 0;
 }
 
 function getExpiry(user: UserProfile) {
@@ -51,7 +59,7 @@ function formatDate(value?: string) {
 }
 
 function planLabel(plan: SubscriptionPlan) {
-  return plan === 'pro' ? 'Pro Trader' : plan === 'community' ? 'Community' : 'Free';
+  return plan === 'pro' ? 'Plus' : plan === 'community' ? 'Community' : 'Starter';
 }
 
 function planClass(plan: SubscriptionPlan) {
@@ -72,6 +80,7 @@ export function AdminConsole() {
   const [loadError, setLoadError] = useState<string | null>(null);
   const [busyUid, setBusyUid] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [adminLogs, setAdminLogs] = useState<AdminLog[]>([]);
   const itemsPerPage = 10;
 
   const loadUsers = async () => {
@@ -80,6 +89,7 @@ export function AdminConsole() {
     try {
       const data = await getAllUsers();
       setUsers(data);
+      try { setAdminLogs(await getAdminLogs()); } catch { setAdminLogs([]); }
     } catch (error: any) {
       setUsers([]);
       setLoadError(error?.code === 'permission-denied'
@@ -148,12 +158,20 @@ export function AdminConsole() {
     setSelectedUser(previous => previous?.uid === uid ? { ...previous, ...patch } : previous);
   };
 
+  const logAction = async (action: string, user: UserProfile, details: string) => {
+    const adminUid = auth.currentUser?.uid;
+    if (!adminUid) return;
+    const log = { adminUid, action, userUid: user.uid, userName: user.displayName || user.email, details, createdAt: new Date().toISOString() };
+    try { await addAdminLog(log); setAdminLogs(previous => [{ id: `local-${Date.now()}`, ...log }, ...previous].slice(0, 40)); } catch { /* action itself already succeeded */ }
+  };
+
   const handleStatus = async (user: UserProfile) => {
     const status: UserStatus = user.status === 'active' ? 'suspended' : 'active';
     setBusyUid(user.uid);
     try {
       await updateUserRoleAndPlan(user.uid, { status });
       patchUser(user.uid, { status });
+      await logAction(status === 'active' ? 'Réactivation' : 'Suspension', user, status === 'active' ? 'Compte réactivé.' : 'Compte suspendu.');
       showToast(status === 'active' ? 'Utilisateur réactivé.' : 'Utilisateur suspendu.', 'success');
     } catch (error: any) {
       showToast(error?.message || 'Modification refusée par Firestore.', 'error');
@@ -166,7 +184,8 @@ export function AdminConsole() {
     const plan = user.pendingPlan || user.plan;
     const paymentDate = new Date();
     const start = paymentDate;
-    const expiry = addOneMonth(start);
+    const duration = planDurationMonths(plan);
+    const expiry = duration ? addMonths(start, duration) : null;
 
     setBusyUid(user.uid);
     try {
@@ -175,7 +194,7 @@ export function AdminConsole() {
         plan,
         paymentDate.toISOString(),
         start.toISOString(),
-        expiry.toISOString()
+        expiry?.toISOString() || start.toISOString()
       );
 
       patchUser(user.uid, {
@@ -185,11 +204,12 @@ export function AdminConsole() {
         planChangeConfirmedAt: new Date().toISOString(),
         paymentDate: paymentDate.toISOString(),
         subscriptionStartAt: start.toISOString(),
-        subscriptionExpiresAt: expiry.toISOString(),
+        subscriptionExpiresAt: expiry ? expiry.toISOString() : undefined,
         subscriptionStatus: 'active',
         paymentStatus: 'paid'
       });
-      showToast('Abonnement confirmé pour 1 mois.', 'success');
+      await logAction('Confirmation de plan', user, `Plan ${planLabel(plan)} confirmé${duration ? ` pour ${duration} mois` : ''}.`);
+      showToast(duration ? `Abonnement confirmé pour ${duration} mois.` : 'Plan Starter confirmé.', 'success');
     } catch (error: any) {
       showToast(error?.message || 'Confirmation refusée par Firestore.', 'error');
     } finally {
@@ -201,7 +221,12 @@ export function AdminConsole() {
     const now = new Date();
     const currentExpiry = getExpiry(user);
     const start = currentExpiry && currentExpiry.getTime() > now.getTime() ? currentExpiry : now;
-    const expiry = addOneMonth(start);
+    const duration = planDurationMonths(user.plan);
+    if (!duration) {
+      showToast('Le plan Starter ne nécessite pas de prolongation payante.', 'error');
+      return;
+    }
+    const expiry = addMonths(start, duration);
 
     setBusyUid(user.uid);
     try {
@@ -220,7 +245,8 @@ export function AdminConsole() {
         subscriptionStatus: 'active',
         paymentStatus: 'paid'
       });
-      showToast('Abonnement prolongé d’un mois.', 'success');
+      await logAction('Renouvellement', user, `Abonnement ${planLabel(user.plan)} prolongé de ${duration} mois.`);
+      showToast(`Abonnement prolongé de ${duration} mois.`, 'success');
     } catch (error: any) {
       showToast(error?.message || 'Prolongation refusée par Firestore.', 'error');
     } finally {
@@ -239,6 +265,7 @@ export function AdminConsole() {
         pendingPlan: plan,
         planChangeRequestedAt: new Date().toISOString()
       });
+      await logAction('Demande de plan', user, `Plan ${planLabel(plan)} placé en attente de confirmation.`);
       showToast('Changement de plan enregistré en attente de confirmation.', 'success');
     } catch (error: any) {
       showToast(error?.message || 'Impossible d’enregistrer le changement.', 'error');
@@ -463,6 +490,11 @@ export function AdminConsole() {
             </div>
           </div>
         )}
+      </section>
+
+      <section className="bg-white border border-[#e0e9e5] rounded-2xl shadow-sm overflow-hidden">
+        <div className="p-4 border-b border-[#edf2f0] flex items-center gap-2"><History className="w-4 h-4 text-[#315fc7]" /><div><h3 className="text-sm font-bold text-[#10233a]">Historique administratif</h3><p className="text-[10px] text-[#8091a2] mt-0.5">Dernières actions effectuées depuis la console.</p></div></div>
+        <div className="divide-y divide-[#edf2f0]">{adminLogs.length === 0 ? <div className="p-6 text-xs text-[#8091a2]">Aucune action enregistrée.</div> : adminLogs.slice(0, 8).map(log => <div key={log.id} className="px-4 py-3 flex items-start gap-3"><div className="mt-0.5 h-7 w-7 rounded-lg bg-[#eef4ff] text-[#315fc7] flex items-center justify-center"><History className="w-3.5 h-3.5" /></div><div className="min-w-0 flex-1"><div className="text-[11px] font-semibold text-[#314861]">{log.action} · {log.userName}</div><div className="text-[10px] text-[#8091a2] mt-0.5">{log.details}</div></div><div className="text-[9px] text-[#9aa9b7] whitespace-nowrap">{formatDate(log.createdAt)}</div></div>)}</div>
       </section>
 
       {stats.expiring > 0 && (
