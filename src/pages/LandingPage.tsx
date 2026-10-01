@@ -167,11 +167,11 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
         </div>
 
         <nav className="hidden md:flex items-center gap-1 rounded-full border border-[#e4ece9] bg-white/70 p-1.5 text-xs font-semibold text-[#60758d] shadow-sm">
-          <a href="#features" className="hover:text-[#0a192f] transition-colors">Plateforme</a>
-          <a href="#journal" className="hover:text-[#0a192f] transition-colors">Fonctionnalités</a>
-          <a href="#trader-score" className="hover:text-[#0a192f] transition-colors">Trader Score</a>
-          <a href="#pricing" className="hover:text-[#0a192f] transition-colors">Tarifs</a>
-          <a href="#contact" className="hover:text-[#0a192f] transition-colors">Contact</a>
+          <a href="#features" className="rounded-full px-3 py-2 hover:bg-white hover:text-[#0a192f] transition-all">Plateforme</a>
+          <a href="#journal" className="rounded-full px-3 py-2 hover:bg-white hover:text-[#0a192f] transition-all">Fonctionnalités</a>
+          <a href="#trader-score" className="rounded-full px-3 py-2 hover:bg-white hover:text-[#0a192f] transition-all">Trader Score</a>
+          <a href="#pricing" className="rounded-full px-3 py-2 hover:bg-white hover:text-[#0a192f] transition-all">Tarifs</a>
+          <a href="#contact" className="rounded-full px-3 py-2 hover:bg-white hover:text-[#0a192f] transition-all">Contact</a>
         </nav>
 
         <div className="flex items-center gap-2">
@@ -238,7 +238,7 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 {[
                   ['P&L', '+$8,420.50', 'text-[#00a982]'],
-                  ['Win Rate', '68.4%', 'text-[#0a192f]'],
+                  ['Win Rate', '68.4%', 'text-white'],
                   ['Max Drawdown', '-4.2%', 'text-[#e05a78]'],
                   ['Trader Score', '84 / 100', 'text-[#2f6bff]'],
                 ].map(([label, value, color]) => (
@@ -262,7 +262,7 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
                   <div className="space-y-3">
                     {[['Risk Management','92%'],['Consistency','81%'],['Psychology','78%']].map(([label, value]) => (
                       <div key={label}>
-                        <div className="flex justify-between text-[11px] font-semibold mb-1"><span>{label}</span><span className="text-[#168c73]">{value}</span></div>
+                        <div className="flex justify-between text-[11px] font-semibold mb-1"><span>{label}</span><span className="text-[#6ee7c9]">{value}</span></div>
                         <div className="h-1.5 bg-white/10 rounded-full overflow-hidden"><div className="h-full bg-gradient-to-r from-[#00a982] to-[#5ce0c1] rounded-full" style={{width:value}} /></div>
                       </div>
                     ))}
