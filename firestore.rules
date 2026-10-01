@@ -31,7 +31,7 @@ service cloud.firestore {
         && request.resource.data.diff(resource.data).affectedKeys()
           .hasOnly(['displayName', 'photoURL', 'email', 'settings']);
 
-      // Full user administration requires the Firebase custom admin claim.
+      // Full user administration requires the Firestore admin role.
       allow read, write: if isAdmin();
     }
 
@@ -39,6 +39,11 @@ service cloud.firestore {
       allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
       allow update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    match /adminLogs/{logId} {
+      allow read, create: if isAdmin();
+      allow update, delete: if false;
     }
 
     match /trades/{tradeId} {
