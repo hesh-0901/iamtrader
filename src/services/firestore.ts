@@ -276,20 +276,63 @@ export async function requestUserPlanChange(uid: string, plan: 'pro' | 'communit
 }
 
 
+export type ContactMessageStatus = 'new' | 'in_progress' | 'resolved';
+
 export interface ContactMessage {
+  id: string;
   name: string;
   email: string;
   subject: string;
   message: string;
+  status: ContactMessageStatus;
+  createdAt: string;
+  updatedAt?: string;
+  handledBy?: string;
+  handledAt?: string;
+  adminNote?: string;
 }
 
-export async function addContactMessage(data: ContactMessage): Promise<string> {
+export async function addContactMessage(data: Omit<ContactMessage, 'id' | 'status' | 'createdAt' | 'updatedAt' | 'handledBy' | 'handledAt' | 'adminNote'>): Promise<string> {
   const docRef = await addFirestoreDoc(collection(db, 'contactMessages'), {
     ...data,
     status: 'new',
     createdAt: new Date().toISOString()
   });
   return docRef.id;
+}
+
+export function subscribeContactMessages(
+  callback: (messages: ContactMessage[], error?: Error) => void
+) {
+  if (!auth.currentUser) {
+    callback([]);
+    return () => {};
+  }
+
+  const q = query(collection(db, 'contactMessages'), orderBy('createdAt', 'desc'), limit(200));
+  return onSnapshot(q, (snapshot) => {
+    callback(snapshot.docs.map(docSnap => ({
+      id: docSnap.id,
+      ...docSnap.data()
+    } as ContactMessage)));
+  }, (error) => {
+    console.warn('Firestore contact messages subscription notice:', error.message);
+    callback([], error);
+  });
+}
+
+export async function updateContactMessage(
+  messageId: string,
+  data: Partial<Pick<ContactMessage, 'status' | 'adminNote' | 'updatedAt' | 'handledBy' | 'handledAt'>>
+): Promise<void> {
+  await updateDoc(doc(db, 'contactMessages', messageId), {
+    ...data,
+    updatedAt: new Date().toISOString()
+  });
+}
+
+export async function deleteContactMessage(messageId: string): Promise<void> {
+  await deleteDoc(doc(db, 'contactMessages', messageId));
 }
 
 export async function addAdminLog(log: Omit<AdminLog, 'id'>): Promise<string> {
