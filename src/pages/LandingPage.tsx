@@ -18,6 +18,8 @@ import {
   PlayCircle,
   Mail,
   MessageSquare,
+  Send,
+  Sparkles,
   X,
   CheckCircle2,
 } from 'lucide-react';
@@ -98,9 +100,43 @@ const plans = [
 export function LandingPage({ onOpenAuth }: LandingPageProps) {
   const [hookIndex, setHookIndex] = useState(0);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
-  const [contactForm, setContactForm] = useState({ name: '', email: '', subject: '', message: '' });
-  const [isContactSending, setIsContactSending] = useState(false);
-  const [contactStatus, setContactStatus] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [aiInput, setAiInput] = useState('');
+  const [aiMessages, setAiMessages] = useState<Array<{ role: 'assistant' | 'user'; text: string }>>([
+    {
+      role: 'assistant',
+      text: 'Bonjour. Je suis l’assistant IAMTRADER. Je peux vous aider à comprendre la plateforme, ses fonctionnalités, le Trader Score et les différents plans.',
+    },
+  ]);
+  const [isAiTyping, setIsAiTyping] = useState(false);
+
+  const aiSuggestions = [
+    'Comment fonctionne IAMTRADER ?',
+    'Qu’est-ce que le Trader Score ?',
+    'Quels sont les plans disponibles ?',
+  ];
+
+  const handleAiSubmit = (event: React.FormEvent<HTMLFormElement>, preset?: string) => {
+    event.preventDefault();
+    const text = (preset ?? aiInput).trim();
+    if (!text || isAiTyping) return;
+
+    setAiMessages((messages) => [...messages, { role: 'user', text }]);
+    setAiInput('');
+    setIsAiTyping(true);
+
+    // Le moteur IA sera branché ici. Le frontend est volontairement prêt à recevoir
+    // la réponse du backend sans modifier l’architecture de la page.
+    window.setTimeout(() => {
+      setAiMessages((messages) => [
+        ...messages,
+        {
+          role: 'assistant',
+          text: 'Je suis prêt à répondre à cette question dès que le moteur IA IAMTRADER sera connecté.',
+        },
+      ]);
+      setIsAiTyping(false);
+    }, 450);
+  };
   const [isContactModalOpen, setIsContactModalOpen] = useState(false);
   const [modalContactForm, setModalContactForm] = useState({ name: '', email: '', subject: '', message: '' });
   const [isModalContactSending, setIsModalContactSending] = useState(false);
@@ -434,91 +470,88 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
                 </button>
               </div>
 
-              <div className="rounded-3xl bg-white border border-[#dfe8ef] p-8 sm:p-10 shadow-[0_12px_40px_rgba(16,35,58,0.05)]">
-                <div className="w-11 h-11 rounded-xl bg-[#e5faf5] text-[#00a982] flex items-center justify-center mb-5">
-                  <MessageSquare className="w-5 h-5" />
+              <div className="relative overflow-hidden rounded-[28px] border border-[#dce9e5] bg-white shadow-[0_20px_60px_rgba(8,24,39,0.08)]">
+                <div className="absolute -right-20 -top-24 h-56 w-56 rounded-full bg-[#00c796]/10 blur-3xl pointer-events-none" />
+                <div className="relative flex items-center justify-between border-b border-[#e7efec] px-6 py-5 sm:px-7">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-[#00c796] to-[#00a982] text-white shadow-[0_10px_25px_rgba(0,169,130,0.2)]">
+                      <Sparkles className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-base font-black text-[#081827]">Assistant IAMTRADER</h3>
+                        <span className="rounded-full bg-[#eafbf6] px-2 py-1 text-[9px] font-black uppercase tracking-wider text-[#168c73]">IA</span>
+                      </div>
+                      <p className="mt-0.5 text-[11px] font-medium text-[#7a8b9b]">Échange instantané</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 rounded-full border border-[#dcebe5] bg-[#f5fbf8] px-2.5 py-1.5 text-[10px] font-bold text-[#168c73]">
+                    <span className="h-1.5 w-1.5 rounded-full bg-[#00a982] shadow-[0_0_0_4px_rgba(0,169,130,0.08)]" />
+                    En ligne
+                  </div>
                 </div>
-                <h3 className="text-xl font-black">Parlons de votre besoin</h3>
-                <p className="mt-2 text-sm text-slate-400 leading-relaxed">
-                  Envoyez-nous votre demande directement depuis IAMTRADER. Elle sera enregistrée dans notre espace de support.
-                </p>
 
-                <form
-                  className="mt-7 space-y-4"
-                  onSubmit={async (event) => {
-                    event.preventDefault();
-                    setContactStatus(null);
-                    if (!contactForm.name.trim() || !contactForm.email.trim() || !contactForm.subject.trim() || !contactForm.message.trim()) {
-                      setContactStatus({ type: 'error', text: 'Veuillez remplir tous les champs.' });
-                      return;
-                    }
-                    setIsContactSending(true);
-                    try {
-                      await addContactMessage({
-                        name: contactForm.name.trim(),
-                        email: contactForm.email.trim(),
-                        subject: contactForm.subject.trim(),
-                        message: contactForm.message.trim(),
-                      });
-                      setContactForm({ name: '', email: '', subject: '', message: '' });
-                      setContactStatus({ type: 'success', text: 'Votre message a bien été envoyé. Nous vous répondrons dès que possible.' });
-                    } catch (error) {
-                      console.error('Contact form submission failed:', error);
-                      setContactStatus({ type: 'error', text: 'Impossible d’envoyer le message pour le moment. Réessayez dans quelques instants.' });
-                    } finally {
-                      setIsContactSending(false);
-                    }
-                  }}
-                >
-                  <div className="grid sm:grid-cols-2 gap-4">
+                <div className="relative h-[360px] overflow-y-auto px-5 py-5 sm:px-7">
+                  <div className="space-y-4">
+                    {aiMessages.map((message, index) => (
+                      <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                        <div className={`max-w-[88%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm ${
+                          message.role === 'user'
+                            ? 'rounded-br-md bg-[#081827] text-white'
+                            : 'rounded-bl-md border border-[#e2ece8] bg-[#f7fbf9] text-[#43586b]'
+                        }`}>
+                          {message.text}
+                        </div>
+                      </div>
+                    ))}
+                    {isAiTyping && (
+                      <div className="flex justify-start">
+                        <div className="flex items-center gap-1.5 rounded-2xl rounded-bl-md border border-[#e2ece8] bg-[#f7fbf9] px-4 py-3">
+                          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#00a982]" />
+                          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#00a982] [animation-delay:120ms]" />
+                          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#00a982] [animation-delay:240ms]" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="border-t border-[#e7efec] bg-[#fbfdfc] px-5 py-4 sm:px-7">
+                  <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
+                    {aiSuggestions.map((suggestion) => (
+                      <button
+                        key={suggestion}
+                        type="button"
+                        onClick={(event) => handleAiSubmit(event as unknown as React.FormEvent<HTMLFormElement>, suggestion)}
+                        disabled={isAiTyping}
+                        className="shrink-0 rounded-full border border-[#dce9e5] bg-white px-3 py-1.5 text-[10px] font-semibold text-[#5d7183] transition-all hover:border-[#9edbca] hover:bg-[#f0faf6] hover:text-[#168c73] disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        {suggestion}
+                      </button>
+                    ))}
+                  </div>
+
+                  <form onSubmit={handleAiSubmit} className="flex items-center gap-2 rounded-2xl border border-[#d9e6e1] bg-white p-1.5 shadow-[0_8px_25px_rgba(8,24,39,0.05)] focus-within:border-[#8bd4c0] focus-within:ring-4 focus-within:ring-[#00a982]/5">
                     <input
                       type="text"
-                      required
-                      value={contactForm.name}
-                      onChange={(event) => setContactForm({ ...contactForm, name: event.target.value })}
-                      placeholder="Votre nom"
-                      className="w-full rounded-xl border border-[#d9e4eb] bg-[#fbfdff] px-4 py-3 text-sm outline-none focus:border-[#00a982] focus:ring-2 focus:ring-[#00a982]/10"
+                      value={aiInput}
+                      onChange={(event) => setAiInput(event.target.value)}
+                      placeholder="Posez votre question à l’IA..."
+                      className="min-w-0 flex-1 bg-transparent px-3 py-2.5 text-sm text-[#081827] outline-none placeholder:text-[#9aa9b5]"
+                      disabled={isAiTyping}
                     />
-                    <input
-                      type="email"
-                      required
-                      value={contactForm.email}
-                      onChange={(event) => setContactForm({ ...contactForm, email: event.target.value })}
-                      placeholder="Votre adresse e-mail"
-                      className="w-full rounded-xl border border-[#d9e4eb] bg-[#fbfdff] px-4 py-3 text-sm outline-none focus:border-[#00a982] focus:ring-2 focus:ring-[#00a982]/10"
-                    />
-                  </div>
-                  <input
-                    type="text"
-                    required
-                    value={contactForm.subject}
-                    onChange={(event) => setContactForm({ ...contactForm, subject: event.target.value })}
-                    placeholder="Sujet"
-                    className="w-full rounded-xl border border-[#d9e4eb] bg-[#fbfdff] px-4 py-3 text-sm outline-none focus:border-[#00a982] focus:ring-2 focus:ring-[#00a982]/10"
-                  />
-                  <textarea
-                    required
-                    rows={5}
-                    value={contactForm.message}
-                    onChange={(event) => setContactForm({ ...contactForm, message: event.target.value })}
-                    placeholder="Votre message..."
-                    className="w-full resize-none rounded-xl border border-[#d9e4eb] bg-[#fbfdff] px-4 py-3 text-sm outline-none focus:border-[#00a982] focus:ring-2 focus:ring-[#00a982]/10"
-                  />
-                  {contactStatus && (
-                    <div className={`rounded-xl px-4 py-3 text-xs font-semibold ${contactStatus.type === 'success' ? 'bg-[#eafbf6] text-[#168c73] border border-[#ccefe5]' : 'bg-rose-50 text-rose-600 border border-rose-100'}`}>
-                      {contactStatus.text}
-                    </div>
-                  )}
-                  <button
-                    type="submit"
-                    disabled={isContactSending}
-                    className="inline-flex items-center justify-center gap-2 w-full px-6 py-3 rounded-xl bg-[#00a982] text-white text-sm font-bold hover:bg-[#008f70] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
-                  >
-                    {isContactSending ? 'Envoi en cours...' : 'Envoyer le message'}
-                    {!isContactSending && <ArrowRight className="w-4 h-4" />}
-                  </button>
-                </form>
-              </div>
+                    <button
+                      type="submit"
+                      disabled={!aiInput.trim() || isAiTyping}
+                      aria-label="Envoyer à l’assistant IA"
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#00a982] text-white shadow-[0_8px_18px_rgba(0,169,130,0.2)] transition-all hover:bg-[#008f70] disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      <Send className="h-4 w-4" />
+                    </button>
+                  </form>
+                  <p className="mt-2 text-center text-[9px] font-medium text-[#9aa9b5]">L’assistant IA sera connecté au moteur IAMTRADER.</p>
+                </div>
+              </div>              </div>
             </div>
           </div>
         </section>
