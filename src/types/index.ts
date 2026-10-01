@@ -84,6 +84,16 @@ export type UserStatus = 'active' | 'suspended';
 export type SubscriptionStatus = 'pending' | 'active' | 'expired';
 export type PaymentStatus = 'unpaid' | 'paid' | 'refunded';
 
+export interface AdminLog {
+  id: string;
+  adminUid: string;
+  action: string;
+  userUid: string;
+  userName: string;
+  details: string;
+  createdAt: string;
+}
+
 export interface UserProfile {
   uid: string;
   email: string;
