@@ -3,7 +3,8 @@ import { User } from 'firebase/auth';
 import { subscribeToAuth, logoutUser, getUserProfile, checkIsAdmin } from './services/auth';
 import { 
   subscribeUserTrades, 
-  subscribeUserAccounts
+  subscribeUserAccounts,
+  requestUserPlanChange
 } from './services/firestore';
 import { Trade, TradingAccount, UserProfile, SubscriptionPlan } from './types';
 import { ToastProvider, useToast } from './components/common/Toast';
@@ -127,11 +128,11 @@ function MainAppContent() {
     return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
   }).length;
 
-  const starterTradeLimit = 50;
+  const starterTradeLimit = 5;
 
   const handleOpenNewTrade = () => {
     if (userProfile?.plan === 'free' && currentMonthTradeCount >= starterTradeLimit) {
-      showToast('Votre limite Starter de 50 trades ce mois-ci est atteinte. Passez à Plus pour continuer sans limite.', 'info');
+      showToast('Votre limite Starter de 5 trades ce mois-ci est atteinte. Passez à Plus pour continuer sans limite.', 'info');
       setCurrentPage('settings');
       return;
     }
