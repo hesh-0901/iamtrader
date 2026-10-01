@@ -147,6 +147,16 @@ export async function deleteAccount(accountId: string): Promise<void> {
 // USER PROFILE & ADMIN
 // ==========================================
 
+export async function getAllAccounts(): Promise<TradingAccount[]> {
+  const snapshot = await getDocs(query(collection(db, 'accounts'), limit(1000)));
+  return snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as TradingAccount));
+}
+
+export async function getAllTrades(): Promise<Trade[]> {
+  const snapshot = await getDocs(query(collection(db, 'trades'), limit(5000)));
+  return snapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() } as Trade));
+}
+
 export async function getAllUsers(): Promise<UserProfile[]> {
   const usersRef = collection(db, 'users');
   const snapshot = await getDocs(query(usersRef, limit(200)));
