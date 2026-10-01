@@ -47,6 +47,8 @@
 .iamtrader-shell [class*="border-blue-500"] { border-color:#BFD3FF !important; }
 .iamtrader-shell [class*="text-indigo-"] { color:#5E52D5 !important; }
 .iamtrader-shell [class*="bg-indigo-"] { background-color:#EFEDFF !important; }
+.iamtrader-shell .bg-indigo-600 { background-color:#4F46E5 !important; color:#fff !important; }
+.iamtrader-shell .bg-indigo-700 { background-color:#4338CA !important; color:#fff !important; }
 .iamtrader-shell [class*="text-emerald-400"],.iamtrader-shell [class*="text-emerald-500"] { color:#00A982 !important; }
 .iamtrader-shell [class*="bg-emerald-500"] { background-color:#00C796 !important; }
 .iamtrader-shell [class*="bg-emerald-"] { background-color:#DFFBF3 !important; }
