@@ -5,8 +5,7 @@ import {
   sendPasswordResetEmail,
   onAuthStateChanged,
   User,
-  updateProfile,
-  getIdTokenResult
+  updateProfile
 } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
@@ -80,26 +79,9 @@ export async function getUserProfile(uid: string): Promise<UserProfile | null> {
 
 export async function checkIsAdmin(user: User): Promise<boolean> {
   try {
-    // Check Custom Claim first (Production requirement)
-    const tokenResult = await getIdTokenResult(user, true);
-    if (tokenResult.claims && tokenResult.claims.admin === true) {
-      return true;
-    }
-  } catch {
-    // ignore
-  }
-
-  // Graceful fallback to user doc in Firestore or admin email
-  try {
     const profile = await getUserProfile(user.uid);
-    if (profile?.role === 'admin') return true;
+    return profile?.role === 'admin';
   } catch {
-    // ignore
+    return false;
   }
-
-  if (user.email && (user.email.toLowerCase().includes('admin') || user.email === 'henochshungu@gmail.com')) {
-    return true;
-  }
-
-  return false;
 }
