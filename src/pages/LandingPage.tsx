@@ -20,6 +20,7 @@ import {
   MessageSquare,
   Send,
   Sparkles,
+  Maximize2,
   X,
   CheckCircle2,
 } from 'lucide-react';
@@ -108,6 +109,7 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
     },
   ]);
   const [isAiTyping, setIsAiTyping] = useState(false);
+  const [isAiExpanded, setIsAiExpanded] = useState(false);
 
   const aiSuggestions = [
     'Comment fonctionne IAMTRADER ?',
@@ -470,7 +472,7 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
                 </button>
               </div>
 
-              <div className="relative overflow-hidden rounded-[28px] border border-[#dce9e5] bg-white shadow-[0_20px_60px_rgba(8,24,39,0.08)]">
+              <div className="relative flex h-[340px] min-h-[340px] flex-col overflow-hidden rounded-[28px] border border-[#dce9e5] bg-white shadow-[0_20px_60px_rgba(8,24,39,0.08)]">
                 <div className="absolute -right-20 -top-24 h-56 w-56 rounded-full bg-[#00c796]/10 blur-3xl pointer-events-none" />
                 <div className="relative flex items-center justify-between border-b border-[#e7efec] px-6 py-5 sm:px-7">
                   <div className="flex items-center gap-3">
@@ -485,13 +487,24 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
                       <p className="mt-0.5 text-[11px] font-medium text-[#7a8b9b]">Échange instantané</p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 rounded-full border border-[#dcebe5] bg-[#f5fbf8] px-2.5 py-1.5 text-[10px] font-bold text-[#168c73]">
-                    <span className="h-1.5 w-1.5 rounded-full bg-[#00a982] shadow-[0_0_0_4px_rgba(0,169,130,0.08)]" />
-                    En ligne
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 rounded-full border border-[#dcebe5] bg-[#f5fbf8] px-2.5 py-1.5 text-[10px] font-bold text-[#168c73]">
+                      <span className="h-1.5 w-1.5 rounded-full bg-[#00a982] shadow-[0_0_0_4px_rgba(0,169,130,0.08)]" />
+                      En ligne
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsAiExpanded(true)}
+                      aria-label="Agrandir l’assistant IA"
+                      title="Agrandir"
+                      className="flex h-8 w-8 items-center justify-center rounded-xl border border-[#dce9e5] bg-white text-[#5d7183] transition-all hover:border-[#9edbca] hover:bg-[#f0faf6] hover:text-[#168c73]"
+                    >
+                      <Maximize2 className="h-3.5 w-3.5" />
+                    </button>
                   </div>
                 </div>
 
-                <div className="relative h-[360px] overflow-y-auto px-5 py-5 sm:px-7">
+                <div className="relative min-h-0 flex-1 overflow-y-auto px-5 py-4 sm:px-7">
                   <div className="space-y-4">
                     {aiMessages.map((message, index) => (
                       <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
@@ -582,6 +595,100 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
         </div>
         <div className="max-w-6xl mx-auto mt-8 pt-6 border-t border-white/10 text-[11px] text-slate-500 flex flex-col sm:flex-row justify-between gap-2"><span>© 2026 IAMTRADER. Tous droits réservés.</span><span>Données hébergées et sécurisées sur Google Cloud Platform.</span></div>
       </footer>
+
+      {isAiExpanded && (
+        <div
+          className="fixed inset-0 z-[90] flex items-center justify-center bg-[#06111f]/75 px-4 py-6 backdrop-blur-md"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="ai-modal-title"
+        >
+          <div className="flex h-[min(82vh,760px)] w-full max-w-5xl flex-col overflow-hidden rounded-[30px] border border-white/20 bg-white shadow-[0_35px_100px_rgba(6,17,31,0.35)]">
+            <div className="flex items-center justify-between border-b border-[#e7efec] bg-white px-6 py-5 sm:px-8">
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-[#00c796] to-[#00a982] text-white shadow-[0_10px_25px_rgba(0,169,130,0.2)]">
+                  <Sparkles className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 id="ai-modal-title" className="text-base font-black text-[#081827]">Assistant IAMTRADER</h2>
+                    <span className="rounded-full bg-[#eafbf6] px-2 py-1 text-[9px] font-black uppercase tracking-wider text-[#168c73]">IA</span>
+                  </div>
+                  <p className="mt-0.5 text-[11px] font-medium text-[#7a8b9b]">Échange instantané</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAiExpanded(false)}
+                aria-label="Fermer l’assistant agrandi"
+                className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#dce9e5] bg-white text-[#5d7183] transition-all hover:border-[#b9d9cf] hover:bg-[#f0faf6] hover:text-[#168c73]"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <div className="min-h-0 flex-1 overflow-y-auto bg-[#fbfdfc] px-6 py-6 sm:px-10">
+              <div className="mx-auto max-w-3xl space-y-4">
+                {aiMessages.map((message, index) => (
+                  <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    <div className={`max-w-[85%] rounded-2xl px-5 py-3.5 text-sm leading-relaxed shadow-sm ${
+                      message.role === 'user'
+                        ? 'rounded-br-md bg-[#081827] text-white'
+                        : 'rounded-bl-md border border-[#e2ece8] bg-white text-[#43586b]'
+                    }`}>
+                      {message.text}
+                    </div>
+                  </div>
+                ))}
+                {isAiTyping && (
+                  <div className="flex justify-start">
+                    <div className="flex items-center gap-1.5 rounded-2xl rounded-bl-md border border-[#e2ece8] bg-white px-4 py-3">
+                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#00a982]" />
+                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#00a982] [animation-delay:120ms]" />
+                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#00a982] [animation-delay:240ms]" />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="border-t border-[#e7efec] bg-white px-5 py-4 sm:px-8">
+              <div className="mx-auto max-w-3xl">
+                <div className="mb-3 flex gap-2 overflow-x-auto pb-1">
+                  {aiSuggestions.map((suggestion) => (
+                    <button
+                      key={suggestion}
+                      type="button"
+                      onClick={(event) => handleAiSubmit(event as unknown as React.FormEvent<HTMLFormElement>, suggestion)}
+                      disabled={isAiTyping}
+                      className="shrink-0 rounded-full border border-[#dce9e5] bg-[#fbfdfc] px-3 py-1.5 text-[10px] font-semibold text-[#5d7183] transition-all hover:border-[#9edbca] hover:bg-[#f0faf6] hover:text-[#168c73] disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
+                </div>
+                <form onSubmit={handleAiSubmit} className="flex items-center gap-2 rounded-2xl border border-[#d9e6e1] bg-white p-1.5 shadow-[0_8px_25px_rgba(8,24,39,0.05)] focus-within:border-[#8bd4c0] focus-within:ring-4 focus-within:ring-[#00a982]/5">
+                  <input
+                    type="text"
+                    value={aiInput}
+                    onChange={(event) => setAiInput(event.target.value)}
+                    placeholder="Posez votre question à l’IA..."
+                    className="min-w-0 flex-1 bg-transparent px-3 py-3 text-sm text-[#081827] outline-none placeholder:text-[#9aa9b5]"
+                    disabled={isAiTyping}
+                  />
+                  <button
+                    type="submit"
+                    disabled={!aiInput.trim() || isAiTyping}
+                    aria-label="Envoyer à l’assistant IA"
+                    className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#00a982] text-white shadow-[0_8px_18px_rgba(0,169,130,0.2)] transition-all hover:bg-[#008f70] disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <Send className="h-4 w-4" />
+                  </button>
+                </form>
+                <p className="mt-2 text-center text-[9px] font-medium text-[#9aa9b5]">L’assistant IA sera connecté au moteur IAMTRADER.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {isContactModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#06111f]/70 px-4 py-6 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="contact-modal-title">
