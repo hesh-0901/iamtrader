@@ -87,29 +87,46 @@ export async function onRequest(context: { request: Request; env: Env }) {
     return json({ error: 'Message utilisateur requis.' }, 400);
   }
 
-  const model = context.env.GEMINI_MODEL || 'gemini-3.5-flash-lite';
+  const model = (context.env.GEMINI_MODEL || 'gemini-3.5-flash-lite').trim();
+  const apiKey = context.env.GEMINI_API_KEY.trim();
 
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
-    {
-      method: 'POST',
-      headers: {
-        'x-goog-api-key': context.env.GEMINI_API_KEY,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            role: 'user',
-            parts: [{ text: safeMessages[safeMessages.length - 1].content }],
-          },
-        ],
-        generationConfig: {
-          maxOutputTokens: 700,
+  let response: Response;
+  try {
+    response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+      {
+        method: 'POST',
+        headers: {
+          'x-goog-api-key': apiKey,
+          'Content-Type': 'application/json',
         },
-      }),
-    }
-  );
+        body: JSON.stringify({
+          contents: [
+            {
+              role: 'user',
+              parts: [{ text: safeMessages[safeMessages.length - 1].content }],
+            },
+          ],
+          generationConfig: {
+            maxOutputTokens: 700,
+          },
+        }),
+      }
+    );
+  } catch (error) {
+    console.error('Gemini fetch failed:', error);
+    return json(
+      {
+        error: 'Le service IA n’a pas pu répondre pour le moment.',
+        details: {
+          reason: 'fetch_failed',
+          model,
+          keyPresent: Boolean(apiKey),
+        },
+      },
+      502
+    );
+  }
 
   const responseText = await response.text();
 
@@ -126,12 +143,35 @@ export async function onRequest(context: { request: Request; env: Env }) {
         ? (data as { error?: { code?: unknown; status?: unknown; message?: unknown } }).error
         : undefined;
 
+    let modelCheckStatus: number | undefined;
+    let modelCheckBody = '';
+
+    try {
+      const modelCheck = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}`,
+        {
+          method: 'GET',
+          headers: {
+            'x-goog-api-key': apiKey,
+          },
+        }
+      );
+      modelCheckStatus = modelCheck.status;
+      modelCheckBody = (await modelCheck.text()).slice(0, 4000);
+    } catch (error) {
+      console.error('Gemini model check failed:', error);
+    }
+
     console.error('Gemini API error:', {
       status: response.status,
       code: providerError?.code,
       providerStatus: providerError?.status,
       message: providerError?.message,
+      model,
+      keyPresent: Boolean(apiKey),
       rawResponse: responseText.slice(0, 4000),
+      modelCheckStatus,
+      modelCheckBody,
     });
 
     return json(
@@ -142,7 +182,11 @@ export async function onRequest(context: { request: Request; env: Env }) {
           code: providerError?.code,
           status: providerError?.status,
           message: providerError?.message,
+          model,
+          keyPresent: Boolean(apiKey),
           rawResponse: responseText.slice(0, 4000),
+          modelCheckStatus,
+          modelCheckBody,
         },
       },
       502
