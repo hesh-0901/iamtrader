@@ -19,6 +19,7 @@ import {
   Mail,
   MessageSquare,
 } from 'lucide-react';
+import { addContactMessage } from '../services/firestore';
 
 interface LandingPageProps {
   onOpenAuth: (mode: 'login' | 'register') => void;
@@ -95,6 +96,9 @@ const plans = [
 export function LandingPage({ onOpenAuth }: LandingPageProps) {
   const [hookIndex, setHookIndex] = useState(0);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
+  const [contactForm, setContactForm] = useState({ name: '', email: '', subject: '', message: '' });
+  const [isContactSending, setIsContactSending] = useState(false);
+  const [contactStatus, setContactStatus] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -380,14 +384,84 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
                 </div>
                 <h3 className="text-xl font-black">Parlons de votre besoin</h3>
                 <p className="mt-2 text-sm text-[#71839a] leading-relaxed">
-                  Pour nous contacter, utilisez directement notre adresse support. Votre logiciel de messagerie s’ouvrira automatiquement.
+                  Envoyez-nous votre demande directement depuis IAMTRADER. Elle sera enregistrée dans notre espace de support.
                 </p>
-                <a
-                  href="mailto:support@iamtrader.com?subject=Contact%20IAMTRADER"
-                  className="mt-7 inline-flex items-center justify-center gap-2 w-full sm:w-auto px-6 py-3 rounded-xl bg-[#00a982] text-white text-sm font-bold hover:bg-[#008f70] transition-colors"
+
+                <form
+                  className="mt-7 space-y-4"
+                  onSubmit={async (event) => {
+                    event.preventDefault();
+                    setContactStatus(null);
+                    if (!contactForm.name.trim() || !contactForm.email.trim() || !contactForm.subject.trim() || !contactForm.message.trim()) {
+                      setContactStatus({ type: 'error', text: 'Veuillez remplir tous les champs.' });
+                      return;
+                    }
+                    setIsContactSending(true);
+                    try {
+                      await addContactMessage({
+                        name: contactForm.name.trim(),
+                        email: contactForm.email.trim(),
+                        subject: contactForm.subject.trim(),
+                        message: contactForm.message.trim(),
+                      });
+                      setContactForm({ name: '', email: '', subject: '', message: '' });
+                      setContactStatus({ type: 'success', text: 'Votre message a bien été envoyé. Nous vous répondrons dès que possible.' });
+                    } catch (error) {
+                      console.error('Contact form submission failed:', error);
+                      setContactStatus({ type: 'error', text: 'Impossible d’envoyer le message pour le moment. Réessayez dans quelques instants.' });
+                    } finally {
+                      setIsContactSending(false);
+                    }
+                  }}
                 >
-                  Écrire à IAMTRADER <ArrowRight className="w-4 h-4" />
-                </a>
+                  <div className="grid sm:grid-cols-2 gap-4">
+                    <input
+                      type="text"
+                      required
+                      value={contactForm.name}
+                      onChange={(event) => setContactForm({ ...contactForm, name: event.target.value })}
+                      placeholder="Votre nom"
+                      className="w-full rounded-xl border border-[#d9e4eb] bg-[#fbfdff] px-4 py-3 text-sm outline-none focus:border-[#00a982] focus:ring-2 focus:ring-[#00a982]/10"
+                    />
+                    <input
+                      type="email"
+                      required
+                      value={contactForm.email}
+                      onChange={(event) => setContactForm({ ...contactForm, email: event.target.value })}
+                      placeholder="Votre adresse e-mail"
+                      className="w-full rounded-xl border border-[#d9e4eb] bg-[#fbfdff] px-4 py-3 text-sm outline-none focus:border-[#00a982] focus:ring-2 focus:ring-[#00a982]/10"
+                    />
+                  </div>
+                  <input
+                    type="text"
+                    required
+                    value={contactForm.subject}
+                    onChange={(event) => setContactForm({ ...contactForm, subject: event.target.value })}
+                    placeholder="Sujet"
+                    className="w-full rounded-xl border border-[#d9e4eb] bg-[#fbfdff] px-4 py-3 text-sm outline-none focus:border-[#00a982] focus:ring-2 focus:ring-[#00a982]/10"
+                  />
+                  <textarea
+                    required
+                    rows={5}
+                    value={contactForm.message}
+                    onChange={(event) => setContactForm({ ...contactForm, message: event.target.value })}
+                    placeholder="Votre message..."
+                    className="w-full resize-none rounded-xl border border-[#d9e4eb] bg-[#fbfdff] px-4 py-3 text-sm outline-none focus:border-[#00a982] focus:ring-2 focus:ring-[#00a982]/10"
+                  />
+                  {contactStatus && (
+                    <div className={`rounded-xl px-4 py-3 text-xs font-semibold ${contactStatus.type === 'success' ? 'bg-[#eafbf6] text-[#168c73] border border-[#ccefe5]' : 'bg-rose-50 text-rose-600 border border-rose-100'}`}>
+                      {contactStatus.text}
+                    </div>
+                  )}
+                  <button
+                    type="submit"
+                    disabled={isContactSending}
+                    className="inline-flex items-center justify-center gap-2 w-full px-6 py-3 rounded-xl bg-[#00a982] text-white text-sm font-bold hover:bg-[#008f70] disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {isContactSending ? 'Envoi en cours...' : 'Envoyer le message'}
+                    {!isContactSending && <ArrowRight className="w-4 h-4" />}
+                  </button>
+                </form>
               </div>
             </div>
           </div>
