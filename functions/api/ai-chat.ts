@@ -98,13 +98,12 @@ export async function onRequest(context: { request: Request; env: Env }) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        systemInstruction: {
-          parts: [{ text: SYSTEM_INSTRUCTIONS }],
-        },
-        contents: safeMessages.map((message) => ({
-          role: message.role === 'assistant' ? 'model' : 'user',
-          parts: [{ text: message.content }],
-        })),
+        contents: [
+          {
+            role: 'user',
+            parts: [{ text: safeMessages[safeMessages.length - 1].content }],
+          },
+        ],
         generationConfig: {
           maxOutputTokens: 700,
         },
