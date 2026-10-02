@@ -112,7 +112,7 @@ function VyraAvatar({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
 
   return (
     <div
-      className={\`relative shrink-0 overflow-hidden rounded-2xl border border-[#ccefe5] bg-gradient-to-br from-[#eafbf6] via-white to-[#dff7ef] shadow-[0_8px_22px_rgba(0,169,130,0.16)] \${sizes[size]}\`}
+      className={`relative shrink-0 overflow-hidden rounded-2xl border border-[#ccefe5] bg-gradient-to-br from-[#eafbf6] via-white to-[#dff7ef] shadow-[0_8px_22px_rgba(0,169,130,0.16)] ${sizes[size]}`}
       role="img"
       aria-label="Avatar de VYRA"
     >
