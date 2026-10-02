@@ -38,6 +38,33 @@ const hooks = [
   'Et si chaque trade pouvait vous apprendre quelque chose ?',
 ];
 
+const VYRA_CHAT_STORAGE_KEY = 'iamtrader_vyra_chat_v1';
+
+function renderVyraText(text: string): React.ReactNode {
+  return text.split('\\n').map((line, index) => {
+    const trimmed = line.trim();
+
+    if (!trimmed) return <div key={index} className="h-2" />;
+
+    const heading = trimmed.match(/^#{1,3}\\s+(.+)$/);
+    const bullet = trimmed.match(/^(?:[-*])\\s+(.+)$/);
+    const numbered = trimmed.match(/^\\d+[.)]\\s+(.+)$/);
+    const content = heading?.[1] ?? bullet?.[1] ?? numbered?.[1] ?? trimmed;
+
+    const parts = content.split(/(\\*\\*[^*]+\\*\\*)/g).map((part, partIndex) =>
+      part.startsWith('**') && part.endsWith('**')
+        ? <strong key={partIndex} className="font-semibold text-[#172b3d]">{part.slice(2, -2)}</strong>
+        : part
+    );
+
+    if (heading) return <div key={index} className="mt-2 mb-1 text-[13px] font-bold text-[#172b3d]">{parts}</div>;
+    if (bullet) return <div key={index} className="flex gap-2 pl-1"><span className="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-[#00a982]" /><span>{parts}</span></div>;
+    if (numbered) return <div key={index} className="flex gap-2 pl-1"><span className="font-semibold text-[#168c73]">{trimmed.match(/^\\d+/)?.[0]}.</span><span>{parts}</span></div>;
+
+    return <p key={index} className="m-0">{parts}</p>;
+  });
+}
+
 const plans = [
   {
     name: 'Starter',
