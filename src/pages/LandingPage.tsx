@@ -117,7 +117,7 @@ function VyraAvatar({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
       aria-label="Avatar de VYRA"
     >
       <img
-        src="/vyra-avatar.svg"
+        src="/vyra-avatar.png"
         alt="VYRA, assistante IA d'IAMTRADER"
         className="h-full w-full object-cover object-[50%_42%]"
       />
