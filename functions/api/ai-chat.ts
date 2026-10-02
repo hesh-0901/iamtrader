@@ -1,3 +1,5 @@
+import { IAMTRADER_KNOWLEDGE } from './vyra-knowledge';
+
 interface Env {
   GEMINI_API_KEY: string;
   GEMINI_MODEL?: string;
@@ -148,7 +150,7 @@ export async function onRequest(context: { request: Request; env: Env }) {
         },
         body: JSON.stringify({
           systemInstruction: {
-            parts: [{ text: SYSTEM_INSTRUCTIONS }],
+            parts: [{ text: `${SYSTEM_INSTRUCTIONS}\n\nBASE DE CONNAISSANCES IAMTRADER\n${IAMTRADER_KNOWLEDGE}` }],
           },
           contents,
         }),
