@@ -40,29 +40,97 @@ const hooks = [
 
 const VYRA_CHAT_STORAGE_KEY = 'iamtrader_vyra_chat_v1';
 
+function renderVyraInline(text: string): React.ReactNode[] {
+  return text.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g).map((part, index) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={index} className="font-semibold text-[#172b3d]">{part.slice(2, -2)}</strong>;
+    }
+    if (part.startsWith('*') && part.endsWith('*')) {
+      return <em key={index}>{part.slice(1, -1)}</em>;
+    }
+    return part;
+  });
+}
+
 function renderVyraText(text: string): React.ReactNode {
-  return text.split('\\n').map((line, index) => {
+  const normalized = text.replace(/\\n/g, '\n').replace(/\r\n/g, '\n').replace(/\r/g, '\n');
+  const lines = normalized.split('\n');
+
+  return lines.map((line, index) => {
     const trimmed = line.trim();
 
-    if (!trimmed) return <div key={index} className="h-2" />;
+    if (!trimmed) {
+      return <div key={index} className="h-2" aria-hidden="true" />;
+    }
 
-    const heading = trimmed.match(/^#{1,3}\\s+(.+)$/);
-    const bullet = trimmed.match(/^(?:[-*])\\s+(.+)$/);
-    const numbered = trimmed.match(/^\\d+[.)]\\s+(.+)$/);
-    const content = heading?.[1] ?? bullet?.[1] ?? numbered?.[1] ?? trimmed;
+    const heading = trimmed.match(/^#{1,3}\s+(.+)$/);
+    const bullet = trimmed.match(/^(?:[-*•])\s+(.+)$/);
+    const numbered = trimmed.match(/^(\d+)[.)]\s+(.+)$/);
+    const content = heading?.[1] ?? bullet?.[1] ?? numbered?.[2] ?? trimmed;
+    const parts = renderVyraInline(content);
 
-    const parts = content.split(/(\\*\\*[^*]+\\*\\*)/g).map((part, partIndex) =>
-      part.startsWith('**') && part.endsWith('**')
-        ? <strong key={partIndex} className="font-semibold text-[#172b3d]">{part.slice(2, -2)}</strong>
-        : part
+    if (heading) {
+      return (
+        <div key={index} className="mt-1 mb-1.5 text-[13px] font-bold leading-5 text-[#172b3d]">
+          {parts}
+        </div>
+      );
+    }
+
+    if (bullet) {
+      return (
+        <div key={index} className="flex gap-2 pl-0.5 leading-6">
+          <span className="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-[#00a982]" />
+          <span>{parts}</span>
+        </div>
+      );
+    }
+
+    if (numbered) {
+      return (
+        <div key={index} className="flex gap-2 pl-0.5 leading-6">
+          <span className="min-w-5 font-semibold text-[#168c73]">{numbered[1]}.</span>
+          <span>{parts}</span>
+        </div>
+      );
+    }
+
+    return (
+      <p key={index} className="m-0 leading-6">
+        {parts}
+      </p>
     );
-
-    if (heading) return <div key={index} className="mt-2 mb-1 text-[13px] font-bold text-[#172b3d]">{parts}</div>;
-    if (bullet) return <div key={index} className="flex gap-2 pl-1"><span className="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-[#00a982]" /><span>{parts}</span></div>;
-    if (numbered) return <div key={index} className="flex gap-2 pl-1"><span className="font-semibold text-[#168c73]">{trimmed.match(/^\\d+/)?.[0]}.</span><span>{parts}</span></div>;
-
-    return <p key={index} className="m-0">{parts}</p>;
   });
+}
+
+function VyraAvatar({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
+  const sizes = {
+    sm: 'h-8 w-8',
+    md: 'h-11 w-11',
+    lg: 'h-12 w-12',
+  };
+
+  return (
+    <div
+      className={\`relative shrink-0 overflow-hidden rounded-2xl border border-[#ccefe5] bg-gradient-to-br from-[#eafbf6] via-white to-[#dff7ef] shadow-[0_8px_22px_rgba(0,169,130,0.16)] \${sizes[size]}\`}
+      role="img"
+      aria-label="Avatar de VYRA"
+    >
+      <svg viewBox="0 0 64 64" className="h-full w-full" aria-hidden="true">
+        <path d="M9 64c1-14 10-22 23-22s22 8 23 22H9Z" fill="#081827" opacity=".96" />
+        <path d="M18 40c3-7 8-11 14-11s11 4 14 11c-4 4-9 6-14 6s-10-2-14-6Z" fill="#f0c6a8" />
+        <path d="M17 29c0-13 7-21 16-21 10 0 17 8 17 21v7c-3-3-5-6-6-10-5 3-12 4-20 3-1 4-3 7-7 9v-9Z" fill="#2f2430" />
+        <path d="M22 26c2-2 4-3 7-3M35 23c3 0 5 1 7 3" stroke="#5b3d39" strokeWidth="1.8" strokeLinecap="round" fill="none" />
+        <circle cx="28" cy="29" r="1.35" fill="#172b3d" />
+        <circle cx="37" cy="29" r="1.35" fill="#172b3d" />
+        <path d="M30 34c1.5 1 3.5 1 5 0" stroke="#b96e68" strokeWidth="1.5" strokeLinecap="round" fill="none" />
+        <path d="M20 16c4-7 12-10 20-6 4 2 7 6 8 12-6-5-12-6-18-4-4 1-7 3-10 7-1-3-1-6 0-9Z" fill="#382832" />
+        <path d="M22 44c3 4 7 6 10 6s7-2 10-6l4 20H18l4-20Z" fill="#f8fbfa" />
+        <path d="M26 44c2 2 4 3 6 3s4-1 6-3v7c-4 2-8 2-12 0v-7Z" fill="#00a982" opacity=".9" />
+      </svg>
+      <span className="absolute bottom-0.5 right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-[#00c796]" />
+    </div>
+  );
 }
 
 const plans = [
@@ -132,7 +200,7 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
   const [aiMessages, setAiMessages] = useState<Array<{ role: 'assistant' | 'user'; text: string }>>([
     {
       role: 'assistant',
-      text: 'Bonjour. Je suis l’assistant IAMTRADER. Je peux vous aider à comprendre la plateforme, ses fonctionnalités, le Trader Score et les différents plans.',
+      text: 'Bonjour. Je suis VYRA, l’assistante IA d’IAMTRADER. Je peux vous aider à comprendre la plateforme et ses fonctionnalités.',
     },
   ]);
   const [isAiTyping, setIsAiTyping] = useState(false);
@@ -528,12 +596,10 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
                 <div className="absolute -right-20 -top-24 h-56 w-56 rounded-full bg-[#00c796]/10 blur-3xl pointer-events-none" />
                 <div className="relative flex items-center justify-between border-b border-[#e7efec] px-6 py-5 sm:px-7">
                   <div className="flex items-center gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gradient-to-br from-[#00c796] to-[#00a982] text-white shadow-[0_10px_25px_rgba(0,169,130,0.2)]">
-                      <Sparkles className="h-5 w-5" />
-                    </div>
+                    <VyraAvatar size="md" />
                     <div>
                       <div className="flex items-center gap-2">
-                        <h3 className="text-base font-black text-[#081827]">Assistant IAMTRADER</h3>
+                        <h3 className="text-base font-black text-[#081827]">VYRA</h3>
                         <span className="rounded-full bg-[#eafbf6] px-2 py-1 text-[9px] font-black uppercase tracking-wider text-[#168c73]">IA</span>
                       </div>
                       <p className="mt-0.5 text-[11px] font-medium text-[#7a8b9b]">Échange instantané</p>
@@ -560,10 +626,11 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
                   <div className="space-y-4">
                     {aiMessages.map((message, index) => (
                       <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                        <div className={`max-w-[88%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm ${
+                        {message.role === 'assistant' && <VyraAvatar size="sm" />}
+                        <div className={`ml-2 max-w-[88%] rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm ${
                           message.role === 'user'
                             ? 'rounded-br-md bg-[#081827] text-white'
-                            : 'rounded-bl-md border border-[#e2ece8] bg-[#f7fbf9] text-[#43586b]'
+                            : 'rounded-bl-md border border-[#dcebe5] bg-white text-[#43586b] shadow-[0_6px_20px_rgba(8,24,39,0.04)]'
                         }`}>
                           {renderVyraText(message.text)}
                         </div>
@@ -614,7 +681,7 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
                       <Send className="h-4 w-4" />
                     </button>
                   </form>
-                  <p className="mt-2 text-center text-[9px] font-medium text-[#9aa9b5]">L’assistant IA sera connecté au moteur IAMTRADER.</p>
+                  <p className="mt-2 text-center text-[9px] font-medium text-[#9aa9b5]">VYRA est connectée au moteur IAMTRADER.</p>
                 </div>
               </div>
             </div>
@@ -663,7 +730,7 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h2 id="ai-modal-title" className="text-base font-black text-[#081827]">Assistant IAMTRADER</h2>
+                    <h2 id="ai-modal-title" className="text-base font-black text-[#081827]">VYRA</h2>
                     <span className="rounded-full bg-[#eafbf6] px-2 py-1 text-[9px] font-black uppercase tracking-wider text-[#168c73]">IA</span>
                   </div>
                   <p className="mt-0.5 text-[11px] font-medium text-[#7a8b9b]">Échange instantané</p>
@@ -682,10 +749,11 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
               <div className="mx-auto max-w-3xl space-y-4">
                 {aiMessages.map((message, index) => (
                   <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                    <div className={`max-w-[85%] rounded-2xl px-5 py-3.5 text-sm leading-relaxed shadow-sm ${
+                    {message.role === 'assistant' && <VyraAvatar size="sm" />}
+                    <div className={`ml-2 max-w-[85%] rounded-2xl px-5 py-3.5 text-sm leading-relaxed shadow-sm ${
                       message.role === 'user'
                         ? 'rounded-br-md bg-[#081827] text-white'
-                        : 'rounded-bl-md border border-[#e2ece8] bg-white text-[#43586b]'
+                        : 'rounded-bl-md border border-[#dcebe5] bg-white text-[#43586b] shadow-[0_8px_24px_rgba(8,24,39,0.05)]'
                     }`}>
                       {renderVyraText(message.text)}
                     </div>
