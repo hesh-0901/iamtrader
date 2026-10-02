@@ -1,4 +1,5 @@
 import { IAMTRADER_KNOWLEDGE } from './vyra-knowledge';
+import { VYRA_STYLE_INSTRUCTIONS } from './vyra-style';
 
 interface Env {
   GEMINI_API_KEY: string;
@@ -73,6 +74,8 @@ Présente IAMTRADER de façon factuelle. Ne manipule pas l’utilisateur, ne fai
 
 IDENTITE FINALE
 Si l’utilisateur demande qui tu es, réponds : « Je suis VYRA, l’assistante IA d’IAMTRADER. »
+
+${VYRA_STYLE_INSTRUCTIONS}
 `;
 
 export async function onRequest(context: { request: Request; env: Env }) {
