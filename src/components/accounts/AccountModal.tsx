@@ -59,6 +59,9 @@ export function AccountModal({ isOpen, onClose, userId }: AccountModalProps) {
     }
   };
 
+  const fieldClass =
+    'w-full bg-white border border-[#DCE5EC] rounded-lg px-3 py-2 text-[#0B1F35] placeholder:text-[#9AA9B8] caret-[#0B1F35] focus:outline-none focus:border-[#00A982] focus:ring-2 focus:ring-[#00A982]/10';
+
   return (
     <Modal
       isOpen={isOpen}
@@ -75,7 +78,7 @@ export function AccountModal({ isOpen, onClose, userId }: AccountModalProps) {
             placeholder="ex: FTMO $100K Swing, Apex $50k #1"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-neutral-100 focus:outline-none focus:border-emerald-500"
+            className={fieldClass}
             required
           />
         </div>
@@ -88,7 +91,7 @@ export function AccountModal({ isOpen, onClose, userId }: AccountModalProps) {
               placeholder="ex: FTMO, Apex, Topstep, IBKR"
               value={broker}
               onChange={(e) => setBroker(e.target.value)}
-              className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-neutral-100"
+              className={fieldClass}
             />
           </div>
 
@@ -97,7 +100,7 @@ export function AccountModal({ isOpen, onClose, userId }: AccountModalProps) {
             <select
               value={type}
               onChange={(e) => setType(e.target.value as AccountType)}
-              className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-neutral-100"
+              className={fieldClass}
             >
               <option value="Prop Firm Funded">Prop Firm Funded</option>
               <option value="Prop Firm Challenge">Prop Firm Challenge</option>
@@ -117,7 +120,7 @@ export function AccountModal({ isOpen, onClose, userId }: AccountModalProps) {
                 setInitialBalance(e.target.value);
                 setCurrentBalance(e.target.value);
               }}
-              className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-neutral-100 font-mono"
+              className={fieldClass + ' font-mono'}
             />
           </div>
 
@@ -126,7 +129,7 @@ export function AccountModal({ isOpen, onClose, userId }: AccountModalProps) {
             <select
               value={currency}
               onChange={(e) => setCurrency(e.target.value as CurrencyCode)}
-              className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-neutral-100"
+              className={fieldClass}
             >
               <option value="USD">USD ($)</option>
               <option value="EUR">EUR (€)</option>
@@ -143,7 +146,7 @@ export function AccountModal({ isOpen, onClose, userId }: AccountModalProps) {
               placeholder="ex: 2500"
               value={maxDrawdownLimit}
               onChange={(e) => setMaxDrawdownLimit(e.target.value)}
-              className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-neutral-100 font-mono"
+              className={fieldClass + ' font-mono'}
             />
           </div>
 
@@ -154,7 +157,7 @@ export function AccountModal({ isOpen, onClose, userId }: AccountModalProps) {
               placeholder="ex: 5000"
               value={targetProfit}
               onChange={(e) => setTargetProfit(e.target.value)}
-              className="w-full bg-neutral-800 border border-neutral-700 rounded-lg px-3 py-2 text-neutral-100 font-mono"
+              className={fieldClass + ' font-mono'}
             />
           </div>
         </div>
