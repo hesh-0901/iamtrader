@@ -112,54 +112,16 @@ function VyraAvatar({ size = 'md' }: { size?: 'sm' | 'md' | 'lg' }) {
 
   return (
     <div
-      className={`relative shrink-0 overflow-hidden rounded-2xl border border-[#c8eee3] bg-[#f5fcfa] shadow-[0_8px_24px_rgba(0,169,130,0.14)] ${sizes[size]}`}
+      className={`relative shrink-0 overflow-hidden rounded-full border-2 border-white bg-[#eafbf6] shadow-[0_6px_18px_rgba(0,169,130,0.18)] ring-1 ring-[#bfe8dc] ${sizes[size]}`}
       role="img"
       aria-label="Avatar de VYRA"
     >
-      <svg viewBox="0 0 80 80" className="h-full w-full" aria-hidden="true">
-        <defs>
-          <linearGradient id="vyra-bg" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#eafff8" />
-            <stop offset="100%" stopColor="#d8f5ed" />
-          </linearGradient>
-          <linearGradient id="vyra-hair" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#172b3d" />
-            <stop offset="100%" stopColor="#304b60" />
-          </linearGradient>
-          <linearGradient id="vyra-jacket" x1="0" y1="0" x2="1" y2="1">
-            <stop offset="0%" stopColor="#ffffff" />
-            <stop offset="100%" stopColor="#e7f5f1" />
-          </linearGradient>
-          <filter id="vyra-shadow" x="-30%" y="-30%" width="160%" height="160%">
-            <feDropShadow dx="0" dy="2" stdDeviation="2" floodColor="#168c73" floodOpacity=".16" />
-          </filter>
-        </defs>
-
-        <rect width="80" height="80" rx="20" fill="url(#vyra-bg)" />
-
-        <circle cx="62" cy="17" r="9" fill="#ffffff" opacity=".75" />
-        <path d="M58 17h8M62 13v8" stroke="#00a982" strokeWidth="1.8" strokeLinecap="round" opacity=".8" />
-
-        <g filter="url(#vyra-shadow)">
-          <path d="M14 80c2-16 12-25 26-25s24 9 26 25H14Z" fill="url(#vyra-jacket)" />
-          <path d="M29 57c3 5 7 8 11 8s8-3 11-8l6 23H23l6-23Z" fill="url(#vyra-jacket)" />
-          <path d="M34 59c2 2 4 3 6 3s4-1 6-3v9c-4 2-8 2-12 0v-9Z" fill="#00a982" opacity=".92" />
-
-          <path d="M26 30c0-11 6-18 14-18s14 7 14 18v13c0 10-6 17-14 17s-14-7-14-17V30Z" fill="#f2c8ad" />
-          <path d="M24 34V29c0-14 6-22 17-22 10 0 18 8 18 21 0 6-2 11-5 14l-2-11c-6 2-13 2-20-1-1 4-3 7-8 9v-5Z" fill="url(#vyra-hair)" />
-          <path d="M27 27c3-8 10-12 19-11 4 1 8 3 11 7-5-1-10-1-15 1-5 2-9 4-15 3Z" fill="#21394d" />
-
-          <circle cx="34" cy="37" r="1.5" fill="#172b3d" />
-          <circle cx="46" cy="37" r="1.5" fill="#172b3d" />
-          <path d="M37 45c2 1.5 4 1.5 6 0" stroke="#b66d67" strokeWidth="1.6" strokeLinecap="round" fill="none" />
-          <path d="M31 33c2-2 4-2.5 6-1.5M43 31.5c2-1 4-.5 6 1.5" stroke="#30495c" strokeWidth="1.4" strokeLinecap="round" fill="none" />
-        </g>
-
-        <circle cx="67" cy="65" r="6" fill="#ffffff" opacity=".96" />
-        <path d="M64.5 65l1.7 1.8 3.4-4" stroke="#00a982" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-      </svg>
-
-      <span className="absolute bottom-0.5 right-0.5 h-2.5 w-2.5 rounded-full border-2 border-white bg-[#00c796] shadow-[0_0_0_2px_rgba(0,199,150,0.12)]" />
+      <img
+        src="/vyra-avatar.webp"
+        alt="VYRA, assistante IA d'IAMTRADER"
+        className="h-full w-full object-cover object-[50%_42%]"
+      />
+      <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white bg-[#00c796] shadow-[0_0_0_2px_rgba(0,199,150,0.14)]" />
     </div>
   );
 }
