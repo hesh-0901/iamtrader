@@ -565,7 +565,7 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
                             ? 'rounded-br-md bg-[#081827] text-white'
                             : 'rounded-bl-md border border-[#e2ece8] bg-[#f7fbf9] text-[#43586b]'
                         }`}>
-                          {message.text}
+                          {renderVyraText(message.text)}
                         </div>
                       </div>
                     ))}
@@ -687,7 +687,7 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
                         ? 'rounded-br-md bg-[#081827] text-white'
                         : 'rounded-bl-md border border-[#e2ece8] bg-white text-[#43586b]'
                     }`}>
-                      {message.text}
+                      {renderVyraText(message.text)}
                     </div>
                   </div>
                 ))}
