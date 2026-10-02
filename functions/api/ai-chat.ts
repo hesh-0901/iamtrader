@@ -1,6 +1,6 @@
 interface Env {
-  OPENAI_API_KEY: string;
-  OPENAI_MODEL?: string;
+  GEMINI_API_KEY: string;
+  GEMINI_MODEL?: string;
 }
 
 type ChatMessage = {
@@ -49,11 +49,14 @@ export async function onRequest(context: { request: Request; env: Env }) {
     return json({ error: 'Méthode non autorisée.' }, 405);
   }
 
-  if (!context.env.OPENAI_API_KEY) {
+  const apiKey = context.env.GEMINI_API_KEY?.trim();
+
+  if (!apiKey) {
     return json({ error: 'Assistant IA non configuré sur le serveur.' }, 500);
   }
 
   let body: { messages?: ChatMessage[] };
+
   try {
     body = await context.request.json();
   } catch {
@@ -76,8 +79,6 @@ export async function onRequest(context: { request: Request; env: Env }) {
     }))
     .filter((message) => message.content);
 
-  // The landing page displays an initial assistant greeting, so discard
-  // leading assistant messages before sending the conversation upstream.
   while (safeMessages.length && safeMessages[0].role === 'assistant') {
     safeMessages.shift();
   }
@@ -86,31 +87,41 @@ export async function onRequest(context: { request: Request; env: Env }) {
     return json({ error: 'Message utilisateur requis.' }, 400);
   }
 
-  const model = (context.env.OPENAI_MODEL || 'gpt-5.6-luna').trim();
-  const apiKey = context.env.OPENAI_API_KEY.trim();
+  const contents = safeMessages.map((message) => ({
+    role: message.role === 'assistant' ? 'model' : 'user',
+    parts: [{ text: message.content }],
+  }));
+
+  const model = (context.env.GEMINI_MODEL || 'gemini-3.5-flash-lite').trim();
 
   let response: Response;
+
   try {
-    response = await fetch('https://api.openai.com/v1/responses', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model,
-        input: safeMessages[safeMessages.length - 1].content,
-      }),
-    });
+    response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+      {
+        method: 'POST',
+        headers: {
+          'x-goog-api-key': apiKey,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          systemInstruction: {
+            parts: [{ text: SYSTEM_INSTRUCTIONS }],
+          },
+          contents,
+        }),
+      }
+    );
   } catch (error) {
-    console.error('OpenAI fetch failed:', error);
+    console.error('Gemini fetch failed:', error);
+
     return json(
       {
         error: 'Le service IA n’a pas pu répondre pour le moment.',
         details: {
           reason: 'fetch_failed',
           model,
-          keyPresent: Boolean(apiKey),
         },
       },
       502
@@ -120,6 +131,7 @@ export async function onRequest(context: { request: Request; env: Env }) {
   const responseText = await response.text();
 
   let data: unknown = {};
+
   try {
     data = responseText ? JSON.parse(responseText) : {};
   } catch {
@@ -127,46 +139,23 @@ export async function onRequest(context: { request: Request; env: Env }) {
   }
 
   if (!response.ok) {
-    let modelCheckStatus: number | undefined;
-    let modelCheckBody = '';
+    const providerError =
+      typeof data === 'object' && data && 'error' in data
+        ? (data as {
+            error?: {
+              code?: unknown;
+              status?: unknown;
+              message?: unknown;
+            };
+          }).error
+        : undefined;
 
-    try {
-      const modelCheck = await fetch(
-        `https://api.openai.com/v1/models/${encodeURIComponent(model)}`,
-        {
-          method: 'GET',
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-          },
-        }
-      );
-      modelCheckStatus = modelCheck.status;
-      modelCheckBody = (await modelCheck.text()).slice(0, 4000);
-    } catch (error) {
-      console.error('OpenAI model check failed:', error);
-    }
-
-    let providerError: {
-      message?: unknown;
-      type?: unknown;
-      code?: unknown;
-      param?: unknown;
-    } | undefined;
-
-    try {
-      const parsed = JSON.parse(responseText) as { error?: typeof providerError };
-      providerError = parsed.error;
-    } catch {
-      // Keep the raw provider response when it is not JSON.
-    }
-
-    console.error('OpenAI API error:', {
+    console.error('Gemini API error:', {
       status: response.status,
       model,
       code: providerError?.code,
-      type: providerError?.type,
+      providerStatus: providerError?.status,
       message: providerError?.message,
-      param: providerError?.param,
       rawResponse: responseText.slice(0, 4000),
     });
 
@@ -177,34 +166,27 @@ export async function onRequest(context: { request: Request; env: Env }) {
           httpStatus: response.status,
           model,
           code: providerError?.code,
-          type: providerError?.type,
+          status: providerError?.status,
           message: providerError?.message,
-          param: providerError?.param,
           rawResponse: responseText.slice(0, 4000),
-          modelCheckStatus,
-          modelCheckBody,
         },
       },
       502
     );
   }
 
-  const parsed = JSON.parse(responseText) as {
-    output?: Array<{
-      type?: string;
-      content?: Array<{
-        type?: string;
-        text?: string;
-      }>;
+  const candidates = (data as {
+    candidates?: Array<{
+      content?: {
+        parts?: Array<{ text?: string }>;
+      };
     }>;
-  };
+  }).candidates;
 
   const outputText =
-    parsed.output
-      ?.filter((item) => item.type === 'message')
-      .flatMap((item) => item.content || [])
-      .filter((part) => part.type === 'output_text' && typeof part.text === 'string')
-      .map((part) => part.text as string)
+    candidates?.[0]?.content?.parts
+      ?.map((part) => part.text)
+      .filter((text): text is string => typeof text === 'string')
       .join('\n') || '';
 
   if (!outputText.trim()) {
