@@ -20,7 +20,7 @@ function authHeader(request: Request) {
 }
 
 function normalizePhone(value: unknown) {
-  const raw = String(value || '').trim().replace(/[\\s-]/g, '');
+  const raw = String(value || '').trim().replace(/[\s-]/g, '');
   if (/^\\+243\\d{9}$/.test(raw)) return '0' + raw.slice(4);
   if (/^243\\d{9}$/.test(raw)) return '0' + raw.slice(3);
   if (/^0\\d{9}$/.test(raw)) return raw;
