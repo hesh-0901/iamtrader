@@ -163,13 +163,13 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
       };
 
       // Score + grade — centered inside the fixed medal area.
-      drawCentered(scoreText, 330, 540, 220, 58, 40, '#ffffff', 800);
+      drawCentered(scoreText, 330, 560, 220, 58, 40, '#ffffff', 800);
       drawCentered(grade, 330, 650, 110, 62, 44, '#2bb58a', 900);
 
       // Trader identity block.
-      drawLeft(traderName, 735, 474, 285, 28, 17, '#0b1b2e', 800);
+      drawLeft(traderName, 735, 469, 285, 28, 17, '#0b1b2e', 800);
       drawLeft(status, 735, 580, 285, 21, 14, '#16876a', 800);
-      drawLeft(tradesText, 735, 680, 285, 21, 15, '#0b1b2e', 800);
+      drawLeft(tradesText, 735, 690, 285, 21, 15, '#0b1b2e', 800);
 
       // Performance indicators.
       drawCentered(winRate, 1228, 590, 170, 30, 21, '#0b1b2e', 800);
