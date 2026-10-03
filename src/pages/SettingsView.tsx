@@ -9,7 +9,7 @@ import { resetUserPassword } from '../services/auth';
 import { useToast } from '../components/common/Toast';
 import { TradingJournalSettings } from '../components/settings/TradingJournalSettings';
 import { formatCurrency } from '../utils/calculations';
-import { createPayment, getPaymentStatus, PaidPlan } from '../services/payments';
+import { confirmSimulatedPayment, createPayment, createSimulatedPayment, getPaymentStatus, PaidPlan } from '../services/payments';
 
 interface SettingsViewProps {
   userProfile: UserProfile | null;
@@ -39,6 +39,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
   const [theme, setTheme] = useState<'light'>('light');
   const [dashboardMode, setDashboardMode] = useState<'standard' | 'focus' | 'analysis' | 'compact'>(() => (localStorage.getItem('iamtrader-dashboard-mode') as any) || 'standard');
   const [paymentPlan, setPaymentPlan] = useState<PaidPlan | null>(null);
+  const [paymentMode, setPaymentMode] = useState<'simulation' | 'live'>('simulation');
   const [paymentPhone, setPaymentPhone] = useState('');
   const [paymentId, setPaymentId] = useState<string | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<'idle' | 'processing' | 'paid' | 'failed'>('idle');
@@ -68,18 +69,39 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
     localStorage.setItem('iamtrader-dashboard-mode', mode);
   };
 
-  const startPayment = (plan: PaidPlan) => { setPaymentPlan(plan); setPaymentPhone(''); setPaymentId(null); setPaymentStatus('idle'); setPaymentMessage(''); };
+  const startPayment = (plan: PaidPlan) => { setPaymentPlan(plan); setPaymentMode('simulation'); setPaymentPhone(''); setPaymentId(null); setPaymentStatus('idle'); setPaymentMessage(''); };
 
   const submitPayment = async () => {
     if (!paymentPlan) return;
     setIsPaymentLoading(true); setPaymentMessage('');
-    try { const payment = await createPayment(paymentPlan, paymentPhone); setPaymentId(payment.id); setPaymentStatus('processing'); setPaymentMessage(payment.message || 'Validez la demande sur votre téléphone.'); }
-    catch (error: any) { setPaymentStatus('failed'); setPaymentMessage(error?.message || 'Impossible d’initier le paiement.'); }
-    finally { setIsPaymentLoading(false); }
+    try {
+      const payment = paymentMode === 'simulation'
+        ? await createSimulatedPayment(paymentPlan, paymentPhone)
+        : await createPayment(paymentPlan, paymentPhone);
+      setPaymentId(payment.id);
+      setPaymentStatus('processing');
+      setPaymentMessage(payment.message || 'Paiement en cours de traitement.');
+    } catch (error: any) {
+      setPaymentStatus('failed');
+      setPaymentMessage(error?.message || 'Impossible d’initier le paiement.');
+    } finally { setIsPaymentLoading(false); }
+  };
+
+  const confirmSimulation = async () => {
+    if (!paymentId) return;
+    setIsPaymentLoading(true); setPaymentMessage('');
+    try {
+      await confirmSimulatedPayment(paymentId);
+      setPaymentStatus('paid');
+      setPaymentMessage('Paiement confirmé. La transaction a été enregistrée côté administration et votre abonnement est activé.');
+    } catch (error: any) {
+      setPaymentStatus('failed');
+      setPaymentMessage(error?.message || 'Impossible de confirmer la simulation.');
+    } finally { setIsPaymentLoading(false); }
   };
 
   React.useEffect(() => {
-    if (!paymentId || paymentStatus !== 'processing') return;
+    if (!paymentId || paymentStatus !== 'processing' || paymentMode === 'simulation') return;
     let cancelled = false; let attempts = 0;
     const timer = window.setInterval(async () => {
       attempts += 1;
@@ -92,7 +114,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
       } catch { if (attempts >= 40) window.clearInterval(timer); }
     }, 3000);
     return () => { cancelled = true; window.clearInterval(timer); };
-  }, [paymentId, paymentStatus]);
+  }, [paymentId, paymentStatus, paymentMode]);
 
   const handlePasswordReset = async () => {
     if (!userProfile?.email) return;
@@ -215,7 +237,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
 
           <section>
             <div className="mb-4 flex items-end justify-between gap-4">
-              <div><span className="text-[9px] font-bold uppercase tracking-[0.16em] text-violet-500">Changer de formule</span><h3 className="mt-1 text-lg font-black text-slate-950">Choisissez votre niveau d’accès</h3><p className="mt-1 text-xs text-slate-500">Les options de paiement en ligne seront reliées ici.</p></div>
+              <div><span className="text-[9px] font-bold uppercase tracking-[0.16em] text-violet-500">Changer de formule</span><h3 className="mt-1 text-lg font-black text-slate-950">Choisissez votre niveau d’accès</h3><p className="mt-1 text-xs text-slate-500">Paiement en mode test maintenant, puis branchement du prestataire réel lundi.</p></div>
               <span className="hidden rounded-full bg-slate-100 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-slate-500 sm:inline-flex">Paiement sécurisé</span>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
@@ -274,17 +296,22 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm">
           <div className="w-full max-w-md overflow-hidden rounded-[26px] border border-slate-200 bg-white shadow-[0_30px_100px_rgba(15,23,42,.25)]">
             <div className="flex items-start justify-between border-b border-slate-200 bg-slate-50 p-5">
-              <div><div className="text-[9px] font-bold uppercase tracking-[0.16em] text-indigo-500">Paiement sécurisé</div><h3 className="mt-1 text-lg font-black text-slate-950">{paymentPlan === 'pro' ? 'Passer à Plus' : 'Activer Community'}</h3><p className="mt-1 text-[11px] text-slate-500">Paiement Mobile Money via Labyrinthe.</p></div>
+              <div><div className="text-[9px] font-bold uppercase tracking-[0.16em] text-indigo-500">Paiement sécurisé</div><h3 className="mt-1 text-lg font-black text-slate-950">{paymentPlan === 'pro' ? 'Passer à Plus' : 'Activer Community'}</h3><p className="mt-1 text-[11px] text-slate-500">Checkout IAMTRADER — le moteur suit le cycle d’un vrai paiement : création, traitement, confirmation et activation.</p></div>
               <button onClick={() => setPaymentPlan(null)} className="rounded-xl p-2 text-slate-500 hover:bg-white hover:text-slate-900" aria-label="Fermer"><X className="h-4 w-4" /></button>
             </div>
             <div className="space-y-4 p-5">
               {paymentStatus === 'idle' && (<>
-                <div className="rounded-2xl bg-slate-50 p-4"><div className="flex items-center justify-between"><span className="text-xs font-bold text-slate-600">Formule</span><span className="text-base font-black text-slate-950">{paymentPlan === 'pro' ? '$9.99 / mois' : '$89.99 / 6 mois'}</span></div><div className="mt-2 text-[11px] text-slate-500">L’activation est automatique après confirmation du paiement.</div></div>
-                <div><label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Numéro Mobile Money</label><div className="relative"><Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input value={paymentPhone} onChange={e => setPaymentPhone(e.target.value)} placeholder="0812345678" inputMode="tel" autoComplete="tel" className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-3 text-sm font-semibold text-slate-950 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100" /></div><p className="mt-1.5 text-[10px] text-slate-400">Numéro qui recevra la demande de validation.</p></div>
+                <div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1">
+                  <button type="button" onClick={() => setPaymentMode('simulation')} className={`rounded-lg px-3 py-2 text-[10px] font-bold transition ${paymentMode === 'simulation' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500'}`}>Simulation</button>
+                  <button type="button" onClick={() => setPaymentMode('live')} className={`rounded-lg px-3 py-2 text-[10px] font-bold transition ${paymentMode === 'live' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-500'}`}>Paiement réel</button>
+                </div>
+                {paymentMode === 'simulation' && <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[10px] leading-4 text-amber-800"><b>Mode test.</b> Aucun argent n’est débité. La transaction sera néanmoins créée dans le registre de paiements et visible par l’administration.</div>}
+                <div className="rounded-2xl bg-slate-50 p-4"><div className="flex items-center justify-between"><span className="text-xs font-bold text-slate-600">Formule</span><span className="text-base font-black text-slate-950">{paymentPlan === 'pro' ? '$9.99 / mois' : '$89.99 / 6 mois'}</span></div><div className="mt-2 text-[11px] text-slate-500">L’activation intervient uniquement après confirmation serveur de la transaction.</div></div>
+                <div><label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Numéro Mobile Money</label><div className="relative"><Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input value={paymentPhone} onChange={e => setPaymentPhone(e.target.value)} placeholder="0812345678" inputMode="tel" autoComplete="tel" className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-3 text-sm font-semibold text-slate-950 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100" /></div><p className="mt-1.5 text-[10px] text-slate-400">{paymentMode === 'simulation' ? 'Numéro utilisé pour reproduire les données d’une transaction Mobile Money.' : 'Numéro qui recevra la demande de validation.'}</p></div>
                 <button onClick={submitPayment} disabled={isPaymentLoading || !paymentPhone.trim()} className="w-full rounded-xl bg-indigo-600 px-4 py-3 text-xs font-bold text-white shadow-lg shadow-indigo-200 transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50">{isPaymentLoading ? 'Initialisation du paiement…' : 'Continuer vers le paiement'}</button>
               </>)}
-              {paymentStatus === 'processing' && (<div className="py-5 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-indigo-50 text-indigo-600"><div className="h-6 w-6 animate-spin rounded-full border-2 border-indigo-200 border-t-indigo-600" /></div><h4 className="mt-4 text-base font-black text-slate-950">Paiement en attente</h4><p className="mt-2 text-xs leading-5 text-slate-500">{paymentMessage || 'Validez la demande sur votre téléphone. Nous vérifions automatiquement la confirmation.'}</p><div className="mt-4 rounded-xl bg-amber-50 px-3 py-2 text-[10px] font-semibold text-amber-700">Validez la demande Mobile Money avant de fermer.</div></div>)}
-              {paymentStatus === 'paid' && (<div className="py-6 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-600"><Check className="h-7 w-7" /></div><h4 className="mt-4 text-base font-black text-slate-950">Paiement confirmé</h4><p className="mt-2 text-xs text-slate-500">{paymentMessage}</p></div>)}
+              {paymentStatus === 'processing' && (<div className="py-5 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-indigo-50 text-indigo-600"><div className="h-6 w-6 animate-spin rounded-full border-2 border-indigo-200 border-t-indigo-600" /></div><h4 className="mt-4 text-base font-black text-slate-950">Paiement en traitement</h4><p className="mt-2 text-xs leading-5 text-slate-500">{paymentMessage || 'Nous attendons la confirmation du prestataire.'}</p>{paymentMode === 'simulation' ? <button onClick={confirmSimulation} disabled={isPaymentLoading} className="mt-5 w-full rounded-xl bg-emerald-600 px-4 py-3 text-xs font-bold text-white disabled:opacity-50">{isPaymentLoading ? 'Confirmation serveur…' : 'Simuler la validation du paiement'}</button> : <div className="mt-4 rounded-xl bg-amber-50 px-3 py-2 text-[10px] font-semibold text-amber-700">Validez la demande Mobile Money avant de fermer.</div>}</div>)}
+              {paymentStatus === 'paid' && (<div className="py-6 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-600"><Check className="h-7 w-7" /></div><h4 className="mt-4 text-base font-black text-slate-950">Paiement confirmé</h4><p className="mt-2 text-xs text-slate-500">{paymentMessage}</p><div className="mt-4 rounded-xl bg-emerald-50 px-3 py-2 text-[10px] font-semibold text-emerald-700">Référence : {paymentId}</div></div>)}
               {paymentStatus === 'failed' && (<div className="space-y-4 py-3 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-rose-50 text-rose-600">!</div><h4 className="text-base font-black text-slate-950">Paiement non finalisé</h4><p className="text-xs leading-5 text-slate-500">{paymentMessage}</p><button onClick={() => setPaymentStatus('idle')} className="w-full rounded-xl bg-slate-950 px-4 py-3 text-xs font-bold text-white">Réessayer</button></div>)}
             </div>
           </div>
