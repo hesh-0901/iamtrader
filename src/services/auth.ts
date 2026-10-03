@@ -52,6 +52,11 @@ export async function registerWithEmail(email: string, pass: string, displayName
   return cred.user;
 }
 
+export async function updateTraderProfile(uid: string, traderProfile: UserProfile['traderProfile'], displayName?: string): Promise<void> {
+  const userRef = doc(db, 'users', uid);
+  await setDoc(userRef, { ...(displayName !== undefined ? { displayName } : {}), traderProfile }, { merge: true });
+}
+
 export async function logoutUser(): Promise<void> {
   await signOut(auth);
 }
