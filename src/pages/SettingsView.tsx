@@ -8,7 +8,7 @@ import {
 import { resetUserPassword, updateTraderProfile } from '../services/auth';
 import { useToast } from '../components/common/Toast';
 import { TradingJournalSettings } from '../components/settings/TradingJournalSettings';
-import { formatCurrency } from '../utils/calculations';
+import { calculateTraderRating, formatCurrency } from '../utils/calculations';
 import { confirmSimulatedPayment, createPayment, createSimulatedPayment, getPaymentStatus, PaidPlan } from '../services/payments';
 
 interface SettingsViewProps {
@@ -64,6 +64,8 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
   const [paymentStatus, setPaymentStatus] = useState<'idle' | 'processing' | 'paid' | 'failed'>('idle');
   const [paymentMessage, setPaymentMessage] = useState('');
   const [isPaymentLoading, setIsPaymentLoading] = useState(false);
+
+  const traderRating = useMemo(() => calculateTraderRating(trades), [trades]);
 
   const currentAccount = useMemo(() => {
     if (selectedAccountId && selectedAccountId !== 'all') return accounts.find(a => a.id === selectedAccountId) || accounts[0];
@@ -385,6 +387,26 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                     {socialLinks.map((link, index) => <div key={link.network + link.username + index} className="text-sm"><span className="font-semibold text-slate-900">{link.network}</span><span className="mx-2 text-slate-300">·</span><span className="text-slate-500">{link.username}</span></div>)}
                   </div>
                 ) : <p className="text-xs text-slate-500">Aucun réseau social renseigné.</p>}
+              </section>
+
+              <section className="relative overflow-hidden rounded-[24px] border border-slate-200 bg-gradient-to-r from-white via-[#f7fffc] to-[#f5f3ff] p-5 shadow-[0_12px_35px_rgba(15,23,42,0.05)]">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-50 text-amber-500 ring-1 ring-amber-100"><Star className="h-5 w-5" /></div>
+                    <div>
+                      <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">IAMTRADER Rating</div>
+                      <div className="mt-1 text-sm font-black text-slate-950">Cote automatique de performance</div>
+                      <p className="mt-1 text-[10px] text-slate-500">{traderRating.isSufficientData ? traderRating.tradesAnalyzed + ' trades analysés · Win Rate ' + traderRating.winRate.toFixed(1) + '% · PF ' + traderRating.profitFactor.toFixed(2) : traderRating.tradesAnalyzed + '/5 trades nécessaires pour obtenir une cote'}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 self-start sm:self-auto">
+                    <div className={traderRating.isSufficientData ? 'flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 shadow-sm' : 'flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2 shadow-sm'}>
+                      <span className={traderRating.isSufficientData ? 'flex h-7 w-7 items-center justify-center rounded-full bg-white text-[11px] font-black text-emerald-700 ring-1 ring-emerald-200' : 'flex h-7 w-7 items-center justify-center rounded-full bg-white text-[11px] font-black text-slate-500 ring-1 ring-slate-200'}>{traderRating.grade}</span>
+                      <span className={traderRating.isSufficientData ? 'text-xs font-black text-emerald-800' : 'text-xs font-black text-slate-600'}>{traderRating.isSufficientData ? traderRating.label : 'En attente'}</span>
+                      {traderRating.isSufficientData && <span className="text-[10px] font-bold text-emerald-600">{traderRating.score}/100</span>}
+                    </div>
+                  </div>
+                </div>
               </section>
             </div>
           ) : (
