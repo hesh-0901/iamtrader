@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Activity, AlertTriangle, BellRing, CheckCircle2, ChevronLeft, ChevronRight, Clock3, CreditCard, Edit3, History, Mail, RefreshCw, Search, Send, ShieldCheck, Trash2, UserCheck, UserX, Users, X, XCircle } from 'lucide-react';
-import { AdminLog, SubscriptionPlan, UserProfile, UserStatus, TradingAccount, Trade } from '../types';
-import { addAdminLog, deleteContactMessage, getAdminLogs, getAllAccounts, getAllTrades, getAllUsers, subscribeAllUsers, subscribeContactMessages, updateContactMessage, updateUserRoleAndPlan } from '../services/firestore';
+import { AdminLog, PaymentRecord, SubscriptionPlan, UserProfile, UserStatus, TradingAccount, Trade } from '../types';
+import { addAdminLog, deleteContactMessage, getAdminLogs, getAllAccounts, getAllTrades, getAllUsers, subscribeAllPayments, subscribeAllUsers, subscribeContactMessages, updateContactMessage, updateUserRoleAndPlan } from '../services/firestore';
 import { useToast } from '../components/common/Toast';
 import { auth } from '../firebase/config';
 
@@ -52,6 +52,8 @@ export function AdminConsole() {
   const [expiry, setExpiry] = useState('');
   const [days, setDays] = useState('');
   const [historyOpen, setHistoryOpen] = useState(false);
+  const [payments, setPayments] = useState<PaymentRecord[]>([]);
+  const [paymentFilter, setPaymentFilter] = useState<'all' | 'paid' | 'processing' | 'failed'>('all');
   const [contactMessages, setContactMessages] = useState<import('../services/firestore').ContactMessage[]>([]);
   const [selectedMessage, setSelectedMessage] = useState<import('../services/firestore').ContactMessage | null>(null);
   const [contactFilter, setContactFilter] = useState<'all' | 'new' | 'in_progress' | 'resolved'>('all');
@@ -103,12 +105,15 @@ export function AdminConsole() {
   useEffect(() => {
     let unsubscribeUsers: (() => void) | undefined;
     let unsubscribeContacts: (() => void) | undefined;
+    let unsubscribePayments: (() => void) | undefined;
 
     const unsubscribeAuth = auth.onAuthStateChanged((user) => {
       unsubscribeUsers?.();
       unsubscribeContacts?.();
+      unsubscribePayments?.();
       unsubscribeUsers = undefined;
       unsubscribeContacts = undefined;
+      unsubscribePayments = undefined;
 
       if (!user) return;
 
@@ -121,11 +126,16 @@ export function AdminConsole() {
         if (realtimeError) return;
         setContactMessages(messages);
       });
+      unsubscribePayments = subscribeAllPayments((nextPayments, realtimeError) => {
+        if (realtimeError) return;
+        setPayments(nextPayments);
+      });
     });
 
     return () => {
       unsubscribeUsers?.();
       unsubscribeContacts?.();
+      unsubscribePayments?.();
       unsubscribeAuth();
     };
   }, []);
@@ -269,6 +279,40 @@ export function AdminConsole() {
             )}
           </div>
         </header>
+
+        <section className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-100 p-4 sm:p-5">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600"><CreditCard className="h-4 w-4" /></div>
+                <div><h2 className="text-sm font-black text-slate-900">Réception des paiements</h2><p className="mt-1 text-[10px] text-slate-400">Registre transactionnel reçu côté serveur, mis à jour en temps réel.</p></div>
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5">
+                {(['all','paid','processing','failed'] as const).map(status => <button key={status} onClick={() => setPaymentFilter(status)} className={'rounded-xl px-3 py-2 text-[10px] font-bold ' + (paymentFilter === status ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200')}>{status === 'all' ? 'Tous' : status === 'paid' ? 'Confirmés' : status === 'processing' ? 'En cours' : 'Échoués'}</button>)}
+              </div>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <div className="rounded-xl bg-slate-50 p-3"><div className="text-[9px] font-bold uppercase tracking-wide text-slate-400">Transactions</div><b className="mt-1 block text-lg text-slate-900">{payments.length}</b></div>
+              <div className="rounded-xl bg-emerald-50 p-3"><div className="text-[9px] font-bold uppercase tracking-wide text-emerald-600">Confirmés</div><b className="mt-1 block text-lg text-emerald-700">{payments.filter(p => p.status === 'paid').length}</b></div>
+              <div className="rounded-xl bg-amber-50 p-3"><div className="text-[9px] font-bold uppercase tracking-wide text-amber-600">En cours</div><b className="mt-1 block text-lg text-amber-700">{payments.filter(p => p.status === 'processing').length}</b></div>
+              <div className="rounded-xl bg-blue-50 p-3"><div className="text-[9px] font-bold uppercase tracking-wide text-blue-600">CA confirmé</div><b className="mt-1 block text-lg text-blue-800">$ {payments.filter(p => p.status === 'paid').reduce((sum, p) => sum + Number(p.amount || 0), 0).toFixed(2)}</b></div>
+            </div>
+          </div>
+          <div className="divide-y divide-slate-100">
+            {payments.filter(p => paymentFilter === 'all' || p.status === paymentFilter).slice(0, 12).length === 0 ? <div className="p-10 text-center"><CreditCard className="mx-auto h-8 w-8 text-slate-300" /><p className="mt-2 text-xs font-bold text-slate-500">Aucune transaction</p><p className="mt-1 text-[10px] text-slate-400">Les nouveaux paiements apparaîtront ici après leur création.</p></div> : payments.filter(p => paymentFilter === 'all' || p.status === paymentFilter).slice(0, 12).map(p => (
+              <div key={p.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between hover:bg-slate-50/70">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className={'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ' + (p.status === 'paid' ? 'bg-emerald-50 text-emerald-600' : p.status === 'processing' ? 'bg-amber-50 text-amber-600' : 'bg-rose-50 text-rose-600')}><CreditCard className="h-4 w-4" /></div>
+                  <div className="min-w-0"><b className="block truncate text-xs text-slate-800">{p.displayName || p.email}</b><span className="mt-0.5 block truncate text-[10px] text-slate-400">{p.email} · {p.planName} · {p.reference.slice(0, 12)}…</span></div>
+                </div>
+                <div className="flex items-center justify-between gap-5 sm:justify-end">
+                  <div className="text-right"><b className="block text-sm font-black text-slate-900">{Number(p.amount).toFixed(2)} {p.currency}</b><span className="mt-0.5 block text-[9px] text-slate-400">{new Date(p.createdAt).toLocaleString('fr-FR')}</span></div>
+                  <span className={'inline-flex rounded-full px-2.5 py-1 text-[9px] font-black ' + (p.status === 'paid' ? 'bg-emerald-50 text-emerald-700' : p.status === 'processing' ? 'bg-amber-50 text-amber-700' : 'bg-rose-50 text-rose-700')}>{p.status === 'paid' ? 'PAYÉ' : p.status === 'processing' ? 'EN COURS' : 'ÉCHEC'}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
 
         {error && <div className="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-xs text-rose-700">{error}</div>}
 
