@@ -215,7 +215,7 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
             className="grid h-full gap-0"
             style={{
               gridTemplateRows:
-                '108px 43px repeat(' + calendarWeekCount + ', 124px) 34px',
+                '108px repeat(' + calendarWeekCount + ', 124px) 34px',
             }}
           >
             <div className="flex flex-col justify-center px-3">
