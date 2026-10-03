@@ -1,4 +1,53 @@
-import { auth } from '../firebase/config';\n\nexport type PaidPlan = 'pro' | 'community';\n\nexport interface PaymentInitResult {\n  id: string;\n  plan: PaidPlan;\n  planName: string;\n  amount: number;\n  currency: string;\n  status: 'processing';\n  reference: string;\n  message: string;\n}\n\nexport async function createPayment(plan: PaidPlan, phone: string): Promise<PaymentInitResult> {\n  const user = auth.currentUser;\n  if (!user) throw new Error('Vous devez être connecté.');\n  const idToken = await user.getIdToken();\n  const response = await fetch('/api/payments', {\n    method: 'POST',\n    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },\n    body: JSON.stringify({ plan, phone })\n  });\n  const data = await response.json();\n  if (!response.ok || !data.success) throw new Error(data.message || 'Impossible d’initier le paiement.');\n  return data.payment as PaymentInitResult;\n}\n\nexport async function getPaymentStatus(id: string) {\n  const user = auth.currentUser;\n  if (!user) throw new Error('Vous devez être connecté.');\n  const idToken = await user.getIdToken();\n  const response = await fetch(`/api/payments?id=${encodeURIComponent(id)}`, {\n    headers: { Authorization: `Bearer ${idToken}` }\n  });\n  const data = await response.json();\n  if (!response.ok || !data.success) throw new Error(data.message || 'Impossible de consulter le paiement.');\n  return data.payment as { id: string; plan: PaidPlan; planName: string; amount: number; currency: string; status: 'initiated' | 'processing' | 'paid' | 'failed'; reference: string; createdAt: string; paidAt?: string | null };\n}
+import { auth } from '../firebase/config';
+
+export type PaidPlan = 'pro' | 'community';
+
+export interface PaymentInitResult {
+  id: string;
+  plan: PaidPlan;
+  planName: string;
+  amount: number;
+  currency: string;
+  status: 'processing';
+  reference: string;
+  message: string;
+}
+
+export async function createPayment(plan: PaidPlan, phone: string): Promise<PaymentInitResult> {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Vous devez être connecté.');
+  const idToken = await user.getIdToken();
+  const response = await fetch('/api/payments', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+    body: JSON.stringify({ plan, phone })
+  });
+  const data = await response.json();
+  if (!response.ok || !data.success) throw new Error(data.message || 'Impossible d’initier le paiement.');
+  return data.payment as PaymentInitResult;
+}
+
+export async function getPaymentStatus(id: string) {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Vous devez être connecté.');
+  const idToken = await user.getIdToken();
+  const response = await fetch(`/api/payments?id=${encodeURIComponent(id)}`, {
+    headers: { Authorization: `Bearer ${idToken}` }
+  });
+  const data = await response.json();
+  if (!response.ok || !data.success) throw new Error(data.message || 'Impossible de consulter le paiement.');
+  return data.payment as {
+    id: string;
+    plan: PaidPlan;
+    planName: string;
+    amount: number;
+    currency: string;
+    status: 'initiated' | 'processing' | 'paid' | 'failed';
+    reference: string;
+    createdAt: string;
+    paidAt?: string | null;
+  };
+}
 
 export async function createSimulatedPayment(plan: PaidPlan, phone: string): Promise<PaymentInitResult> {
   const user = auth.currentUser;
