@@ -209,77 +209,76 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
         </div>
       </div>
 
-      {/* Weekly P&L + recent positions sidebar */}
-      <aside className="flex min-w-0 flex-col overflow-hidden rounded-[20px] border border-[#DCE7EE] bg-white text-[#0B1F35] shadow-[0_14px_40px_rgba(11,31,53,0.055)] xl:max-h-[760px]">
-        <div className="border-b border-[#E8EEF2] px-4 py-4">
-          <div className="flex items-center justify-between gap-3">
-            <div>
+      {/* Weekly P&L + recent trades/positions — side-by-side like the reference */}
+      <aside className="min-w-0 overflow-hidden rounded-[20px] border border-[#DCE7EE] bg-white text-[#0B1F35] shadow-[0_14px_40px_rgba(11,31,53,0.055)] xl:col-span-1">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-[minmax(180px,0.72fr)_minmax(260px,1fr)]">
+          <section className="border-b border-[#E8EEF2] md:border-b-0 md:border-r">
+            <div className="border-b border-[#E8EEF2] px-4 py-4">
               <h3 className="text-xs font-extrabold tracking-[-0.01em]">P&L par semaine</h3>
               <p className="mt-1 text-[9px] text-[#8A9AAF]">Performance de {monthNames[month]} {year}</p>
             </div>
-            <div className="rounded-lg bg-[#F5F8FB] px-2 py-1 text-[8px] font-bold text-[#60758D]">{weeklyStats.length} semaines</div>
-          </div>
-        </div>
-
-        <div className="space-y-2.5 p-3.5">
-          {weeklyStats.map(item => {
-            const profitable = item.pnl > 0;
-            const loss = item.pnl < 0;
-            const tone = profitable ? 'border-[#B7EBDD] bg-[#F2FCF8]' : loss ? 'border-[#FFD0D9] bg-[#FFF6F8]' : 'border-[#E3EBF0] bg-[#F8FAFC]';
-            const amountTone = profitable ? 'text-[#00A982]' : loss ? 'text-[#EF476F]' : 'text-[#60758D]';
-            const badgeTone = profitable ? 'bg-[#DDF7EE] text-[#008F63]' : loss ? 'bg-[#FFE5EB] text-[#D83F50]' : 'bg-[#E9EFF4] text-[#71839A]';
-            return (
-              <div key={item.week} className={'rounded-xl border p-3.5 transition-colors ' + tone}>
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="text-[10px] font-extrabold text-[#60758D]">Week {item.week}</div>
-                    <div className={'mt-1 text-lg font-black tracking-[-0.03em] tabular-nums ' + amountTone}>{formatCurrency(item.pnl)}</div>
+            <div className="space-y-2.5 p-3.5">
+              {weeklyStats.map(item => {
+                const profitable = item.pnl > 0;
+                const loss = item.pnl < 0;
+                const tone = profitable ? 'border-[#B7EBDD] bg-[#F2FCF8]' : loss ? 'border-[#FFD0D9] bg-[#FFF6F8]' : 'border-[#E3EBF0] bg-[#F8FAFC]';
+                const amountTone = profitable ? 'text-[#00A982]' : loss ? 'text-[#EF476F]' : 'text-[#60758D]';
+                const badgeTone = profitable ? 'bg-[#DDF7EE] text-[#008F63]' : loss ? 'bg-[#FFE5EB] text-[#D83F50]' : 'bg-[#E9EFF4] text-[#71839A]';
+                return (
+                  <div key={item.week} className={'rounded-xl border p-3 transition-colors ' + tone}>
+                    <div className="flex items-start justify-between gap-2">
+                      <div>
+                        <div className="text-[10px] font-extrabold text-[#60758D]">Week {item.week}</div>
+                        <div className={'mt-1 text-base font-black tracking-[-0.03em] tabular-nums ' + amountTone}>{formatCurrency(item.pnl)}</div>
+                      </div>
+                      <span className={'rounded-full px-1.5 py-1 text-[7px] font-bold ' + badgeTone}>{item.activeDays}j</span>
+                    </div>
+                    <div className="mt-2 text-[8px] font-semibold text-[#8A9AAF]">{item.tradeCount} trade{item.tradeCount > 1 ? 's' : ''}</div>
                   </div>
-                  <span className={'rounded-full px-2 py-1 text-[8px] font-bold ' + badgeTone}>
-                    {item.activeDays} jour{item.activeDays > 1 ? 's' : ''}
-                  </span>
-                </div>
-                <div className="mt-2 flex items-center justify-between text-[8px] font-semibold text-[#8A9AAF]">
-                  <span>{item.tradeCount} trade{item.tradeCount > 1 ? 's' : ''}</span>
-                  <span>{profitable ? 'Semaine positive' : loss ? 'Semaine négative' : 'Aucune activité'}</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="border-y border-[#E8EEF2] px-4 py-3.5">
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-xs font-extrabold">Positions récentes</h3>
-              <p className="mt-1 text-[9px] text-[#8A9AAF]">Positions actuellement ouvertes</p>
+                );
+              })}
             </div>
-            <span className="rounded-full bg-[#ECF4FF] px-2 py-1 text-[8px] font-bold text-[#3B82F6]">{recentOpenPositions.length}</span>
-          </div>
-        </div>
+          </section>
 
-        <div className="min-h-0 flex-1 divide-y divide-[#EDF2F5] overflow-y-auto">
-          {recentOpenPositions.map(trade => (
-            <button key={trade.id} onClick={() => onSelectTrade(trade)} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-[#F7FBFA] cursor-pointer">
-              <div className="flex min-w-0 items-center gap-2.5">
-                <DirectionBadge direction={trade.direction} />
-                <div className="min-w-0">
-                  <div className="truncate text-[10px] font-extrabold text-[#0B1F35]">{trade.symbol}</div>
-                  <div className="mt-0.5 truncate text-[8px] text-[#8A9AAF]">{new Date(trade.entryDate).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>
-                </div>
+          <section className="min-w-0">
+            <div className="border-b border-[#E8EEF2] px-4 py-3.5">
+              <div className="flex items-center gap-5 border-b border-transparent">
+                <div className="relative pb-2 text-[10px] font-extrabold text-[#5B3FD1] after:absolute after:bottom-0 after:left-0 after:h-0.5 after:w-full after:rounded-full after:bg-[#5B3FD1]">Trades récents</div>
+                <div className="pb-2 text-[10px] font-bold text-[#71839A]">Positions ouvertes</div>
               </div>
-              <div className="shrink-0 text-right">
-                <div className="text-[8px] font-bold text-[#60758D]">SL {trade.stopLoss?.toLocaleString() || '—'}</div>
-                <div className="mt-0.5 text-[8px] font-bold text-[#60758D]">TP {trade.takeProfit?.toLocaleString() || '—'}</div>
-              </div>
-            </button>
-          ))}
-          {!recentOpenPositions.length && (
-            <div className="px-4 py-8 text-center">
-              <BriefcaseBusiness className="mx-auto h-5 w-5 text-[#B2BEC8]" />
-              <p className="mt-2 text-[10px] font-semibold text-[#71839A]">Aucune position ouverte</p>
             </div>
-          )}
+
+            <div className="divide-y divide-[#EDF2F5]">
+              {recentClosedTrades.map(trade => (
+                <button key={trade.id} onClick={() => onSelectTrade(trade)} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-[#F7FBFA] cursor-pointer">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] font-bold text-[#71839A]">{new Date(trade.entryDate).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</span>
+                      <span className="text-[10px] font-extrabold text-[#0B1F35]">{trade.symbol}</span>
+                    </div>
+                    <div className="mt-1"><DirectionBadge direction={trade.direction} /></div>
+                  </div>
+                  <div className={'shrink-0 text-right text-[11px] font-black tabular-nums ' + (trade.pnl > 0 ? 'text-[#00A982]' : trade.pnl < 0 ? 'text-[#EF476F]' : 'text-[#60758D]')}>
+                    {formatCurrency(trade.pnl)}
+                  </div>
+                </button>
+              ))}
+              {!recentClosedTrades.length && <div className="px-4 py-10 text-center text-[10px] font-semibold text-[#8A9AAF]">Aucun trade récent</div>}
+            </div>
+
+            <div className="border-t border-[#E8EEF2] px-4 py-3">
+              <div className="flex items-center justify-between text-[8px] font-semibold text-[#8A9AAF]">
+                <span>Positions ouvertes</span>
+                <span className="rounded-full bg-[#ECF4FF] px-2 py-1 font-bold text-[#3B82F6]">{recentOpenPositions.length}</span>
+              </div>
+              {recentOpenPositions.slice(0, 3).map(trade => (
+                <button key={trade.id} onClick={() => onSelectTrade(trade)} className="mt-2 flex w-full items-center justify-between gap-2 rounded-lg bg-[#F8FAFC] px-3 py-2 text-left hover:bg-[#F1F6FA] cursor-pointer">
+                  <span className="text-[9px] font-extrabold text-[#0B1F35]">{trade.symbol}</span>
+                  <span className="text-[8px] font-bold text-[#60758D]">SL {trade.stopLoss?.toLocaleString() || '—'} · TP {trade.takeProfit?.toLocaleString() || '—'}</span>
+                </button>
+              ))}
+            </div>
+          </section>
         </div>
       </aside>
 
