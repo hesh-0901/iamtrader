@@ -160,7 +160,7 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
   return <div className="space-y-5">{situation}{modeBar}<div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
   <div className="p-5 rounded-2xl card-premium">
     <div className="flex items-center justify-between mb-4"><div><h2 className="text-sm font-bold text-[#10233a]">Score psychologique</h2><p className="text-[10px] text-[#8798a8]">Maîtrise émotionnelle et qualité d'exécution.</p></div><ShieldCheck className="w-4 h-4 text-[#08b77a]" /></div>
-    <DisciplineGauge value={score.psychologyScore} sufficient={score.isSufficientData} title="Score psychologique" subtitle="Maîtrise émotionnelle et discipline." />
+    <DisciplineGauge value={score.psychologyScore} sufficient={score.isSufficientData} title="Score psychologique" subtitle="Maîtrise émotionnelle et discipline." showHeader={false} />
   </div>
   <div className="p-5 rounded-2xl card-premium">
     <div className="flex items-center justify-between mb-4"><div><h2 className="text-sm font-bold text-[#10233a]">Analyse psycho</h2><p className="text-[10px] text-[#8798a8]">4 dimensions de votre comportement.</p></div><Activity className="w-4 h-4 text-[#08b77a]" /></div>
@@ -208,7 +208,7 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
 </div>{recentTrades(6)}</div>;
 }
 
-function DisciplineGauge({ value, sufficient, title = 'Score de discipline', subtitle = 'Indice global de discipline.' }: { value: number; sufficient: boolean; title?: string; subtitle?: string }) {
+function DisciplineGauge({ value, sufficient, title = 'Score de discipline', subtitle = 'Indice global de discipline.', showHeader = true }: { value: number; sufficient: boolean; title?: string; subtitle?: string; showHeader?: boolean }) {
   const score = Math.max(0, Math.min(100, value));
   const segments = 50;
   const activeSegments = Math.round((score / 100) * segments);
@@ -234,15 +234,15 @@ function DisciplineGauge({ value, sufficient, title = 'Score de discipline', sub
   const label = !sufficient ? '—' : score >= 80 ? 'Excellent' : score >= 30 ? 'Bon' : 'À travailler';
 
   return (
-    <div className="h-full rounded-2xl bg-white p-5">
-      <div className="flex items-center justify-between">
+    <div className={showHeader ? "h-full rounded-2xl bg-white p-5" : "w-full"}>
+      {showHeader && <div className="flex items-center justify-between">
         <div><h2 className="text-sm font-bold text-[#10233a]">{title}</h2><p className="text-[10px] text-[#8798a8] mt-0.5">{subtitle}</p></div>
         <span className="flex h-7 w-7 items-center justify-center rounded-full border border-[#dfe5ea] text-[#71839a]" title="Score calculé à partir de vos performances">
           <Info className="h-3.5 w-3.5" />
         </span>
-      </div>
-      <div className="mt-2 flex justify-center">
-        <svg viewBox="0 0 240 155" className="h-auto w-full max-w-[330px]" role="img" aria-label={`Score de discipline : ${sufficient ? `${Math.round(score)}%` : 'indisponible'}`}>
+      </div>}
+      <div className={showHeader ? "mt-2 flex justify-center" : "flex justify-center"}>
+        <svg viewBox="0 0 240 155" className="h-auto w-full max-w-[330px]" role="img" aria-label={`${title} : ${sufficient ? `${Math.round(score)}%` : 'indisponible'}`}>
           <defs>
             <radialGradient id="scoreGaugeGlow" cx="50%" cy="72%" r="55%">
               <stop offset="0%" stopColor="#e8f7df" stopOpacity="0.95" />
