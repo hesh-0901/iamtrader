@@ -4,10 +4,11 @@ export async function createSimulatedPayment(plan: PaidPlan, phone: string): Pro
   const user = auth.currentUser;
   if (!user) throw new Error('Vous devez être connecté.');
   const idToken = await user.getIdToken();
+  const idempotencyKey = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '');
   const response = await fetch('/api/payments/simulate', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
-    body: JSON.stringify({ plan, phone })
+    body: JSON.stringify({ plan, phone, idempotencyKey })
   });
   const data = await response.json();
   if (!response.ok || !data.success) throw new Error(data.message || 'Impossible de créer la simulation.');
