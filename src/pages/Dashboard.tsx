@@ -51,6 +51,81 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
     localStorage.setItem('iamtrader-dashboard-mode', value);
   };
 
+  const intelligence = useMemo(() => {
+    const closed = trades.filter(t => t.result !== 'OPEN').sort((a,b) => new Date(a.entryDate).getTime() - new Date(b.entryDate).getTime());
+    const sum = (items: Trade[]) => items.reduce((n,t) => n + (Number(t.pnl) || 0), 0);
+    const group = (key: (t: Trade) => string) => {
+      const map: Record<string,{pnl:number;count:number;wins:number;losses:number;rr:number}> = {};
+      closed.forEach(t => {
+        const k = key(t) || 'Non renseigné';
+        const item = map[k] || {pnl:0,count:0,wins:0,losses:0,rr:0};
+        item.pnl += Number(t.pnl) || 0;
+        item.count++;
+        if (t.result === 'WIN') item.wins++;
+        if (t.result === 'LOSS') item.losses++;
+        item.rr += Number(t.rMultiple) || 0;
+        map[k] = item;
+      });
+      return Object.entries(map).map(([name,v]) => ({
+        name, ...v, winRate: v.count ? (v.wins / v.count) * 100 : 0, avgR: v.count ? v.rr / v.count : 0
+      })).sort((a,b) => b.pnl - a.pnl);
+    };
+    const byDay = group(t => t.entryDate.split('T')[0]);
+    const bySession = group(t => t.session);
+    const bySetup = group(t => t.setup?.trim() || 'Non renseigné');
+    const bySymbol = group(t => t.symbol);
+    const byDirection = group(t => t.direction);
+    const byTimeframe = group(t => t.timeframe);
+    const emotional = closed.filter(t => ['FOMO','Revenge','Fear','Overconfidence','Hesitation'].includes(t.emotion));
+    const revenge = closed.filter(t => t.emotion === 'Revenge');
+    const fomo = closed.filter(t => t.emotion === 'FOMO');
+    const withSL = closed.filter(t => Number(t.stopLoss) > 0);
+    const withTP = closed.filter(t => Number(t.takeProfit) > 0);
+    const risks = closed.map(t => Number(t.riskAmount) || 0).filter(v => v > 0);
+    const avgRisk = risks.length ? risks.reduce((a,b)=>a+b,0)/risks.length : 0;
+    const maxRisk = risks.length ? Math.max(...risks) : 0;
+    const riskPct = capital > 0 ? (avgRisk / capital) * 100 : 0;
+    const uniqueDays = new Set(closed.map(t => t.entryDate.split('T')[0])).size;
+    const avgTradesPerDay = uniqueDays ? closed.length / uniqueDays : 0;
+    const lastDate = closed.length ? new Date(closed[closed.length - 1].entryDate).getTime() : 0;
+    const recent7 = lastDate ? closed.filter(t => lastDate - new Date(t.entryDate).getTime() <= 7 * 86400000) : [];
+    const recentPnl = sum(recent7);
+    const recentWins = recent7.filter(t => t.pnl > 0).length;
+    const recentGrossWin = recent7.filter(t => t.pnl > 0).reduce((n,t)=>n+t.pnl,0);
+    const recentGrossLoss = recent7.filter(t => t.pnl < 0).reduce((n,t)=>n+Math.abs(t.pnl),0);
+    const recentPF = recentGrossLoss ? recentGrossWin / recentGrossLoss : recentGrossWin > 0 ? 99.9 : 0;
+    const recoveryFactor = metrics.maxDrawdownAmount > 0 ? metrics.totalPnl / metrics.maxDrawdownAmount : metrics.totalPnl > 0 ? 99.9 : 0;
+    const bestDay = byDay[0];
+    const worstDay = [...byDay].sort((a,b)=>a.pnl-b.pnl)[0];
+    const bestSession = bySession[0];
+    const bestSetup = bySetup[0];
+    const bestSymbol = bySymbol[0];
+    const bestDirection = byDirection[0];
+    const bestTimeframe = byTimeframe[0];
+    const actions: string[] = [];
+    if (!closed.length) actions.push('Commencez par journaliser chaque exécution avec setup, risque et état émotionnel.');
+    else if (closed.length < 5) actions.push('Continuez à construire un échantillon avant de tirer des conclusions solides.');
+    if (closed.length >= 5 && metrics.profitFactor < 1) actions.push('Edge sous 1,00 PF : isolez les setups, sessions et instruments qui détruisent le résultat.');
+    if (closed.length >= 5 && emotional.length / closed.length >= 0.2) actions.push('20%+ des trades sont émotionnels : surveillez FOMO, revanche et hésitation avant la prochaine entrée.');
+    if (closed.length >= 5 && withSL.length / closed.length < 0.8) actions.push('Moins de 80% des trades ont un stop renseigné : standardisez le risque avant l’exécution.');
+    if (metrics.currentStreak.type === 'LOSS' && metrics.currentStreak.count >= 3) actions.push('Série actuelle de ' + metrics.currentStreak.count + ' pertes : vérifiez le contexte et le respect du plan avant de reprendre.');
+    if (metrics.maxDrawdownPercent >= 5) actions.push('Drawdown maximum de ' + metrics.maxDrawdownPercent.toFixed(1) + '% : traitez le drawdown comme une contrainte de risque, pas comme un objectif à récupérer.');
+    if (!actions.length) actions.push('Le journal ne montre pas de signal comportemental majeur. Continuez à surveiller edge, risque et répétabilité.');
+    return {
+      closed, emotionalRate: closed.length ? emotional.length / closed.length * 100 : 0,
+      revengeRate: closed.length ? revenge.length / closed.length * 100 : 0,
+      fomoRate: closed.length ? fomo.length / closed.length * 100 : 0,
+      slRate: closed.length ? withSL.length / closed.length * 100 : 0,
+      tpRate: closed.length ? withTP.length / closed.length * 100 : 0,
+      avgRisk, maxRisk, riskPct, avgTradesPerDay, recent7, recentPnl,
+      recentWinRate: recent7.length ? recentWins / recent7.length * 100 : 0,
+      recentPF, recoveryFactor,
+      bestDay, worstDay, bestSession, bestSetup, bestSymbol, bestDirection, bestTimeframe,
+      actions
+    };
+  }, [trades, capital, metrics]);
+
+
   const situation = (
     <div className="rounded-2xl bg-white border border-[#dce7e3] p-5 shadow-[0_8px_24px_rgba(16,35,58,0.04)]">
       <div className="flex items-start justify-between gap-4">
@@ -151,7 +226,104 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
 
   const modeBar = <div className="flex flex-wrap gap-1.5 rounded-xl bg-white border border-[#dce7e3] p-1.5 shadow-[0_5px_18px_rgba(16,35,58,0.03)]">{modes.map(([value,label,Icon]) => <button key={value} onClick={() => setDashboardMode(value)} className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-semibold cursor-pointer transition-all ${mode === value ? 'bg-[#10233a] text-white' : 'text-[#71839a] hover:bg-[#f3f7f5]'}`}><Icon className="w-3.5 h-3.5" />{label}</button>)}</div>;
 
-  if (mode === 'focus') return <div className="space-y-5">{situation}{modeBar}
+  const intelligenceStandard = (
+    <div className="p-5 rounded-2xl card-premium">
+      <div className="flex items-start justify-between gap-4 mb-5">
+        <div><h2 className="text-sm font-bold text-[#10233a]">Intelligence trader</h2><p className="text-[10px] text-[#8798a8]">Les informations utiles sont calculées automatiquement à partir du journal.</p></div>
+        <div className="rounded-xl bg-[#e7faf3] px-2.5 py-1.5 text-[9px] font-bold text-[#087b59]">AUTO</div>
+      </div>
+      <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-2.5">
+        <InsightMini label="PF" value={metrics.profitFactor.toFixed(2)} sub="edge global" tone={metrics.profitFactor >= 1 ? 'positive' : 'negative'} />
+        <InsightMini label="Expectancy" value={formatCurrency(metrics.expectancy)} sub="par trade" tone={metrics.expectancy >= 0 ? 'positive' : 'negative'} />
+        <InsightMini label="Recovery" value={intelligence.recoveryFactor >= 99 ? '∞' : intelligence.recoveryFactor.toFixed(2)} sub="P&L / DD" tone={intelligence.recoveryFactor >= 1 ? 'positive' : 'negative'} />
+        <InsightMini label="Risque moyen" value={intelligence.avgRisk ? formatCurrency(intelligence.avgRisk) : '—'} sub={intelligence.riskPct ? intelligence.riskPct.toFixed(2) + '% du capital' : 'non renseigné'} />
+        <InsightMini label="Émotion" value={intelligence.emotionalRate.toFixed(0) + '%'} sub="trades émotionnels" tone={intelligence.emotionalRate <= 20 ? 'positive' : 'negative'} />
+        <InsightMini label="Stop Loss" value={intelligence.slRate.toFixed(0) + '%'} sub="trades protégés" tone={intelligence.slRate >= 80 ? 'positive' : 'negative'} />
+        <InsightMini label="7 derniers j." value={formatCurrency(intelligence.recentPnl)} sub={intelligence.recent7.length + ' trades · ' + intelligence.recentWinRate.toFixed(0) + '% win'} tone={intelligence.recentPnl >= 0 ? 'positive' : 'negative'} />
+        <InsightMini label="Série" value={metrics.currentStreak.count ? (metrics.currentStreak.type === 'WIN' ? '+' : '-') + metrics.currentStreak.count : '—'} sub={metrics.currentStreak.type === 'WIN' ? 'victoires' : metrics.currentStreak.type === 'LOSS' ? 'pertes' : 'aucune'} tone={metrics.currentStreak.type === 'WIN' ? 'positive' : metrics.currentStreak.type === 'LOSS' ? 'negative' : 'neutral'} />
+      </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-3 mt-3">
+        <InsightBlock title="Où votre edge apparaît" items={[
+          intelligence.bestSetup ? intelligence.bestSetup.name + ' · ' + formatCurrency(intelligence.bestSetup.pnl) + ' · ' + intelligence.bestSetup.winRate.toFixed(0) + '% win' : 'Setup : —',
+          intelligence.bestSymbol ? intelligence.bestSymbol.name + ' · ' + formatCurrency(intelligence.bestSymbol.pnl) : 'Instrument : —',
+          intelligence.bestSession ? intelligence.bestSession.name + ' · ' + formatCurrency(intelligence.bestSession.pnl) : 'Session : —',
+          intelligence.bestDirection ? intelligence.bestDirection.name + ' · ' + formatCurrency(intelligence.bestDirection.pnl) : 'Direction : —',
+        ]} />
+        <InsightBlock title="Rythme & répétabilité" items={[
+          intelligence.avgTradesPerDay.toFixed(1) + ' trade/jour en moyenne',
+          intelligence.bestDay ? 'Meilleure journée : ' + intelligence.bestDay.name + ' · ' + formatCurrency(intelligence.bestDay.pnl) : 'Meilleure journée : —',
+          intelligence.worstDay ? 'Journée la plus faible : ' + intelligence.worstDay.name + ' · ' + formatCurrency(intelligence.worstDay.pnl) : 'Journée la plus faible : —',
+          'TP renseigné sur ' + intelligence.tpRate.toFixed(0) + '% des trades',
+        ]} />
+        <InsightBlock title="Action automatique" items={intelligence.actions.slice(0,3)} emphasis />
+      </div>
+    </div>
+  );
+
+  const intelligenceFocus = (
+    <div className="p-4 rounded-2xl border border-[#dce7e3] bg-white shadow-[0_8px_24px_rgba(16,35,58,0.04)]">
+      <div className="flex items-center justify-between mb-3"><div><h2 className="text-sm font-bold text-[#10233a]">Avant de trader</h2><p className="text-[10px] text-[#8798a8]">Lecture instantanée des contraintes du journal.</p></div><ShieldCheck className="w-4 h-4 text-[#08b77a]" /></div>
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+        <InsightMini label="PF" value={metrics.profitFactor.toFixed(2)} sub="edge" tone={metrics.profitFactor >= 1 ? 'positive' : 'negative'} />
+        <InsightMini label="Risque moyen" value={intelligence.avgRisk ? formatCurrency(intelligence.avgRisk) : '—'} sub={intelligence.riskPct ? intelligence.riskPct.toFixed(2) + '% capital' : 'non renseigné'} />
+        <InsightMini label="Émotion" value={intelligence.emotionalRate.toFixed(0) + '%'} sub="historique" tone={intelligence.emotionalRate <= 20 ? 'positive' : 'negative'} />
+        <InsightMini label="Série" value={metrics.currentStreak.count ? (metrics.currentStreak.type === 'WIN' ? '+' : '-') + metrics.currentStreak.count : '—'} sub="actuelle" tone={metrics.currentStreak.type === 'WIN' ? 'positive' : metrics.currentStreak.type === 'LOSS' ? 'negative' : 'neutral'} />
+        <InsightMini label="DD max" value={'-' + metrics.maxDrawdownPercent.toFixed(1) + '%'} sub="observé" tone={metrics.maxDrawdownPercent <= 5 ? 'positive' : 'negative'} />
+      </div>
+      <div className="mt-3 rounded-xl bg-[#f8fbfa] border border-[#e7efec] p-3"><div className="text-[9px] uppercase tracking-wider font-bold text-[#087b59]">Point à contrôler</div><div className="mt-1 text-xs font-semibold text-[#314861]">{intelligence.actions[0]}</div></div>
+    </div>
+  );
+
+  const intelligenceAnalysis = (
+    <div className="p-5 rounded-2xl card-premium">
+      <div className="flex items-center justify-between mb-4"><div><h2 className="text-sm font-bold text-[#10233a]">Diagnostic systématique</h2><p className="text-[10px] text-[#8798a8]">Le journal permet d'identifier où l'edge existe et où il se dégrade.</p></div><Activity className="w-4 h-4 text-[#08b77a]" /></div>
+      <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8 gap-2">
+        <InsightMini label="PF" value={metrics.profitFactor.toFixed(2)} sub="global" tone={metrics.profitFactor >= 1 ? 'positive' : 'negative'} />
+        <InsightMini label="PF 7j." value={intelligence.recent7.length ? intelligence.recentPF.toFixed(2) : '—'} sub={intelligence.recent7.length + ' trades'} tone={intelligence.recentPF >= 1 ? 'positive' : 'negative'} />
+        <InsightMini label="Win 7j." value={intelligence.recentWinRate.toFixed(0) + '%'} sub="récent" />
+        <InsightMini label="Risque max" value={intelligence.maxRisk ? formatCurrency(intelligence.maxRisk) : '—'} sub="renseigné" />
+        <InsightMini label="FOMO" value={intelligence.fomoRate.toFixed(0) + '%'} sub="trades" tone={intelligence.fomoRate === 0 ? 'positive' : 'negative'} />
+        <InsightMini label="Revenge" value={intelligence.revengeRate.toFixed(0) + '%'} sub="trades" tone={intelligence.revengeRate === 0 ? 'positive' : 'negative'} />
+        <InsightMini label="SL" value={intelligence.slRate.toFixed(0) + '%'} sub="usage" tone={intelligence.slRate >= 80 ? 'positive' : 'negative'} />
+        <InsightMini label="Récupération" value={intelligence.recoveryFactor >= 99 ? '∞' : intelligence.recoveryFactor.toFixed(2)} sub="P&L / DD" tone={intelligence.recoveryFactor >= 1 ? 'positive' : 'negative'} />
+      </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3 mt-4">
+        <InsightBlock title="Meilleure condition" items={[
+          intelligence.bestSetup ? 'Setup : ' + intelligence.bestSetup.name : 'Setup : —',
+          intelligence.bestSession ? 'Session : ' + intelligence.bestSession.name : 'Session : —',
+          intelligence.bestSymbol ? 'Instrument : ' + intelligence.bestSymbol.name : 'Instrument : —',
+          intelligence.bestTimeframe ? 'Timeframe : ' + intelligence.bestTimeframe.name : 'Timeframe : —',
+        ]} />
+        <InsightBlock title="Direction" items={byDirectionSummary(trades)} />
+        <InsightBlock title="Rythme" items={[
+          intelligence.avgTradesPerDay.toFixed(1) + ' trade/jour',
+          intelligence.recent7.length + ' trade(s) sur la fenêtre récente',
+          intelligence.bestDay ? 'Meilleur jour : ' + intelligence.bestDay.name : 'Meilleur jour : —',
+          intelligence.worstDay ? 'Pire jour : ' + intelligence.worstDay.name : 'Pire jour : —',
+        ]} />
+        <InsightBlock title="Priorité" items={intelligence.actions.slice(0,4)} emphasis />
+      </div>
+    </div>
+  );
+
+  const intelligenceCompact = (
+    <div className="rounded-2xl border border-[#dce7e3] bg-white p-4 shadow-[0_8px_24px_rgba(16,35,58,0.04)]">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-[9px] font-bold uppercase tracking-wider text-[#087b59]">Lecture instantanée</span>
+        <span className="text-[10px] text-[#71839a]">PF {metrics.profitFactor.toFixed(2)}</span>
+        <span className="text-[10px] text-[#71839a]">·</span>
+        <span className={intelligence.recentPnl >= 0 ? "text-[10px] font-semibold text-[#008f63]" : "text-[10px] font-semibold text-[#e14d5d]"}>7j {formatCurrency(intelligence.recentPnl)}</span>
+        <span className="text-[10px] text-[#71839a]">·</span>
+        <span className="text-[10px] text-[#71839a]">Émotion {intelligence.emotionalRate.toFixed(0)}%</span>
+        <span className="text-[10px] text-[#71839a]">·</span>
+        <span className="text-[10px] text-[#71839a]">DD {metrics.maxDrawdownPercent.toFixed(1)}%</span>
+      </div>
+      <div className="mt-2 text-xs font-semibold text-[#314861]">{intelligence.actions[0]}</div>
+    </div>
+  );
+
+
+  if (mode === 'focus') return <div className="space-y-5">{situation}{modeBar}{intelligenceFocus}
     <div className="grid grid-cols-1 xl:grid-cols-4 gap-4">
       <div className="xl:col-span-3 p-5 rounded-2xl card-premium"><div className="flex items-center justify-between mb-3"><div><h2 className="text-sm font-bold text-[#10233a]">Focus Trading</h2><p className="text-[10px] text-[#8798a8]">Equity, risque et résultats récents.</p></div><Focus className="w-4 h-4 text-[#08b77a]" /></div><div className="min-h-[280px]">{chart}</div></div>
       <div className="p-5 rounded-2xl card-premium"><div className="flex items-center justify-between mb-4"><div><h2 className="text-sm font-bold text-[#10233a]">À surveiller</h2><p className="text-[10px] text-[#8798a8]">Deux repères avant une décision.</p></div><ShieldAlert className="w-4 h-4 text-[#f59e0b]" /></div><div className="space-y-3">
@@ -163,7 +335,7 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
     {recentTrades(6)}
   </div>;
 
-  if (mode === 'analysis') return <div className="space-y-5">{situation}{modeBar}
+  if (mode === 'analysis') return <div className="space-y-5">{situation}{modeBar}{intelligenceAnalysis}
     <div className="grid grid-cols-2 md:grid-cols-5 gap-3"><Metric label="Trades" value={String(metrics.totalTrades)} sub="Total" /><Metric label="Win Rate" value={metrics.winRate.toFixed(1)+'%'} sub="Gagnants" tone="positive" /><Metric label="Profit Factor" value={metrics.profitFactor.toFixed(2)} sub="Gains / pertes" /><Metric label="Expectancy" value={formatCurrency(metrics.expectancy)} sub="Par trade" tone={metrics.expectancy>=0?'positive':'negative'} /><Metric label="Avg R" value={metrics.avgRR.toFixed(2)} sub="Ratio moyen" /></div>
     <div className="p-5 rounded-2xl card-premium"><div className="flex items-center justify-between mb-2"><div><h2 className="text-sm font-bold text-[#10233a]">Analyse de l'equity</h2><p className="text-[10px] text-[#8798a8]">Évolution du capital et points de retournement.</p></div><TrendingUp className="w-4 h-4 text-[#08b77a]" /></div>{chart}</div>
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
@@ -172,13 +344,13 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
     </div>{recentTrades(8)}
   </div>;
 
-  if (mode === 'compact') return <div className="space-y-4">{situation}{modeBar}
+  if (mode === 'compact') return <div className="space-y-4">{situation}{modeBar}{intelligenceCompact}
     <div className="p-4 rounded-2xl card-premium"><div className="flex items-center justify-between mb-2"><div><h2 className="text-sm font-bold text-[#10233a]">Vue compacte</h2><p className="text-[10px] text-[#8798a8]">L'essentiel du compte, sans surcharge.</p></div><Minimize2 className="w-4 h-4 text-[#08b77a]" /></div><div className="min-h-[240px]">{chart}</div></div>
     <div className="grid grid-cols-2 md:grid-cols-4 gap-2"><div className="rounded-xl bg-white border border-[#e7efec] px-3 py-2"><div className="text-[8px] uppercase text-[#8798a8]">P&L</div><div className={"text-sm font-bold font-mono "+(metrics.totalPnl>=0?'text-[#008f63]':'text-[#e14d5d]')}>{formatCurrency(metrics.totalPnl)}</div></div><div className="rounded-xl bg-white border border-[#e7efec] px-3 py-2"><div className="text-[8px] uppercase text-[#8798a8]">Win Rate</div><div className="text-sm font-bold font-mono text-[#10233a]">{metrics.winRate.toFixed(1)}%</div></div><div className="rounded-xl bg-white border border-[#e7efec] px-3 py-2"><div className="text-[8px] uppercase text-[#8798a8]">Drawdown</div><div className="text-sm font-bold font-mono text-[#10233a]">-{metrics.maxDrawdownPercent.toFixed(1)}%</div></div><div className="rounded-xl bg-white border border-[#e7efec] px-3 py-2"><div className="text-[8px] uppercase text-[#8798a8]">Trades</div><div className="text-sm font-bold font-mono text-[#10233a]">{metrics.totalTrades}</div></div></div>
     {recentTrades(5)}
   </div>;
 
-  return <div className="space-y-5">{situation}{modeBar}<div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+  return <div className="space-y-5">{situation}{modeBar}{intelligenceStandard}<div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
   <div className="p-5 rounded-2xl card-premium">
     <div className="flex items-center justify-between mb-4"><div><h2 className="text-sm font-bold text-[#10233a]">Score psychologique</h2><p className="text-[10px] text-[#8798a8]">Maîtrise émotionnelle et qualité d'exécution.</p></div><ShieldCheck className="w-4 h-4 text-[#08b77a]" /></div>
     <DisciplineGauge value={score.psychologyScore} sufficient={score.isSufficientData} title="Score psychologique" subtitle="Maîtrise émotionnelle et discipline." showHeader={false} />
@@ -227,6 +399,34 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
     </div>
   </div>
 </div>{recentTrades(6)}</div>;
+}
+
+
+function byDirectionSummary(trades: Trade[]): string[] {
+  const map: Record<string, {pnl:number;count:number}> = {};
+  trades.filter(t=>t.result!=='OPEN').forEach(t => {
+    const k=t.direction;
+    const item=map[k]||{pnl:0,count:0};
+    item.pnl += Number(t.pnl)||0;
+    item.count++;
+    map[k]=item;
+  });
+  return Object.entries(map).sort((a,b)=>b[1].pnl-a[1].pnl).map(([name,v])=>name + ' · ' + formatCurrency(v.pnl) + ' · ' + v.count + ' trade' + (v.count>1?'s':'')).slice(0,3);
+}
+
+function InsightMini({label,value,sub,tone='neutral'}:{label:string;value:string;sub?:string;tone?:'neutral'|'positive'|'negative'}) {
+  return <div className="rounded-xl border border-[#e7efec] bg-[#fbfdfc] p-2.5 min-w-0">
+    <div className="text-[8px] uppercase tracking-wider font-bold text-[#8798a8] truncate">{label}</div>
+    <div className={'mt-1 text-sm font-bold font-mono truncate ' + (tone==='positive'?'text-[#008f63]':tone==='negative'?'text-[#e14d5d]':'text-[#10233a]')}>{value}</div>
+    {sub && <div className="mt-0.5 text-[8px] text-[#94a2ad] truncate">{sub}</div>}
+  </div>;
+}
+
+function InsightBlock({title,items,emphasis=false}:{title:string;items:string[];emphasis?:boolean}) {
+  return <div className={'rounded-xl border p-3 ' + (emphasis?'border-[#c9eee1] bg-[#f2fbf7]':'border-[#e7efec] bg-[#fbfdfc]')}>
+    <div className={'text-[9px] uppercase tracking-wider font-bold ' + (emphasis?'text-[#087b59]':'text-[#71839a]')}>{title}</div>
+    <div className="mt-2 space-y-1.5">{items.map((item,i)=><div key={i} className="text-[9px] leading-4 text-[#314861]">{item}</div>)}</div>
+  </div>;
 }
 
 function DisciplineGauge({ value, sufficient, title = 'Score de discipline', subtitle = 'Indice global de discipline.', showHeader = true }: { value: number; sufficient: boolean; title?: string; subtitle?: string; showHeader?: boolean }) {
