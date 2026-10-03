@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Trade, TradingAccount, UserProfile } from '../types';
 import { calculatePerformance, calculateTraderScore, formatCurrency } from '../utils/calculations';
 import { ResultBadge, DirectionBadge } from '../components/common/Badge';
-import { Activity, ChevronRight, Focus, LayoutGrid, Minimize2, ShieldCheck, TrendingUp } from 'lucide-react';
+import { Activity, ChevronRight, Focus, LayoutGrid, Minimize2, ShieldCheck, TrendingUp, BarChart3, CircleDollarSign, Target, ShieldAlert, Star, Info } from 'lucide-react';
 
 interface DashboardProps {
   trades: Trade[];
@@ -60,12 +60,59 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
           <p className="text-xs text-[#71839a] mt-1">Capital, performance, risque et activité récente en une seule lecture.</p>
         </div>
       </div>
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-2.5 mt-5">
-        <Metric label="Equity" value={formatCurrency(equity)} sub={`${roi >= 0 ? '+' : ''}${roi.toFixed(2)}%`} />
-        <Metric label="P&L" value={formatCurrency(metrics.totalPnl)} sub={`${metrics.totalTrades} trades`} tone={metrics.totalPnl >= 0 ? 'positive' : 'negative'} />
-        <Metric label="Win rate" value={`${metrics.winRate.toFixed(1)}%`} sub={`${metrics.winningTrades}W · ${metrics.losingTrades}L`} />
-        <Metric label="Drawdown" value={`-${metrics.maxDrawdownPercent.toFixed(1)}%`} sub={metrics.maxDrawdownPercent > 5 ? 'À surveiller' : 'Sous contrôle'} tone={metrics.maxDrawdownPercent > 5 ? 'negative' : 'positive'} />
-        <Metric label="Trader Score" value={score.isSufficientData ? `${score.overallScore}/100` : '—'} sub={score.isSufficientData ? 'Indice global' : 'Min. 5 trades'} />
+            <div className="mt-5 rounded-2xl border border-[#dce7ee] bg-white overflow-hidden shadow-[0_10px_30px_rgba(11,31,53,0.045)]">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 divide-y sm:divide-y-0 sm:divide-x divide-[#e4ebef]">
+          <DashboardMetricCard
+            label="EQUITY"
+            icon={BarChart3}
+            value={formatCurrency(equity)}
+            accent="mint"
+            secondary={`${roi >= 0 ? '+' : ''}${roi.toFixed(2)}%`}
+            progress={Math.max(0, Math.min(100, roi))}
+            footerLeft={`Initial: ${formatCurrency(capital)}`}
+            footerRight={`Actuel: ${formatCurrency(equity)}`}
+          />
+          <DashboardMetricCard
+            label="P&L"
+            icon={CircleDollarSign}
+            value={formatCurrency(metrics.totalPnl)}
+            accent={metrics.totalPnl >= 0 ? "mint" : "rose"}
+            secondary={`${metrics.totalTrades} trade${metrics.totalTrades > 1 ? "s" : ""}`}
+            progress={Math.max(0, Math.min(100, roi))}
+            footerLeft="Résultat"
+            footerRight={formatCurrency(metrics.totalPnl)}
+          />
+          <DashboardMetricCard
+            label="WIN RATE"
+            icon={Target}
+            value={`${metrics.winRate.toFixed(1)}%`}
+            accent="amber"
+            secondary={`${metrics.winningTrades}W · ${metrics.losingTrades}L`}
+            progress={Math.max(0, Math.min(100, metrics.winRate))}
+            footerLeft="Total trades"
+            footerRight={String(metrics.totalTrades)}
+          />
+          <DashboardMetricCard
+            label="DRAWDOWN"
+            icon={ShieldAlert}
+            value={`-${metrics.maxDrawdownPercent.toFixed(1)}%`}
+            accent={metrics.maxDrawdownPercent > 5 ? "rose" : "mint"}
+            secondary={metrics.maxDrawdownPercent > 5 ? "À surveiller" : "Sous contrôle"}
+            progress={Math.max(0, Math.min(100, (metrics.maxDrawdownPercent / 10) * 100))}
+            footerLeft="Limite"
+            footerRight={`Disponible: ${Math.max(0, 10 - metrics.maxDrawdownPercent).toFixed(1)}%`}
+          />
+          <DashboardMetricCard
+            label="TRADER SCORE"
+            icon={Star}
+            value={score.isSufficientData ? `${score.overallScore}/100` : "—"}
+            accent="indigo"
+            secondary={score.isSufficientData ? "Indice global" : "Min. 5 trades"}
+            progress={score.isSufficientData ? score.overallScore : 0}
+            footerLeft="Performance"
+            footerRight={score.isSufficientData ? "Score" : "—"}
+          />
+        </div>
       </div>
     </div>
   );
@@ -113,6 +160,34 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
   return <div className="space-y-5">{situation}{modeBar}<div className="grid grid-cols-1 xl:grid-cols-3 gap-4"><div className="xl:col-span-2 p-5 rounded-2xl card-premium"><div className="flex justify-between mb-2"><div><h2 className="text-sm font-bold text-[#10233a]">Courbe d'equity</h2><p className="text-[10px] text-[#8798a8]">Votre progression en un coup d'œil.</p></div><span className="text-[10px] px-2 py-1 rounded-full bg-[#e7faf3] text-[#087b59]">Dynamique</span></div>{chart}</div><div className="p-5 rounded-2xl card-premium"><div className="flex items-center gap-2 mb-4"><ShieldCheck className="w-4 h-4 text-[#2f6bff]" /><h2 className="text-sm font-bold text-[#10233a]">Trader Score</h2></div><div className="text-4xl font-bold font-mono text-[#10233a] text-center py-4">{score.isSufficientData?score.overallScore:'—'}<span className="text-xs text-[#8798a8]">/100</span></div><div className="text-[10px] text-[#71839a] text-center">{score.isSufficientData?'Indice global de discipline':'Min. 5 trades requis'}</div></div></div><div className="grid grid-cols-1 xl:grid-cols-2 gap-4"><div className="p-5 rounded-2xl card-premium"><h2 className="text-sm font-bold text-[#10233a] mb-4">Risque & contrôle</h2><Metric label="Drawdown" value={`-${metrics.maxDrawdownPercent.toFixed(1)}%`} sub={metrics.maxDrawdownPercent>5?'À surveiller':'Sous contrôle'} tone={metrics.maxDrawdownPercent>5?'negative':'positive'} /><Metric label="Profit Factor" value={metrics.profitFactor.toFixed(2)} sub="Gains / pertes" /><Metric label="Expectancy" value={formatCurrency(metrics.expectancy)} sub="Par trade" tone={metrics.expectancy>=0?'positive':'negative'} /></div><div className="p-5 rounded-2xl card-premium"><h2 className="text-sm font-bold text-[#10233a] mb-4">Lecture pratique</h2><div className="grid grid-cols-2 gap-2.5"><Metric label="Trade moyen" value={metrics.totalTrades?formatCurrency(metrics.totalPnl/metrics.totalTrades):'$0'} sub="P&L moyen" /><Metric label="Avg R" value={metrics.avgRR.toFixed(2)} sub="Ratio moyen" /><Metric label="Gains moyens" value={formatCurrency(metrics.avgWin)} sub={`${metrics.winningTrades} gagnants`} /><Metric label="Pertes moyennes" value={formatCurrency(metrics.avgLoss)} sub={`${metrics.losingTrades} pertes`} /></div></div></div>{recentTrades(6)}</div>;
 }
 
+function DashboardMetricCard({
+  label, icon: Icon, value, secondary, progress, footerLeft, footerRight, accent,
+}: {
+  label: string; icon: React.ElementType; value: string; secondary?: string; progress: number; footerLeft?: string; footerRight?: string;
+  accent: 'mint' | 'rose' | 'amber' | 'indigo';
+}) {
+  const palette = {
+    mint: { icon: 'bg-[#e7faf3] text-[#00a982]', fill: 'bg-[#08b77a]', value: 'text-[#0b1f35]', secondary: 'text-[#00a982] bg-[#e7faf3]' },
+    rose: { icon: 'bg-[#fff0f4] text-[#ef476f]', fill: 'bg-[#ef476f]', value: 'text-[#ef476f]', secondary: 'text-[#ef476f] bg-[#fff0f4]' },
+    amber: { icon: 'bg-[#fff7e5] text-[#d99020]', fill: 'bg-[#f59e0b]', value: 'text-[#0b1f35]', secondary: 'text-[#d99020] bg-[#fff7e5]' },
+    indigo: { icon: 'bg-[#eef0ff] text-[#4f46e5]', fill: 'bg-[#4f46e5]', value: 'text-[#0b1f35]', secondary: 'text-[#4f46e5] bg-[#eef0ff]' },
+  }[accent];
+  const filled = Math.round(Math.max(0, Math.min(100, progress)) / 4);
+  return (
+    <div className="min-w-0 px-4 py-4 sm:px-5 sm:py-5">
+      <div className="flex items-center gap-2">
+        <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-xl ${palette.icon}`}><Icon className="h-4 w-4" strokeWidth={2.2} /></span>
+        <div className="flex min-w-0 items-center gap-1.5"><span className="truncate text-[10px] font-bold uppercase tracking-[0.12em] text-[#71839a]">{label}</span><Info className="h-3 w-3 shrink-0 text-[#9aa9b8]" /></div>
+      </div>
+      <div className={`mt-3 text-[23px] font-bold tracking-tight font-mono tabular-nums ${palette.value}`}>{value}</div>
+      <div className="mt-2 min-h-[24px]">{secondary && <span className={`inline-flex max-w-full items-center rounded-full px-2.5 py-1 text-[9px] font-semibold ${palette.secondary}`}>{secondary}</span>}</div>
+      <div className="mt-3"><div className="flex gap-[3px]" aria-label={`Progression ${Math.round(progress)}%`}>{Array.from({ length: 25 }).map((_, index) => <span key={index} className={`h-2.5 flex-1 rounded-[2px] ${index < filled ? palette.fill : "bg-[#e6edf1]"}`} />)}</div>
+        <div className="mt-1.5 flex justify-between text-[8px] font-medium text-[#91a0ad]"><span>0%</span><span>100%</span></div>
+      </div>
+      <div className="mt-4 flex min-w-0 items-end justify-between gap-3 text-[9px]"><span className="min-w-0 truncate text-[#71839a]">{footerLeft}</span><span className="min-w-0 truncate text-right font-semibold text-[#00a982]">{footerRight}</span></div>
+    </div>
+  );
+}
 function Metric({ label, value, sub, tone = 'neutral' }: { label: string; value: string; sub?: string; tone?: 'neutral'|'positive'|'negative' }) {
   return <div className="p-3 rounded-xl bg-[#f8fbfa] border border-[#e7efec] mb-2"><div className="text-[9px] uppercase tracking-wider font-semibold text-[#8a9aab]">{label}</div><div className={`mt-1 text-sm font-bold font-mono ${tone==='positive'?'text-[#008f63]':tone==='negative'?'text-[#e14d5d]':'text-[#10233a]'}`}>{value}</div>{sub && <div className="text-[9px] text-[#94a2ad] mt-0.5">{sub}</div>}</div>;
 }
