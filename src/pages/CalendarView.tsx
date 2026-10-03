@@ -27,9 +27,8 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
   const lastDayOfMonth = new Date(year, month + 1, 0);
   const daysInMonth = lastDayOfMonth.getDate();
   
-  // Starting day index (0: Monday, ..., 6: Sunday for European format)
-  let startDay = firstDayOfMonth.getDay() - 1;
-  if (startDay === -1) startDay = 6; // Sunday is index 6
+  // Calendar week starts on Sunday (0) and ends on Saturday (6).
+  const startDay = firstDayOfMonth.getDay();
 
   const prevMonth = () => {
     setCurrentDate(new Date(year, month - 1, 1));
