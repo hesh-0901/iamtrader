@@ -350,7 +350,7 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
     {intelligenceCompact}{recentTrades(5)}
   </div>;
 
-  return <div className="space-y-5">{situation}{modeBar}{intelligenceStandard}<div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+  return <div className="space-y-5">{situation}{modeBar}<div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
   <div className="p-5 rounded-2xl card-premium">
     <div className="flex items-center justify-between mb-4"><div><h2 className="text-sm font-bold text-[#10233a]">Score psychologique</h2><p className="text-[10px] text-[#8798a8]">Maîtrise émotionnelle et qualité d'exécution.</p></div><ShieldCheck className="w-4 h-4 text-[#08b77a]" /></div>
     <DisciplineGauge value={score.psychologyScore} sufficient={score.isSufficientData} title="Score psychologique" subtitle="Maîtrise émotionnelle et discipline." showHeader={false} />
@@ -398,7 +398,7 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
       {!trades.length && <div className="text-[11px] text-[#8798a8]">Aucun setup à analyser.</div>}
     </div>
   </div>
-</div>{recentTrades(6)}</div>;
+</div>{intelligenceStandard}{recentTrades(6)}</div>;
 }
 
 
