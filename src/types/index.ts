@@ -118,11 +118,37 @@ export interface AdminLog {
   createdAt: string;
 }
 
+export interface TraderSocialLink {
+  network: string;
+  username: string;
+}
+
+export interface UserCertificate {
+  id: string;
+  title: string;
+  issuedAt: string;
+  certificateNumber?: string;
+}
+
 export interface UserProfile {
   uid: string;
   email: string;
   displayName: string;
   photoURL?: string;
+  traderProfile?: {
+    firstName?: string;
+    lastName?: string;
+    gender?: string;
+    age?: number;
+    city?: string;
+    country?: string;
+    whatsapp?: string;
+    level?: string;
+    style?: string;
+    markets?: string[];
+    socialLinks?: TraderSocialLink[];
+  };
+  certificates?: UserCertificate[];
   plan: SubscriptionPlan;
   role: UserRole;
   status: UserStatus;
