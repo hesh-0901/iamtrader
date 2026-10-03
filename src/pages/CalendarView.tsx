@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Trade, TradingAccount } from '../types';
 import { groupTradesByDay, formatCurrency } from '../utils/calculations';
 import { DirectionBadge, ResultBadge } from '../components/common/Badge';
-import { ChevronLeft, ChevronRight, CalendarDays, X, BriefcaseBusiness, Activity } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CalendarDays, X, BriefcaseBusiness } from 'lucide-react';
 
 interface CalendarViewProps {
   trades: Trade[];
@@ -68,6 +68,44 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
     return { monthlyPnl, monthlyTrades, greenDays, redDays };
   }, [tradesByDay, year, month]);
 
+  // Weekly P&L for the currently displayed month. Weeks follow the calendar (Monday -> Sunday).
+  const weeklyStats = useMemo(() => {
+    const first = new Date(year, month, 1);
+    const last = new Date(year, month + 1, 0);
+    const firstMondayOffset = (first.getDay() + 6) % 7;
+    const weekCount = Math.ceil((firstMondayOffset + last.getDate()) / 7);
+
+    return Array.from({ length: weekCount }, (_, weekIndex) => {
+      const startDayNumber = weekIndex * 7 - firstMondayOffset + 1;
+      const endDayNumber = Math.min(startDayNumber + 6, last.getDate());
+      const from = Math.max(1, startDayNumber);
+      const to = Math.min(last.getDate(), endDayNumber);
+      let pnl = 0;
+      let tradeCount = 0;
+      let activeDays = 0;
+
+      for (let dayNumber = from; dayNumber <= to; dayNumber++) {
+        const key = year + '-' + String(month + 1).padStart(2, '0') + '-' + String(dayNumber).padStart(2, '0');
+        const day = tradesByDay[key];
+        if (day) {
+          pnl += day.netPnl;
+          tradeCount += day.trades.length;
+          activeDays++;
+        }
+      }
+
+      return { week: weekIndex + 1, pnl, tradeCount, activeDays };
+    });
+  }, [tradesByDay, year, month]);
+
+  const recentOpenPositions = useMemo(() => {
+    return trades
+      .filter(trade => trade.result === 'OPEN')
+      .sort((a, b) => new Date(b.entryDate).getTime() - new Date(a.entryDate).getTime())
+      .slice(0, 6);
+  }, [trades]);
+
+
   const selectedDayTrades = selectedDayKey && tradesByDay[selectedDayKey] ? tradesByDay[selectedDayKey].trades : [];
 
   // Compact calendar: daily P&L is the primary visual signal.
@@ -86,7 +124,7 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
 
   return (
     <div className="space-y-4">
-      <div className="mx-auto w-full max-w-[1180px] overflow-hidden rounded-[20px] border border-[#DCE7EE] bg-white text-[#0B1F35] shadow-[0_14px_40px_rgba(11,31,53,0.055)]">
+      <div className="mx-auto grid w-full max-w-[1280px] grid-cols-1 gap-4 xl:grid-cols-[minmax(0,1fr)_320px]">
         <div className="border-b border-[#E8EEF2] px-4 py-4 sm:px-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex min-w-0 items-center gap-3">
@@ -171,99 +209,80 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
         </div>
       </div>
 
-      {/* Recent positions & trades */}
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-        <section className="overflow-hidden rounded-[18px] border border-[#DCE7EE] bg-white shadow-[0_10px_30px_rgba(11,31,53,0.045)]">
-          <div className="flex items-center justify-between border-b border-[#E8EEF2] px-4 py-3.5">
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#C9DCFF] bg-[#ECF4FF] text-[#3B82F6]">
-                <BriefcaseBusiness className="h-3.5 w-3.5" />
-              </div>
-              <div>
-                <h3 className="text-xs font-extrabold text-[#0B1F35]">Positions récentes</h3>
-                <p className="mt-0.5 text-[9px] text-[#8A9AAF]">Positions actuellement ouvertes</p>
-              </div>
+      {/* Weekly P&L + recent positions sidebar */}
+      <aside className="flex min-w-0 flex-col overflow-hidden rounded-[20px] border border-[#DCE7EE] bg-white text-[#0B1F35] shadow-[0_14px_40px_rgba(11,31,53,0.055)] xl:max-h-[760px]">
+        <div className="border-b border-[#E8EEF2] px-4 py-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-xs font-extrabold tracking-[-0.01em]">P&L par semaine</h3>
+              <p className="mt-1 text-[9px] text-[#8A9AAF]">Performance de {monthNames[month]} {year}</p>
             </div>
-            <span className="rounded-full bg-[#ECF4FF] px-2 py-1 text-[8px] font-bold text-[#3B82F6]">
-              {trades.filter(t => t.result === 'OPEN').length} ouverte{trades.filter(t => t.result === 'OPEN').length > 1 ? 's' : ''}
-            </span>
+            <div className="rounded-lg bg-[#F5F8FB] px-2 py-1 text-[8px] font-bold text-[#60758D]">{weeklyStats.length} semaines</div>
           </div>
+        </div>
 
-          <div className="divide-y divide-[#EDF2F5]">
-            {trades.filter(t => t.result === 'OPEN').slice(0, 5).map(trade => (
-              <button
-                key={trade.id}
-                onClick={() => onSelectTrade(trade)}
-                className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-[#F7FBFA] cursor-pointer"
-              >
-                <div className="flex min-w-0 items-center gap-3">
-                  <DirectionBadge direction={trade.direction} />
-                  <div className="min-w-0">
-                    <div className="truncate text-[11px] font-extrabold text-[#0B1F35]">{trade.symbol}</div>
-                    <div className="mt-0.5 text-[8px] text-[#8A9AAF]">{new Date(trade.entryDate).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })} · Entrée {trade.entryPrice?.toLocaleString() || '—'}</div>
+        <div className="space-y-2.5 p-3.5">
+          {weeklyStats.map(item => {
+            const profitable = item.pnl > 0;
+            const loss = item.pnl < 0;
+            const tone = profitable ? 'border-[#B7EBDD] bg-[#F2FCF8]' : loss ? 'border-[#FFD0D9] bg-[#FFF6F8]' : 'border-[#E3EBF0] bg-[#F8FAFC]';
+            const amountTone = profitable ? 'text-[#00A982]' : loss ? 'text-[#EF476F]' : 'text-[#60758D]';
+            const badgeTone = profitable ? 'bg-[#DDF7EE] text-[#008F63]' : loss ? 'bg-[#FFE5EB] text-[#D83F50]' : 'bg-[#E9EFF4] text-[#71839A]';
+            return (
+              <div key={item.week} className={'rounded-xl border p-3.5 transition-colors ' + tone}>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="text-[10px] font-extrabold text-[#60758D]">Week {item.week}</div>
+                    <div className={'mt-1 text-lg font-black tracking-[-0.03em] tabular-nums ' + amountTone}>{formatCurrency(item.pnl)}</div>
                   </div>
+                  <span className={'rounded-full px-2 py-1 text-[8px] font-bold ' + badgeTone}>
+                    {item.activeDays} jour{item.activeDays > 1 ? 's' : ''}
+                  </span>
                 </div>
-                <div className="shrink-0 text-right">
-                  <div className="text-[9px] font-bold text-[#60758D]">SL {trade.stopLoss?.toLocaleString() || '—'}</div>
-                  <div className="mt-0.5 text-[9px] font-bold text-[#60758D]">TP {trade.takeProfit?.toLocaleString() || '—'}</div>
+                <div className="mt-2 flex items-center justify-between text-[8px] font-semibold text-[#8A9AAF]">
+                  <span>{item.tradeCount} trade{item.tradeCount > 1 ? 's' : ''}</span>
+                  <span>{profitable ? 'Semaine positive' : loss ? 'Semaine négative' : 'Aucune activité'}</span>
                 </div>
-              </button>
-            ))}
-            {!trades.some(t => t.result === 'OPEN') && (
-              <div className="px-4 py-8 text-center">
-                <BriefcaseBusiness className="mx-auto h-5 w-5 text-[#B2BEC8]" />
-                <p className="mt-2 text-[10px] font-semibold text-[#71839A]">Aucune position ouverte</p>
-                <p className="mt-1 text-[8px] text-[#A0ADBA]">Vos positions ouvertes apparaîtront ici.</p>
               </div>
-            )}
-          </div>
-        </section>
+            );
+          })}
+        </div>
 
-        <section className="overflow-hidden rounded-[18px] border border-[#DCE7EE] bg-white shadow-[0_10px_30px_rgba(11,31,53,0.045)]">
-          <div className="flex items-center justify-between border-b border-[#E8EEF2] px-4 py-3.5">
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#B7EBDD] bg-[#E7FAF3] text-[#00A982]">
-                <Activity className="h-3.5 w-3.5" />
-              </div>
-              <div>
-                <h3 className="text-xs font-extrabold text-[#0B1F35]">Trades récents</h3>
-                <p className="mt-0.5 text-[9px] text-[#8A9AAF]">Dernières opérations enregistrées</p>
-              </div>
+        <div className="border-y border-[#E8EEF2] px-4 py-3.5">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-xs font-extrabold">Positions récentes</h3>
+              <p className="mt-1 text-[9px] text-[#8A9AAF]">Positions actuellement ouvertes</p>
             </div>
-            <span className="rounded-full bg-[#E7FAF3] px-2 py-1 text-[8px] font-bold text-[#00A982]">
-              {trades.filter(t => t.result !== 'OPEN').length} clôturé{trades.filter(t => t.result !== 'OPEN').length > 1 ? 's' : ''}
-            </span>
+            <span className="rounded-full bg-[#ECF4FF] px-2 py-1 text-[8px] font-bold text-[#3B82F6]">{recentOpenPositions.length}</span>
           </div>
+        </div>
 
-          <div className="divide-y divide-[#EDF2F5]">
-            {trades.filter(t => t.result !== 'OPEN').slice(0, 6).map(trade => (
-              <button
-                key={trade.id}
-                onClick={() => onSelectTrade(trade)}
-                className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-[#F7FBFA] cursor-pointer"
-              >
-                <div className="flex min-w-0 items-center gap-3">
-                  <DirectionBadge direction={trade.direction} />
-                  <div className="min-w-0">
-                    <div className="truncate text-[11px] font-extrabold text-[#0B1F35]">{trade.symbol}</div>
-                    <div className="mt-0.5 text-[8px] text-[#8A9AAF]">{new Date(trade.entryDate).toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' })} · {trade.setup || 'Setup non renseigné'}</div>
-                  </div>
+        <div className="min-h-0 flex-1 divide-y divide-[#EDF2F5] overflow-y-auto">
+          {recentOpenPositions.map(trade => (
+            <button key={trade.id} onClick={() => onSelectTrade(trade)} className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-[#F7FBFA] cursor-pointer">
+              <div className="flex min-w-0 items-center gap-2.5">
+                <DirectionBadge direction={trade.direction} />
+                <div className="min-w-0">
+                  <div className="truncate text-[10px] font-extrabold text-[#0B1F35]">{trade.symbol}</div>
+                  <div className="mt-0.5 truncate text-[8px] text-[#8A9AAF]">{new Date(trade.entryDate).toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</div>
                 </div>
-                <div className="shrink-0 text-right">
-                  <div className={`text-[11px] font-black tabular-nums ${trade.pnl > 0 ? 'text-[#00A982]' : trade.pnl < 0 ? 'text-[#EF476F]' : 'text-[#60758D]'}`}>{formatCurrency(trade.pnl)}</div>
-                  <div className="mt-0.5"><ResultBadge result={trade.result} /></div>
-                </div>
-              </button>
-            ))}
-            {!trades.some(t => t.result !== 'OPEN') && (
-              <div className="px-4 py-8 text-center">
-                <Activity className="mx-auto h-5 w-5 text-[#B2BEC8]" />
-                <p className="mt-2 text-[10px] font-semibold text-[#71839A]">Aucun trade récent</p>
-                <p className="mt-1 text-[8px] text-[#A0ADBA]">Vos trades clôturés apparaîtront ici.</p>
               </div>
-            )}
-          </div>
-        </section>
+              <div className="shrink-0 text-right">
+                <div className="text-[8px] font-bold text-[#60758D]">SL {trade.stopLoss?.toLocaleString() || '—'}</div>
+                <div className="mt-0.5 text-[8px] font-bold text-[#60758D]">TP {trade.takeProfit?.toLocaleString() || '—'}</div>
+              </div>
+            </button>
+          ))}
+          {!recentOpenPositions.length && (
+            <div className="px-4 py-8 text-center">
+              <BriefcaseBusiness className="mx-auto h-5 w-5 text-[#B2BEC8]" />
+              <p className="mt-2 text-[10px] font-semibold text-[#71839A]">Aucune position ouverte</p>
+            </div>
+          )}
+        </div>
+      </aside>
+
       </div>
 
       {/* Selected Day Details Modal */}
