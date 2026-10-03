@@ -172,7 +172,8 @@ function DashboardMetricCard({
     amber: { icon: 'bg-[#fff7e5] text-[#d99020]', fill: 'bg-[#f59e0b]', value: 'text-[#0b1f35]', secondary: 'text-[#d99020] bg-[#fff7e5]' },
     indigo: { icon: 'bg-[#eef0ff] text-[#4f46e5]', fill: 'bg-[#4f46e5]', value: 'text-[#0b1f35]', secondary: 'text-[#4f46e5] bg-[#eef0ff]' },
   }[accent];
-  const filled = Math.round(Math.max(0, Math.min(100, progress)) / 4);
+  const normalizedProgress = Math.max(0, Math.min(100, progress));
+  const filled = Math.round(normalizedProgress / 4);
   return (
     <div className="min-w-0 px-4 py-4 sm:px-5 sm:py-5">
       <div className="flex items-center gap-2">
@@ -181,8 +182,20 @@ function DashboardMetricCard({
       </div>
       <div className={`mt-3 text-[23px] font-bold tracking-tight font-mono tabular-nums ${palette.value}`}>{value}</div>
       <div className="mt-2 min-h-[24px]">{secondary && <span className={`inline-flex max-w-full items-center rounded-full px-2.5 py-1 text-[9px] font-semibold ${palette.secondary}`}>{secondary}</span>}</div>
-      <div className="mt-3"><div className="flex gap-[3px]" aria-label={`Progression ${Math.round(progress)}%`}>{Array.from({ length: 25 }).map((_, index) => <span key={index} className={`h-2.5 flex-1 rounded-[2px] ${index < filled ? palette.fill : "bg-[#e6edf1]"}`} />)}</div>
-        <div className="mt-1.5 flex justify-between text-[8px] font-medium text-[#91a0ad]"><span>0%</span><span>100%</span></div>
+      <div className="mt-3">
+        <div className="flex items-center gap-[3px]" aria-label={`Progression ${normalizedProgress.toFixed(1)}%`}>
+          {Array.from({ length: 25 }).map((_, index) => (
+            <span
+              key={index}
+              className={`h-[2px] min-w-0 flex-1 rounded-full ${index < filled ? palette.fill : "bg-[#e6edf1]"}`}
+            />
+          ))}
+        </div>
+        <div className="mt-1.5 grid grid-cols-3 items-center text-[8px] font-medium text-[#91a0ad]">
+          <span>0%</span>
+          <span className="text-center font-semibold text-[#71839a]">{normalizedProgress.toFixed(1)}%</span>
+          <span className="text-right">100%</span>
+        </div>
       </div>
       <div className="mt-4 flex min-w-0 items-end justify-between gap-3 text-[9px]"><span className="min-w-0 truncate text-[#71839a]">{footerLeft}</span><span className="min-w-0 truncate text-right font-semibold text-[#00a982]">{footerRight}</span></div>
     </div>
