@@ -30,6 +30,10 @@ function daysBetween(from?: string, to?: string) {
   if (!from || !to) return null;
   return Math.max(0, Math.ceil((new Date(to).getTime() - new Date(from).getTime()) / 86400000));
 }
+const countryOptions = [
+  'Afrique du Sud','Algérie','Allemagne','Angola','Australie','Autriche','Belgique','Bénin','Botswana','Brésil','Burkina Faso','Burundi','Cameroun','Canada','Chine','Colombie','Congo','Côte d’Ivoire','Égypte','Émirats arabes unis','Espagne','États-Unis','France','Gabon','Ghana','Guinée','Inde','Italie','Kenya','Madagascar','Malawi','Mali','Maroc','Maurice','Mozambique','Namibie','Niger','Nigeria','Ouganda','République démocratique du Congo','Royaume-Uni','Rwanda','Sénégal','Suisse','Tanzanie','Tchad','Togo','Tunisie','Turquie','Ukraine','Zambie','Zimbabwe'
+];
+
 
 export function SettingsView({ userProfile, accounts, trades, selectedAccountId, onRequestPlan }: SettingsViewProps) {
   const { showToast } = useToast();
@@ -301,8 +305,10 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
       {activeTab === 'profile' && (
         <div className="space-y-5">
           {!isEditingProfile ? (
-            <div className="space-y-8">
-              <section className="border-b border-slate-200 pb-7">
+            <div className="space-y-6">
+              <section className="relative overflow-hidden rounded-[24px] border border-slate-200 bg-gradient-to-br from-white via-white to-[#effaf7] p-6 shadow-[0_18px_50px_rgba(15,23,42,0.07)]">
+                <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-[#00a982]/10 blur-2xl" />
+                <div className="relative border-b border-slate-200/80 pb-6">
                 <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
                   <div className="min-w-0">
                     <div className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#00a982]">Profil trader</div>
@@ -314,10 +320,11 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                   </div>
                   <button type="button" onClick={() => setIsEditingProfile(true)} className="self-start rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 sm:self-auto">Modifier</button>
                 </div>
+              </div>
               </section>
 
-              <section>
-                <div className="mb-4 text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">Informations personnelles</div>
+              <section className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-[0_14px_40px_rgba(15,23,42,0.05)]">
+                <div className="mb-5 flex items-center gap-3"><span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#e5faf5] text-[#00896e]"><User className="h-4 w-4" /></span><div><div className="text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">Informations personnelles</div><div className="mt-0.5 text-sm font-bold text-slate-900">Identité & coordonnées</div></div></div>
                 <div className="grid gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-4">
                   {[
                     ['Prénom', firstName], ['Nom', lastName], ['Sexe', gender], ['Âge', age ? age + ' ans' : '—'],
@@ -331,17 +338,17 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                 </div>
               </section>
 
-              <section className="border-t border-slate-200 pt-7">
-                <div className="mb-4 text-[9px] font-bold uppercase tracking-[0.18em] text-[#00a982]">Trading</div>
+              <section className="rounded-[24px] border border-slate-200 bg-slate-950 p-6 shadow-[0_18px_50px_rgba(15,23,42,0.10)]">
+                <div className="mb-5 flex items-center justify-between gap-4"><div><div className="text-[9px] font-bold uppercase tracking-[0.18em] text-emerald-300">Trading</div><div className="mt-1 text-sm font-bold text-white">Profil de trading</div></div><Activity className="h-4 w-4 text-emerald-300" /></div>
                 <div className="flex flex-wrap items-baseline gap-x-10 gap-y-5">
-                  <div><div className="text-[9px] font-semibold uppercase tracking-wider text-slate-400">Niveau</div><div className="mt-1.5 text-sm font-bold text-slate-900">{traderLevel || '—'}</div></div>
-                  <div><div className="text-[9px] font-semibold uppercase tracking-wider text-slate-400">Style</div><div className="mt-1.5 text-sm font-bold text-slate-900">{traderStyle || '—'}</div></div>
-                  <div className="min-w-[180px]"><div className="text-[9px] font-semibold uppercase tracking-wider text-slate-400">Marchés</div><div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">{traderMarkets.length ? traderMarkets.map(m => <span key={m} className="text-sm font-bold text-slate-900">{m}</span>) : <span className="text-sm font-bold text-slate-900">—</span>}</div></div>
+                  <div className="rounded-2xl bg-white/5 p-4 ring-1 ring-white/10"><div className="text-[9px] font-semibold uppercase tracking-wider text-white/45">Niveau</div><div className="mt-1.5 text-sm font-bold text-white">{traderLevel || '—'}</div></div>
+                  <div className="rounded-2xl bg-white/5 p-4 ring-1 ring-white/10"><div className="text-[9px] font-semibold uppercase tracking-wider text-white/45">Style</div><div className="mt-1.5 text-sm font-bold text-white">{traderStyle || '—'}</div></div>
+                  <div className="min-w-[180px] rounded-2xl bg-white/5 p-4 ring-1 ring-white/10"><div className="text-[9px] font-semibold uppercase tracking-wider text-white/45">Marchés</div><div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">{traderMarkets.length ? traderMarkets.map(m => <span key={m} className="text-sm font-bold text-white">{m}</span>) : <span className="text-sm font-bold text-white">—</span>}</div></div>
                 </div>
               </section>
 
-              <section className="border-t border-slate-200 pt-7">
-                <div className="mb-4 text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">Réseaux sociaux</div>
+              <section className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-[0_14px_40px_rgba(15,23,42,0.05)]">
+                <div className="mb-5 flex items-center gap-3"><span className="flex h-8 w-8 items-center justify-center rounded-xl bg-violet-50 text-violet-600">◎</span><div className="text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">Réseaux sociaux</div></div>
                 {socialLinks.length ? (
                   <div className="flex flex-wrap gap-x-6 gap-y-3">
                     {socialLinks.map((link, index) => <div key={link.network + link.username + index} className="text-sm"><span className="font-semibold text-slate-900">{link.network}</span><span className="mx-2 text-slate-300">·</span><span className="text-slate-500">{link.username}</span></div>)}
@@ -359,8 +366,9 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                 <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {[
                     ['Prénom', firstName, setFirstName], ['Nom', lastName, setLastName], ['Nom d’affichage', displayName, setDisplayName],
-                    ['Âge', age, setAge], ['Ville', city, setCity], ['Pays', country, setCountry], ['WhatsApp', whatsapp, setWhatsapp]
-                  ].map(([label, value, setter], index) => <div key={String(label)} className={index === 2 ? 'lg:col-span-1' : ''}><label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">{label as string}</label><input value={value as string} onChange={e => (setter as React.Dispatch<React.SetStateAction<string>>)(e.target.value)} inputMode={label === 'Âge' ? 'numeric' : undefined} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-[#00a982] focus:ring-2 focus:ring-[#e5faf5]" /></div>)}
+                    ['Âge', age, setAge], ['Ville', city, setCity], ['WhatsApp', whatsapp, setWhatsapp]
+                  ].map(([label, value, setter], index) => <div key={String(label)} className={index === 2 ? 'lg:col-span-1' : ''}><label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">{label as string}</label><input value={value as string} onChange={e => (setter as React.Dispatch<React.SetStateAction<string>>)(e.target.value)} type={label === 'WhatsApp' ? 'tel' : 'text'} inputMode={label === 'Âge' ? 'numeric' : label === 'WhatsApp' ? 'tel' : undefined} placeholder={label === 'WhatsApp' ? '+243 9XX XXX XXX' : undefined} autoComplete={label === 'WhatsApp' ? 'tel' : undefined} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-[#00a982] focus:ring-2 focus:ring-[#e5faf5]" /></div>)}
+                  <div><label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Pays</label><select value={country} onChange={e => setCountry(e.target.value)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-[#00a982] focus:ring-2 focus:ring-[#e5faf5]"><option value="">Sélectionner un pays</option>{countryOptions.map(item => <option key={item} value={item}>{item}</option>)}</select></div>
                   <div><label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Sexe</label><select value={gender} onChange={e => setGender(e.target.value)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-[#00a982]"><option value="">Sélectionner</option><option>Homme</option><option>Femme</option><option>Autre</option></select></div>
                   <div><label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">E-mail</label><input disabled value={userProfile?.email || ''} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-500" /></div>
                   <div><label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Date d’inscription</label><input disabled value={formatDate(userProfile?.createdAt)} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-500" /></div>
