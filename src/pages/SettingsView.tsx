@@ -168,7 +168,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
 
       // Trader identity block.
       drawLeft(traderName, 735, 454, 285, 28, 17, '#0b1b2e', 800);
-      drawLeft(status, 735, 552, 285, 21, 14, '#16876a', 800);
+      drawLeft(status, 735, 570, 285, 21, 14, '#16876a', 800);
       drawLeft(tradesText, 735, 680, 285, 21, 15, '#0b1b2e', 800);
 
       // Performance indicators.
