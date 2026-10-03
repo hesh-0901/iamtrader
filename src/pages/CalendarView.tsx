@@ -278,6 +278,8 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
         </div>
       </section>
 
+      </div>
+
       {/* Selected Day Details Modal */}
       {selectedDayKey && tradesByDay[selectedDayKey] && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#10233a]/20 backdrop-blur-[3px] p-4" onClick={() => setSelectedDayKey(null)}>
