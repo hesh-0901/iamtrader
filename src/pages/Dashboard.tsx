@@ -183,11 +183,11 @@ function DashboardMetricCard({
       <div className={`mt-3 text-[23px] font-bold tracking-tight font-mono tabular-nums ${palette.value}`}>{value}</div>
       <div className="mt-2 min-h-[24px]">{secondary && <span className={`inline-flex max-w-full items-center rounded-full px-2.5 py-1 text-[9px] font-semibold ${palette.secondary}`}>{secondary}</span>}</div>
       <div className="mt-3">
-        <div className="flex items-center gap-[2px]" aria-label={`Progression ${normalizedProgress.toFixed(1)}%`}>
+        <div className="flex items-center gap-[2px] h-6" aria-label={`Progression ${normalizedProgress.toFixed(1)}%`}>
           {Array.from({ length: 50 }).map((_, index) => (
             <span
               key={index}
-              className={`h-[2px] min-w-0 flex-1 rounded-[1px] ${index < filled ? palette.fill : "bg-[#e6edf1]"}`}
+              className={`h-full min-w-0 flex-1 rounded-[1px] ${index < filled ? palette.fill : "bg-[#e6edf1]"}`}
             />
           ))}
         </div>
