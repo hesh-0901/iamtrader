@@ -158,30 +158,42 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
   if (mode === 'compact') return <div className="space-y-4">{situation}{modeBar}<div className="p-4 rounded-2xl card-premium">{chart}</div>{recentTrades(5)}</div>;
 
   return <div className="space-y-5">{situation}{modeBar}<div className="grid grid-cols-1 xl:grid-cols-3 gap-4"><div className="xl:col-span-2 p-5 rounded-2xl card-premium"><div className="flex justify-between mb-2"><div><h2 className="text-sm font-bold text-[#10233a]">Courbe d'equity</h2><p className="text-[10px] text-[#8798a8]">Votre progression en un coup d'œil.</p></div><span className="text-[10px] px-2 py-1 rounded-full bg-[#e7faf3] text-[#087b59]">Dynamique</span></div>{chart}</div><div className="p-2 rounded-2xl card-premium"><DisciplineGauge value={score.overallScore} sufficient={score.isSufficientData} /></div></div><div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
-  <div className="p-5 rounded-2xl card-premium">
-    <div className="flex items-center justify-between mb-4"><div><h2 className="text-sm font-bold text-[#10233a]">Score psychologique</h2><p className="text-[10px] text-[#8798a8]">État mental et discipline d'exécution.</p></div><ShieldCheck className="w-4 h-4 text-[#08b77a]" /></div>
-    <div className="flex items-end gap-2"><span className="text-4xl font-bold font-mono text-[#10233a]">{score.isSufficientData ? score.psychologyScore : '—'}</span><span className="text-xs text-[#8798a8] mb-1">/100</span></div>
-    <div className="mt-3 h-2 rounded-full bg-[#edf2f0] overflow-hidden"><div className="h-full rounded-full bg-[#08b77a]" style={{width:`${score.isSufficientData ? score.psychologyScore : 0}%`}} /></div>
-    <div className="mt-2 text-[10px] text-[#71839a]">{score.isSufficientData ? (score.psychologyScore >= 80 ? 'Très bonne maîtrise émotionnelle' : score.psychologyScore >= 60 ? 'Psychologie globalement stable' : 'Psychologie à travailler') : 'Min. 5 trades requis'}</div>
+  <div className="p-3 rounded-2xl card-premium">
+    <DisciplineGauge value={score.psychologyScore} sufficient={score.isSufficientData} title="Score psychologique" subtitle="État mental et discipline d'exécution." />
   </div>
   <div className="p-5 rounded-2xl card-premium">
-    <div className="flex items-center justify-between mb-3"><div><h2 className="text-sm font-bold text-[#10233a]">Analyse psycho</h2><p className="text-[10px] text-[#8798a8]">Forces et points de vigilance.</p></div><Activity className="w-4 h-4 text-[#08b77a]" /></div>
-    <div className="space-y-2.5">
-      {(score.strengths.length ? score.strengths.slice(0,2).map((item)=><div key={item} className="text-[11px] rounded-lg bg-[#e7faf3] px-3 py-2 text-[#087b59]">{item}</div>) : <div className="text-[11px] text-[#8798a8]">Pas encore assez de données pour identifier les forces.</div>)}
-      {(score.weaknesses.length ? score.weaknesses.slice(0,2).map((item)=><div key={item} className="text-[11px] rounded-lg bg-[#fff5f5] px-3 py-2 text-[#c44d5b]">{item}</div>) : null)}
+    <div className="flex items-center justify-between mb-3"><div><h2 className="text-sm font-bold text-[#10233a]">Analyse psycho</h2><p className="text-[10px] text-[#8798a8]">Lecture visuelle des composantes du comportement.</p></div><Activity className="w-4 h-4 text-[#08b77a]" /></div>
+    <div className="space-y-3">
+      {[
+        ['Psychologie', score.psychologyScore],
+        ['Discipline', score.disciplineScore],
+        ['Consistance', score.consistencyScore],
+        ['Exécution', score.executionScore],
+      ].map(([label,value])=><div key={label}>
+        <div className="flex justify-between text-[10px] mb-1"><span className="font-semibold text-[#314861]">{label}</span><span className="font-mono text-[#71839a]">{score.isSufficientData ? `${value}/100` : '—'}</span></div>
+        <div className="h-2 rounded-full bg-[#edf2f0] overflow-hidden"><div className="h-full rounded-full bg-[#08b77a]" style={{width:`${score.isSufficientData ? value : 0}%`}} /></div>
+      </div>)}
+    </div>
+    <div className="mt-4 grid grid-cols-2 gap-2">
+      <div className="rounded-lg bg-[#e7faf3] px-3 py-2"><div className="text-[8px] uppercase tracking-wider text-[#087b59]">Forces</div><div className="mt-1 text-[10px] font-semibold text-[#314861]">{score.strengths.length || 0} identifiée{score.strengths.length>1?'s':''}</div></div>
+      <div className="rounded-lg bg-[#fff5f5] px-3 py-2"><div className="text-[8px] uppercase tracking-wider text-[#c44d5b]">Vigilance</div><div className="mt-1 text-[10px] font-semibold text-[#314861]">{score.weaknesses.length || 0} point{score.weaknesses.length>1?'s':''}</div></div>
     </div>
   </div>
   <div className="p-5 rounded-2xl card-premium">
-    <div className="flex items-center justify-between mb-3"><div><h2 className="text-sm font-bold text-[#10233a]">Rentabilité des setups</h2><p className="text-[10px] text-[#8798a8]">Quels setups produisent les meilleurs résultats.</p></div><Target className="w-4 h-4 text-[#08b77a]" /></div>
-    <div className="space-y-2">
-      {Object.entries(trades.reduce<Record<string,{count:number;wins:number;pnl:number;r:number}>>((map,t)=>{const key=t.setup?.trim()||'Non renseigné';const item=map[key]||{count:0,wins:0,pnl:0,r:0};item.count++;if(t.result==='WIN')item.wins++;item.pnl+=Number(t.pnl)||0;item.r+=Number(t.rMultiple)||0;map[key]=item;return map;},{})).sort((a,b)=>b[1].pnl-a[1].pnl).slice(0,4).map(([setup,s])=><div key={setup} className="rounded-lg border border-[#e7efec] bg-[#fbfdfc] px-3 py-2"><div className="flex justify-between gap-2 text-[11px]"><span className="font-semibold text-[#314861] truncate">{setup}</span><span className={s.pnl>=0?'text-[#008f63]':'text-[#e14d5d]'}>{formatCurrency(s.pnl)}</span></div><div className="mt-1 text-[9px] text-[#8798a8]">{s.count} trade{s.count>1?'s':''} · {((s.wins/s.count)*100).toFixed(0)}% win · {(s.r/s.count).toFixed(2)}R moyen</div></div>)}
+    <div className="flex items-center justify-between mb-3"><div><h2 className="text-sm font-bold text-[#10233a]">Rentabilité des setups</h2><p className="text-[10px] text-[#8798a8]">P&L, Win Rate et R moyen par setup.</p></div><Target className="w-4 h-4 text-[#08b77a]" /></div>
+    <div className="space-y-3">
+      {Object.entries(trades.reduce<Record<string,{count:number;wins:number;pnl:number;r:number}>>((map,t)=>{const key=t.setup?.trim()||'Non renseigné';const item=map[key]||{count:0,wins:0,pnl:0,r:0};item.count++;if(t.result==='WIN')item.wins++;item.pnl+=Number(t.pnl)||0;item.r+=Number(t.rMultiple)||0;map[key]=item;return map;},{})).sort((a,b)=>b[1].pnl-a[1].pnl).slice(0,4).map(([setup,s])=>{const maxPnl=Math.max(...Object.values(trades.reduce<Record<string,number>>((map,t)=>{const key=t.setup?.trim()||'Non renseigné';map[key]=(map[key]||0)+(Number(t.pnl)||0);return map;},{})).map(v=>Math.abs(v)),1);const width=Math.min(100,(Math.abs(s.pnl)/maxPnl)*100);return <div key={setup}>
+        <div className="flex justify-between gap-2 text-[10px] mb-1"><span className="font-semibold text-[#314861] truncate">{setup}</span><span className={s.pnl>=0?'text-[#008f63]':'text-[#e14d5d]'}>{formatCurrency(s.pnl)}</span></div>
+        <div className="h-3 rounded-full bg-[#edf2f0] overflow-hidden"><div className={`h-full rounded-full ${s.pnl>=0?'bg-[#08b77a]':'bg-[#e14d5d]'}`} style={{width:`${width}%`}} /></div>
+        <div className="mt-1 text-[9px] text-[#8798a8]">{s.count} trade{s.count>1?'s':''} · {((s.wins/s.count)*100).toFixed(0)}% win · {(s.r/s.count).toFixed(2)}R moyen</div>
+      </div>})}
       {!trades.length && <div className="text-[11px] text-[#8798a8]">Aucun setup à analyser.</div>}
     </div>
   </div>
 </div>{recentTrades(6)}</div>;
 }
 
-function DisciplineGauge({ value, sufficient }: { value: number; sufficient: boolean }) {
+function DisciplineGauge({ value, sufficient, title = 'Score de discipline', subtitle = 'Indice global de discipline.' }: { value: number; sufficient: boolean; title?: string; subtitle?: string }) {
   const score = Math.max(0, Math.min(100, value));
   const segments = 50;
   const activeSegments = Math.round((score / 100) * segments);
@@ -209,7 +221,7 @@ function DisciplineGauge({ value, sufficient }: { value: number; sufficient: boo
   return (
     <div className="h-full rounded-2xl bg-white p-5">
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-bold text-[#10233a]">Score de discipline</h2>
+        <div><h2 className="text-sm font-bold text-[#10233a]">{title}</h2><p className="text-[10px] text-[#8798a8] mt-0.5">{subtitle}</p></div>
         <span className="flex h-7 w-7 items-center justify-center rounded-full border border-[#dfe5ea] text-[#71839a]" title="Score calculé à partir de vos performances">
           <Info className="h-3.5 w-3.5" />
         </span>
