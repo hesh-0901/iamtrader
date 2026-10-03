@@ -301,55 +301,54 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
       {activeTab === 'profile' && (
         <div className="space-y-5">
           {!isEditingProfile ? (
-            <>
-              <section className="overflow-hidden rounded-[26px] border border-slate-200 bg-white shadow-sm">
-                <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-[#0b3b36] px-6 py-6 text-white">
-                  <div className="flex flex-wrap items-start justify-between gap-4">
-                    <div>
-                      <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-emerald-300">Profil trader</span>
-                      <h2 className="mt-2 text-2xl font-black tracking-tight">{displayName || [firstName, lastName].filter(Boolean).join(' ') || 'Trader IAMTRADER'}</h2>
-                      <p className="mt-1 text-xs text-white/60">{userProfile?.email || '—'}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
+            <div className="space-y-8">
+              <section className="border-b border-slate-200 pb-7">
+                <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+                  <div className="min-w-0">
+                    <div className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#00a982]">Profil trader</div>
+                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+                      <h2 className="text-3xl font-black tracking-[-0.03em] text-slate-950">{displayName || [firstName, lastName].filter(Boolean).join(' ') || 'Trader IAMTRADER'}</h2>
                       <PlanBadge plan={userProfile?.plan || 'free'} />
-                      <button type="button" onClick={() => setIsEditingProfile(true)} className="rounded-xl bg-white/10 px-3.5 py-2 text-xs font-bold text-white ring-1 ring-white/15 hover:bg-white/15">Modifier le profil</button>
                     </div>
+                    <p className="mt-1 text-xs text-slate-500">{[city, country].filter(Boolean).join(', ') || 'Localisation non renseignée'}{city || country ? ' · ' : ''}{userProfile?.email || '—'}</p>
                   </div>
+                  <button type="button" onClick={() => setIsEditingProfile(true)} className="self-start rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 sm:self-auto">Modifier</button>
                 </div>
-                <div className="grid gap-px bg-slate-200 sm:grid-cols-2 lg:grid-cols-3">
+              </section>
+
+              <section>
+                <div className="mb-4 text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">Informations personnelles</div>
+                <div className="grid gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-4">
                   {[
                     ['Prénom', firstName], ['Nom', lastName], ['Sexe', gender], ['Âge', age ? age + ' ans' : '—'],
-                    ['Ville', city], ['Pays', country], ['WhatsApp', whatsapp], ['E-mail', userProfile?.email || '—'],
-                    ['Date d’inscription', formatDate(userProfile?.createdAt)]
+                    ['Ville', city], ['Pays', country], ['WhatsApp', whatsapp], ['Membre depuis', formatDate(userProfile?.createdAt)]
                   ].map(([label, value]) => (
-                    <div key={label} className="bg-white px-5 py-4">
-                      <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400">{label}</div>
-                      <div className="mt-1 text-sm font-semibold text-slate-900">{value || '—'}</div>
+                    <div key={label} className="min-w-0">
+                      <div className="text-[9px] font-semibold uppercase tracking-wider text-slate-400">{label}</div>
+                      <div className="mt-1.5 truncate text-sm font-semibold text-slate-900">{value || '—'}</div>
                     </div>
                   ))}
                 </div>
               </section>
 
-              <section className="rounded-[26px] border border-slate-200 bg-white p-6 shadow-sm">
-                <div className="flex items-center justify-between gap-4">
-                  <div><span className="text-[9px] font-bold uppercase tracking-[0.16em] text-[#00a982]">Trading</span><h3 className="mt-1 text-lg font-black text-slate-900">Profil de trading</h3></div>
-                </div>
-                <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                  <div className="rounded-2xl bg-slate-50 p-4"><div className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Niveau</div><div className="mt-1 text-sm font-black text-slate-900">{traderLevel || '—'}</div></div>
-                  <div className="rounded-2xl bg-slate-50 p-4"><div className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Style</div><div className="mt-1 text-sm font-black text-slate-900">{traderStyle || '—'}</div></div>
-                  <div className="rounded-2xl bg-slate-50 p-4"><div className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Marchés</div><div className="mt-2 flex flex-wrap gap-1.5">{traderMarkets.length ? traderMarkets.map(m => <span key={m} className="rounded-full bg-[#e5faf5] px-2.5 py-1 text-[10px] font-bold text-[#007f60]">{m}</span>) : <span className="text-sm font-black text-slate-900">—</span>}</div></div>
+              <section className="border-t border-slate-200 pt-7">
+                <div className="mb-4 text-[9px] font-bold uppercase tracking-[0.18em] text-[#00a982]">Trading</div>
+                <div className="flex flex-wrap items-baseline gap-x-10 gap-y-5">
+                  <div><div className="text-[9px] font-semibold uppercase tracking-wider text-slate-400">Niveau</div><div className="mt-1.5 text-sm font-bold text-slate-900">{traderLevel || '—'}</div></div>
+                  <div><div className="text-[9px] font-semibold uppercase tracking-wider text-slate-400">Style</div><div className="mt-1.5 text-sm font-bold text-slate-900">{traderStyle || '—'}</div></div>
+                  <div className="min-w-[180px]"><div className="text-[9px] font-semibold uppercase tracking-wider text-slate-400">Marchés</div><div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">{traderMarkets.length ? traderMarkets.map(m => <span key={m} className="text-sm font-bold text-slate-900">{m}</span>) : <span className="text-sm font-bold text-slate-900">—</span>}</div></div>
                 </div>
               </section>
 
-              <section className="rounded-[26px] border border-slate-200 bg-white p-6 shadow-sm">
-                <div><span className="text-[9px] font-bold uppercase tracking-[0.16em] text-violet-500">Présence</span><h3 className="mt-1 text-lg font-black text-slate-900">Réseaux sociaux</h3></div>
+              <section className="border-t border-slate-200 pt-7">
+                <div className="mb-4 text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">Réseaux sociaux</div>
                 {socialLinks.length ? (
-                  <div className="mt-5 flex flex-wrap gap-2">
-                    {socialLinks.map((link, index) => <div key={link.network + link.username + index} className="rounded-full border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs"><span className="font-bold text-slate-700">{link.network}</span><span className="mx-1.5 text-slate-300">·</span><span className="text-slate-500">{link.username}</span></div>)}
+                  <div className="flex flex-wrap gap-x-6 gap-y-3">
+                    {socialLinks.map((link, index) => <div key={link.network + link.username + index} className="text-sm"><span className="font-semibold text-slate-900">{link.network}</span><span className="mx-2 text-slate-300">·</span><span className="text-slate-500">{link.username}</span></div>)}
                   </div>
-                ) : <p className="mt-4 text-xs text-slate-500">Aucun réseau social renseigné.</p>}
+                ) : <p className="text-xs text-slate-500">Aucun réseau social renseigné.</p>}
               </section>
-            </>
+            </div>
           ) : (
             <>
               <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
