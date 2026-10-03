@@ -176,7 +176,7 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
                 <div
                   key={cell.dayStr || `empty-${index}`}
                   onClick={() => cell.dayStr && hasTrades && setSelectedDayKey(cell.dayStr)}
-                  className={`relative min-h-[108px] p-3 transition-colors sm:min-h-[124px] sm:p-3.5 ${isOutsideMonth ? 'bg-white' : cellTone} ${hasTrades ? 'cursor-pointer' : ''} ${isSelected ? 'z-10 ring-2 ring-inset ring-[#2F6BFF]' : ''}`}
+                  className={`relative min-h-[108px] p-3 transition-colors sm:min-h-[124px] sm:p-3.5 ${isOutsideMonth ? 'bg-transparent' : cellTone} ${hasTrades ? 'cursor-pointer' : ''} ${isSelected ? 'z-10 ring-2 ring-inset ring-[#2F6BFF]' : ''} ${isOutsideMonth ? 'border-0 outline-none ring-0' : ''}`}
                   aria-hidden={isOutsideMonth}
                 >
                   {!isOutsideMonth && (
@@ -215,7 +215,7 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
             className="grid h-full gap-0"
             style={{
               gridTemplateRows:
-                '108px 43px repeat(' + calendarWeekCount + ', minmax(0, 1fr)) 51px',
+                '108px 43px repeat(' + calendarWeekCount + ', 124px) 34px',
             }}
           >
             <div className="flex flex-col justify-center px-3">
