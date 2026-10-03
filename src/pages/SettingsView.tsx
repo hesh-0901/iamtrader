@@ -71,7 +71,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
     const templateUrl = '/assets/iamtrader-badge-template.png';
     const templateWidth = 1665;
     const templateHeight = 945;
-    const exportScale = 2;
+    const exportScale = 4;
     const canvasWidth = templateWidth * exportScale;
     const canvasHeight = templateHeight * exportScale;
 
