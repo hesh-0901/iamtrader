@@ -69,8 +69,11 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
 
   const downloadTraderBadge = async () => {
     const templateUrl = '/assets/iamtrader-badge-template.png';
-    const canvasWidth = 1665;
-    const canvasHeight = 945;
+    const templateWidth = 1665;
+    const templateHeight = 945;
+    const exportScale = 2;
+    const canvasWidth = templateWidth * exportScale;
+    const canvasHeight = templateHeight * exportScale;
 
     const traderName = (displayName || [firstName, lastName].filter(Boolean).join(' ') || userProfile?.email || 'Trader').trim();
     const status = traderRating.isSufficientData ? traderRating.label : 'Données insuffisantes';
@@ -100,8 +103,11 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
 
       const context = canvas.getContext('2d');
       if (!context) throw new Error('Canvas unavailable');
+      context.imageSmoothingEnabled = true;
+      context.imageSmoothingQuality = 'high';
+      context.scale(exportScale, exportScale);
 
-      context.drawImage(image, 0, 0, canvasWidth, canvasHeight);
+      context.drawImage(image, 0, 0, templateWidth, templateHeight);
 
       const fitText = (
         text: string,
@@ -162,13 +168,13 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
 
       // Trader identity block.
       drawLeft(traderName, 735, 454, 285, 28, 17, '#0b1b2e', 800);
-      drawLeft(status, 735, 540, 285, 22, 15, '#16876a', 800);
+      drawLeft(status, 735, 552, 285, 21, 14, '#16876a', 800);
       drawLeft(tradesText, 735, 680, 285, 21, 15, '#0b1b2e', 800);
 
       // Performance indicators.
       drawCentered(winRate, 1228, 590, 170, 30, 21, '#0b1b2e', 800);
       drawCentered(profitFactor, 1480, 590, 170, 30, 21, '#0b1b2e', 800);
-      drawLeft(generatedAt, 1215, 722, 350, 21, 14, '#0b1b2e', 700);
+      drawLeft(generatedAt, 1215, 722, 350, 20, 14, '#0b1b2e', 700);
 
       context.textAlign = 'left';
       context.textBaseline = 'alphabetic';
