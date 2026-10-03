@@ -224,9 +224,9 @@ function DisciplineGauge({ value, sufficient }: { value: number; sufficient: boo
           <text x="120" y="108" textAnchor="middle" className="fill-[#263238] text-[20px] font-bold">{sufficient ? `${Math.round(score)}%` : '—'}</text>
           <text x="120" y="123" textAnchor="middle" className="fill-[#34a853] text-[9px] font-semibold">{label}</text>
           <text x="22" y="146" className="fill-[#94a3b8] text-[8px] font-semibold">0%</text>
-          <text x="72" y="54" textAnchor="middle" className="fill-[#94a3b8] text-[8px] font-semibold">30%</text>
-          <text x="120" y="36" textAnchor="middle" className="fill-[#94a3b8] text-[8px] font-semibold">50%</text>
-          <text x="168" y="54" textAnchor="middle" className="fill-[#94a3b8] text-[8px] font-semibold">80%</text>
+          <text x="72" y="25" textAnchor="middle" className="fill-[#94a3b8] text-[8px] font-semibold">30%</text>
+          <text x="120" y="13" textAnchor="middle" className="fill-[#94a3b8] text-[8px] font-semibold">50%</text>
+          <text x="168" y="25" textAnchor="middle" className="fill-[#94a3b8] text-[8px] font-semibold">80%</text>
           <text x="198" y="146" textAnchor="middle" className="fill-[#94a3b8] text-[8px] font-semibold">100%</text>
         </svg>
       </div>
