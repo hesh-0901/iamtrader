@@ -170,6 +170,16 @@ export interface UserProfile {
   };
 }
 
+export interface TraderRating {
+  score: number;
+  grade: 'A+' | 'A' | 'B+' | 'B' | 'C' | 'D';
+  label: 'Elite' | 'Excellent' | 'Solide' | 'En progression' | 'À construire' | 'Données insuffisantes';
+  isSufficientData: boolean;
+  tradesAnalyzed: number;
+  winRate: number;
+  profitFactor: number;
+}
+
 export interface TraderScoreReport {
   overallScore: number;
   riskManagementScore: number;
