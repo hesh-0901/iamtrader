@@ -68,162 +68,120 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
   const traderRating = useMemo(() => calculateTraderRating(trades), [trades]);
 
   const downloadTraderBadge = async () => {
-    const escapeXml = (value: string) => value
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&apos;');
+    const templateUrl = '/assets/iamtrader-badge-template.png';
+    const canvasWidth = 1665;
+    const canvasHeight = 945;
 
-    const traderName = escapeXml(
-      (displayName || [firstName, lastName].filter(Boolean).join(' ') || userProfile?.email || 'Trader').trim()
-    );
-    const grade = escapeXml(traderRating.grade);
-    const score = traderRating.isSufficientData ? traderRating.score : 0;
-    const scoreText = traderRating.isSufficientData ? `${score}/100` : '—';
-    const label = escapeXml(traderRating.isSufficientData ? traderRating.label : 'Données insuffisantes');
-    const generatedAt = escapeXml(
-      new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' })
-    );
-    const circumference = 2 * Math.PI * 92;
-    const dash = traderRating.isSufficientData ? (circumference * score) / 100 : 0;
+    const traderName = (displayName || [firstName, lastName].filter(Boolean).join(' ') || userProfile?.email || 'Trader').trim();
+    const status = traderRating.isSufficientData ? traderRating.label : 'Données insuffisantes';
+    const scoreText = traderRating.isSufficientData ? `${traderRating.score}/100` : '—';
+    const grade = traderRating.grade;
+    const winRate = traderRating.isSufficientData ? `${traderRating.winRate.toFixed(1)}%` : '—';
+    const profitFactor = traderRating.isSufficientData ? traderRating.profitFactor.toFixed(2) : '—';
+    const tradesText = `${traderRating.tradesAnalyzed} trades`;
+    const generatedAt = new Date().toLocaleDateString('fr-FR', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric'
+    });
 
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="750" viewBox="0 0 1200 750">
-      <defs>
-        <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stop-color="#ffffff"/>
-          <stop offset="0.58" stop-color="#f8fffc"/>
-          <stop offset="1" stop-color="#f3f0ff"/>
-        </linearGradient>
-        <linearGradient id="mint" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stop-color="#00a982"/>
-          <stop offset="1" stop-color="#47d9b3"/>
-        </linearGradient>
-        <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0" stop-color="#d9a441"/>
-          <stop offset="1" stop-color="#f2cc73"/>
-        </linearGradient>
-        <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%">
-          <feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#102a43" flood-opacity=".14"/>
-        </filter>
-        <filter id="soft" x="-30%" y="-30%" width="160%" height="160%">
-          <feGaussianBlur stdDeviation="18"/>
-        </filter>
-      </defs>
+    const image = new Image();
+    image.src = templateUrl;
 
-      <rect width="1200" height="750" fill="#eef4f2"/>
-      <circle cx="1090" cy="80" r="150" fill="#dff8f0" filter="url(#soft)" opacity=".9"/>
-      <circle cx="90" cy="690" r="170" fill="#eee9ff" filter="url(#soft)" opacity=".8"/>
-
-      <rect x="38" y="38" width="1124" height="674" rx="42" fill="url(#paper)" stroke="#dce9e5" stroke-width="2" filter="url(#shadow)"/>
-      <rect x="38" y="38" width="1124" height="8" rx="4" fill="url(#mint)"/>
-
-      <g transform="translate(84 86)">
-        <circle cx="34" cy="34" r="34" fill="#0a192f"/>
-        <path d="M18 43 L26 20 L34 38 L42 20 L50 43" fill="none" stroke="#48d9b4" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-        <text x="86" y="25" fill="#0a192f" font-family="Arial,sans-serif" font-size="24" font-weight="900" letter-spacing="3">IAMTRADER</text>
-        <text x="86" y="52" fill="#6f8191" font-family="Arial,sans-serif" font-size="13" font-weight="700" letter-spacing="2">TRADER PERFORMANCE IDENTITY</text>
-      </g>
-
-      <g transform="translate(855 82)">
-        <rect width="220" height="54" rx="27" fill="#f0faf7" stroke="#cbeee3"/>
-        <circle cx="29" cy="27" r="8" fill="#00a982"/>
-        <text x="50" y="33" fill="#087b62" font-family="Arial,sans-serif" font-size="14" font-weight="800" letter-spacing="1.2">AUTOMATED RATING</text>
-      </g>
-
-      <line x1="84" y1="166" x2="1116" y2="166" stroke="#e5eeeb" stroke-width="2"/>
-
-      <g transform="translate(84 208)">
-        <text x="0" y="0" fill="#8a99a7" font-family="Arial,sans-serif" font-size="12" font-weight="800" letter-spacing="2.5">PERFORMANCE BADGE</text>
-        <text x="0" y="48" fill="#0a192f" font-family="Arial,sans-serif" font-size="39" font-weight="900">IAMTRADER RATING</text>
-        <text x="0" y="78" fill="#657789" font-family="Arial,sans-serif" font-size="16">Cote calculée automatiquement à partir des performances de trading.</text>
-      </g>
-
-      <g transform="translate(84 330)">
-        <circle cx="112" cy="112" r="112" fill="#ffffff" stroke="#e2eee9" stroke-width="12"/>
-        <circle cx="112" cy="112" r="92" fill="none" stroke="#e8f1ee" stroke-width="14"/>
-        <circle cx="112" cy="112" r="92" fill="none" stroke="url(#mint)" stroke-width="14" stroke-linecap="round"
-          stroke-dasharray="${dash.toFixed(2)} ${Math.max(circumference - dash, 0).toFixed(2)}"
-          transform="rotate(-90 112 112)"/>
-        <circle cx="112" cy="112" r="72" fill="#f6fcfa"/>
-        <text x="112" y="102" text-anchor="middle" fill="#0a192f" font-family="Arial,sans-serif" font-size="48" font-weight="900">${scoreText}</text>
-        <text x="112" y="130" text-anchor="middle" fill="#7b8c99" font-family="Arial,sans-serif" font-size="12" font-weight="800" letter-spacing="1.5">SCORE</text>
-      </g>
-
-      <g transform="translate(320 330)">
-        <rect x="0" y="0" width="310" height="224" rx="28" fill="#ffffff" stroke="#dfeae7"/>
-        <rect x="24" y="24" width="72" height="72" rx="22" fill="#f0faf7" stroke="#ccefe5"/>
-        <text x="60" y="77" text-anchor="middle" fill="#087b62" font-family="Arial,sans-serif" font-size="38" font-weight="900">${grade}</text>
-        <text x="120" y="45" fill="#8998a5" font-family="Arial,sans-serif" font-size="11" font-weight="800" letter-spacing="1.8">TRADER</text>
-        <text x="120" y="73" fill="#0a192f" font-family="Arial,sans-serif" font-size="25" font-weight="900">${traderName}</text>
-        <text x="24" y="135" fill="#087b62" font-family="Arial,sans-serif" font-size="20" font-weight="900">${label}</text>
-        <line x1="24" y1="158" x2="286" y2="158" stroke="#e8efed"/>
-        <text x="24" y="187" fill="#83929e" font-family="Arial,sans-serif" font-size="11" font-weight="700">ANALYSÉ</text>
-        <text x="24" y="207" fill="#0a192f" font-family="Arial,sans-serif" font-size="16" font-weight="900">${traderRating.tradesAnalyzed} trades</text>
-      </g>
-
-      <g transform="translate(654 330)">
-        <rect x="0" y="0" width="462" height="224" rx="28" fill="#f8fbfa" stroke="#dfeae7"/>
-        <text x="28" y="39" fill="#8998a5" font-family="Arial,sans-serif" font-size="11" font-weight="800" letter-spacing="1.8">PERFORMANCE INDICATORS</text>
-
-        <g transform="translate(28 65)">
-          <rect width="190" height="62" rx="18" fill="#ffffff" stroke="#e4ecea"/>
-          <text x="18" y="24" fill="#8a99a7" font-family="Arial,sans-serif" font-size="10" font-weight="800">WIN RATE</text>
-          <text x="18" y="48" fill="#0a192f" font-family="Arial,sans-serif" font-size="21" font-weight="900">${traderRating.isSufficientData ? traderRating.winRate.toFixed(1) : '—'}%</text>
-        </g>
-
-        <g transform="translate(244 65)">
-          <rect width="190" height="62" rx="18" fill="#ffffff" stroke="#e4ecea"/>
-          <text x="18" y="24" fill="#8a99a7" font-family="Arial,sans-serif" font-size="10" font-weight="800">PROFIT FACTOR</text>
-          <text x="18" y="48" fill="#0a192f" font-family="Arial,sans-serif" font-size="21" font-weight="900">${traderRating.isSufficientData ? traderRating.profitFactor.toFixed(2) : '—'}</text>
-        </g>
-
-        <g transform="translate(28 143)">
-          <circle cx="9" cy="9" r="7" fill="url(#gold)"/>
-          <text x="26" y="14" fill="#5e6f7d" font-family="Arial,sans-serif" font-size="11" font-weight="700">Badge généré le ${generatedAt}</text>
-        </g>
-      </g>
-
-      <g transform="translate(84 590)">
-        <line x1="0" y1="0" x2="1032" y2="0" stroke="#dfe9e6" stroke-width="2"/>
-        <text x="0" y="38" fill="#84939f" font-family="Arial,sans-serif" font-size="11" font-weight="700">Généré automatiquement par IAMTRADER • Les données et la cote ne sont pas modifiables par le trader.</text>
-        <text x="1032" y="38" text-anchor="end" fill="#0a192f" font-family="Arial,sans-serif" font-size="12" font-weight="900" letter-spacing="1.5">IAMTRADER.TRADE</text>
-      </g>
-
-      <g transform="translate(1005 666)">
-        <circle cx="28" cy="0" r="25" fill="#ffffff" stroke="#d7e5e1"/>
-        <path d="M17 7 L24 -11 L31 4 L38 -11 L45 7" fill="none" stroke="#00a982" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-      </g>
-    </svg>`;
-
-    const svgUrl = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml;charset=utf-8' }));
     try {
-      const image = new Image();
-      image.src = svgUrl;
       await new Promise<void>((resolve, reject) => {
         image.onload = () => resolve();
-        image.onerror = () => reject(new Error('Badge rendering failed'));
+        image.onerror = () => reject(new Error('Badge template unavailable'));
       });
+
       const canvas = document.createElement('canvas');
-      canvas.width = 1200;
-      canvas.height = 750;
+      canvas.width = canvasWidth;
+      canvas.height = canvasHeight;
+
       const context = canvas.getContext('2d');
       if (!context) throw new Error('Canvas unavailable');
-      context.drawImage(image, 0, 0);
-      const pngUrl = canvas.toDataURL('image/png');
+
+      context.drawImage(image, 0, 0, canvasWidth, canvasHeight);
+
+      const fitText = (
+        text: string,
+        maxWidth: number,
+        initialSize: number,
+        minSize: number,
+        weight = 700,
+        family = 'Arial, sans-serif'
+      ) => {
+        let size = initialSize;
+        while (size > minSize) {
+          context.font = `${weight} ${size}px ${family}`;
+          if (context.measureText(text).width <= maxWidth) break;
+          size -= 1;
+        }
+        return size;
+      };
+
+      const drawCentered = (
+        text: string,
+        x: number,
+        y: number,
+        maxWidth: number,
+        initialSize: number,
+        minSize: number,
+        color: string,
+        weight = 700
+      ) => {
+        const size = fitText(text, maxWidth, initialSize, minSize, weight);
+        context.font = `${weight} ${size}px Arial, sans-serif`;
+        context.fillStyle = color;
+        context.textAlign = 'center';
+        context.textBaseline = 'middle';
+        context.fillText(text, x, y);
+      };
+
+      const drawLeft = (
+        text: string,
+        x: number,
+        y: number,
+        maxWidth: number,
+        initialSize: number,
+        minSize: number,
+        color: string,
+        weight = 700
+      ) => {
+        const size = fitText(text, maxWidth, initialSize, minSize, weight);
+        context.font = `${weight} ${size}px Arial, sans-serif`;
+        context.fillStyle = color;
+        context.textAlign = 'left';
+        context.textBaseline = 'middle';
+        context.fillText(text, x, y);
+      };
+
+      // Score + grade — centered inside the fixed medal area.
+      drawCentered(scoreText, 330, 515, 245, 62, 42, '#ffffff', 800);
+      drawCentered(grade, 330, 635, 120, 66, 46, '#2bb58a', 900);
+
+      // Trader identity block.
+      drawLeft(traderName, 750, 466, 270, 30, 18, '#0b1b2e', 800);
+      drawLeft(status, 750, 565, 270, 23, 15, '#16876a', 800);
+      drawLeft(tradesText, 750, 678, 270, 22, 15, '#0b1b2e', 800);
+
+      // Performance indicators.
+      drawCentered(winRate, 1210, 574, 155, 31, 22, '#0b1b2e', 800);
+      drawCentered(profitFactor, 1450, 574, 155, 31, 22, '#0b1b2e', 800);
+      drawLeft(generatedAt, 1235, 692, 300, 22, 15, '#0b1b2e', 700);
+
+      context.textAlign = 'left';
+      context.textBaseline = 'alphabetic';
+
+      const pngUrl = canvas.toDataURL('image/png', 1);
       const anchor = document.createElement('a');
       anchor.href = pngUrl;
       anchor.download = 'iamtrader-performance-badge.png';
       anchor.click();
+
       showToast('Badge IAMTRADER téléchargé en PNG.', 'success');
     } catch {
-      const anchor = document.createElement('a');
-      anchor.href = svgUrl;
-      anchor.download = 'iamtrader-performance-badge.svg';
-      anchor.click();
-      showToast('Badge IAMTRADER téléchargé.', 'success');
-    } finally {
-      URL.revokeObjectURL(svgUrl);
+      showToast('Le template du badge est introuvable. Vérifiez public/assets/iamtrader-badge-template.png.', 'error');
     }
   };
 
