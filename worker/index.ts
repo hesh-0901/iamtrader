@@ -1,6 +1,6 @@
 import { onRequest as handleAiChat } from '../functions/api/ai-chat';
 import { onRequestPost as handleContactReply } from '../functions/api/contact-reply';
-import { handlePaymentRequest, handlePaymentCallback } from './payments';
+import { handlePaymentRequest, handlePaymentCallback, handleSimulatedPaymentRequest, handleSimulatedPaymentConfirm } from './payments';
 import type { PaymentEnv } from './firebaseAdmin';
 
 interface Env {
@@ -13,6 +13,7 @@ interface Env {
   LABYRINTHE_API_TOKEN?: string;
   FIREBASE_API_KEY?: string;
   FIREBASE_SERVICE_ACCOUNT_JSON?: string;
+  PAYMENT_SIMULATION_ENABLED?: string;
 }
 
 type EnvWithPayments = Env & PaymentEnv;
@@ -27,6 +28,14 @@ export default {
 
     if (url.pathname === '/api/contact-reply') {
       return handleContactReply({ request, env });
+    }
+
+    if (url.pathname === '/api/payments/simulate') {
+      return handleSimulatedPaymentRequest(request, env);
+    }
+
+    if (url.pathname === '/api/payments/simulate/confirm') {
+      return handleSimulatedPaymentConfirm(request, env);
     }
 
     if (url.pathname === '/api/payments') {
