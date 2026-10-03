@@ -3,7 +3,7 @@ import { UserProfile, SubscriptionPlan, TradingAccount, Trade } from '../types';
 import { PlanBadge } from '../components/common/Badge';
 import {
   User, Shield, CreditCard, Sliders, Lock, Mail, Check, ArrowRight,
-  Activity, CalendarDays, Clock3, WalletCards, Sparkles, ChevronRight, Phone, X, Crown, Target, Coins, TrendingUp
+  Activity, CalendarDays, Clock3, WalletCards, Sparkles, ChevronRight, Phone, X, Crown, Target, Coins, TrendingUp, Star
 } from 'lucide-react';
 import { resetUserPassword, updateTraderProfile } from '../services/auth';
 import { useToast } from '../components/common/Toast';
