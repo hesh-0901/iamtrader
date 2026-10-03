@@ -105,6 +105,13 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
       .slice(0, 6);
   }, [trades]);
 
+  const recentClosedTrades = useMemo(() => {
+    return trades
+      .filter(trade => trade.result !== 'OPEN')
+      .sort((a, b) => new Date(b.entryDate).getTime() - new Date(a.entryDate).getTime())
+      .slice(0, 6);
+  }, [trades]);
+
 
   const selectedDayTrades = selectedDayKey && tradesByDay[selectedDayKey] ? tradesByDay[selectedDayKey].trades : [];
 
