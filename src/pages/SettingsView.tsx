@@ -157,18 +157,18 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
       };
 
       // Score + grade — centered inside the fixed medal area.
-      drawCentered(scoreText, 330, 515, 245, 62, 42, '#ffffff', 800);
-      drawCentered(grade, 330, 635, 120, 66, 46, '#2bb58a', 900);
+      drawCentered(scoreText, 330, 505, 220, 58, 40, '#ffffff', 800);
+      drawCentered(grade, 330, 650, 110, 62, 44, '#2bb58a', 900);
 
       // Trader identity block.
-      drawLeft(traderName, 750, 466, 270, 30, 18, '#0b1b2e', 800);
-      drawLeft(status, 750, 565, 270, 23, 15, '#16876a', 800);
-      drawLeft(tradesText, 750, 678, 270, 22, 15, '#0b1b2e', 800);
+      drawLeft(traderName, 735, 454, 285, 28, 17, '#0b1b2e', 800);
+      drawLeft(status, 735, 540, 285, 22, 15, '#16876a', 800);
+      drawLeft(tradesText, 735, 680, 285, 21, 15, '#0b1b2e', 800);
 
       // Performance indicators.
-      drawCentered(winRate, 1210, 574, 155, 31, 22, '#0b1b2e', 800);
-      drawCentered(profitFactor, 1450, 574, 155, 31, 22, '#0b1b2e', 800);
-      drawLeft(generatedAt, 1235, 692, 300, 22, 15, '#0b1b2e', 700);
+      drawCentered(winRate, 1228, 590, 170, 30, 21, '#0b1b2e', 800);
+      drawCentered(profitFactor, 1480, 590, 170, 30, 21, '#0b1b2e', 800);
+      drawLeft(generatedAt, 1215, 722, 350, 21, 14, '#0b1b2e', 700);
 
       context.textAlign = 'left';
       context.textBaseline = 'alphabetic';
