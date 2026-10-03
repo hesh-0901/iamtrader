@@ -15,7 +15,7 @@ import {
   addDoc as addFirestoreDoc
 } from 'firebase/firestore';
 import { db, auth } from '../firebase/config';
-import { AdminLog, Trade, TradingAccount, UserProfile } from '../types';
+import { AdminLog, PaymentRecord, Trade, TradingAccount, UserProfile } from '../types';
 
 // ==========================================
 // TRADES SERVICE
@@ -175,6 +175,29 @@ export function subscribeAllUsers(
     callback(users);
   }, (error) => {
     console.warn('Firestore admin users realtime notice:', error.message);
+    callback([], error);
+  });
+}
+
+export function subscribeAllPayments(
+  callback: (payments: PaymentRecord[], error?: Error) => void
+) {
+  if (!auth.currentUser) {
+    callback([]);
+    return () => {};
+  }
+
+  const paymentsRef = collection(db, 'payments');
+  const q = query(paymentsRef, limit(100));
+  return onSnapshot(q, (snapshot) => {
+    const payments = snapshot.docs.map(docSnap => ({
+      id: docSnap.id,
+      ...docSnap.data()
+    } as PaymentRecord));
+    payments.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    callback(payments);
+  }, (error) => {
+    console.warn('Firestore admin payments realtime notice:', error.message);
     callback([], error);
   });
 }
