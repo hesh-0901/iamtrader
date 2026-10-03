@@ -160,6 +160,88 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
   return <div className="space-y-5">{situation}{modeBar}<div className="grid grid-cols-1 xl:grid-cols-3 gap-4"><div className="xl:col-span-2 p-5 rounded-2xl card-premium"><div className="flex justify-between mb-2"><div><h2 className="text-sm font-bold text-[#10233a]">Courbe d'equity</h2><p className="text-[10px] text-[#8798a8]">Votre progression en un coup d'œil.</p></div><span className="text-[10px] px-2 py-1 rounded-full bg-[#e7faf3] text-[#087b59]">Dynamique</span></div>{chart}</div><div className="p-2 rounded-2xl card-premium"><DisciplineGauge value={score.overallScore} sufficient={score.isSufficientData} /></div></div><div className="grid grid-cols-1 xl:grid-cols-2 gap-4"><div className="p-5 rounded-2xl card-premium"><h2 className="text-sm font-bold text-[#10233a] mb-4">Risque & contrôle</h2><Metric label="Drawdown" value={`-${metrics.maxDrawdownPercent.toFixed(1)}%`} sub={metrics.maxDrawdownPercent>5?'À surveiller':'Sous contrôle'} tone={metrics.maxDrawdownPercent>5?'negative':'positive'} /><Metric label="Profit Factor" value={metrics.profitFactor.toFixed(2)} sub="Gains / pertes" /><Metric label="Expectancy" value={formatCurrency(metrics.expectancy)} sub="Par trade" tone={metrics.expectancy>=0?'positive':'negative'} /></div><div className="p-5 rounded-2xl card-premium"><h2 className="text-sm font-bold text-[#10233a] mb-4">Lecture pratique</h2><div className="grid grid-cols-2 gap-2.5"><Metric label="Trade moyen" value={metrics.totalTrades?formatCurrency(metrics.totalPnl/metrics.totalTrades):'$0'} sub="P&L moyen" /><Metric label="Avg R" value={metrics.avgRR.toFixed(2)} sub="Ratio moyen" /><Metric label="Gains moyens" value={formatCurrency(metrics.avgWin)} sub={`${metrics.winningTrades} gagnants`} /><Metric label="Pertes moyennes" value={formatCurrency(metrics.avgLoss)} sub={`${metrics.losingTrades} pertes`} /></div></div></div>{recentTrades(6)}</div>;
 }
 
+function DisciplineGauge({ value, sufficient }: { value: number; sufficient: boolean }) {
+  const score = Math.max(0, Math.min(100, value));
+  const segments = 50;
+  const activeSegments = Math.round((score / 100) * segments);
+  const centerX = 120;
+  const centerY = 116;
+  const radius = 82;
+  const strokeWidth = 8;
+  const startAngle = -180;
+  const anglePerSegment = 180 / segments;
+
+  const polar = (angle: number) => {
+    const radians = (angle * Math.PI) / 180;
+    return { x: centerX + radius * Math.cos(radians), y: centerY + radius * Math.sin(radians) };
+  };
+
+  const arcPath = (a0: number, a1: number) => {
+    const p0 = polar(a0);
+    const p1 = polar(a1);
+    return `M ${p0.x} ${p0.y} A ${radius} ${radius} 0 0 1 ${p1.x} ${p1.y}`;
+  };
+
+  const segmentColor = (index: number) => {
+    const pct = ((index + 0.5) / segments) * 100;
+    if (pct <= 30) return '#ff3b30';
+    if (pct <= 80) return '#ff9500';
+    return '#34a853';
+  };
+
+  const label = !sufficient ? '—' : score >= 80 ? 'Excellent' : score >= 30 ? 'Bon' : 'À travailler';
+
+  return (
+    <div className="h-full rounded-2xl bg-white p-5">
+      <div className="flex items-center justify-between">
+        <h2 className="text-sm font-bold text-[#10233a]">Score de discipline</h2>
+        <span className="flex h-7 w-7 items-center justify-center rounded-full border border-[#dfe5ea] text-[#71839a]" title="Score calculé à partir de vos performances">
+          <Info className="h-3.5 w-3.5" />
+        </span>
+      </div>
+      <div className="mt-2 flex justify-center">
+        <svg viewBox="0 0 240 155" className="h-auto w-full max-w-[330px]" role="img" aria-label={`Score de discipline : ${sufficient ? `${Math.round(score)}%` : 'indisponible'}`}>
+          <defs>
+            <radialGradient id="scoreGaugeGlow" cx="50%" cy="72%" r="55%">
+              <stop offset="0%" stopColor="#e8f7df" stopOpacity="0.95" />
+              <stop offset="100%" stopColor="#ffffff" stopOpacity="0" />
+            </radialGradient>
+          </defs>
+          <path d="M 28 116 A 92 92 0 0 1 212 116 L 198 116 A 78 78 0 0 0 42 116 Z" fill="url(#scoreGaugeGlow)" />
+          {Array.from({ length: segments }).map((_, index) => {
+            const gap = 0.9;
+            const a0 = startAngle + index * anglePerSegment + gap;
+            const a1 = startAngle + (index + 1) * anglePerSegment - gap;
+            const active = sufficient && index < activeSegments;
+            return (
+              <path
+                key={index}
+                d={arcPath(a0, a1)}
+                fill="none"
+                stroke={active ? segmentColor(index) : '#9aa7b8'}
+                strokeWidth={strokeWidth}
+                strokeLinecap="butt"
+              />
+            );
+          })}
+          <text x="120" y="108" textAnchor="middle" className="fill-[#263238] text-[20px] font-bold">{sufficient ? `${Math.round(score)}%` : '—'}</text>
+          <text x="120" y="123" textAnchor="middle" className="fill-[#34a853] text-[9px] font-semibold">{label}</text>
+          <text x="23" y="136" className="fill-[#94a3b8] text-[8px] font-semibold">0%</text>
+          <text x="77" y="61" className="fill-[#94a3b8] text-[8px] font-semibold">30%</text>
+          <text x="120" y="46" textAnchor="middle" className="fill-[#94a3b8] text-[8px] font-semibold">50%</text>
+          <text x="165" y="61" className="fill-[#94a3b8] text-[8px] font-semibold">80%</text>
+          <text x="198" y="136" className="fill-[#94a3b8] text-[8px] font-semibold">100%</text>
+        </svg>
+      </div>
+      <div className="mt-1 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[9px] text-[#71839a]">
+        <span className="flex items-center gap-1"><i className="h-2 w-2 rounded-full bg-[#ff3b30]" />0 – 30%</span>
+        <span className="flex items-center gap-1"><i className="h-2 w-2 rounded-full bg-[#ff9500]" />30 – 80%</span>
+        <span className="flex items-center gap-1"><i className="h-2 w-2 rounded-full bg-[#34a853]" />80 – 100%</span>
+      </div>
+    </div>
+  );
+}
+
 function DashboardMetricCard({
   label, icon: Icon, value, secondary, progress, footerLeft, footerRight, accent,
 }: {
