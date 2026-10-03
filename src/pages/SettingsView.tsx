@@ -290,7 +290,6 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
       )}
 
       {activeTab === 'journal' && <TradingJournalSettings userProfile={userProfile} />}
-    </div>
 
       {paymentPlan && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm">
@@ -317,5 +316,6 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
           </div>
         </div>
       )}
+    </div>
   );
 }
