@@ -46,6 +46,14 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    match /payments/{paymentId} {
+      // Payment transactions are written by the secure Worker and are never
+      // directly writable from the browser. Admins can read the ledger.
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+
     match /trades/{tradeId} {
       allow read: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
       allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
