@@ -166,20 +166,14 @@ function DisciplineGauge({ value, sufficient }: { value: number; sufficient: boo
   const activeSegments = Math.round((score / 100) * segments);
   const centerX = 120;
   const centerY = 116;
-  const radius = 82;
-  const strokeWidth = 8;
+  const innerRadius = 72;
+  const outerRadius = 91;
   const startAngle = -180;
-  const anglePerSegment = 180 / segments;
+  const angleStep = 180 / segments;
 
-  const polar = (angle: number) => {
+  const point = (radius: number, angle: number) => {
     const radians = (angle * Math.PI) / 180;
     return { x: centerX + radius * Math.cos(radians), y: centerY + radius * Math.sin(radians) };
-  };
-
-  const arcPath = (a0: number, a1: number) => {
-    const p0 = polar(a0);
-    const p1 = polar(a1);
-    return `M ${p0.x} ${p0.y} A ${radius} ${radius} 0 0 1 ${p1.x} ${p1.y}`;
   };
 
   const segmentColor = (index: number) => {
@@ -209,28 +203,31 @@ function DisciplineGauge({ value, sufficient }: { value: number; sufficient: boo
           </defs>
           <path d="M 28 116 A 92 92 0 0 1 212 116 L 198 116 A 78 78 0 0 0 42 116 Z" fill="url(#scoreGaugeGlow)" />
           {Array.from({ length: segments }).map((_, index) => {
-            const gap = 0.9;
-            const a0 = startAngle + index * anglePerSegment + gap;
-            const a1 = startAngle + (index + 1) * anglePerSegment - gap;
+            const gap = 0.75;
+            const angle = startAngle + (index + 0.5) * angleStep;
+            const p0 = point(innerRadius, angle - gap);
+            const p1 = point(outerRadius, angle + gap);
             const active = sufficient && index < activeSegments;
             return (
-              <path
+              <line
                 key={index}
-                d={arcPath(a0, a1)}
-                fill="none"
+                x1={p0.x}
+                y1={p0.y}
+                x2={p1.x}
+                y2={p1.y}
                 stroke={active ? segmentColor(index) : '#9aa7b8'}
-                strokeWidth={strokeWidth}
+                strokeWidth="3"
                 strokeLinecap="butt"
               />
             );
           })}
           <text x="120" y="108" textAnchor="middle" className="fill-[#263238] text-[20px] font-bold">{sufficient ? `${Math.round(score)}%` : '—'}</text>
           <text x="120" y="123" textAnchor="middle" className="fill-[#34a853] text-[9px] font-semibold">{label}</text>
-          <text x="23" y="136" className="fill-[#94a3b8] text-[8px] font-semibold">0%</text>
-          <text x="77" y="61" className="fill-[#94a3b8] text-[8px] font-semibold">30%</text>
-          <text x="120" y="46" textAnchor="middle" className="fill-[#94a3b8] text-[8px] font-semibold">50%</text>
-          <text x="165" y="61" className="fill-[#94a3b8] text-[8px] font-semibold">80%</text>
-          <text x="198" y="136" className="fill-[#94a3b8] text-[8px] font-semibold">100%</text>
+          <text x="22" y="136" className="fill-[#94a3b8] text-[8px] font-semibold">0%</text>
+          <text x="72" y="62" textAnchor="middle" className="fill-[#94a3b8] text-[8px] font-semibold">30%</text>
+          <text x="120" y="45" textAnchor="middle" className="fill-[#94a3b8] text-[8px] font-semibold">50%</text>
+          <text x="168" y="62" textAnchor="middle" className="fill-[#94a3b8] text-[8px] font-semibold">80%</text>
+          <text x="198" y="136" textAnchor="middle" className="fill-[#94a3b8] text-[8px] font-semibold">100%</text>
         </svg>
       </div>
       <div className="mt-1 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-[9px] text-[#71839a]">
