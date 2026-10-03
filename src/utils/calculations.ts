@@ -308,7 +308,7 @@ export function calculateTraderRating(trades: Trade[]): TraderRating {
 
   const value = score.overallScore;
   const grade = value >= 90 ? 'A+' : value >= 82 ? 'A' : value >= 74 ? 'B+' : value >= 66 ? 'B' : value >= 55 ? 'C' : 'D';
-  const label = value >= 90 ? 'Elite' : value >= 82 ? 'Excellent' : value >= 74 ? 'Solide' : value >= 66 ? 'En progression' : value >= 55 ? 'À construire' : 'Données insuffisantes';
+  const label = value >= 90 ? 'Elite' : value >= 82 ? 'Excellent' : value >= 74 ? 'Solide' : value >= 66 ? 'En progression' : 'À construire';
 
   return {
     score: value,
