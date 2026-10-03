@@ -81,6 +81,7 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
       const from = Math.max(1, startDayNumber);
       const to = Math.min(last.getDate(), endDayNumber);
       let pnl = 0;
+      let realizedR = 0;
       let tradeCount = 0;
       let activeDays = 0;
 
@@ -89,12 +90,13 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
         const day = tradesByDay[key];
         if (day) {
           pnl += day.netPnl;
+          realizedR += day.trades.reduce((sum, trade) => sum + (typeof trade.rMultiple === 'number' ? trade.rMultiple : 0), 0);
           tradeCount += day.trades.length;
           activeDays++;
         }
       }
 
-      return { week: weekIndex + 1, pnl, tradeCount, activeDays };
+      return { week: weekIndex + 1, pnl, realizedR, tradeCount, activeDays };
     });
   }, [tradesByDay, year, month]);
 
@@ -218,12 +220,12 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
         </section>
 
       {/* Weekly P&L */}
-      <section className="min-w-0 overflow-hidden rounded-[20px] border border-[#DCE7EE] bg-white text-[#0B1F35] shadow-[0_14px_40px_rgba(11,31,53,0.055)]">
-        <div className="border-b border-[#E8EEF2] px-4 py-4">
+      <section className="min-w-0 px-1 text-[#0B1F35] xl:h-full">
+        <div className="px-2 pb-3 pt-1">
           <h3 className="text-xs font-extrabold tracking-[-0.01em]">P&L par semaine</h3>
           <p className="mt-1 text-[9px] text-[#8A9AAF]">Performance de {monthNames[month]} {year}</p>
         </div>
-        <div className="space-y-2.5 p-3.5">
+        <div className="space-y-2.5 px-1">
           {weeklyStats.map(item => {
             const profitable = item.pnl > 0;
             const loss = item.pnl < 0;
@@ -232,11 +234,14 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
             const badgeTone = profitable ? 'bg-[#DDF7EE] text-[#008F63]' : loss ? 'bg-[#FFE5EB] text-[#D83F50]' : 'bg-[#E9EFF4] text-[#71839A]';
             return (
               <div key={item.week} className={'rounded-xl border p-3.5 transition-colors ' + tone}>
-                <div className="text-[9px] font-extrabold text-[#60758D]">Week {item.week}</div>
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[9px] font-extrabold text-[#60758D]">Week {item.week}</span>
+                  <span className={'rounded-full px-1.5 py-1 text-[7px] font-bold ' + badgeTone}>{item.activeDays}j</span>
+                </div>
                 <div className={'mt-1 text-lg font-black tracking-[-0.03em] tabular-nums ' + amountTone}>{formatCurrency(item.pnl)}</div>
-                <div className="mt-2 flex items-center justify-between gap-1 text-[7px] font-semibold text-[#8A9AAF]">
+                <div className="mt-2 flex items-center justify-between gap-2 text-[8px] font-semibold text-[#8A9AAF]">
                   <span>{item.tradeCount} trade{item.tradeCount > 1 ? 's' : ''}</span>
-                  <span className={'rounded-full px-1.5 py-1 font-bold ' + badgeTone}>{item.activeDays}j</span>
+                  <span className={item.realizedR > 0 ? 'text-[#00A982]' : item.realizedR < 0 ? 'text-[#EF476F]' : 'text-[#71839A]'}>{item.realizedR >= 0 ? '+' : ''}{item.realizedR.toFixed(2)}R réalisés</span>
                 </div>
               </div>
             );
