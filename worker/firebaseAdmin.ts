@@ -5,6 +5,7 @@ export interface PaymentEnv {
   FIREBASE_SERVICE_ACCOUNT_JSON?: string;
   FIREBASE_API_KEY?: string;
   LABYRINTHE_API_TOKEN?: string;
+  PAYMENT_SIMULATION_ENABLED?: string;
 }
 
 function base64Url(input: string | ArrayBuffer): string {
