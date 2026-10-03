@@ -31,6 +31,10 @@ function randomId() {
   return crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '');
 }
 
+function simulationEnabled(env: PaymentEnv & { PAYMENT_SIMULATION_ENABLED?: string }) {
+  return env.PAYMENT_SIMULATION_ENABLED === 'true';
+}
+
 function publicPayment(payment: Record<string, unknown>) {
   return {
     id: payment.id,
@@ -236,5 +240,144 @@ export async function handlePaymentCallback(request: Request, env: PaymentEnv) {
   } catch (error) {
     console.error('Payment callback error:', error);
     return json({ received: false }, 500);
+  }
+}
+
+
+/**
+ * Test-only checkout. It mirrors the lifecycle of a real payment provider:
+ * create transaction -> processing -> server confirmation -> activate entitlement.
+ * It never calls a PSP and is disabled unless PAYMENT_SIMULATION_ENABLED=true.
+ */
+export async function handleSimulatedPaymentRequest(request: Request, env: PaymentEnv & { PAYMENT_SIMULATION_ENABLED?: string }) {
+  if (!simulationEnabled(env)) return json({ success: false, message: 'La simulation de paiement est désactivée.' }, 404);
+  if (request.method !== 'POST') return json({ success: false, message: 'Méthode non autorisée.' }, 405);
+
+  const token = authHeader(request);
+  if (!token) return json({ success: false, message: 'Authentification requise.' }, 401);
+
+  try {
+    const user = await verifyFirebaseIdToken(env, token);
+    const body = await request.json() as { plan?: keyof typeof PLANS; phone?: string; idempotencyKey?: string };
+    const planKey = body.plan;
+    const plan = planKey ? PLANS[planKey] : undefined;
+    const phone = normalizePhone(body.phone);
+    const idempotencyKey = String(body.idempotencyKey || '').replace(/[^a-f0-9]/gi, '').toLowerCase();
+
+    if (!plan || !planKey) return json({ success: false, message: 'Formule invalide.' }, 400);
+    if (!phone) return json({ success: false, message: 'Numéro Mobile Money invalide.' }, 400);
+    if (idempotencyKey.length !== 64) return json({ success: false, message: 'Clé de paiement invalide.' }, 400);
+
+    const profile = await firestoreGet(env, `users/${encodeURIComponent(user.uid)}`);
+    if (!profile) return json({ success: false, message: 'Profil utilisateur introuvable.' }, 404);
+    if (profile.status === 'suspended') return json({ success: false, message: 'Ce compte est suspendu.' }, 403);
+
+    const existing = await firestoreGet(env, `payments/${idempotencyKey}`);
+    if (existing && existing.uid === user.uid) {
+      return json({ success: true, payment: publicPayment(existing) });
+    }
+    if (existing) return json({ success: false, message: 'Référence de paiement déjà utilisée.' }, 409);
+
+    const now = new Date().toISOString();
+    await firestoreCreate(env, 'payments', idempotencyKey, {
+      id: idempotencyKey,
+      uid: user.uid,
+      email: user.email || profile.email || '',
+      displayName: profile.displayName || user.email || '',
+      plan: planKey,
+      planName: plan.name,
+      amount: plan.amount,
+      currency: plan.currency,
+      phone,
+      provider: 'SIMULATOR',
+      paymentMethod: 'Mobile Money — simulation',
+      mode: 'simulation',
+      status: 'processing',
+      reference: idempotencyKey,
+      createdAt: now,
+      updatedAt: now
+    });
+
+    return json({
+      success: true,
+      payment: {
+        id: idempotencyKey,
+        plan: planKey,
+        planName: plan.name,
+        amount: plan.amount,
+        currency: plan.currency,
+        status: 'processing',
+        reference: idempotencyKey,
+        message: 'Paiement simulé créé. Confirmez pour déclencher le webhook de succès.'
+      }
+    });
+  } catch (error) {
+    console.error('Simulated payment initiation error:', error);
+    return json({ success: false, message: 'Impossible de créer la simulation.' }, 500);
+  }
+}
+
+export async function handleSimulatedPaymentConfirm(request: Request, env: PaymentEnv & { PAYMENT_SIMULATION_ENABLED?: string }) {
+  if (!simulationEnabled(env)) return json({ success: false, message: 'La simulation de paiement est désactivée.' }, 404);
+  if (request.method !== 'POST') return json({ success: false, message: 'Méthode non autorisée.' }, 405);
+
+  const token = authHeader(request);
+  if (!token) return json({ success: false, message: 'Authentification requise.' }, 401);
+
+  try {
+    const user = await verifyFirebaseIdToken(env, token);
+    const body = await request.json() as { id?: string };
+    const id = String(body.id || '').trim().toLowerCase();
+    if (!/^[a-f0-9]{64}$/.test(id)) return json({ success: false, message: 'Référence de paiement invalide.' }, 400);
+
+    const payment = await firestoreGet(env, `payments/${id}`);
+    if (!payment || payment.uid !== user.uid) return json({ success: false, message: 'Paiement introuvable.' }, 404);
+    if (payment.status === 'paid') return json({ success: true, payment: publicPayment(payment) });
+    if (payment.status !== 'processing') return json({ success: false, message: 'Ce paiement ne peut plus être confirmé.' }, 409);
+    if (payment.mode !== 'simulation' || payment.provider !== 'SIMULATOR') return json({ success: false, message: 'Transaction de simulation invalide.' }, 400);
+
+    const planKey = payment.plan as keyof typeof PLANS;
+    const plan = PLANS[planKey];
+    if (!plan || Number(payment.amount) !== plan.amount || payment.currency !== plan.currency) {
+      return json({ success: false, message: 'Le montant de la transaction ne correspond pas au tarif du plan.' }, 409);
+    }
+
+    const now = new Date();
+    const paidAt = now.toISOString();
+    const expires = new Date(now.getTime() + plan.durationDays * 86400000).toISOString();
+
+    await firestorePatch(env, `payments/${id}`, {
+      status: 'paid',
+      paidAt,
+      updatedAt: paidAt,
+      provider: 'SIMULATOR',
+      confirmationSource: 'simulated_webhook'
+    }, ['status', 'paidAt', 'updatedAt', 'provider', 'confirmationSource']);
+
+    await firestorePatch(env, `users/${encodeURIComponent(String(payment.uid))}`, {
+      plan: planKey,
+      paymentDate: paidAt,
+      subscriptionStartAt: paidAt,
+      subscriptionExpiresAt: expires,
+      subscriptionStatus: 'active',
+      paymentStatus: 'paid',
+      planChangeConfirmedAt: paidAt,
+      updatedAt: paidAt
+    }, [
+      'plan',
+      'paymentDate',
+      'subscriptionStartAt',
+      'subscriptionExpiresAt',
+      'subscriptionStatus',
+      'paymentStatus',
+      'planChangeConfirmedAt',
+      'updatedAt'
+    ]);
+
+    const finalPayment = await firestoreGet(env, `payments/${id}`);
+    return json({ success: true, payment: publicPayment(finalPayment || { ...payment, status: 'paid', paidAt }) });
+  } catch (error) {
+    console.error('Simulated payment confirmation error:', error);
+    return json({ success: false, message: 'Impossible de confirmer la simulation.' }, 500);
   }
 }
