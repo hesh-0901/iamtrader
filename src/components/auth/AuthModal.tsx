@@ -88,7 +88,7 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
                 placeholder="ex: Alex Trader"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                className="w-full bg-neutral-800 border border-neutral-700 rounded-lg pl-9 pr-3 py-2 text-neutral-100 focus:outline-none focus:border-emerald-500"
+                className="w-full bg-white !text-[#0B1F35] placeholder:!text-[#9AA9B8] border border-[#DCE5EC] rounded-lg pl-9 pr-3 py-2 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10"
                 required
               />
             </div>
@@ -104,7 +104,7 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
               placeholder="trader@iamtrader.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-neutral-800 border border-neutral-700 rounded-lg pl-9 pr-3 py-2 text-neutral-100 focus:outline-none focus:border-emerald-500"
+              className="w-full bg-white !text-[#0B1F35] placeholder:!text-[#9AA9B8] border border-[#DCE5EC] rounded-lg pl-9 pr-3 py-2 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10"
               required
             />
           </div>
@@ -131,7 +131,7 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-neutral-800 border border-neutral-700 rounded-lg pl-9 pr-3 py-2 text-neutral-100 focus:outline-none focus:border-emerald-500"
+                className="w-full bg-white !text-[#0B1F35] placeholder:!text-[#9AA9B8] border border-[#DCE5EC] rounded-lg pl-9 pr-3 py-2 focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10"
                 required
                 minLength={6}
               />
