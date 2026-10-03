@@ -323,7 +323,7 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
   );
 
 
-  if (mode === 'focus') return <div className="space-y-5">{situation}{modeBar}{intelligenceFocus}
+  if (mode === 'focus') return <div className="space-y-5">{situation}{modeBar}
     <div className="grid grid-cols-1 xl:grid-cols-4 gap-4">
       <div className="xl:col-span-3 p-5 rounded-2xl card-premium"><div className="flex items-center justify-between mb-3"><div><h2 className="text-sm font-bold text-[#10233a]">Focus Trading</h2><p className="text-[10px] text-[#8798a8]">Equity, risque et résultats récents.</p></div><Focus className="w-4 h-4 text-[#08b77a]" /></div><div className="min-h-[280px]">{chart}</div></div>
       <div className="p-5 rounded-2xl card-premium"><div className="flex items-center justify-between mb-4"><div><h2 className="text-sm font-bold text-[#10233a]">À surveiller</h2><p className="text-[10px] text-[#8798a8]">Deux repères avant une décision.</p></div><ShieldAlert className="w-4 h-4 text-[#f59e0b]" /></div><div className="space-y-3">
@@ -332,22 +332,22 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
       </div></div>
     </div>
     <div className="grid grid-cols-2 md:grid-cols-4 gap-3"><Metric label="Win Rate" value={metrics.winRate.toFixed(1)+'%'} sub="Gagnants" tone="positive" /><Metric label="Avg R" value={metrics.avgRR.toFixed(2)} sub="R moyen" /><Metric label="Drawdown" value={'-'+metrics.maxDrawdownPercent.toFixed(1)+'%'} sub="Max observé" tone={metrics.maxDrawdownPercent>5?'negative':'positive'} /><Metric label="Trades" value={String(metrics.totalTrades)} sub="Journal" /></div>
-    {recentTrades(6)}
+    {intelligenceFocus}{recentTrades(6)}
   </div>;
 
-  if (mode === 'analysis') return <div className="space-y-5">{situation}{modeBar}{intelligenceAnalysis}
+  if (mode === 'analysis') return <div className="space-y-5">{situation}{modeBar}
     <div className="grid grid-cols-2 md:grid-cols-5 gap-3"><Metric label="Trades" value={String(metrics.totalTrades)} sub="Total" /><Metric label="Win Rate" value={metrics.winRate.toFixed(1)+'%'} sub="Gagnants" tone="positive" /><Metric label="Profit Factor" value={metrics.profitFactor.toFixed(2)} sub="Gains / pertes" /><Metric label="Expectancy" value={formatCurrency(metrics.expectancy)} sub="Par trade" tone={metrics.expectancy>=0?'positive':'negative'} /><Metric label="Avg R" value={metrics.avgRR.toFixed(2)} sub="Ratio moyen" /></div>
     <div className="p-5 rounded-2xl card-premium"><div className="flex items-center justify-between mb-2"><div><h2 className="text-sm font-bold text-[#10233a]">Analyse de l'equity</h2><p className="text-[10px] text-[#8798a8]">Évolution du capital et points de retournement.</p></div><TrendingUp className="w-4 h-4 text-[#08b77a]" /></div>{chart}</div>
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
       <div className="p-5 rounded-2xl card-premium"><div className="flex items-center justify-between mb-4"><div><h2 className="text-sm font-bold text-[#10233a]">Performance par instrument</h2><p className="text-[10px] text-[#8798a8]">Comparaison du P&L cumulé.</p></div><BarChart3 className="w-4 h-4 text-[#08b77a]" /></div><div className="space-y-3">{(() => {const rows=Object.entries(trades.reduce<Record<string,number>>((map,t)=>{map[t.symbol]=(map[t.symbol]||0)+(Number(t.pnl)||0);return map;},{})).sort((a,b)=>b[1]-a[1]).slice(0,5);const max=Math.max(...rows.map(([,v])=>Math.abs(v)),1);return rows.map(([symbol,pnl])=><div key={symbol}><div className="flex justify-between mb-1"><span className="text-[10px] font-semibold text-[#314861]">{symbol}</span><span className={pnl>=0?'text-[#008f63]':'text-[#e14d5d]'}>{formatCurrency(pnl)}</span></div><div className="h-3 rounded-full bg-[#edf2f0]"><div className={"h-full rounded-full "+(pnl>=0?'bg-[#08b77a]':'bg-[#e14d5d]')} style={{width:Math.max(5,Math.abs(pnl)/max*100)+'%'}} /></div></div>);})()}</div></div>
       <div className="p-5 rounded-2xl card-premium"><div className="flex items-center justify-between mb-4"><div><h2 className="text-sm font-bold text-[#10233a]">Sessions</h2><p className="text-[10px] text-[#8798a8]">Répartition des résultats par session.</p></div><Target className="w-4 h-4 text-[#08b77a]" /></div><div className="grid grid-cols-2 gap-3">{['Asia','London','Overlap','New York'].map(session=>{const list=trades.filter(t=>t.session===session);const pnl=list.reduce((s,t)=>s+(Number(t.pnl)||0),0);return <div key={session} className="rounded-xl border border-[#e7efec] bg-[#fbfdfc] p-3"><div className="flex justify-between"><span className="text-[10px] font-semibold text-[#314861]">{session}</span><span className={pnl>=0?'text-[#008f63]':'text-[#e14d5d]'}>{formatCurrency(pnl)}</span></div><div className="mt-2 h-2 rounded-full bg-[#edf2f0]"><div className={"h-full rounded-full "+(pnl>=0?'bg-[#08b77a]':'bg-[#e14d5d]')} style={{width:Math.max(8,Math.min(100,Math.abs(pnl)/Math.max(Math.abs(pnl),1)*100))+'%'}} /></div><div className="mt-1 text-[8px] text-[#94a2ad]">{list.length} trade{list.length>1?'s':''}</div></div>})}</div></div>
-    </div>{recentTrades(8)}
+    </div>{intelligenceAnalysis}{recentTrades(8)}
   </div>;
 
-  if (mode === 'compact') return <div className="space-y-4">{situation}{modeBar}{intelligenceCompact}
+  if (mode === 'compact') return <div className="space-y-4">{situation}{modeBar}
     <div className="p-4 rounded-2xl card-premium"><div className="flex items-center justify-between mb-2"><div><h2 className="text-sm font-bold text-[#10233a]">Vue compacte</h2><p className="text-[10px] text-[#8798a8]">L'essentiel du compte, sans surcharge.</p></div><Minimize2 className="w-4 h-4 text-[#08b77a]" /></div><div className="min-h-[240px]">{chart}</div></div>
     <div className="grid grid-cols-2 md:grid-cols-4 gap-2"><div className="rounded-xl bg-white border border-[#e7efec] px-3 py-2"><div className="text-[8px] uppercase text-[#8798a8]">P&L</div><div className={"text-sm font-bold font-mono "+(metrics.totalPnl>=0?'text-[#008f63]':'text-[#e14d5d]')}>{formatCurrency(metrics.totalPnl)}</div></div><div className="rounded-xl bg-white border border-[#e7efec] px-3 py-2"><div className="text-[8px] uppercase text-[#8798a8]">Win Rate</div><div className="text-sm font-bold font-mono text-[#10233a]">{metrics.winRate.toFixed(1)}%</div></div><div className="rounded-xl bg-white border border-[#e7efec] px-3 py-2"><div className="text-[8px] uppercase text-[#8798a8]">Drawdown</div><div className="text-sm font-bold font-mono text-[#10233a]">-{metrics.maxDrawdownPercent.toFixed(1)}%</div></div><div className="rounded-xl bg-white border border-[#e7efec] px-3 py-2"><div className="text-[8px] uppercase text-[#8798a8]">Trades</div><div className="text-sm font-bold font-mono text-[#10233a]">{metrics.totalTrades}</div></div></div>
-    {recentTrades(5)}
+    {intelligenceCompact}{recentTrades(5)}
   </div>;
 
   return <div className="space-y-5">{situation}{modeBar}{intelligenceStandard}<div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
