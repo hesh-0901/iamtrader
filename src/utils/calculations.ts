@@ -1,4 +1,4 @@
-import { Trade, PerformanceMetrics, TraderScoreReport } from '../types';
+import { Trade, PerformanceMetrics, TraderScoreReport, TraderRating } from '../types';
 
 export function formatCurrency(amount: number, currency: string = 'USD'): string {
   const symbol = currency === 'EUR' ? '€' : currency === 'GBP' ? '£' : '$';
@@ -288,6 +288,36 @@ export function calculateTraderScore(trades: Trade[]): TraderScoreReport {
     weaknesses,
     isSufficientData: true,
     tradesAnalyzed: closedTrades.length
+  };
+}
+
+export function calculateTraderRating(trades: Trade[]): TraderRating {
+  const score = calculateTraderScore(trades);
+  const perf = calculatePerformance(trades);
+  if (!score.isSufficientData) {
+    return {
+      score: 0,
+      grade: 'D',
+      label: 'Données insuffisantes',
+      isSufficientData: false,
+      tradesAnalyzed: score.tradesAnalyzed,
+      winRate: perf.winRate,
+      profitFactor: perf.profitFactor
+    };
+  }
+
+  const value = score.overallScore;
+  const grade = value >= 90 ? 'A+' : value >= 82 ? 'A' : value >= 74 ? 'B+' : value >= 66 ? 'B' : value >= 55 ? 'C' : 'D';
+  const label = value >= 90 ? 'Elite' : value >= 82 ? 'Excellent' : value >= 74 ? 'Solide' : value >= 66 ? 'En progression' : value >= 55 ? 'À construire' : 'Données insuffisantes';
+
+  return {
+    score: value,
+    grade,
+    label,
+    isSufficientData: true,
+    tradesAnalyzed: score.tradesAnalyzed,
+    winRate: perf.winRate,
+    profitFactor: perf.profitFactor
   };
 }
 
