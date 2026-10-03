@@ -49,6 +49,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
   const [socialNetwork, setSocialNetwork] = useState('Instagram');
   const [socialUsername, setSocialUsername] = useState('');
   const [isProfileSaving, setIsProfileSaving] = useState(false);
+  const [isEditingProfile, setIsEditingProfile] = useState(!userProfile?.traderProfile);
   const [defaultCurrency, setDefaultCurrency] = useState(userProfile?.settings?.defaultCurrency || 'USD');
   const [theme, setTheme] = useState<'light'>('light');
   const [dashboardMode, setDashboardMode] = useState<'standard' | 'focus' | 'analysis' | 'compact'>(() => (localStorage.getItem('iamtrader-dashboard-mode') as any) || 'standard');
@@ -138,6 +139,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
         firstName, lastName, gender, age: age ? Number(age) : undefined, city, country, whatsapp,
         level: traderLevel, style: traderStyle, markets: traderMarkets, socialLinks
       }, displayName);
+      setIsEditingProfile(false);
       showToast('Profil trader enregistré avec succès', 'success');
     } catch (error: any) {
       showToast(error?.message || 'Impossible d’enregistrer le profil', 'error');
@@ -298,38 +300,92 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
 
       {activeTab === 'profile' && (
         <div className="space-y-5">
-          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="flex items-center justify-between gap-4 border-b border-slate-100 pb-5">
-              <div><h3 className="text-lg font-black text-slate-900">Profil du trader</h3><p className="mt-1 text-xs text-slate-500">Les informations visibles dans votre profil IAMTRADER.</p></div>
-              <PlanBadge plan={userProfile?.plan || 'free'} />
-            </div>
-            <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {[
-                ['Prénom', firstName, setFirstName], ['Nom', lastName, setLastName], ['Nom d’affichage', displayName, setDisplayName],
-                ['Âge', age, setAge], ['Ville', city, setCity], ['Pays', country, setCountry], ['WhatsApp', whatsapp, setWhatsapp]
-              ].map(([label, value, setter], index) => <div key={String(label)} className={index === 2 ? 'lg:col-span-1' : ''}><label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">{label as string}</label><input value={value as string} onChange={e => (setter as React.Dispatch<React.SetStateAction<string>>)(e.target.value)} inputMode={label === 'Âge' ? 'numeric' : undefined} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-[#00a982] focus:ring-2 focus:ring-[#e5faf5]" /></div>)}
-              <div><label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Sexe</label><select value={gender} onChange={e => setGender(e.target.value)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-[#00a982]"><option value="">Sélectionner</option><option>Homme</option><option>Femme</option><option>Autre</option></select></div>
-              <div><label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">E-mail</label><input disabled value={userProfile?.email || ''} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-500" /></div>
-              <div><label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Date d’inscription</label><input disabled value={formatDate(userProfile?.createdAt)} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-500" /></div>
-            </div>
-          </section>
+          {!isEditingProfile ? (
+            <>
+              <section className="overflow-hidden rounded-[26px] border border-slate-200 bg-white shadow-sm">
+                <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-[#0b3b36] px-6 py-6 text-white">
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                      <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-emerald-300">Profil trader</span>
+                      <h2 className="mt-2 text-2xl font-black tracking-tight">{displayName || [firstName, lastName].filter(Boolean).join(' ') || 'Trader IAMTRADER'}</h2>
+                      <p className="mt-1 text-xs text-white/60">{userProfile?.email || '—'}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <PlanBadge plan={userProfile?.plan || 'free'} />
+                      <button type="button" onClick={() => setIsEditingProfile(true)} className="rounded-xl bg-white/10 px-3.5 py-2 text-xs font-bold text-white ring-1 ring-white/15 hover:bg-white/15">Modifier le profil</button>
+                    </div>
+                  </div>
+                </div>
+                <div className="grid gap-px bg-slate-200 sm:grid-cols-2 lg:grid-cols-3">
+                  {[
+                    ['Prénom', firstName], ['Nom', lastName], ['Sexe', gender], ['Âge', age ? age + ' ans' : '—'],
+                    ['Ville', city], ['Pays', country], ['WhatsApp', whatsapp], ['E-mail', userProfile?.email || '—'],
+                    ['Date d’inscription', formatDate(userProfile?.createdAt)]
+                  ].map(([label, value]) => (
+                    <div key={label} className="bg-white px-5 py-4">
+                      <div className="text-[9px] font-bold uppercase tracking-wider text-slate-400">{label}</div>
+                      <div className="mt-1 text-sm font-semibold text-slate-900">{value || '—'}</div>
+                    </div>
+                  ))}
+                </div>
+              </section>
 
-          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h3 className="text-sm font-black text-slate-900">Profil de trading</h3>
-            <div className="mt-4 grid gap-4 sm:grid-cols-3">
-              <div><label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Niveau</label><select value={traderLevel} onChange={e => setTraderLevel(e.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"><option value="">Sélectionner</option><option>Débutant</option><option>Intermédiaire</option><option>Avancé</option><option>Professionnel</option></select></div>
-              <div><label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Style</label><select value={traderStyle} onChange={e => setTraderStyle(e.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"><option value="">Sélectionner</option><option>Scalping</option><option>Day Trading</option><option>Swing Trading</option><option>Position Trading</option></select></div>
-              <div><label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Marchés principaux</label><div className="flex flex-wrap gap-2">{['Forex','Gold','Indices','Crypto'].map(m => <button type="button" key={m} onClick={() => toggleMarket(m)} className={`rounded-full px-3 py-1.5 text-[10px] font-bold ${traderMarkets.includes(m) ? 'bg-[#e5faf5] text-[#007f60] ring-1 ring-[#b7ebdd]' : 'bg-slate-100 text-slate-500'}`}>{m}</button>)}</div></div>
-            </div>
-          </section>
+              <section className="rounded-[26px] border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="flex items-center justify-between gap-4">
+                  <div><span className="text-[9px] font-bold uppercase tracking-[0.16em] text-[#00a982]">Trading</span><h3 className="mt-1 text-lg font-black text-slate-900">Profil de trading</h3></div>
+                </div>
+                <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                  <div className="rounded-2xl bg-slate-50 p-4"><div className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Niveau</div><div className="mt-1 text-sm font-black text-slate-900">{traderLevel || '—'}</div></div>
+                  <div className="rounded-2xl bg-slate-50 p-4"><div className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Style</div><div className="mt-1 text-sm font-black text-slate-900">{traderStyle || '—'}</div></div>
+                  <div className="rounded-2xl bg-slate-50 p-4"><div className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Marchés</div><div className="mt-2 flex flex-wrap gap-1.5">{traderMarkets.length ? traderMarkets.map(m => <span key={m} className="rounded-full bg-[#e5faf5] px-2.5 py-1 text-[10px] font-bold text-[#007f60]">{m}</span>) : <span className="text-sm font-black text-slate-900">—</span>}</div></div>
+                </div>
+              </section>
 
-          <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h3 className="text-sm font-black text-slate-900">Réseaux sociaux</h3><p className="mt-1 text-xs text-slate-500">Choisissez un réseau et ajoutez uniquement votre identifiant.</p>
-            <div className="mt-4 flex flex-col gap-2 sm:flex-row"><select value={socialNetwork} onChange={e => setSocialNetwork(e.target.value)} className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm sm:w-40"><option>Instagram</option><option>Facebook</option><option>TikTok</option><option>X</option><option>LinkedIn</option><option>YouTube</option></select><input value={socialUsername} onChange={e => setSocialUsername(e.target.value)} placeholder="@votre_nom" className="min-w-0 flex-1 rounded-xl border border-slate-200 px-3 py-2.5 text-sm" /><button type="button" onClick={addSocialLink} className="rounded-xl bg-slate-950 px-4 py-2.5 text-xs font-bold text-white">+ Ajouter</button></div>
-            {socialLinks.length > 0 && <div className="mt-4 flex flex-wrap gap-2">{socialLinks.map((link, index) => <div key={link.network + link.username + index} className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs"><span className="font-bold text-slate-700">{link.network}</span><span className="text-slate-500">{link.username}</span><button type="button" onClick={() => removeSocialLink(index)} className="text-slate-400 hover:text-rose-500">×</button></div>)}</div>}
-          </section>
+              <section className="rounded-[26px] border border-slate-200 bg-white p-6 shadow-sm">
+                <div><span className="text-[9px] font-bold uppercase tracking-[0.16em] text-violet-500">Présence</span><h3 className="mt-1 text-lg font-black text-slate-900">Réseaux sociaux</h3></div>
+                {socialLinks.length ? (
+                  <div className="mt-5 flex flex-wrap gap-2">
+                    {socialLinks.map((link, index) => <div key={link.network + link.username + index} className="rounded-full border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs"><span className="font-bold text-slate-700">{link.network}</span><span className="mx-1.5 text-slate-300">·</span><span className="text-slate-500">{link.username}</span></div>)}
+                  </div>
+                ) : <p className="mt-4 text-xs text-slate-500">Aucun réseau social renseigné.</p>}
+              </section>
+            </>
+          ) : (
+            <>
+              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <div className="flex items-center justify-between gap-4 border-b border-slate-100 pb-5">
+                  <div><h3 className="text-lg font-black text-slate-900">Profil du trader</h3><p className="mt-1 text-xs text-slate-500">Les informations visibles dans votre profil IAMTRADER.</p></div>
+                  <PlanBadge plan={userProfile?.plan || 'free'} />
+                </div>
+                <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {[
+                    ['Prénom', firstName, setFirstName], ['Nom', lastName, setLastName], ['Nom d’affichage', displayName, setDisplayName],
+                    ['Âge', age, setAge], ['Ville', city, setCity], ['Pays', country, setCountry], ['WhatsApp', whatsapp, setWhatsapp]
+                  ].map(([label, value, setter], index) => <div key={String(label)} className={index === 2 ? 'lg:col-span-1' : ''}><label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">{label as string}</label><input value={value as string} onChange={e => (setter as React.Dispatch<React.SetStateAction<string>>)(e.target.value)} inputMode={label === 'Âge' ? 'numeric' : undefined} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-[#00a982] focus:ring-2 focus:ring-[#e5faf5]" /></div>)}
+                  <div><label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Sexe</label><select value={gender} onChange={e => setGender(e.target.value)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-[#00a982]"><option value="">Sélectionner</option><option>Homme</option><option>Femme</option><option>Autre</option></select></div>
+                  <div><label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">E-mail</label><input disabled value={userProfile?.email || ''} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-500" /></div>
+                  <div><label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Date d’inscription</label><input disabled value={formatDate(userProfile?.createdAt)} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-500" /></div>
+                </div>
+              </section>
 
-          <div className="flex justify-end"><button onClick={saveTraderProfile} disabled={isProfileSaving} className="rounded-xl bg-[#0a192f] px-5 py-3 text-xs font-bold text-white disabled:opacity-50">{isProfileSaving ? 'Enregistrement…' : 'Enregistrer le profil'}</button></div>
+              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h3 className="text-sm font-black text-slate-900">Profil de trading</h3>
+                <div className="mt-4 grid gap-4 sm:grid-cols-3">
+                  <div><label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Niveau</label><select value={traderLevel} onChange={e => setTraderLevel(e.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"><option value="">Sélectionner</option><option>Débutant</option><option>Intermédiaire</option><option>Avancé</option><option>Professionnel</option></select></div>
+                  <div><label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Style</label><select value={traderStyle} onChange={e => setTraderStyle(e.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"><option value="">Sélectionner</option><option>Scalping</option><option>Day Trading</option><option>Swing Trading</option><option>Position Trading</option></select></div>
+                  <div><label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Marchés principaux</label><div className="flex flex-wrap gap-2">{['Forex','Gold','Indices','Crypto'].map(m => <button type="button" key={m} onClick={() => toggleMarket(m)} className={`rounded-full px-3 py-1.5 text-[10px] font-bold ${traderMarkets.includes(m) ? 'bg-[#e5faf5] text-[#007f60] ring-1 ring-[#b7ebdd]' : 'bg-slate-100 text-slate-500'}`}>{m}</button>)}</div></div>
+                </div>
+              </section>
+
+              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+                <h3 className="text-sm font-black text-slate-900">Réseaux sociaux</h3><p className="mt-1 text-xs text-slate-500">Choisissez un réseau et ajoutez uniquement votre identifiant.</p>
+                <div className="mt-4 flex flex-col gap-2 sm:flex-row"><select value={socialNetwork} onChange={e => setSocialNetwork(e.target.value)} className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm sm:w-40"><option>Instagram</option><option>Facebook</option><option>TikTok</option><option>X</option><option>LinkedIn</option><option>YouTube</option></select><input value={socialUsername} onChange={e => setSocialUsername(e.target.value)} placeholder="@votre_nom" className="min-w-0 flex-1 rounded-xl border border-slate-200 px-3 py-2.5 text-sm" /><button type="button" onClick={addSocialLink} className="rounded-xl bg-slate-950 px-4 py-2.5 text-xs font-bold text-white">+ Ajouter</button></div>
+                {socialLinks.length > 0 && <div className="mt-4 flex flex-wrap gap-2">{socialLinks.map((link, index) => <div key={link.network + link.username + index} className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs"><span className="font-bold text-slate-700">{link.network}</span><span className="text-slate-500">{link.username}</span><button type="button" onClick={() => removeSocialLink(index)} className="text-slate-400 hover:text-rose-500">×</button></div>)}</div>}
+              </section>
+
+              <div className="flex justify-end gap-2"><button type="button" onClick={() => setIsEditingProfile(false)} className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-xs font-bold text-slate-700">Annuler</button><button onClick={saveTraderProfile} disabled={isProfileSaving} className="rounded-xl bg-[#0a192f] px-5 py-3 text-xs font-bold text-white disabled:opacity-50">{isProfileSaving ? 'Enregistrement…' : 'Enregistrer le profil'}</button></div>
+            </>
+          )}
         </div>
       )}
 
