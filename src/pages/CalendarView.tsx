@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Trade, TradingAccount } from '../types';
 import { groupTradesByDay, formatCurrency } from '../utils/calculations';
 import { DirectionBadge, ResultBadge } from '../components/common/Badge';
-import { ChevronLeft, ChevronRight, CalendarDays, X, BriefcaseBusiness } from 'lucide-react';
+import { ChevronLeft, ChevronRight, CalendarDays, X } from 'lucide-react';
 
 interface CalendarViewProps {
   trades: Trade[];
@@ -46,7 +46,7 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
     'Juillet', 'Août', 'Septembre', 'Octobre', 'Novembre', 'Décembre'
   ];
 
-  const weekDayLabels = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'];
+  const weekDayLabels = ['Dim', 'Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam'];
 
   // Monthly summary metrics
   const monthStats = useMemo(() => {
@@ -68,15 +68,15 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
     return { monthlyPnl, monthlyTrades, greenDays, redDays };
   }, [tradesByDay, year, month]);
 
-  // Weekly P&L for the currently displayed month. Weeks follow the calendar (Monday -> Sunday).
+  // Weekly P&L for the currently displayed month. Weeks follow the calendar (Sunday -> Saturday).
   const weeklyStats = useMemo(() => {
     const first = new Date(year, month, 1);
     const last = new Date(year, month + 1, 0);
-    const firstMondayOffset = (first.getDay() + 6) % 7;
-    const weekCount = Math.ceil((firstMondayOffset + last.getDate()) / 7);
+    const firstSundayOffset = first.getDay();
+    const weekCount = Math.ceil((firstSundayOffset + last.getDate()) / 7);
 
     return Array.from({ length: weekCount }, (_, weekIndex) => {
-      const startDayNumber = weekIndex * 7 - firstMondayOffset + 1;
+      const startDayNumber = weekIndex * 7 - firstSundayOffset + 1;
       const endDayNumber = Math.min(startDayNumber + 6, last.getDate());
       const from = Math.max(1, startDayNumber);
       const to = Math.min(last.getDate(), endDayNumber);
@@ -100,19 +100,7 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
     });
   }, [tradesByDay, year, month]);
 
-  const recentOpenPositions = useMemo(() => {
-    return trades
-      .filter(trade => trade.result === 'OPEN')
-      .sort((a, b) => new Date(b.entryDate).getTime() - new Date(a.entryDate).getTime())
-      .slice(0, 6);
-  }, [trades]);
 
-  const recentClosedTrades = useMemo(() => {
-    return trades
-      .filter(trade => trade.result !== 'OPEN')
-      .sort((a, b) => new Date(b.entryDate).getTime() - new Date(a.entryDate).getTime())
-      .slice(0, 6);
-  }, [trades]);
 
 
   const selectedDayTrades = selectedDayKey && tradesByDay[selectedDayKey] ? tradesByDay[selectedDayKey].trades : [];
@@ -219,13 +207,17 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
         </div>
         </section>
 
-      {/* Weekly P&L */}
-      <section className="min-w-0 px-1 text-[#0B1F35] xl:h-full">
-        <div className="px-2 pb-3 pt-1">
-          <h3 className="text-xs font-extrabold tracking-[-0.01em]">P&L par semaine</h3>
-          <p className="mt-1 text-[9px] text-[#8A9AAF]">Performance de {monthNames[month]} {year}</p>
-        </div>
-        <div className="space-y-2.5 px-1">
+      {/* Weekly P&L — each card aligns with one calendar row */}
+      <section className="min-w-0 text-[#0B1F35] xl:h-full">
+        <div
+          className="grid h-full gap-0"
+          style={{ gridTemplateRows: '108px repeat(' + (calendarCells.length / 7) + ', minmax(0, 1fr)) 34px' }}
+        >
+          <div className="flex flex-col justify-center px-2">
+            <h3 className="text-xs font-extrabold tracking-[-0.01em]">P&L par semaine</h3>
+            <p className="mt-1 text-[9px] text-[#8A9AAF]">Performance de {monthNames[month]} {year}</p>
+          </div>
+
           {weeklyStats.map(item => {
             const profitable = item.pnl > 0;
             const loss = item.pnl < 0;
@@ -233,19 +225,23 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
             const amountTone = profitable ? 'text-[#00A982]' : loss ? 'text-[#EF476F]' : 'text-[#60758D]';
             const badgeTone = profitable ? 'bg-[#DDF7EE] text-[#008F63]' : loss ? 'bg-[#FFE5EB] text-[#D83F50]' : 'bg-[#E9EFF4] text-[#71839A]';
             return (
-              <div key={item.week} className={'rounded-xl border p-3.5 transition-colors ' + tone}>
-                <div className="flex items-center justify-between gap-2">
-                  <span className="text-[9px] font-extrabold text-[#60758D]">Week {item.week}</span>
-                  <span className={'rounded-full px-1.5 py-1 text-[7px] font-bold ' + badgeTone}>{item.activeDays}j</span>
-                </div>
-                <div className={'mt-1 text-lg font-black tracking-[-0.03em] tabular-nums ' + amountTone}>{formatCurrency(item.pnl)}</div>
-                <div className="mt-2 flex items-center justify-between gap-2 text-[8px] font-semibold text-[#8A9AAF]">
-                  <span>{item.tradeCount} trade{item.tradeCount > 1 ? 's' : ''}</span>
-                  <span className={item.realizedR > 0 ? 'text-[#00A982]' : item.realizedR < 0 ? 'text-[#EF476F]' : 'text-[#71839A]'}>{item.realizedR >= 0 ? '+' : ''}{item.realizedR.toFixed(2)}R réalisés</span>
+              <div key={item.week} className="flex min-h-0 items-center px-1">
+                <div className={'flex h-[calc(100%-8px)] w-full flex-col justify-center rounded-xl border p-3 transition-colors ' + tone}>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-[9px] font-extrabold text-[#60758D]">Week {item.week}</span>
+                    <span className={'rounded-full px-1.5 py-1 text-[7px] font-bold ' + badgeTone}>{item.activeDays}j</span>
+                  </div>
+                  <div className={'mt-1 text-lg font-black tracking-[-0.03em] tabular-nums ' + amountTone}>{formatCurrency(item.pnl)}</div>
+                  <div className="mt-2 flex items-center justify-between gap-2 text-[8px] font-semibold text-[#8A9AAF]">
+                    <span>{item.tradeCount} trade{item.tradeCount > 1 ? 's' : ''}</span>
+                    <span className={item.realizedR > 0 ? 'text-[#00A982]' : item.realizedR < 0 ? 'text-[#EF476F]' : 'text-[#71839A]'}>{item.realizedR >= 0 ? '+' : ''}{item.realizedR.toFixed(2)}R réalisés</span>
+                  </div>
                 </div>
               </div>
             );
           })}
+
+          <div />
         </div>
       </section>
 
