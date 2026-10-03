@@ -84,6 +84,30 @@ export type UserStatus = 'active' | 'suspended';
 export type SubscriptionStatus = 'pending' | 'active' | 'expired';
 export type PaymentStatus = 'unpaid' | 'paid' | 'refunded';
 
+export type PaymentRecordStatus = 'initiated' | 'processing' | 'paid' | 'failed' | 'refunded';
+export type PaymentMode = 'live' | 'simulation';
+
+export interface PaymentRecord {
+  id: string;
+  uid: string;
+  email: string;
+  displayName?: string;
+  plan: SubscriptionPlan;
+  planName: string;
+  amount: number;
+  currency: string;
+  phone?: string;
+  provider?: string;
+  paymentMethod?: string;
+  mode?: PaymentMode;
+  status: PaymentRecordStatus;
+  reference: string;
+  createdAt: string;
+  updatedAt?: string;
+  paidAt?: string;
+  failureMessage?: string;
+}
+
 export interface AdminLog {
   id: string;
   adminUid: string;
