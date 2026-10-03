@@ -3,7 +3,7 @@ import { UserProfile, SubscriptionPlan, TradingAccount, Trade } from '../types';
 import { PlanBadge } from '../components/common/Badge';
 import {
   User, Shield, CreditCard, Sliders, Lock, Mail, Check, ArrowRight,
-  Activity, CalendarDays, Clock3, WalletCards, Sparkles, ChevronRight, Phone, X
+  Activity, CalendarDays, Clock3, WalletCards, Sparkles, ChevronRight, Phone, X, Crown, Target, Coins, TrendingUp
 } from 'lucide-react';
 import { resetUserPassword, updateTraderProfile } from '../services/auth';
 import { useToast } from '../components/common/Toast';
@@ -338,12 +338,43 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                 </div>
               </section>
 
-              <section className="rounded-[24px] border border-slate-200 bg-slate-950 p-6 shadow-[0_18px_50px_rgba(15,23,42,0.10)]">
-                <div className="mb-5 flex items-center justify-between gap-4"><div><div className="text-[9px] font-bold uppercase tracking-[0.18em] text-emerald-300">Trading</div><div className="mt-1 text-sm font-bold text-white">Profil de trading</div></div><Activity className="h-4 w-4 text-emerald-300" /></div>
-                <div className="flex flex-wrap items-baseline gap-x-10 gap-y-5">
-                  <div className="rounded-2xl bg-white/5 p-4 ring-1 ring-white/10"><div className="text-[9px] font-semibold uppercase tracking-wider text-white/45">Niveau</div><div className="mt-1.5 text-sm font-bold text-white">{traderLevel || '—'}</div></div>
-                  <div className="rounded-2xl bg-white/5 p-4 ring-1 ring-white/10"><div className="text-[9px] font-semibold uppercase tracking-wider text-white/45">Style</div><div className="mt-1.5 text-sm font-bold text-white">{traderStyle || '—'}</div></div>
-                  <div className="min-w-[180px] rounded-2xl bg-white/5 p-4 ring-1 ring-white/10"><div className="text-[9px] font-semibold uppercase tracking-wider text-white/45">Marchés</div><div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1">{traderMarkets.length ? traderMarkets.map(m => <span key={m} className="text-sm font-bold text-white">{m}</span>) : <span className="text-sm font-bold text-white">—</span>}</div></div>
+              <section className="relative overflow-hidden rounded-[24px] border border-[#dceee9] bg-gradient-to-br from-[#f8fffd] via-white to-[#eef8ff] p-6 shadow-[0_14px_42px_rgba(15,23,42,0.06)]">
+                <div className="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-[#00a982]/10 blur-3xl" />
+                <div className="pointer-events-none absolute -bottom-16 left-1/3 h-32 w-32 rounded-full bg-blue-100/60 blur-3xl" />
+                <div className="relative">
+                  <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#00a982]">Trading</div>
+                      <h3 className="mt-1 text-lg font-black tracking-tight text-slate-950">Profil de trading</h3>
+                      <p className="mt-1 text-[11px] text-slate-500">Votre style, votre niveau et vos marchés principaux.</p>
+                    </div>
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[#00a982] shadow-sm ring-1 ring-[#dceee9]"><TrendingUp className="h-4 w-4" /></div>
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <div className="rounded-2xl border border-white bg-white/90 p-4 shadow-sm">
+                      <div className="flex items-start justify-between gap-3">
+                        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-600 ring-1 ring-amber-100"><Crown className="h-4 w-4" /></span>
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Niveau</span>
+                      </div>
+                      <div className="mt-3 text-sm font-black text-slate-950">{traderLevel || '—'}</div>
+                    </div>
+                    <div className="rounded-2xl border border-white bg-white/90 p-4 shadow-sm">
+                      <div className="flex items-start justify-between gap-3">
+                        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-50 text-violet-600 ring-1 ring-violet-100"><Target className="h-4 w-4" /></span>
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Style</span>
+                      </div>
+                      <div className="mt-3 text-sm font-black text-slate-950">{traderStyle || '—'}</div>
+                    </div>
+                    <div className="rounded-2xl border border-white bg-white/90 p-4 shadow-sm">
+                      <div className="flex items-start justify-between gap-3">
+                        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100"><Coins className="h-4 w-4" /></span>
+                        <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Marchés</span>
+                      </div>
+                      <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1.5">
+                        {traderMarkets.length ? traderMarkets.map(m => <span key={m} className="text-sm font-black text-slate-950">{m}</span>) : <span className="text-sm font-black text-slate-950">—</span>}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </section>
 
