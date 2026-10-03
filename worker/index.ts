@@ -1,5 +1,7 @@
 import { onRequest as handleAiChat } from '../functions/api/ai-chat';
 import { onRequestPost as handleContactReply } from '../functions/api/contact-reply';
+import { handlePaymentRequest, handlePaymentCallback } from './payments';
+import type { PaymentEnv } from './firebaseAdmin';
 
 interface Env {
   ASSETS: Fetcher;
@@ -8,10 +10,15 @@ interface Env {
   RESEND_API_KEY?: string;
   RESEND_FROM_EMAIL?: string;
   RESEND_REPLY_TO?: string;
+  LABYRINTHE_API_TOKEN?: string;
+  FIREBASE_API_KEY?: string;
+  FIREBASE_SERVICE_ACCOUNT_JSON?: string;
 }
 
+type EnvWithPayments = Env & PaymentEnv;
+
 export default {
-  async fetch(request: Request, env: Env): Promise<Response> {
+  async fetch(request: Request, env: EnvWithPayments): Promise<Response> {
     const url = new URL(request.url);
 
     if (url.pathname === '/api/ai-chat') {
@@ -20,6 +27,14 @@ export default {
 
     if (url.pathname === '/api/contact-reply') {
       return handleContactReply({ request, env });
+    }
+
+    if (url.pathname === '/api/payments') {
+      return handlePaymentRequest(request, env);
+    }
+
+    if (url.pathname === '/api/payments/callback') {
+      return handlePaymentCallback(request, env);
     }
 
     return env.ASSETS.fetch(request);
