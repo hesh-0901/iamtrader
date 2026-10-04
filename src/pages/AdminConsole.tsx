@@ -123,6 +123,7 @@ export function AdminConsole() {
   useEffect(() => {
     let unsubscribeUsers: (() => void) | undefined;
     let unsubscribeContacts: (() => void) | undefined;
+    let paymentTimer: number | undefined;
 
     const unsubscribeAuth = auth.onAuthStateChanged((user) => {
       unsubscribeUsers?.();
@@ -133,7 +134,7 @@ export function AdminConsole() {
       if (!user) return;
 
       load();
-      const paymentTimer = window.setInterval(refreshPayments, 15000);
+      paymentTimer = window.setInterval(refreshPayments, 15000);
       unsubscribeUsers = subscribeAllUsers((nextUsers, realtimeError) => {
         if (realtimeError) return;
         setUsers(nextUsers);
@@ -144,7 +145,15 @@ export function AdminConsole() {
       });
     });
 
-    return (
+    return () => {
+      if (paymentTimer) window.clearInterval(paymentTimer);
+      unsubscribeUsers?.();
+      unsubscribeContacts?.();
+      unsubscribeAuth();
+    };
+  }, []);
+
+  return (
     <div className="min-h-full bg-[#f5f8fb] -m-4 lg:-m-6">
       <div className="mx-auto max-w-[1600px] px-4 py-4 lg:px-6">
         <nav className="sticky top-2 z-30 mb-5 rounded-2xl border border-slate-200 bg-white/95 p-2 shadow-[0_8px_30px_rgba(11,31,53,.07)] backdrop-blur">
