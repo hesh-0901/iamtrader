@@ -347,7 +347,7 @@ export function AdminConsole() {
                 <table className="w-full min-w-[1050px] text-left">
                   <thead className="bg-slate-50/80">
                     <tr className="border-b border-slate-200">
-                      {['Date','ID','Nom complet','Email','Plan','Montant','Statut','Actions'].map(h=><th key={h} className="px-4 py-3 text-[8px] font-black uppercase tracking-[.12em] text-slate-400">{h}</th>)}
+                      {['#','Date','ID client','Nom complet','Email','Plan','Montant','Statut','Actions'].map(h=><th key={h} className="px-4 py-3 text-[8px] font-black uppercase tracking-[.12em] text-slate-400">{h}</th>)}
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
@@ -356,8 +356,8 @@ export function AdminConsole() {
                       const rowStatus=p.status==='paid'?'PAYÉ':p.status==='processing'||p.status==='initiated'?'EN ATTENTE':p.status==='cancelled'?'ANNULÉ':p.status==='invalidated'?'INVALIDÉ':'ÉCHEC';
                       const rowTone=p.status==='paid'?'bg-emerald-50 text-emerald-700':p.status==='processing'||p.status==='initiated'?'bg-amber-50 text-amber-700':p.status==='cancelled'?'bg-slate-100 text-slate-600':'bg-rose-50 text-rose-700';
                       return <tr key={p.id} className="hover:bg-slate-50/70">
-                        <td className="whitespace-nowrap px-4 py-3"><div className="text-[10px] font-semibold text-slate-700">{new Date(p.createdAt||'').toLocaleDateString('fr-FR')}</div><div className="text-[8px] text-slate-400">{new Date(p.createdAt||'').toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</div></td>
-                        <td className="max-w-[180px] px-4 py-3"><span className="block truncate font-mono text-[8px] font-bold text-slate-500" title={p.id}>{p.id}</span><span className="mt-1 block truncate text-[8px] text-slate-400" title={p.reference}>Réf. {p.reference}</span></td>
+                        <td className="whitespace-nowrap px-4 py-3"><span className="inline-flex h-7 min-w-7 items-center justify-center rounded-lg bg-slate-100 px-2 text-[9px] font-black text-slate-500">{payments.filter(x=>paymentFilter==='all'||x.status===paymentFilter).indexOf(p)+1}</span></td><td className="whitespace-nowrap px-4 py-3"><div className="text-[10px] font-semibold text-slate-700">{new Date(p.createdAt||'').toLocaleDateString('fr-FR')}</div><div className="text-[8px] text-slate-400">{new Date(p.createdAt||'').toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'})}</div></td>
+                        <td className="max-w-[180px] px-4 py-3"><span className="block truncate font-mono text-[9px] font-black text-[#0b1f35]" title={p.reference}>{p.reference || p.id}</span><span className="mt-1 block truncate text-[8px] text-slate-400" title={(p as any).invoiceNumber}>Facture {(p as any).invoiceNumber || ("INV-" + String(p.id || "").slice(-8).toUpperCase())}</span></td>
                         <td className="whitespace-nowrap px-4 py-3"><div className="text-[10px] font-black text-[#0b1f35]">{rowName}</div><div className="text-[8px] text-slate-400">{p.displayName || '—'}</div></td>
                         <td className="max-w-[180px] px-4 py-3"><span className="block truncate text-[9px] text-slate-500">{p.email}</span></td>
                         <td className="whitespace-nowrap px-4 py-3"><span className="rounded-lg bg-slate-100 px-2 py-1 text-[8px] font-black text-slate-600">{p.planName || (p.plan==='pro'?'Plus':'Community')}</span></td>
