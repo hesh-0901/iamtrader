@@ -202,7 +202,50 @@ export function AdminConsole() {
           </section>}
 
           {adminTab==='support' && <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="grid min-h-[620px] lg:grid-cols-[330px_1fr]"><aside className="border-b border-slate-100 bg-slate-50/70 lg:border-b-0 lg:border-r"><div className="border-b border-slate-200 p-4"><div className="flex items-center justify-between"><div><h2 className="text-sm font-black text-[#0b1f35]">Inbox</h2><p className="text-[9px] text-slate-400">{contactMessages.filter(m=>m.status==='new').length} nouveaux messages</p></div><Mail className="h-4 w-4 text-blue-600"/></div><div className="mt-3 flex gap-1">{(['all','new','in_progress','resolved'] as const).map(s=><button key={s} onClick={()=>setContactFilter(s)} className={'rounded-lg px-2 py-1.5 text-[8px] font-bold '+(contactFilter===s?'bg-[#0b1f35] text-white':'bg-white text-slate-500 border')}>{s==='all'?'Tous':s==='new'?'Nouveaux':s==='in_progress'?'En cours':'Traités'}</button>)}</div></div><div className="divide-y divide-slate-100">{contactMessages.filter(m=>contactFilter==='all'||m.status===contactFilter).map(m=><button key={m.id} onClick={()=>{setSelectedMessage(m);setContactNote(m.adminNote||'');setReplyText('')}} className={'w-full p-4 text-left hover:bg-white '+(selectedMessage?.id===m.id?'bg-white':'')}><div className="flex items-center gap-2"><div className={'flex h-8 w-8 items-center justify-center rounded-xl '+(m.status==='new'?'bg-blue-50 text-blue-600':m.status==='in_progress'?'bg-amber-50 text-amber-600':'bg-emerald-50 text-emerald-600')}><Mail className="h-3.5 w-3.5"/></div><div className="min-w-0 flex-1"><b className="block truncate text-[10px] text-slate-800">{m.subject}</b><span className="block truncate text-[8px] text-slate-400">{m.name} · {m.email}</span></div>{m.status==='new'&&<span className="h-2 w-2 rounded-full bg-blue-500"/></div></button>)}</div></aside><div className="hidden items-center justify-center bg-white lg:flex">{selectedMessage?<div className="w-full max-w-2xl p-8"><div className="mb-5 flex items-center gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#0b1f35] text-white"><Mail className="h-5 w-5"/></div><div><h2 className="text-lg font-black text-[#0b1f35]">{selectedMessage.subject}</h2><p className="text-[10px] text-slate-400">{selectedMessage.name} · {selectedMessage.email}</p></div></div><div className="rounded-2xl border border-slate-200 bg-slate-50 p-5"><p className="whitespace-pre-wrap text-sm leading-7 text-slate-700">{selectedMessage.message}</p></div><div className="mt-4"><textarea value={replyText} onChange={e=>setReplyText(e.target.value)} rows={7} placeholder="Écrire une réponse..." className="w-full resize-none rounded-2xl border border-slate-200 bg-white p-4 text-xs outline-none focus:border-blue-300"/><div className="mt-2 flex justify-end"><button disabled={replyBusy||!replyText.trim()} onClick={async()=>{if(!selectedMessage||!replyText.trim())return;const currentUser=auth.currentUser;if(!currentUser)return;setReplyBusy(true);try{const idToken=await currentUser.getIdToken();const response=await fetch('/api/contact-reply',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+idToken},body:JSON.stringify({to:selectedMessage.email,subject:selectedMessage.subject,reply:replyText.trim(),originalMessage:selectedMessage.message,name:selectedMessage.name})});const payload=await response.json().catch(()=>({}));if(!response.ok)throw new Error(payload?.error||'Envoi impossible');const now=new Date().toISOString();await adminUpdateContact(selectedMessage.id,{status:'resolved',handledBy:currentUser.uid,handledAt:now,lastReply:replyText.trim(),repliedAt:now,repliedBy:currentUser.uid});setSelectedMessage(prev=>prev?{...prev,status:'resolved',lastReply:replyText.trim(),repliedAt:now,repliedBy:currentUser.uid}:prev);setReplyText('');showToast('Réponse envoyée.','success')}catch(e:any){showToast(e?.message||'Envoi impossible.','error')}finally{setReplyBusy(false)}}} className="inline-flex items-center gap-2 rounded-xl bg-[#0b1f35] px-4 py-2.5 text-xs font-bold text-white"><Send className="h-4 w-4"/>{replyBusy?'Envoi...':'Envoyer'}</button></div></div></div>:<div className="text-center text-slate-300"><Mail className="mx-auto h-10 w-10"/><p className="mt-2 text-xs">Sélectionnez une conversation</p></div>}</div></div>
+            <div className="grid min-h-[620px] lg:grid-cols-[330px_1fr]">
+              <aside className="border-b border-slate-100 bg-slate-50/70 lg:border-b-0 lg:border-r">
+                <div className="border-b border-slate-200 p-4">
+                  <div className="flex items-center justify-between">
+                    <div><h2 className="text-sm font-black text-[#0b1f35]">Inbox</h2><p className="text-[9px] text-slate-400">{contactMessages.filter(m=>m.status==='new').length} nouveaux messages</p></div>
+                    <Mail className="h-4 w-4 text-blue-600"/>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-1">
+                    {(['all','new','in_progress','resolved'] as const).map(s => (
+                      <button key={s} onClick={() => setContactFilter(s)} className={'rounded-lg px-2 py-1.5 text-[8px] font-bold ' + (contactFilter===s ? 'bg-[#0b1f35] text-white' : 'bg-white text-slate-500 border')}>
+                        {s==='all'?'Tous':s==='new'?'Nouveaux':s==='in_progress'?'En cours':'Traités'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="divide-y divide-slate-100">
+                  {contactMessages.filter(m=>contactFilter==='all'||m.status===contactFilter).map(m => (
+                    <button key={m.id} onClick={() => { setSelectedMessage(m); setContactNote(m.adminNote||''); setReplyText(''); }} className={'w-full p-4 text-left hover:bg-white ' + (selectedMessage?.id===m.id ? 'bg-white' : '')}>
+                      <div className="flex items-center gap-2">
+                        <div className={'flex h-8 w-8 items-center justify-center rounded-xl ' + (m.status==='new'?'bg-blue-50 text-blue-600':m.status==='in_progress'?'bg-amber-50 text-amber-600':'bg-emerald-50 text-emerald-600')}><Mail className="h-3.5 w-3.5"/></div>
+                        <div className="min-w-0 flex-1"><b className="block truncate text-[10px] text-slate-800">{m.subject}</b><span className="block truncate text-[8px] text-slate-400">{m.name} · {m.email}</span></div>
+                        {m.status==='new' && <span className="h-2 w-2 rounded-full bg-blue-500"/>}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </aside>
+              <div className="flex min-w-0 items-center justify-center bg-white">
+                {selectedMessage ? (
+                  <div className="w-full max-w-2xl p-6 sm:p-8">
+                    <div className="mb-5 flex items-center gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[#0b1f35] text-white"><Mail className="h-5 w-5"/></div><div><h2 className="text-lg font-black text-[#0b1f35]">{selectedMessage.subject}</h2><p className="text-[10px] text-slate-400">{selectedMessage.name} · {selectedMessage.email}</p></div></div>
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5"><p className="whitespace-pre-wrap text-sm leading-7 text-slate-700">{selectedMessage.message}</p></div>
+                    <div className="mt-4 rounded-2xl border border-slate-200 bg-white p-4">
+                      <textarea value={replyText} onChange={e=>setReplyText(e.target.value)} rows={7} placeholder="Écrire une réponse..." className="w-full resize-none rounded-2xl border border-slate-200 bg-slate-50 p-4 text-xs outline-none focus:border-blue-300"/>
+                      <div className="mt-3 flex justify-end">
+                        <button disabled={replyBusy||!replyText.trim()} onClick={async()=>{if(!selectedMessage||!replyText.trim())return;const currentUser=auth.currentUser;if(!currentUser)return;setReplyBusy(true);try{const idToken=await currentUser.getIdToken();const response=await fetch('/api/contact-reply',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+idToken},body:JSON.stringify({to:selectedMessage.email,subject:selectedMessage.subject,reply:replyText.trim(),originalMessage:selectedMessage.message,name:selectedMessage.name})});const payload=await response.json().catch(()=>({}));if(!response.ok)throw new Error(payload?.error||'Envoi impossible');const now=new Date().toISOString();await adminUpdateContact(selectedMessage.id,{status:'resolved',handledBy:currentUser.uid,handledAt:now,lastReply:replyText.trim(),repliedAt:now,repliedBy:currentUser.uid});setSelectedMessage(prev=>prev?{...prev,status:'resolved',lastReply:replyText.trim(),repliedAt:now,repliedBy:currentUser.uid}:prev);setReplyText('');showToast('Réponse envoyée.','success')}catch(e:any){showToast(e?.message||'Envoi impossible.','error')}finally{setReplyBusy(false)}}} className="inline-flex items-center gap-2 rounded-xl bg-[#0b1f35] px-4 py-2.5 text-xs font-bold text-white disabled:opacity-50"><Send className="h-4 w-4"/>{replyBusy?'Envoi...':'Envoyer'}</button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center text-slate-300"><Mail className="mx-auto h-10 w-10"/><p className="mt-2 text-xs">Sélectionnez une conversation</p></div>
+                )}
+              </div>
+            </div>
           </section>}
 
           {adminTab==='analytics' && <section className="space-y-4">
