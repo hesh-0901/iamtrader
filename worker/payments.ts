@@ -40,9 +40,9 @@ function randomId() {
   return crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '');
 }
 
-function paymentReference(paymentId: string, createdAt: string) {
-  const year = new Date(createdAt).getUTCFullYear().toString().slice(-2);
-  return `TXN-${year}-${paymentId.slice(-8).toUpperCase()}`;
+function paymentReference(paymentId: string, _createdAt: string) {
+  const code = paymentId.slice(-8).toUpperCase();
+  return `IMAT-${code.slice(0, 4)} ${code.slice(4)}`;
 }
 
 function invoiceNumber(paymentId: string, createdAt: string) {
