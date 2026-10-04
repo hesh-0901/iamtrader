@@ -210,15 +210,15 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
 
         {/* Weekly P&L uses the exact same vertical structure as the calendar:
             header + weekday row + one card per Sunday -> Saturday row + footer. */}
-        <section className="min-w-0 border-l border-[#DCE7EE] bg-white text-[#0B1F35] xl:h-full">
+        <section className="min-w-0 bg-white text-[#0B1F35] xl:h-full">
           <div
             className="grid h-full gap-0"
             style={{
               gridTemplateRows:
-                '120px repeat(' + calendarWeekCount + ', minmax(124px, 1fr)) 34px',
+                '130px repeat(' + calendarWeekCount + ', 125px) 40px',
             }}
           >
-            <div className="flex flex-col justify-center border-b border-[#E5EDF1] bg-[#F8FAFC] px-4">
+            <div className="flex h-full flex-col justify-center bg-[#F8FAFC] px-4">
               <h3 className="text-sm font-extrabold tracking-[-0.01em]">P&L par semaine</h3>
               <p className="mt-1 text-[10px] text-[#8A9AAF]">Performance de {monthNames[month]} {year}</p>
             </div>
@@ -232,7 +232,7 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
 
               return (
                 <div key={item.week} className="flex min-h-0 items-center px-1">
-                  <div className={'flex h-full w-full flex-col justify-center border-b p-3 ' + tone}>
+                  <div className={'flex h-full w-full flex-col justify-center p-3 ' + tone}>
                     <div className="flex items-center justify-between gap-2">
                       <span className="text-[11px] font-extrabold text-[#60758D]">Semaine {item.week}</span>
                       <span className={'rounded-full px-2 py-1 text-[8px] font-bold ' + badgeTone}>{item.activeDays}j</span>
