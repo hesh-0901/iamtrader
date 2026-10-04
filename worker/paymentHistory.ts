@@ -19,6 +19,13 @@ function legacyInvoiceNumber(payment: Record<string, unknown>) {
   return `INV-${year}-${id.slice(-8).toUpperCase()}`;
 }
 
+function profileFullName(profile: Record<string, any> | null) {
+  if (!profile) return null;
+  const firstName = String(profile.traderProfile?.firstName || profile.firstName || '').trim();
+  const lastName = String(profile.traderProfile?.lastName || profile.lastName || '').trim();
+  return [firstName, lastName].filter(Boolean).join(' ') || null;
+}
+
 function authHeader(request: Request) {
   const value = request.headers.get('Authorization') || '';
   return value.startsWith('Bearer ') ? value.slice(7) : null;
@@ -50,7 +57,7 @@ export async function handlePaymentHistory(request: Request, env: PaymentEnv) {
         buyerUid: payment.uid || user.uid,
         buyerEmail: payment.email || user.email || null,
         displayName: payment.displayName || profile?.displayName || null,
-        fullName: payment.fullName || [profile?.traderProfile?.firstName, profile?.traderProfile?.lastName].filter(Boolean).join(' ') || null,
+        fullName: profileFullName(profile) || payment.fullName || null,
         payerName: payment.payerName || null,
         payerPhone: payment.phone || null,
         createdAt: payment.createdAt || null,
