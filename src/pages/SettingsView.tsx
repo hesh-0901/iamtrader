@@ -75,6 +75,9 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
   const [paymentId, setPaymentId] = useState<string | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<'idle' | 'processing' | 'paid' | 'failed'>('idle');
   const [paymentMessage, setPaymentMessage] = useState('');
+  const [paymentAction, setPaymentAction] = useState<'initial' | 'renewal' | 'upgrade' | null>(null);
+  const [paymentActivationStart, setPaymentActivationStart] = useState<string | null>(null);
+  const [paymentActivationExpires, setPaymentActivationExpires] = useState<string | null>(null);
   const [isPaymentLoading, setIsPaymentLoading] = useState(false);
 
   const traderRating = useMemo(() => calculateTraderRating(trades), [trades]);
@@ -234,7 +237,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
     localStorage.setItem('iamtrader-dashboard-mode', mode);
   };
 
-  const startPayment = (plan: PaidPlan) => { setPaymentPlan(plan); setPaymentMode('simulation'); setPaymentPhone(userProfile?.traderProfile?.whatsapp || ''); setPaymentProvider('Airtel Money'); setPaymentPayerName(userProfile?.displayName || [userProfile?.traderProfile?.firstName, userProfile?.traderProfile?.lastName].filter(Boolean).join(' ') || ''); setPaymentId(null); setPaymentStatus('idle'); setPaymentMessage(''); };
+  const startPayment = (plan: PaidPlan) => { setPaymentPlan(plan); setPaymentMode('simulation'); setPaymentPhone(userProfile?.traderProfile?.whatsapp || ''); setPaymentProvider('Airtel Money'); setPaymentPayerName(userProfile?.displayName || [userProfile?.traderProfile?.firstName, userProfile?.traderProfile?.lastName].filter(Boolean).join(' ') || ''); setPaymentId(null); setPaymentStatus('idle'); setPaymentMessage(''); setPaymentAction(null); setPaymentActivationStart(null); setPaymentActivationExpires(null); };
 
   const submitPayment = async () => {
     if (!paymentPlan) return;
@@ -245,6 +248,9 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
         ? await createSimulatedPayment(paymentPlan, details)
         : await createPayment(paymentPlan, details);
       setPaymentId(payment.id);
+      setPaymentAction(payment.subscriptionAction || null);
+      setPaymentActivationStart(payment.activationStartAt || null);
+      setPaymentActivationExpires(payment.activationExpiresAt || null);
       setPaymentStatus('processing');
       setPaymentMessage(payment.message || 'Paiement en cours de traitement.');
     } catch (error: any) {
@@ -661,6 +667,16 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                       </div>
                       <p className="mt-3 text-[10px] leading-4 text-slate-400">Les frais de paiement correspondent à 3 % du prix de l’abonnement et sont intégrés au montant envoyé au prestataire.</p>
                       <p className="mt-1 text-[10px] text-slate-500">L’activation intervient uniquement après confirmation serveur de la transaction.</p>
+                      {(() => {
+                        const currentExpiry = userProfile?.subscriptionExpiresAt ? new Date(userProfile.subscriptionExpiresAt) : null;
+                        const activeNow = !!currentExpiry && currentExpiry.getTime() > Date.now() && userProfile?.plan !== 'free';
+                        const estimatedStart = activeNow ? currentExpiry : new Date();
+                        const estimatedEnd = new Date(estimatedStart.getTime() + (paymentPlan === 'pro' ? 30 : 180) * 86400000);
+                        return <div className="mt-3 grid grid-cols-2 gap-2 text-[10px]">
+                          <div className="rounded-xl bg-white p-2.5 ring-1 ring-slate-200"><div className="font-bold uppercase tracking-wider text-slate-400">Début prévu</div><div className="mt-1 font-black text-slate-800">{formatDate(estimatedStart.toISOString())}</div></div>
+                          <div className="rounded-xl bg-white p-2.5 ring-1 ring-slate-200"><div className="font-bold uppercase tracking-wider text-slate-400">Fin prévue</div><div className="mt-1 font-black text-slate-800">{formatDate(estimatedEnd.toISOString())}</div></div>
+                        </div>;
+                      })()}
                     </div>
                   );
                 })()}
@@ -675,7 +691,12 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                 <p className="text-[10px] leading-4 text-slate-400">Le nom, l’opérateur et l’identifiant seront associés à la transaction. Pour un paiement réel, utilisez les informations du compte Mobile Money qui recevra la demande.</p>
                 <button onClick={submitPayment} disabled={isPaymentLoading || !paymentPhone.trim() || !paymentPayerName.trim() || !paymentProvider} className="w-full rounded-xl bg-indigo-600 px-4 py-3 text-xs font-bold text-white shadow-lg shadow-indigo-200 transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50">{isPaymentLoading ? 'Initialisation du paiement…' : 'Continuer vers le paiement'}</button>
               </>)}
-              {paymentStatus === 'processing' && (<div className="py-5 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-indigo-50 text-indigo-600"><div className="h-6 w-6 animate-spin rounded-full border-2 border-indigo-200 border-t-indigo-600" /></div><h4 className="mt-4 text-base font-black text-slate-950">Paiement en traitement</h4><p className="mt-2 text-xs leading-5 text-slate-500">{paymentMessage || 'Nous attendons la confirmation du prestataire.'}</p>{paymentMode === 'simulation' ? <button onClick={confirmSimulation} disabled={isPaymentLoading} className="mt-5 w-full rounded-xl bg-emerald-600 px-4 py-3 text-xs font-bold text-white disabled:opacity-50">{isPaymentLoading ? 'Confirmation serveur…' : 'Simuler la validation du paiement'}</button> : <div className="mt-4 rounded-xl bg-amber-50 px-3 py-2 text-[10px] font-semibold text-amber-700">Validez la demande Mobile Money avant de fermer.</div>}</div>)}
+              {paymentStatus === 'processing' && (<div className="py-5 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-indigo-50 text-indigo-600"><div className="h-6 w-6 animate-spin rounded-full border-2 border-indigo-200 border-t-indigo-600" /></div><h4 className="mt-4 text-base font-black text-slate-950">Paiement en traitement</h4><p className="mt-2 text-xs leading-5 text-slate-500">{paymentMessage || 'Nous attendons la confirmation du prestataire.'}</p>
+                {paymentActivationStart && <div className="mt-4 rounded-xl bg-slate-50 p-3 text-left text-[10px]">
+                  <div className="flex justify-between gap-3"><span className="text-slate-500">Type</span><b className="text-slate-800">{paymentAction === 'upgrade' ? 'Upgrade programmé' : paymentAction === 'renewal' ? 'Renouvellement' : 'Nouvelle souscription'}</b></div>
+                  <div className="mt-1 flex justify-between gap-3"><span className="text-slate-500">Début</span><b className="text-slate-800">{formatDate(paymentActivationStart)}</b></div>
+                  <div className="mt-1 flex justify-between gap-3"><span className="text-slate-500">Expiration</span><b className="text-slate-800">{formatDate(paymentActivationExpires || undefined)}</b></div>
+                </div>}{paymentMode === 'simulation' ? <button onClick={confirmSimulation} disabled={isPaymentLoading} className="mt-5 w-full rounded-xl bg-emerald-600 px-4 py-3 text-xs font-bold text-white disabled:opacity-50">{isPaymentLoading ? 'Confirmation serveur…' : 'Simuler la validation du paiement'}</button> : <div className="mt-4 rounded-xl bg-amber-50 px-3 py-2 text-[10px] font-semibold text-amber-700">Validez la demande Mobile Money avant de fermer.</div>}</div>)}
               {paymentStatus === 'paid' && (<div className="py-6 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-600"><Check className="h-7 w-7" /></div><h4 className="mt-4 text-base font-black text-slate-950">Paiement confirmé</h4><p className="mt-2 text-xs text-slate-500">{paymentMessage}</p><div className="mt-4 rounded-xl bg-emerald-50 px-3 py-2 text-[10px] font-semibold text-emerald-700">Référence : {paymentId}</div></div>)}
               {paymentStatus === 'failed' && (<div className="space-y-4 py-3 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-rose-50 text-rose-600">!</div><h4 className="text-base font-black text-slate-950">Paiement non finalisé</h4><p className="text-xs leading-5 text-slate-500">{paymentMessage}</p><button onClick={() => setPaymentStatus('idle')} className="w-full rounded-xl bg-slate-950 px-4 py-3 text-xs font-bold text-white">Réessayer</button></div>)}
             </div>
