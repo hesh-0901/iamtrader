@@ -15,7 +15,8 @@ export function decideSubscription(profile: Record<string, unknown>, planKey: ke
   }
   if (!active) {
     const start = now;
-    return { action: 'initial' as const, currentPlan, start, expires: new Date(start.getTime() + SUBSCRIPTION_PLANS[planKey].durationDays * 86400000) };
+    const action = currentPlan !== 'free' && expiry ? 'renewal' as const : 'initial' as const;
+    return { action, currentPlan, start, expires: new Date(start.getTime() + SUBSCRIPTION_PLANS[planKey].durationDays * 86400000) };
   }
   if (currentPlan === planKey) {
     return { error: 'Ce forfait est déjà actif. Le renouvellement sera possible après son expiration.' } as const;
@@ -50,8 +51,7 @@ export function lifecycleFields(profile: Record<string, unknown>, now: Date) {
   const scheduledPlan = String(profile.scheduledPlan || '');
   const scheduledStartAt = profile.scheduledStartAt ? new Date(String(profile.scheduledStartAt)) : null;
   const scheduledExpiresAt = profile.scheduledExpiresAt ? new Date(String(profile.scheduledExpiresAt)) : null;
-  if (!scheduledPlan || !scheduledStartAt || !scheduledExpiresAt || scheduledStartAt.getTime() > now.getTime()) return null;
-  return {
+  if (scheduledPlan && scheduledStartAt && scheduledExpiresAt && scheduledStartAt.getTime() <= now.getTime()) return {
     plan: scheduledPlan,
     subscriptionStartAt: scheduledStartAt.toISOString(),
     subscriptionExpiresAt: scheduledExpiresAt.toISOString(),
@@ -61,4 +61,10 @@ export function lifecycleFields(profile: Record<string, unknown>, now: Date) {
     scheduledExpiresAt: '',
     updatedAt: now.toISOString()
   };
+
+  const expiry = profile.subscriptionExpiresAt ? new Date(String(profile.subscriptionExpiresAt)) : null;
+  if (expiry && expiry.getTime() <= now.getTime() && String(profile.plan || 'free') !== 'free') {
+    return { plan: 'free', subscriptionStatus: 'expired', updatedAt: now.toISOString() };
+  }
+  return null;
 }
