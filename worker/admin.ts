@@ -1,0 +1,74 @@
+import { firestoreGet, firestorePatch, firestoreDelete, verifyFirebaseIdToken, type PaymentEnv } from './firebaseAdmin';
+
+type AdminEnv = PaymentEnv;
+
+function json(data: unknown, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
+  });
+}
+
+async function requireAdmin(request: Request, env: AdminEnv) {
+  const header = request.headers.get('Authorization') || '';
+  if (!header.startsWith('Bearer ')) throw new Response(JSON.stringify({ error: 'Authentification requise.' }), { status: 401, headers: { 'Content-Type': 'application/json' } });
+  const identity = await verifyFirebaseIdToken(env, header.slice(7));
+  const profile = await firestoreGet(env, `users/${encodeURIComponent(identity.uid)}`);
+  if (!profile || profile.role !== 'admin' || profile.status === 'suspended') {
+    throw new Response(JSON.stringify({ error: 'Accès administrateur requis.' }), { status: 403, headers: { 'Content-Type': 'application/json' } });
+  }
+  return identity;
+}
+
+export async function handleAdminMutation(request: Request, env: AdminEnv) {
+  try {
+    const identity = await requireAdmin(request, env);
+    const body = await request.json().catch(() => null) as {
+      action?: string;
+      uid?: string;
+      messageId?: string;
+      data?: Record<string, unknown>;
+      log?: Record<string, unknown>;
+    } | null;
+
+    if (!body?.action) return json({ error: 'Action administrative manquante.' }, 400);
+
+    if (body.action === 'update-user') {
+      if (!body.uid || !body.data) return json({ error: 'Utilisateur ou données manquants.' }, 400);
+      const allowed = ['role','plan','status','paymentDate','subscriptionStartAt','subscriptionExpiresAt','subscriptionStatus','paymentStatus','pendingPlan','planChangeRequestedAt','planChangeConfirmedAt'];
+      const data = Object.fromEntries(Object.entries(body.data).filter(([key]) => allowed.includes(key)));
+      data.updatedAt = new Date().toISOString();
+      await firestorePatch(env, `users/${encodeURIComponent(body.uid)}`, data, Object.keys(data));
+      return json({ success: true });
+    }
+
+    if (body.action === 'update-contact') {
+      if (!body.messageId || !body.data) return json({ error: 'Message ou données manquants.' }, 400);
+      const allowed = ['status','adminNote','handledBy','handledAt','lastReply','repliedAt','repliedBy'];
+      const data = Object.fromEntries(Object.entries(body.data).filter(([key]) => allowed.includes(key)));
+      data.updatedAt = new Date().toISOString();
+      await firestorePatch(env, `contactMessages/${encodeURIComponent(body.messageId)}`, data, Object.keys(data));
+      return json({ success: true });
+    }
+
+    if (body.action === 'delete-contact') {
+      if (!body.messageId) return json({ error: 'Message manquant.' }, 400);
+      await firestoreDelete(env, `contactMessages/${encodeURIComponent(body.messageId)}`);
+      return json({ success: true });
+    }
+
+    if (body.action === 'add-log') {
+      if (!body.log) return json({ error: 'Journal manquant.' }, 400);
+      const log = { ...body.log, adminUid: identity.uid, createdAt: new Date().toISOString() };
+      const id = crypto.randomUUID();
+      await firestorePatch(env, `adminLogs/${encodeURIComponent(id)}`, log, Object.keys(log));
+      return json({ success: true, id });
+    }
+
+    return json({ error: 'Action administrative inconnue.' }, 400);
+  } catch (error) {
+    if (error instanceof Response) return error;
+    console.error('Admin API error:', error);
+    return json({ error: error instanceof Error ? error.message : 'Erreur serveur.' }, 500);
+  }
+}
