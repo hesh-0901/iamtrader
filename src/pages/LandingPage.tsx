@@ -796,7 +796,12 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
                         ? 'rounded-br-md bg-[#081827] text-white'
                         : 'rounded-bl-md border border-[#dcebe5] bg-white text-[#43586b] shadow-[0_8px_24px_rgba(8,24,39,0.05)]'
                     }`}>
-                      {renderVyraText(message.text)}
+                      <div>
+                        {renderVyraText(message.text)}
+                        <div className={`mt-1.5 text-right text-[9px] font-medium ${message.role === 'user' ? 'text-white/55' : 'text-[#9aa9b5]'}`}>
+                          {formatVyraTime(message.createdAt)}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 ))}
