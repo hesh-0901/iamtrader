@@ -36,7 +36,7 @@ export async function handleAdminMutation(request: Request, env: AdminEnv) {
     if (body.action === 'update-user') {
       if (!body.uid || !body.data) return json({ error: 'Utilisateur ou données manquants.' }, 400);
       const allowed = ['role','plan','status','paymentDate','subscriptionStartAt','subscriptionExpiresAt','subscriptionStatus','paymentStatus','pendingPlan','planChangeRequestedAt','planChangeConfirmedAt'];
-      const data = Object.fromEntries(Object.entries(body.data).filter(([key]) => allowed.includes(key)));
+      const data = Object.fromEntries(Object.entries(body.data).filter(([key, value]) => allowed.includes(key) && value !== undefined));
       data.updatedAt = new Date().toISOString();
       await firestorePatch(env, `users/${encodeURIComponent(body.uid)}`, data, Object.keys(data));
       return json({ success: true });
