@@ -7,6 +7,14 @@ const PLANS = {
   community: { name: 'Community', amount: 89.99, currency: 'USD', durationDays: 180 }
 } as const;
 
+const PAYMENT_FEE_RATE = 0.03;
+
+function calculatePaymentAmounts(baseAmount: number) {
+  const fee = Math.round(baseAmount * PAYMENT_FEE_RATE * 100) / 100;
+  const total = Math.round((baseAmount + fee) * 100) / 100;
+  return { baseAmount, fee, total };
+}
+
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -60,10 +68,12 @@ export async function handlePaymentRequest(request: Request, env: PaymentEnv & {
       const planKey = body.plan;
       const plan = planKey ? PLANS[planKey] : undefined;
       const phone = normalizePhone(body.phone);
+      const paymentAmounts = plan ? calculatePaymentAmounts(plan.amount) : undefined;
 
       if (!plan || !planKey) return json({ success: false, message: 'Formule invalide.' }, 400);
       if (!phone) return json({ success: false, message: 'Numéro Mobile Money invalide. Utilisez un numéro RDC à 10 chiffres.' }, 400);
       if (!env.LABYRINTHE_API_TOKEN) return json({ success: false, message: 'Le paiement n’est pas encore configuré côté serveur.' }, 503);
+      if (!paymentAmounts) return json({ success: false, message: 'Montant de paiement invalide.' }, 400);
 
       const profile = await firestoreGet(env, `users/${encodeURIComponent(user.uid)}`);
       if (!profile) return json({ success: false, message: 'Profil utilisateur introuvable.' }, 404);
@@ -77,7 +87,10 @@ export async function handlePaymentRequest(request: Request, env: PaymentEnv & {
         email: user.email || profile.email || '',
         plan: planKey,
         planName: plan.name,
-        amount: plan.amount,
+        amount: paymentAmounts.total,
+        baseAmount: paymentAmounts.baseAmount,
+        paymentFee: paymentAmounts.fee,
+        paymentFeeRate: PAYMENT_FEE_RATE,
         currency: plan.currency,
         phone,
         status: 'initiated',
@@ -92,7 +105,7 @@ export async function handlePaymentRequest(request: Request, env: PaymentEnv & {
         body: JSON.stringify({
           token: env.LABYRINTHE_API_TOKEN,
           phone,
-          amount: plan.amount,
+          amount: paymentAmounts.total,
           currency: plan.currency,
           country: 'CD',
           reference: paymentId,
@@ -124,7 +137,9 @@ export async function handlePaymentRequest(request: Request, env: PaymentEnv & {
           id: paymentId,
           plan: planKey,
           planName: plan.name,
-          amount: plan.amount,
+          amount: paymentAmounts.total,
+          baseAmount: paymentAmounts.baseAmount,
+          paymentFee: paymentAmounts.fee,
           currency: plan.currency,
           status: 'processing',
           reference: paymentId,
