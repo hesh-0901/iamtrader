@@ -2,9 +2,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Activity, AlertTriangle, BellRing, CheckCircle2, ChevronLeft, ChevronRight, Clock3, CreditCard, Edit3, History, Mail, RefreshCw, Search, Send, ShieldCheck, Trash2, UserCheck, UserX, Users, X, XCircle } from 'lucide-react';
 import { AdminLog, PaymentRecord, SubscriptionPlan, UserProfile, UserStatus, TradingAccount, Trade } from '../types';
 import { getAdminLogs, getAllAccounts, getAllTrades, getAllUsers, subscribeAllPayments, subscribeAllUsers, subscribeContactMessages } from '../services/firestore';
+import { adminAddLog, adminDeleteContact, adminUpdateContact, adminUpdateUser } from '../services/adminConsole';
 import { useToast } from '../components/common/Toast';
 import { auth } from '../firebase/config';
-import { adminAddLog, adminDeleteContact, adminUpdateContact, adminUpdateUser } from '../services/adminConsole';
 
 type Filter = 'all' | 'active' | 'suspended' | 'expiring' | 'expired' | 'pending';
 const DAY = 86400000;
@@ -263,41 +263,42 @@ export function AdminConsole() {
   }
 
   return (
-    <div className="min-h-full bg-[#f6f8fb] -m-4 lg:-m-6 p-3 sm:p-4 lg:p-6">
-      <div className="mx-auto max-w-[1560px] space-y-4">
-        <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm lg:hidden">
-          <div><div className="text-[9px] font-black uppercase tracking-[.15em] text-slate-400">IAMTRADER</div><div className="mt-0.5 text-xs font-black text-slate-950">Administration</div></div>
-          <button onClick={load} disabled={loading} className="rounded-xl border border-slate-200 p-2 text-slate-500"><RefreshCw className={'h-4 w-4 ' + (loading ? 'animate-spin' : '')}/></button>
-        </div>
-        <div className="flex gap-5">
-          <aside className="hidden w-56 shrink-0 lg:block"><div className="sticky top-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="border-b border-slate-100 p-5"><div className="flex items-center gap-3"><div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#0b1f35] text-white"><ShieldCheck className="h-4 w-4"/></div><div><b className="block text-[11px] text-slate-950">IAMTRADER</b><span className="text-[9px] text-slate-400">Admin workspace</span></div></div></div>
-            <div className="p-2.5"><div className="px-3 pb-2 pt-1 text-[8px] font-black uppercase tracking-[.16em] text-slate-400">Workspace</div>
-              {([
-                ['overview','Vue d’ensemble',Activity],['users','Utilisateurs',Users],['subscriptions','Abonnements',Clock3],['payments','Paiements',CreditCard],['support','Support',Mail],['analytics','Analytics',Activity],['audit','Journal d’audit',History]
-              ] as const).map(([key,label,Icon]) => <button key={key} onClick={()=>setAdminTab(key)} className={'mb-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[10px] font-bold '+(adminTab===key?'bg-[#0b1f35] text-white':'text-slate-500 hover:bg-slate-50 hover:text-slate-900')}><Icon className="h-4 w-4"/><span>{label}</span>{key==='support'&&contactMessages.filter(m=>m.status==='new').length>0&&<span className="ml-auto rounded-full bg-blue-100 px-1.5 py-0.5 text-[8px] font-black text-blue-700">{contactMessages.filter(m=>m.status==='new').length}</span>}</button>)}
-            </div>
-            <div className="m-2.5 rounded-xl bg-slate-50 p-3"><div className="text-[9px] font-bold text-emerald-700">● Temps réel actif</div><p className="mt-1 text-[8px] leading-4 text-slate-400">Données synchronisées automatiquement.</p></div>
-          </div></aside>
-          <main className="min-w-0 flex-1">
-            <div className="mb-4 flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-              <div className="min-w-0"><div className="text-[8px] font-black uppercase tracking-[.16em] text-slate-400">Admin Console</div><div className="mt-0.5 truncate text-sm font-black text-slate-950">{adminTab === 'overview' ? 'Vue d’ensemble' : adminTab === 'users' ? 'Utilisateurs' : adminTab === 'subscriptions' ? 'Abonnements' : adminTab === 'payments' ? 'Paiements' : adminTab === 'support' ? 'Support' : adminTab === 'analytics' ? 'Analytics' : 'Journal d’audit'}</div></div>
-              <div className="flex items-center gap-2"><span className="hidden rounded-full bg-emerald-50 px-2.5 py-1.5 text-[8px] font-black text-emerald-700 sm:inline-flex">LIVE</span><button onClick={load} disabled={loading} className="rounded-xl border border-slate-200 bg-white p-2 text-slate-500 hover:bg-slate-50"><RefreshCw className={'h-4 w-4 ' + (loading ? 'animate-spin' : '')}/></button></div>
-            </div>
-            <div className="mb-4 flex gap-1.5 overflow-x-auto lg:hidden">{([
-              ['overview','Vue d’ensemble'],['users','Utilisateurs'],['subscriptions','Abonnements'],['payments','Paiements'],['support','Support'],['analytics','Analytics'],['audit','Audit']
-            ] as const).map(([key,label])=><button key={key} onClick={()=>setAdminTab(key)} className={'whitespace-nowrap rounded-xl px-3 py-2 text-[9px] font-bold '+(adminTab===key?'bg-[#0b1f35] text-white':'bg-white text-slate-500 border border-slate-200')}>{label}</button>)}</div>
-            <div className="mb-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-                <div><div className="text-[8px] font-black uppercase tracking-[.16em] text-blue-600">Workspace / Administration</div><h1 className="mt-1 text-xl font-black tracking-tight text-slate-950">{adminTab === 'overview' ? 'Vue d’ensemble' : adminTab === 'users' ? 'Utilisateurs' : adminTab === 'subscriptions' ? 'Abonnements' : adminTab === 'payments' ? 'Paiements' : adminTab === 'support' ? 'Support' : adminTab === 'analytics' ? 'Analytics' : 'Journal d’audit'}</h1><p className="mt-1 text-[10px] text-slate-400">Gestion opérationnelle de la plateforme IAMTRADER.</p></div>
-                <div className="flex items-center gap-2"><span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1.5 text-[8px] font-black text-emerald-700"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500"/>LIVE</span><button onClick={load} disabled={loading} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[9px] font-bold text-slate-600 hover:bg-slate-50"><RefreshCw className={'h-3.5 w-3.5 '+(loading?'animate-spin':'')}/>Actualiser</button></div>
-              </div>
-              <div className="mt-4 grid grid-cols-2 gap-2 md:grid-cols-6">
-                {[['Utilisateurs',stats.total,Users,'text-slate-900'],['Actifs',stats.active,UserCheck,'text-emerald-700'],['Payants',stats.paid,CreditCard,'text-blue-700'],['À traiter',stats.pending,BellRing,'text-violet-700'],['Bientôt expirés',stats.expiring,Clock3,'text-amber-700'],['Expirés',stats.expired,XCircle,'text-rose-700']].map(([label,value,Icon,tone])=><div key={String(label)} className="rounded-xl border border-slate-100 bg-slate-50/70 p-3"><div className="flex items-center justify-between text-[8px] font-bold uppercase tracking-wide text-slate-400"><span>{String(label)}</span><Icon className="h-3.5 w-3.5"/></div><b className={'mt-1.5 block text-lg font-black '+String(tone)}>{String(value)}</b></div>)}
-              </div>
-            </div>
+    <div className="min-h-full bg-[#f4f7fa] -m-4 lg:-m-6 p-4 lg:p-6">
+      <div className="max-w-[1500px] mx-auto space-y-5">
+        <nav className="sticky top-0 z-20 flex overflow-x-auto rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm">
+          {([
+            ['overview','Vue d’ensemble'],
+            ['users','Utilisateurs'],
+            ['subscriptions','Abonnements'],
+            ['payments','Paiements'],
+            ['support','Support'],
+            ['analytics','Analytics'],
+            ['audit','Journal d’audit']
+          ] as const).map(([key,label]) => (
+            <button key={key} onClick={() => setAdminTab(key)} className={'whitespace-nowrap rounded-xl px-4 py-2.5 text-[10px] font-black transition ' + (adminTab === key ? 'bg-[#0b1f35] text-white shadow-sm' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900')}>
+              {label}
+            </button>
+          ))}
+        </nav>
 
-        {(adminTab === 'overview' || adminTab === 'payments') && <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <header className="relative overflow-hidden rounded-[28px] bg-[#0b1f35] p-5 sm:p-7 text-white shadow-[0_20px_60px_rgba(11,31,53,.13)]">
+          <div className="absolute -right-24 -top-28 h-80 w-80 rounded-full bg-emerald-400/10 blur-3xl" />
+          <div className="relative flex flex-col xl:flex-row xl:items-end xl:justify-between gap-5">
+            <div>
+              <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.18em] text-emerald-300"><ShieldCheck className="w-4 h-4" />Control Center</div>
+              <h1 className="mt-2 text-2xl sm:text-3xl font-black tracking-tight">Administration IAMTRADER</h1>
+              <p className="mt-2 max-w-2xl text-sm text-white/60">Une console opérationnelle pour gérer les utilisateurs, les plans, les paiements et les échéances.</p>
+            </div>
+            <button onClick={load} disabled={loading} className="inline-flex items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/10 px-4 py-3 text-xs font-bold hover:bg-white/15"><RefreshCw className={'w-4 h-4 ' + (loading ? 'animate-spin' : '')} />Actualiser</button>
+          </div>
+          <div className="relative mt-7 grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-2">
+            {[['Utilisateurs', stats.total, Users], ['Actifs', stats.active, UserCheck], ['Paiements', stats.paid, CreditCard], ['À confirmer', stats.pending, Activity], ['≤ 5 jours', stats.expiring, AlertTriangle], ['Expirés', stats.expired, XCircle]].map(([label, value, Icon]) =>
+              <div key={String(label)} className="rounded-2xl border border-white/[.08] bg-white/[.07] p-3.5"><div className="flex justify-between text-[9px] font-bold uppercase tracking-wider text-white/50"><span>{String(label)}</span><Icon className="w-3.5 h-3.5" /></div><div className="mt-2 text-2xl font-black">{String(value)}</div></div>
+            )}
+          </div>
+        </header>
+
+        {(adminTab === 'overview' || adminTab === 'payments') && <section className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm">
           <div className="border-b border-slate-100 p-4 sm:p-5">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-center gap-3">
@@ -361,7 +362,7 @@ export function AdminConsole() {
 
         {(adminTab === 'overview' || adminTab === 'users' || adminTab === 'subscriptions') && <>
         <section className="grid lg:grid-cols-[1fr_360px] gap-4">
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
               <div><h2 className="text-sm font-black text-slate-900">Utilisateurs & abonnements</h2><p className="mt-1 text-[11px] text-slate-400">{filtered.length} résultat(s)</p></div>
               <div className="flex flex-col sm:flex-row gap-2">
@@ -370,7 +371,7 @@ export function AdminConsole() {
               </div>
             </div>
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex items-center justify-between"><div><div className="text-[9px] font-bold uppercase tracking-wider text-amber-600">À traiter</div><h2 className="mt-1 text-sm font-black text-slate-900">File opérationnelle</h2></div><Activity className="w-5 h-5 text-emerald-500" /></div>
             <div className="mt-4 grid grid-cols-3 gap-2">
               <button onClick={() => setFilter('pending')} className="rounded-xl bg-blue-50 p-3 text-left hover:bg-blue-100"><b className="text-lg text-blue-700">{stats.pending}</b><span className="block text-[9px] font-semibold text-blue-600">Confirmations</span></button>
@@ -380,7 +381,7 @@ export function AdminConsole() {
           </div>
         </section>
 
-        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        <section className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm">
           {loading ? <div className="p-16 text-center text-xs text-slate-400">Chargement des utilisateurs...</div> : visible.length === 0 ? <div className="p-16 text-center"><Users className="mx-auto w-9 h-9 text-slate-300" /><p className="mt-3 text-sm font-bold text-slate-600">Aucun utilisateur</p></div> :
             <><div className="overflow-x-auto"><table className="w-full min-w-[1050px]"><thead className="border-b border-slate-100 bg-slate-50/80"><tr className="text-left text-[9px] font-bold uppercase tracking-[.14em] text-slate-400"><th className="px-3 py-3 text-center">#</th><th className="px-5 py-3">Utilisateur</th><th className="px-3 py-3">Plan</th><th className="px-3 py-3">P&L</th><th className="px-3 py-3">Capital initial</th><th className="px-3 py-3">Trades</th><th className="px-3 py-3">Paiement</th><th className="px-3 py-3">Échéance</th><th className="px-3 py-3">Temps</th><th className="px-3 py-3">Statut</th><th className="px-5 py-3 text-right">Action</th></tr></thead>
             <tbody>{visible.map((u, index) => {
@@ -390,7 +391,7 @@ export function AdminConsole() {
         </section>
         </>}
 
-        {(adminTab === 'overview' || adminTab === 'support') && <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        {(adminTab === 'overview' || adminTab === 'support') && <section className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm">
           <div className="border-b border-slate-100 p-4 sm:p-5">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-center gap-3">
@@ -413,19 +414,18 @@ export function AdminConsole() {
           </div>
         </section>}
 
-        {adminTab === 'audit' && <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        {adminTab === 'audit' && <section className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm">
           <button onClick={() => setHistoryOpen(!historyOpen)} className="flex w-full items-center justify-between p-4 text-left"><span className="flex items-center gap-2"><History className="w-4 h-4 text-blue-600" /><span><b className="block text-sm text-slate-900">Historique administratif</b><small className="block mt-0.5 text-[10px] text-slate-400">Traçabilité des opérations.</small></span></span><span className="text-xs font-bold text-slate-400">{historyOpen ? 'Réduire' : 'Afficher'}</span></button>
           {historyOpen && <div className="divide-y divide-slate-100 border-t border-slate-100">{logs.length ? logs.slice(0, 12).map(l => <div key={l.id} className="flex gap-3 px-5 py-3"><div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600"><History className="w-3.5 h-3.5" /></div><div><b className="text-[11px] text-slate-700">{l.action} · {l.userName}</b><p className="mt-0.5 text-[10px] text-slate-400">{l.details}</p></div></div>) : <div className="p-6 text-xs text-slate-400">Aucune action.</div>}</div>}
         </section>}
 
         {adminTab === 'analytics' && <section className="grid gap-4 lg:grid-cols-3">
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="text-[9px] font-black uppercase tracking-[.14em] text-slate-400">Croissance</div><div className="mt-2 text-3xl font-black text-slate-950">{newUsers.length}</div><div className="mt-1 text-[11px] text-slate-500">nouveaux utilisateurs sur 7 jours</div></div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="text-[9px] font-black uppercase tracking-[.14em] text-slate-400">Conversion paiement</div><div className="mt-2 text-3xl font-black text-slate-950">{stats.total ? Math.round((stats.paid / stats.total) * 100) : 0}%</div><div className="mt-1 text-[11px] text-slate-500">{stats.paid} utilisateur(s) avec paiement confirmé</div></div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="text-[9px] font-black uppercase tracking-[.14em] text-slate-400">Performance trading</div><div className="mt-2 text-3xl font-black text-slate-950">{trades.length}</div><div className="mt-1 text-[11px] text-slate-500">trades enregistrés · {accounts.length} compte(s)</div></div>
-          <div className="lg:col-span-3 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-center gap-2"><Activity className="h-4 w-4 text-emerald-600" /><div><h2 className="text-sm font-black text-slate-900">État temps réel</h2><p className="mt-1 text-[10px] text-slate-400">Les indicateurs sont alimentés par les données déjà synchronisées en temps réel.</p></div></div><div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4"><div className="rounded-2xl bg-slate-50 p-4"><b className="text-lg text-slate-900">{payments.length}</b><span className="mt-1 block text-[9px] text-slate-500">transactions</span></div><div className="rounded-2xl bg-emerald-50 p-4"><b className="text-lg text-emerald-700">{contactMessages.filter(m => m.status === 'new').length}</b><span className="mt-1 block text-[9px] text-emerald-600">tickets nouveaux</span></div><div className="rounded-2xl bg-blue-50 p-4"><b className="text-lg text-blue-700">{stats.pending}</b><span className="mt-1 block text-[9px] text-blue-600">changements en attente</span></div><div className="rounded-2xl bg-amber-50 p-4"><b className="text-lg text-amber-700">{stats.expiring}</b><span className="mt-1 block text-[9px] text-amber-600">échéances proches</span></div></div></div>
+          <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm"><div className="text-[9px] font-black uppercase tracking-[.14em] text-slate-400">Croissance</div><div className="mt-2 text-3xl font-black text-slate-950">{newUsers.length}</div><div className="mt-1 text-[11px] text-slate-500">nouveaux utilisateurs sur 7 jours</div></div>
+          <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm"><div className="text-[9px] font-black uppercase tracking-[.14em] text-slate-400">Conversion paiement</div><div className="mt-2 text-3xl font-black text-slate-950">{stats.total ? Math.round((stats.paid / stats.total) * 100) : 0}%</div><div className="mt-1 text-[11px] text-slate-500">{stats.paid} utilisateur(s) avec paiement confirmé</div></div>
+          <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm"><div className="text-[9px] font-black uppercase tracking-[.14em] text-slate-400">Performance trading</div><div className="mt-2 text-3xl font-black text-slate-950">{trades.length}</div><div className="mt-1 text-[11px] text-slate-500">trades enregistrés · {accounts.length} compte(s)</div></div>
+          <div className="lg:col-span-3 rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-center gap-2"><Activity className="h-4 w-4 text-emerald-600" /><div><h2 className="text-sm font-black text-slate-900">État temps réel</h2><p className="mt-1 text-[10px] text-slate-400">Les indicateurs sont alimentés par les données déjà synchronisées en temps réel.</p></div></div><div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4"><div className="rounded-2xl bg-slate-50 p-4"><b className="text-lg text-slate-900">{payments.length}</b><span className="mt-1 block text-[9px] text-slate-500">transactions</span></div><div className="rounded-2xl bg-emerald-50 p-4"><b className="text-lg text-emerald-700">{contactMessages.filter(m => m.status === 'new').length}</b><span className="mt-1 block text-[9px] text-emerald-600">tickets nouveaux</span></div><div className="rounded-2xl bg-blue-50 p-4"><b className="text-lg text-blue-700">{stats.pending}</b><span className="mt-1 block text-[9px] text-blue-600">changements en attente</span></div><div className="rounded-2xl bg-amber-50 p-4"><b className="text-lg text-amber-700">{stats.expiring}</b><span className="mt-1 block text-[9px] text-amber-600">échéances proches</span></div></div></div>
         </section>}
-            </main>
-          </div>
+      </div>
 
       {selectedMessage && <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm" onClick={() => setSelectedMessage(null)}>
         <div className="w-full max-w-2xl overflow-hidden rounded-[28px] border border-white bg-[#f7f9fc] shadow-2xl" onClick={e => e.stopPropagation()}>
@@ -515,7 +515,6 @@ export function AdminConsole() {
           </div>
         </div>
       </div>}
-    </div>
     </div>
   );
 }
