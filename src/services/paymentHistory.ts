@@ -13,6 +13,8 @@ export interface PaymentHistoryItem {
   invoiceNumber?: string | null;
   buyerUid?: string | null;
   buyerEmail?: string | null;
+  displayName?: string | null;
+  fullName?: string | null;
   payerName?: string | null;
   payerPhone?: string | null;
   createdAt?: string | null;
