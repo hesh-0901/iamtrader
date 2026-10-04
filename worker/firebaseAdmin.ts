@@ -149,6 +149,32 @@ export async function firestoreQueryByField(
   return rows.filter(row => row.document).map(row => fromFirestoreDocument(row.document));
 }
 
+export async function firestoreQueryCollection(
+  env: PaymentEnv,
+  collectionName: string,
+  limit = 200,
+  orderByField = 'createdAt'
+) {
+  const token = await accessToken(env);
+  const response = await fetch(`${FIRESTORE_BASE}:runQuery`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      structuredQuery: {
+        from: [{ collectionId: collectionName }],
+        orderBy: [{ field: { fieldPath: orderByField }, direction: 'DESCENDING' }],
+        limit
+      }
+    })
+  });
+  if (!response.ok) throw new Error(`Firestore COLLECTION QUERY failed: ${response.status}`);
+  const rows = await response.json() as Array<{ document?: any }>;
+  return rows.filter(row => row.document).map(row => ({
+    id: String(row.document.name || '').split('/').pop(),
+    ...fromFirestoreDocument(row.document)
+  }));
+}
+
 export async function firestoreCreate(env: PaymentEnv, collectionName: string, documentId: string, data: Record<string, unknown>) {
   const token = await accessToken(env);
   const response = await fetch(`${FIRESTORE_BASE}/${collectionName}?documentId=${encodeURIComponent(documentId)}`, {
