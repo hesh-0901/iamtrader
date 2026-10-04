@@ -1,8 +1,8 @@
 import React from 'react';
-import { LayoutDashboard, BookOpen, LineChart, ShieldCheck, Wallet, CalendarDays, BrainCircuit, Sliders, ShieldAlert, ChevronLeft, X, Activity } from 'lucide-react';
+import { LayoutDashboard, BookOpen, LineChart, ShieldCheck, Wallet, CalendarDays, BrainCircuit, Sliders, ShieldAlert, ChevronLeft, X, Activity, Receipt } from 'lucide-react';
 import { UserRole } from '../../types';
 
-export type NavigationPage = 'dashboard' | 'journal' | 'calendar' | 'performance' | 'psychology' | 'trader-score' | 'accounts' | 'settings' | 'admin';
+export type NavigationPage = 'dashboard' | 'journal' | 'calendar' | 'performance' | 'psychology' | 'trader-score' | 'accounts' | 'history' | 'settings' | 'admin';
 
 interface SidebarProps {
   currentPage: NavigationPage;
@@ -25,6 +25,7 @@ export function Sidebar({ currentPage, onNavigate, userRole, isMobileOpen, onClo
     { group: 'Trading', items: [
       { id: 'accounts' as NavigationPage, label: 'Comptes & Prop Firms', icon: Wallet },
       { id: 'calendar' as NavigationPage, label: 'Calendrier P&L', icon: CalendarDays },
+      { id: 'history' as NavigationPage, label: 'Mon historique', icon: Receipt },
       { id: 'psychology' as NavigationPage, label: 'Psychologie & Biais', icon: BrainCircuit }
     ]},
     { group: 'Système', items: [
