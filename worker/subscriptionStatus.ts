@@ -33,6 +33,6 @@ export async function handleSubscriptionStatus(request: Request, env: PaymentEnv
     }});
   } catch (error) {
     console.error('Subscription lifecycle error:', error);
-    return json({ success: false, message: 'Impossible de synchroniser l’abonnement.' }, 500);
+    return json({ success: false, message: error instanceof Error ? error.message : 'Impossible de synchroniser l’abonnement.' }, 500);
   }
 }
