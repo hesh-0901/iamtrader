@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Activity, AlertTriangle, BellRing, CheckCircle2, ChevronLeft, ChevronRight, Clock3, CreditCard, Edit3, History, Mail, RefreshCw, Search, Send, ShieldCheck, Trash2, UserCheck, UserX, Users, X, XCircle } from 'lucide-react';
 import { AdminLog, PaymentRecord, SubscriptionPlan, UserProfile, UserStatus, TradingAccount, Trade } from '../types';
-import { getAdminLogs, getAllAccounts, getAllTrades, getAllUsers, subscribeAllPayments, subscribeAllUsers, subscribeContactMessages } from '../services/firestore';
-import { adminAddLog, adminDeleteContact, adminUpdateContact, adminUpdateUser } from '../services/adminConsole';
+import { getAdminLogs, getAllAccounts, getAllTrades, getAllUsers, subscribeAllUsers, subscribeContactMessages } from '../services/firestore';
+import { adminAddLog, adminDeleteContact, adminGetPayments, adminUpdateContact, adminUpdateUser } from '../services/adminConsole';
 import { useToast } from '../components/common/Toast';
 import { auth } from '../firebase/config';
 
@@ -71,6 +71,12 @@ export function AdminConsole() {
     setLogs([]);
     try {
       const userData = await getAllUsers();
+      try {
+        const paymentData = await adminGetPayments<{ success: boolean; payments: PaymentRecord[] }>();
+        setPayments(paymentData.payments || []);
+      } catch (paymentError) {
+        console.warn('IAMTRADER Admin secure payment ledger unavailable:', paymentError);
+      }
       setUsers(userData);
       try {
         const [accountData, tradeData] = await Promise.all([getAllAccounts(), getAllTrades()]);
@@ -107,15 +113,12 @@ export function AdminConsole() {
   useEffect(() => {
     let unsubscribeUsers: (() => void) | undefined;
     let unsubscribeContacts: (() => void) | undefined;
-    let unsubscribePayments: (() => void) | undefined;
 
     const unsubscribeAuth = auth.onAuthStateChanged((user) => {
       unsubscribeUsers?.();
       unsubscribeContacts?.();
-      unsubscribePayments?.();
       unsubscribeUsers = undefined;
       unsubscribeContacts = undefined;
-      unsubscribePayments = undefined;
 
       if (!user) return;
 
@@ -128,16 +131,11 @@ export function AdminConsole() {
         if (realtimeError) return;
         setContactMessages(messages);
       });
-      unsubscribePayments = subscribeAllPayments((nextPayments, realtimeError) => {
-        if (realtimeError) return;
-        setPayments(nextPayments);
-      });
     });
 
     return () => {
       unsubscribeUsers?.();
       unsubscribeContacts?.();
-      unsubscribePayments?.();
       unsubscribeAuth();
     };
   }, []);
