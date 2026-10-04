@@ -1,4 +1,4 @@
-import { firestoreGet, firestorePatch, firestoreDelete, firestoreSet, verifyFirebaseIdToken, type PaymentEnv } from './firebaseAdmin';
+import { firestoreGet, firestorePatch, firestoreDelete, firestoreSet, firestoreQueryCollection, verifyFirebaseIdToken, type PaymentEnv } from './firebaseAdmin';
 
 type AdminEnv = PaymentEnv;
 
@@ -32,6 +32,11 @@ export async function handleAdminMutation(request: Request, env: AdminEnv) {
     } | null;
 
     if (!body?.action) return json({ error: 'Action administrative manquante.' }, 400);
+
+    if (body.action === 'get-payments') {
+      const payments = await firestoreQueryCollection(env, 'payments', 250, 'createdAt');
+      return json({ success: true, payments });
+    }
 
     if (body.action === 'update-user') {
       if (!body.uid || !body.data) return json({ error: 'Utilisateur ou données manquants.' }, 400);
