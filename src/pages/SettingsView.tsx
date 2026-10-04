@@ -3,11 +3,12 @@ import { UserProfile, SubscriptionPlan, TradingAccount, Trade } from '../types';
 import { PlanBadge } from '../components/common/Badge';
 import {
   User, Shield, CreditCard, Sliders, Lock, Mail, Check, ArrowRight,
-  Activity, CalendarDays, Clock3, WalletCards, Sparkles, ChevronRight, Phone, X, Crown, Target, Coins, TrendingUp, Star
+  Activity, CalendarDays, Clock3, WalletCards, Sparkles, ChevronRight, Phone, X, Crown, Target, Coins, TrendingUp, Star, Receipt
 } from 'lucide-react';
 import { resetUserPassword, updateTraderProfile } from '../services/auth';
 import { useToast } from '../components/common/Toast';
 import { TradingJournalSettings } from '../components/settings/TradingJournalSettings';
+import { PaymentHistory } from './PaymentHistory';
 import { calculateTraderRating, formatCurrency } from '../utils/calculations';
 import { confirmSimulatedPayment, createPayment, createSimulatedPayment, getPaymentStatus, PaidPlan, PaymentDetails } from '../services/payments';
 
@@ -47,7 +48,7 @@ const countryOptions = [
 
 export function SettingsView({ userProfile, accounts, trades, selectedAccountId, onRequestPlan }: SettingsViewProps) {
   const { showToast } = useToast();
-  const [activeTab, setActiveTab] = useState<'profile' | 'certificates' | 'subscription' | 'security' | 'preferences' | 'journal'>('subscription');
+  const [activeTab, setActiveTab] = useState<'profile' | 'certificates' | 'subscription' | 'security' | 'preferences' | 'journal' | 'history'>('subscription');
   const [displayName, setDisplayName] = useState(userProfile?.displayName || '');
   const [firstName, setFirstName] = useState(userProfile?.traderProfile?.firstName || '');
   const [lastName, setLastName] = useState(userProfile?.traderProfile?.lastName || '');
@@ -330,6 +331,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
     ['security', 'Sécurité & Accès', Lock],
     ['preferences', 'Préférences Interface', Sliders],
     ['journal', 'Journal & Calculs', Activity],
+    ['history', 'Historique des paiements', Receipt],
   ] as const;
 
   return (
@@ -347,6 +349,8 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
           </button>
         ))}
       </div>
+
+      {activeTab === 'history' && <PaymentHistory />}
 
       {activeTab === 'subscription' && (
         <div className="space-y-5">
