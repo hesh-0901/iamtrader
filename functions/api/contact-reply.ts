@@ -1,3 +1,4 @@
+import { verifyFirebaseIdToken, firestoreGet } from '../../worker/firebaseAdmin';
 interface Env {
   RESEND_API_KEY: string;
   RESEND_FROM_EMAIL: string;
@@ -20,20 +21,17 @@ export async function onRequestPost(context:{request:Request;env:Env}) {
   if(!subject||!reply) return json({error:'Sujet et réponse obligatoires.'},400);
   if(reply.length>10000) return json({error:'La réponse est trop longue.'},400);
   const idToken=authHeader.slice(7);
-  let uid='';
+  let identity:{uid:string;email?:string};
+  let profile:Record<string, unknown>|null;
   try {
-    const parts=idToken.split('.');
-    if(parts.length===3) {
-      const decoded=JSON.parse(atob(parts[1].replace(/-/g,'+').replace(/_/g,'/')));
-      uid=typeof decoded.user_id==='string'?decoded.user_id:typeof decoded.sub==='string'?decoded.sub:'';
-    }
-  } catch {}
-  if(!uid) return json({error:'Jeton Firebase invalide.'},401);
-  const userResponse=await fetch('https://firestore.googleapis.com/v1/projects/iamtrader/databases/(default)/documents/users/'+encodeURIComponent(uid),{headers:{Authorization:authHeader}});
-  if(!userResponse.ok) return json({error:'Session administrateur non autorisée.'},403);
-  const userDoc=await userResponse.json() as {fields?:Record<string,{stringValue?:string}>};
-  const role=userDoc.fields?.role?.stringValue, status=userDoc.fields?.status?.stringValue;
-  if(role!=='admin'||status==='suspended') return json({error:'Accès administrateur requis.'},403);
+    identity=await verifyFirebaseIdToken(context.env as any, idToken);
+    profile=await firestoreGet(context.env as any, `users/${encodeURIComponent(identity.uid)}`);
+  } catch {
+    return json({error:'Jeton Firebase invalide ou expiré.'},401);
+  }
+  if(!profile || profile.role!=='admin' || profile.status==='suspended') {
+    return json({error:'Accès administrateur requis.'},403);
+  }
   if(!context.env.RESEND_API_KEY||!context.env.RESEND_FROM_EMAIL) return json({error:'Configuration e-mail du serveur incomplète.'},500);
   const safeName=escapeHtml(name||'Trader'), safeReply=escapeHtml(reply), safeOriginal=escapeHtml(originalMessage||'—');
   const html='<div style="font-family:Arial,sans-serif;line-height:1.6;color:#172033;max-width:680px;margin:auto"><h2 style="color:#0b1f35">IAMTRADER</h2><p>Bonjour '+safeName+',</p><div style="white-space:pre-wrap">'+safeReply+'</div><hr style="margin:28px 0;border:0;border-top:1px solid #e5e7eb"><p style="font-size:12px;color:#64748b">Votre message initial :<br>'+safeOriginal+'</p></div>';
