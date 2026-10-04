@@ -24,7 +24,7 @@ import { TradeModal } from './components/journal/TradeModal';
 import { TradeDetailModal } from './components/journal/TradeDetailModal';
 import { AccountModal } from './components/accounts/AccountModal';
 import { AuthModal } from './components/auth/AuthModal';
-import { ShieldAlert, LogOut, Loader2, Activity } from 'lucide-react';
+import { ShieldAlert, LogOut, Loader2 } from 'lucide-react';
 import { syncSubscriptionStatus } from './services/payments';
 
 function MainAppContent() {
