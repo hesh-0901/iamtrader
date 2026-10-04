@@ -1,4 +1,4 @@
-import { firestoreGet, firestorePatch, firestoreDelete, verifyFirebaseIdToken, type PaymentEnv } from './firebaseAdmin';
+import { firestoreGet, firestorePatch, firestoreDelete, firestoreSet, verifyFirebaseIdToken, type PaymentEnv } from './firebaseAdmin';
 
 type AdminEnv = PaymentEnv;
 
@@ -61,7 +61,7 @@ export async function handleAdminMutation(request: Request, env: AdminEnv) {
       if (!body.log) return json({ error: 'Journal manquant.' }, 400);
       const log = { ...body.log, adminUid: identity.uid, createdAt: new Date().toISOString() };
       const id = crypto.randomUUID();
-      await firestorePatch(env, `adminLogs/${encodeURIComponent(id)}`, log, Object.keys(log));
+      await firestoreSet(env, `adminLogs/${encodeURIComponent(id)}`, log);
       return json({ success: true, id });
     }
 
