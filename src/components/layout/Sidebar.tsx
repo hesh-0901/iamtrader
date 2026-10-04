@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, BookOpen, LineChart, ShieldCheck, Wallet, CalendarDays, BrainCircuit, Sliders, ShieldAlert, ChevronLeft, X, Activity } from 'lucide-react';
+import { LayoutDashboard, BookOpen, LineChart, ShieldCheck, Wallet, CalendarDays, BrainCircuit, Sliders, ShieldAlert, ChevronLeft, X } from 'lucide-react';
 import { UserRole } from '../../types';
 
 export type NavigationPage = 'dashboard' | 'journal' | 'calendar' | 'performance' | 'psychology' | 'trader-score' | 'accounts' | 'history' | 'settings' | 'admin';
