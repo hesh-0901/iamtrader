@@ -113,6 +113,32 @@ export async function firestoreGet(env: PaymentEnv, path: string) {
   return fromFirestoreDocument(await response.json());
 }
 
+export async function firestoreQueryByField(
+  env: PaymentEnv,
+  collectionName: string,
+  fieldName: string,
+  fieldValue: string,
+  limit = 100,
+  orderByField = 'createdAt'
+) {
+  const token = await accessToken(env);
+  const response = await fetch(`${FIRESTORE_BASE}:runQuery`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      structuredQuery: {
+        from: [{ collectionId: collectionName }],
+        where: { fieldFilter: { field: { fieldPath: fieldName }, op: 'EQUAL', value: firestoreValue(fieldValue) } },
+        orderBy: [{ field: { fieldPath: orderByField }, direction: 'DESCENDING' }],
+        limit
+      }
+    })
+  });
+  if (!response.ok) throw new Error(`Firestore QUERY failed: ${response.status}`);
+  const rows = await response.json() as Array<{ document?: any }>;
+  return rows.filter(row => row.document).map(row => fromFirestoreDocument(row.document));
+}
+
 export async function firestoreCreate(env: PaymentEnv, collectionName: string, documentId: string, data: Record<string, unknown>) {
   const token = await accessToken(env);
   const response = await fetch(`${FIRESTORE_BASE}/${collectionName}?documentId=${encodeURIComponent(documentId)}`, {
