@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Activity, AlertTriangle, BellRing, Check, CheckCircle2, ChevronLeft, Eye, ChevronRight, Clock3, CreditCard, Edit3, History, Mail, RefreshCw, Search, Send, ShieldCheck, Trash2, UserCheck, UserX, Users, X, XCircle } from 'lucide-react';
+import { Activity, AlertTriangle, BellRing, Check, CheckCircle2, ChevronLeft, Eye, ChevronRight, Clock3, CreditCard, Edit3, History, Mail, ReceiptText, RefreshCw, Search, Send, ShieldCheck, Trash2, UserCheck, UserX, Users, X, XCircle } from 'lucide-react';
 import { AdminLog, PaymentRecord, SubscriptionPlan, UserProfile, UserStatus, TradingAccount, Trade } from '../types';
 import { getAdminLogs, getAllAccounts, getAllTrades, getAllUsers, subscribeAllUsers, subscribeContactMessages } from '../services/firestore';
 import { adminAddLog, adminDeleteContact, adminGetPayments, adminUpdateContact, adminUpdatePayment, adminUpdateUser } from '../services/adminConsole';
