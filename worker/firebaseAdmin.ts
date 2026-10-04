@@ -66,8 +66,28 @@ async function accessToken(env: PaymentEnv): Promise<string> {
     .replace('-----BEGIN PRIVATE KEY-----', '')
     .replace('-----END PRIVATE KEY-----', '')
     .replace(/\s/g, '');
-  const key = await crypto.subtle.importKey('pkcs8', Uint8Array.from(atob(body), c => c.charCodeAt(0)), { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['sign']);
-  const signature = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, new TextEncoder().encode(header + '.' + payload));
+  let key: CryptoKey;
+  try {
+    key = await crypto.subtle.importKey(
+      'pkcs8',
+      Uint8Array.from(atob(body), c => c.charCodeAt(0)),
+      { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' },
+      false,
+      ['sign']
+    );
+  } catch {
+    throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON contains an invalid private_key');
+  }
+  let signature: ArrayBuffer;
+  try {
+    signature = await crypto.subtle.sign(
+      'RSASSA-PKCS1-v1_5',
+      key,
+      new TextEncoder().encode(header + '.' + payload)
+    );
+  } catch {
+    throw new Error('Unable to sign Firebase service account assertion');
+  }
   const response = await fetch(GOOGLE_TOKEN_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -123,7 +143,10 @@ export async function verifyFirebaseIdToken(env: PaymentEnv, idToken: string): P
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ idToken })
   });
-  if (!response.ok) throw new Error('Invalid Firebase authentication token');
+  if (!response.ok) {
+    const details = (await response.text()).slice(0, 300);
+    throw new Error(`Firebase authentication lookup failed: HTTP ${response.status} ${details}`);
+  }
   const data = await response.json() as { users?: Array<{ localId: string; email?: string }> };
   const user = data.users?.[0];
   if (!user?.localId) throw new Error('Authenticated Firebase user not found');
