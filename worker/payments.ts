@@ -1,4 +1,5 @@
 import { firestoreCreate, firestoreGet, firestorePatch, PaymentEnv, verifyFirebaseIdToken } from './firebaseAdmin';
+import { decideSubscription, subscriptionFields, SubscriptionAction } from './subscription';
 
 const LABYRINTHE_URL = 'https://api.labyrinthe-rdc.com/api/V1/payment/mobile';
 
@@ -64,7 +65,7 @@ export async function handlePaymentRequest(request: Request, env: PaymentEnv & {
 
     try {
       const user = await verifyFirebaseIdToken(env, token);
-      const body = await request.json() as { plan?: keyof typeof PLANS; phone?: string };
+      const body = await request.json() as { plan?: keyof typeof PLANS; phone?: string; paymentMethod?: string; paymentProvider?: string; payerName?: string };
       const planKey = body.plan;
       const plan = planKey ? PLANS[planKey] : undefined;
       const phone = normalizePhone(body.phone);
@@ -78,6 +79,13 @@ export async function handlePaymentRequest(request: Request, env: PaymentEnv & {
       const profile = await firestoreGet(env, `users/${encodeURIComponent(user.uid)}`);
       if (!profile) return json({ success: false, message: 'Profil utilisateur introuvable.' }, 404);
       if (profile.status === 'suspended') return json({ success: false, message: 'Ce compte est suspendu.' }, 403);
+
+      const decision = decideSubscription(profile, planKey, new Date());
+      if ('error' in decision) return json({ success: false, message: decision.error }, 409);
+      const payerName = String(body.payerName || profile.displayName || user.email || '').trim();
+      if (!payerName) return json({ success: false, message: 'Le nom du titulaire du paiement est requis.' }, 400);
+      const paymentMethod = String(body.paymentMethod || 'mobile_money');
+      const paymentProvider = String(body.paymentProvider || '');
 
       const paymentId = randomId();
       const now = new Date().toISOString();
@@ -93,6 +101,13 @@ export async function handlePaymentRequest(request: Request, env: PaymentEnv & {
         paymentFeeRate: PAYMENT_FEE_RATE,
         currency: plan.currency,
         phone,
+        payerName,
+        paymentMethod,
+        paymentProvider,
+        subscriptionAction: decision.action,
+        currentPlanAtPurchase: decision.currentPlan,
+        activationStartAt: decision.start.toISOString(),
+        activationExpiresAt: decision.expires.toISOString(),
         status: 'initiated',
         reference: paymentId,
         createdAt: now
@@ -143,6 +158,9 @@ export async function handlePaymentRequest(request: Request, env: PaymentEnv & {
           currency: plan.currency,
           status: 'processing',
           reference: paymentId,
+          subscriptionAction: decision.action,
+          activationStartAt: decision.start.toISOString(),
+          activationExpiresAt: decision.expires.toISOString(),
           message: result.message || 'Paiement initié. Validez la demande sur votre téléphone.'
         }
       });
@@ -273,7 +291,7 @@ export async function handleSimulatedPaymentRequest(request: Request, env: Payme
 
   try {
     const user = await verifyFirebaseIdToken(env, token);
-    const body = await request.json() as { plan?: keyof typeof PLANS; phone?: string; idempotencyKey?: string };
+    const body = await request.json() as { plan?: keyof typeof PLANS; phone?: string; idempotencyKey?: string; paymentMethod?: string; paymentProvider?: string; payerName?: string };
     const planKey = body.plan;
     const plan = planKey ? PLANS[planKey] : undefined;
     const phone = normalizePhone(body.phone);
@@ -288,6 +306,13 @@ export async function handleSimulatedPaymentRequest(request: Request, env: Payme
     const profile = await firestoreGet(env, `users/${encodeURIComponent(user.uid)}`);
     if (!profile) return json({ success: false, message: 'Profil utilisateur introuvable.' }, 404);
     if (profile.status === 'suspended') return json({ success: false, message: 'Ce compte est suspendu.' }, 403);
+
+    const decision = decideSubscription(profile, planKey, new Date());
+    if ('error' in decision) return json({ success: false, message: decision.error }, 409);
+    const payerName = String(body.payerName || profile.displayName || user.email || '').trim();
+    if (!payerName) return json({ success: false, message: 'Le nom du titulaire du paiement est requis.' }, 400);
+    const paymentMethod = String(body.paymentMethod || 'mobile_money');
+    const paymentProvider = String(body.paymentProvider || '');
 
     const existing = await firestoreGet(env, `payments/${idempotencyKey}`);
     if (existing && existing.uid === user.uid) {
@@ -309,7 +334,14 @@ export async function handleSimulatedPaymentRequest(request: Request, env: Payme
       paymentFeeRate: PAYMENT_FEE_RATE,
       currency: plan.currency,
       phone,
+      payerName,
+      paymentMethod,
+      paymentProvider,
       provider: 'SIMULATOR',
+      subscriptionAction: decision.action,
+      currentPlanAtPurchase: decision.currentPlan,
+      activationStartAt: decision.start.toISOString(),
+      activationExpiresAt: decision.expires.toISOString(),
       paymentMethod: 'Mobile Money — simulation',
       mode: 'simulation',
       status: 'processing',
@@ -330,6 +362,9 @@ export async function handleSimulatedPaymentRequest(request: Request, env: Payme
         currency: plan.currency,
         status: 'processing',
         reference: idempotencyKey,
+        subscriptionAction: decision.action,
+        activationStartAt: decision.start.toISOString(),
+        activationExpiresAt: decision.expires.toISOString(),
         message: 'Paiement simulé créé. Confirmez pour déclencher le webhook de succès.'
       }
     });
@@ -369,7 +404,12 @@ export async function handleSimulatedPaymentConfirm(request: Request, env: Payme
 
     const now = new Date();
     const paidAt = now.toISOString();
-    const expires = new Date(now.getTime() + plan.durationDays * 86400000).toISOString();
+    const profile = await firestoreGet(env, `users/${encodeURIComponent(String(payment.uid))}`);
+    if (!profile) return json({ success: false, message: 'Profil utilisateur introuvable.' }, 404);
+    const decision = decideSubscription(profile, planKey, now);
+    if ('error' in decision) return json({ success: false, message: decision.error }, 409);
+    const start = decision.start.toISOString();
+    const expires = decision.expires.toISOString();
 
     await firestorePatch(env, `payments/${id}`, {
       status: 'paid',
@@ -379,24 +419,9 @@ export async function handleSimulatedPaymentConfirm(request: Request, env: Payme
       confirmationSource: 'simulated_webhook'
     }, ['status', 'paidAt', 'updatedAt', 'provider', 'confirmationSource']);
 
-    await firestorePatch(env, `users/${encodeURIComponent(String(payment.uid))}`, {
-      plan: planKey,
-      paymentDate: paidAt,
-      subscriptionStartAt: paidAt,
-      subscriptionExpiresAt: expires,
-      subscriptionStatus: 'active',
-      paymentStatus: 'paid',
-      planChangeConfirmedAt: paidAt,
-      updatedAt: paidAt
-    }, [
-      'plan',
-      'paymentDate',
-      'subscriptionStartAt',
-      'subscriptionExpiresAt',
-      'subscriptionStatus',
-      'paymentStatus',
-      'planChangeConfirmedAt',
-      'updatedAt'
+    await firestorePatch(env, `users/${encodeURIComponent(String(payment.uid))}`, subscriptionFields(profile, planKey, (payment.subscriptionAction as SubscriptionAction) || decision.action, start, expires, paidAt), [
+      'plan', 'paymentDate', 'subscriptionStartAt', 'subscriptionExpiresAt', 'subscriptionStatus', 'paymentStatus',
+      'planChangeConfirmedAt', 'pendingPlan', 'planChangeRequestedAt', 'scheduledPlan', 'scheduledStartAt', 'scheduledExpiresAt', 'updatedAt'
     ]);
 
     const finalPayment = await firestoreGet(env, `payments/${id}`);
