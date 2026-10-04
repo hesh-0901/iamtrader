@@ -81,7 +81,7 @@ export interface TradingAccount {
 export type SubscriptionPlan = 'free' | 'pro' | 'community';
 export type UserRole = 'trader' | 'admin';
 export type UserStatus = 'active' | 'suspended';
-export type SubscriptionStatus = 'pending' | 'active' | 'expired';
+export type SubscriptionStatus = 'pending' | 'active' | 'expired' | 'scheduled';
 export type PaymentStatus = 'unpaid' | 'paid' | 'refunded';
 
 export type PaymentRecordStatus = 'initiated' | 'processing' | 'paid' | 'failed' | 'refunded';
@@ -106,6 +106,14 @@ export interface PaymentRecord {
   updatedAt?: string;
   paidAt?: string;
   failureMessage?: string;
+  baseAmount?: number;
+  paymentFee?: number;
+  paymentFeeRate?: number;
+  payerName?: string;
+  paymentProvider?: string;
+  subscriptionAction?: 'initial' | 'renewal' | 'upgrade';
+  activationStartAt?: string;
+  activationExpiresAt?: string;
 }
 
 export interface AdminLog {
@@ -161,6 +169,9 @@ export interface UserProfile {
   pendingPlan?: SubscriptionPlan;
   planChangeRequestedAt?: string;
   planChangeConfirmedAt?: string;
+  scheduledPlan?: SubscriptionPlan;
+  scheduledStartAt?: string;
+  scheduledExpiresAt?: string;
   settings?: {
     defaultCurrency: CurrencyCode;
     theme: 'dark' | 'light';
