@@ -8,7 +8,7 @@ export interface PaymentHistoryItem {
   baseAmount: number;
   paymentFee: number;
   currency: string;
-  status: 'initiated' | 'processing' | 'paid' | 'failed';
+  status: 'initiated' | 'processing' | 'paid' | 'failed' | 'refunded' | 'cancelled' | 'invalidated';
   reference: string;
   invoiceNumber?: string | null;
   buyerUid?: string | null;
