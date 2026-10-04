@@ -7,6 +7,8 @@ export interface PaymentInitResult {
   plan: PaidPlan;
   planName: string;
   amount: number;
+  baseAmount?: number;
+  paymentFee?: number;
   currency: string;
   status: 'processing';
   reference: string;
