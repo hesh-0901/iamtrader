@@ -31,6 +31,7 @@ export async function handlePaymentHistory(request: Request, env: PaymentEnv) {
 
   try {
     const user = await verifyFirebaseIdToken(env, token);
+    const profile = await firestoreGet(env, `users/${encodeURIComponent(user.uid)}`);
     const payments = await firestoreQueryByField(env, 'payments', 'uid', user.uid, 100, 'uid');
 
     return json({
@@ -48,6 +49,8 @@ export async function handlePaymentHistory(request: Request, env: PaymentEnv) {
         invoiceNumber: payment.invoiceNumber || legacyInvoiceNumber(payment),
         buyerUid: payment.uid || user.uid,
         buyerEmail: payment.email || user.email || null,
+        displayName: payment.displayName || profile?.displayName || null,
+        fullName: payment.fullName || [profile?.traderProfile?.firstName, profile?.traderProfile?.lastName].filter(Boolean).join(' ') || null,
         payerName: payment.payerName || null,
         payerPhone: payment.phone || null,
         createdAt: payment.createdAt || null,
