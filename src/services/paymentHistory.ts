@@ -10,6 +10,11 @@ export interface PaymentHistoryItem {
   currency: string;
   status: 'initiated' | 'processing' | 'paid' | 'failed';
   reference: string;
+  invoiceNumber?: string | null;
+  buyerUid?: string | null;
+  buyerEmail?: string | null;
+  payerName?: string | null;
+  payerPhone?: string | null;
   createdAt?: string | null;
   paidAt?: string | null;
   subscriptionAction?: 'initial' | 'renewal' | 'upgrade';
