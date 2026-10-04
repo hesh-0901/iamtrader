@@ -3,6 +3,7 @@ import { onRequestPost as handleContactReply } from '../functions/api/contact-re
 import { handlePaymentRequest, handlePaymentCallback, handleSimulatedPaymentRequest, handleSimulatedPaymentConfirm } from './payments';
 import type { PaymentEnv } from './firebaseAdmin';
 import { handleSubscriptionStatus } from './subscriptionStatus';
+import { handlePaymentHistory } from './paymentHistory';
 
 interface Env {
   ASSETS: Fetcher;
@@ -41,6 +42,10 @@ export default {
 
     if (url.pathname === '/api/subscription/status') {
       return handleSubscriptionStatus(request, env);
+    }
+
+    if (url.pathname === '/api/payments/history') {
+      return handlePaymentHistory(request, env);
     }
 
     if (url.pathname === '/api/payments') {
