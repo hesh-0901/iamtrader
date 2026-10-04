@@ -40,6 +40,17 @@ function randomId() {
   return crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '');
 }
 
+function paymentReference(paymentId: string, createdAt: string) {
+  const year = new Date(createdAt).getUTCFullYear().toString().slice(-2);
+  return `TXN-${year}-${paymentId.slice(-8).toUpperCase()}`;
+}
+
+function invoiceNumber(paymentId: string, createdAt: string) {
+  const year = new Date(createdAt).getUTCFullYear().toString().slice(-2);
+  return `INV-${year}-${paymentId.slice(-8).toUpperCase()}`;
+}
+
+
 function simulationEnabled(env: PaymentEnv & { PAYMENT_SIMULATION_ENABLED?: string }) {
   return env.PAYMENT_SIMULATION_ENABLED === 'true';
 }
@@ -110,6 +121,8 @@ export async function handlePaymentRequest(request: Request, env: PaymentEnv & {
         activationExpiresAt: decision.expires.toISOString(),
         status: 'initiated',
         reference: paymentId,
+        transactionReference: paymentReference(paymentId, now),
+        invoiceNumber: invoiceNumber(paymentId, now),
         createdAt: now
       });
 
@@ -157,7 +170,7 @@ export async function handlePaymentRequest(request: Request, env: PaymentEnv & {
           paymentFee: paymentAmounts.fee,
           currency: plan.currency,
           status: 'processing',
-          reference: paymentId,
+          reference: paymentReference(paymentId, now),
           subscriptionAction: decision.action,
           activationStartAt: decision.start.toISOString(),
           activationExpiresAt: decision.expires.toISOString(),
@@ -332,6 +345,8 @@ export async function handleSimulatedPaymentRequest(request: Request, env: Payme
       mode: 'simulation',
       status: 'processing',
       reference: idempotencyKey,
+      transactionReference: paymentReference(idempotencyKey, now),
+      invoiceNumber: invoiceNumber(idempotencyKey, now),
       createdAt: now,
       updatedAt: now
     });
@@ -347,7 +362,7 @@ export async function handleSimulatedPaymentRequest(request: Request, env: Payme
         paymentFee: paymentAmounts.fee,
         currency: plan.currency,
         status: 'processing',
-        reference: idempotencyKey,
+        reference: paymentReference(idempotencyKey, now),
         subscriptionAction: decision.action,
         activationStartAt: decision.start.toISOString(),
         activationExpiresAt: decision.expires.toISOString(),
