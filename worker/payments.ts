@@ -63,7 +63,8 @@ function publicPayment(payment: Record<string, unknown>) {
     amount: payment.amount,
     currency: payment.currency,
     status: payment.status,
-    reference: payment.reference,
+    reference: payment.transactionReference || payment.reference,
+    invoiceNumber: payment.invoiceNumber || null,
     createdAt: payment.createdAt,
     paidAt: payment.paidAt || null
   };
