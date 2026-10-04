@@ -223,9 +223,13 @@ export async function handlePaymentCallback(request: Request, env: PaymentEnv) {
       if (!plan) return json({ received: false }, 400);
 
       const now = new Date();
-      const start = now.toISOString();
-      const expires = new Date(now.getTime() + plan.durationDays * 86400000).toISOString();
-      const paidAt = String(payload.time || start);
+      const profile = await firestoreGet(env, `users/${encodeURIComponent(String(payment.uid))}`);
+      if (!profile) return json({ received: false }, 404);
+      const decision = decideSubscription(profile, planKey, now);
+      if ('error' in decision) return json({ received: false }, 409);
+      const start = decision.start.toISOString();
+      const expires = decision.expires.toISOString();
+      const paidAt = String(payload.time || now.toISOString());
 
       await firestorePatch(env, `payments/${reference}`, {
         status: 'paid',
@@ -235,26 +239,9 @@ export async function handlePaymentCallback(request: Request, env: PaymentEnv) {
         updatedAt: start
       }, ['status', 'paidAt', 'provider', 'labyrintheOrderNumber', 'updatedAt']);
 
-      await firestorePatch(env, `users/${encodeURIComponent(String(payment.uid))}`, {
-        plan: planKey,
-        paymentDate: paidAt,
-        subscriptionStartAt: start,
-        subscriptionExpiresAt: expires,
-        subscriptionStatus: 'active',
-        paymentStatus: 'paid',
-        planChangeConfirmedAt: start,
-        updatedAt: start
-      }, [
-        'plan',
-        'paymentDate',
-        'subscriptionStartAt',
-        'subscriptionExpiresAt',
-        'subscriptionStatus',
-        'paymentStatus',
-        'planChangeConfirmedAt',
-        'pendingPlan',
-        'planChangeRequestedAt',
-        'updatedAt'
+      await firestorePatch(env, `users/${encodeURIComponent(String(payment.uid))}`, subscriptionFields(profile, planKey, (payment.subscriptionAction as SubscriptionAction) || decision.action, start, expires, paidAt), [
+        'plan', 'paymentDate', 'subscriptionStartAt', 'subscriptionExpiresAt', 'subscriptionStatus', 'paymentStatus',
+        'planChangeConfirmedAt', 'pendingPlan', 'planChangeRequestedAt', 'scheduledPlan', 'scheduledStartAt', 'scheduledExpiresAt', 'updatedAt'
       ]);
 
       return json({ received: true });
