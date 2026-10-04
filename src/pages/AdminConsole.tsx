@@ -416,7 +416,8 @@ export function AdminConsole() {
           <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm"><div className="text-[9px] font-black uppercase tracking-[.14em] text-slate-400">Performance trading</div><div className="mt-2 text-3xl font-black text-slate-950">{trades.length}</div><div className="mt-1 text-[11px] text-slate-500">trades enregistrés · {accounts.length} compte(s)</div></div>
           <div className="lg:col-span-3 rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-center gap-2"><Activity className="h-4 w-4 text-emerald-600" /><div><h2 className="text-sm font-black text-slate-900">État temps réel</h2><p className="mt-1 text-[10px] text-slate-400">Les indicateurs sont alimentés par les données déjà synchronisées en temps réel.</p></div></div><div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4"><div className="rounded-2xl bg-slate-50 p-4"><b className="text-lg text-slate-900">{payments.length}</b><span className="mt-1 block text-[9px] text-slate-500">transactions</span></div><div className="rounded-2xl bg-emerald-50 p-4"><b className="text-lg text-emerald-700">{contactMessages.filter(m => m.status === 'new').length}</b><span className="mt-1 block text-[9px] text-emerald-600">tickets nouveaux</span></div><div className="rounded-2xl bg-blue-50 p-4"><b className="text-lg text-blue-700">{stats.pending}</b><span className="mt-1 block text-[9px] text-blue-600">changements en attente</span></div><div className="rounded-2xl bg-amber-50 p-4"><b className="text-lg text-amber-700">{stats.expiring}</b><span className="mt-1 block text-[9px] text-amber-600">échéances proches</span></div></div></div>
         </section>}
-      </div>
+            </main>
+          </div>
 
       {selectedMessage && <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm" onClick={() => setSelectedMessage(null)}>
         <div className="w-full max-w-2xl overflow-hidden rounded-[28px] border border-white bg-[#f7f9fc] shadow-2xl" onClick={e => e.stopPropagation()}>
@@ -506,6 +507,7 @@ export function AdminConsole() {
           </div>
         </div>
       </div>}
+    </div>
     </div>
   );
 }
