@@ -222,12 +222,17 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
   const [hookIndex, setHookIndex] = useState(0);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [aiInput, setAiInput] = useState('');
-  const [aiMessages, setAiMessages] = useState<Array<{ role: 'assistant' | 'user'; text: string; createdAt: number }>>([
-    {
-      role: 'assistant',
-      text: 'Bonjour. Je suis VYRA, l’assistante IA d’IAMTRADER. Je peux vous aider à comprendre la plateforme et ses fonctionnalités.',
-    },
-  ]);
+  const [aiMessages, setAiMessages] = useState<Array<{ role: 'assistant' | 'user'; text: string; createdAt: number }>>(() => {
+    const savedMessages = loadVyraChat();
+    if (savedMessages?.length) return savedMessages;
+    return [
+      {
+        role: 'assistant' as const,
+        text: 'Bonjour. Je suis VYRA, l’assistante IA d’IAMTRADER. Je peux vous aider à comprendre la plateforme et ses fonctionnalités.',
+        createdAt: Date.now(),
+      },
+    ];
+  });
   const [isAiTyping, setIsAiTyping] = useState(false);
   const [isAiExpanded, setIsAiExpanded] = useState(false);
 
