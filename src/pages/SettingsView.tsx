@@ -21,6 +21,16 @@ interface SettingsViewProps {
 
 const starterLimit = 5;
 
+const PAYMENT_FEE_RATE = 0.03;
+const PAYMENT_PRICES = { pro: 9.99, community: 89.99 } as const;
+
+function getPaymentAmounts(plan: PaidPlan) {
+  const baseAmount = PAYMENT_PRICES[plan];
+  const paymentFee = Math.round(baseAmount * PAYMENT_FEE_RATE * 100) / 100;
+  const total = Math.round((baseAmount + paymentFee) * 100) / 100;
+  return { baseAmount, paymentFee, total };
+}
+
 function formatDate(value?: string) {
   if (!value) return '—';
   return new Date(value).toLocaleDateString('fr-FR', { day: '2-digit', month: 'long', year: 'numeric' });
@@ -616,7 +626,33 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                   <button type="button" onClick={() => setPaymentMode('live')} className={`rounded-lg px-3 py-2 text-[10px] font-bold transition ${paymentMode === 'live' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-500'}`}>Paiement réel</button>
                 </div>
                 {paymentMode === 'simulation' && <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[10px] leading-4 text-amber-800"><b>Mode test.</b> Aucun argent n’est débité. La transaction sera néanmoins créée dans le registre de paiements et visible par l’administration.</div>}
-                <div className="rounded-2xl bg-slate-50 p-4"><div className="flex items-center justify-between"><span className="text-xs font-bold text-slate-600">Formule</span><span className="text-base font-black text-slate-950">{paymentPlan === 'pro' ? '$9.99 / mois' : '$89.99 / 6 mois'}</span></div><div className="mt-2 text-[11px] text-slate-500">L’activation intervient uniquement après confirmation serveur de la transaction.</div></div>
+                {(() => {
+                  const amounts = getPaymentAmounts(paymentPlan);
+                  return (
+                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-xs font-bold text-slate-600">Formule</span>
+                        <span className="text-sm font-black text-slate-950">{paymentPlan === 'pro' ? 'Plus · 1 mois' : 'Community · 6 mois'}</span>
+                      </div>
+                      <div className="mt-4 space-y-2 text-[11px]">
+                        <div className="flex items-center justify-between text-slate-500">
+                          <span>Abonnement</span>
+                          <span className="font-semibold text-slate-700">${amounts.baseAmount.toFixed(2)}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-slate-500">
+                          <span>Frais de paiement (3 %)</span>
+                          <span className="font-semibold text-slate-700">+${amounts.paymentFee.toFixed(2)}</span>
+                        </div>
+                        <div className="mt-3 flex items-end justify-between border-t border-slate-200 pt-3">
+                          <span className="text-xs font-bold text-slate-700">Total à payer</span>
+                          <span className="text-xl font-black text-slate-950">${amounts.total.toFixed(2)}</span>
+                        </div>
+                      </div>
+                      <p className="mt-3 text-[10px] leading-4 text-slate-400">Les frais de paiement correspondent à 3 % du prix de l’abonnement et sont intégrés au montant envoyé au prestataire.</p>
+                      <p className="mt-1 text-[10px] text-slate-500">L’activation intervient uniquement après confirmation serveur de la transaction.</p>
+                    </div>
+                  );
+                })()}
                 <div><label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Numéro Mobile Money</label><div className="relative"><Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input value={paymentPhone} onChange={e => setPaymentPhone(e.target.value)} placeholder="0812345678" inputMode="tel" autoComplete="tel" className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-3 text-sm font-semibold text-slate-950 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100" /></div><p className="mt-1.5 text-[10px] text-slate-400">{paymentMode === 'simulation' ? 'Numéro utilisé pour reproduire les données d’une transaction Mobile Money.' : 'Numéro qui recevra la demande de validation.'}</p></div>
                 <button onClick={submitPayment} disabled={isPaymentLoading || !paymentPhone.trim()} className="w-full rounded-xl bg-indigo-600 px-4 py-3 text-xs font-bold text-white shadow-lg shadow-indigo-200 transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50">{isPaymentLoading ? 'Initialisation du paiement…' : 'Continuer vers le paiement'}</button>
               </>)}
