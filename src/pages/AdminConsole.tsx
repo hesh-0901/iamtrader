@@ -189,128 +189,88 @@ export function AdminConsole() {
           </header>
 
           {adminTab==='overview' && <section className="space-y-4">
-              <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
-                {[
-                  ['Utilisateurs actifs', users.filter(u => u.status === 'active').length, 'bg-emerald-50 text-emerald-700', '↗'],
-                  ['Revenu confirmé', '$ ' + overviewRevenue.toFixed(2), 'bg-blue-50 text-blue-700', '$'],
-                  ['Abonnements actifs', overviewPaidUsers.length, 'bg-violet-50 text-violet-700', '●'],
-                  ['Paiements à confirmer', overviewPendingPayments.length, 'bg-amber-50 text-amber-700', '!'],
-                  ['Tickets ouverts', overviewOpenTickets.length, 'bg-sky-50 text-sky-700', '?'],
-                  ['Échéances ≤ 5 jours', overviewExpiringUsers.length, 'bg-rose-50 text-rose-700', '◷']
-                ].map(([label, value, tone, icon]) => (
-                  <div key={String(label)} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[8px] font-black uppercase tracking-wider text-slate-400">{String(label)}</span>
-                      <span className={'flex h-7 w-7 items-center justify-center rounded-lg text-[11px] font-black ' + String(tone)}>{String(icon)}</span>
-                    </div>
-                    <b className="mt-3 block text-2xl font-black tracking-tight text-[#0b1f35]">{String(value)}</b>
-                  </div>
-                ))}
-              </div>
-
-              <div className="grid gap-4 xl:grid-cols-[1.55fr_.8fr]">
-                <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <h2 className="text-sm font-black text-[#0b1f35]">Revenus & activité commerciale</h2>
-                      <p className="mt-1 text-[10px] text-slate-400">Lecture rapide des paiements et de la croissance des abonnements.</p>
-                    </div>
-                    <button onClick={() => setAdminTab('payments')} className="rounded-xl bg-slate-50 px-3 py-2 text-[9px] font-bold text-slate-600 hover:bg-slate-100">Voir les paiements</button>
-                  </div>
-                  <div className="mt-5 grid gap-3 md:grid-cols-3">
-                    <div className="rounded-xl bg-slate-50 p-4">
-                      <span className="text-[8px] font-black uppercase text-slate-400">CA confirmé</span>
-                      <b className="mt-2 block text-xl font-black text-[#0b1f35]">$ {revenue.toFixed(2)}</b>
-                      <span className="mt-1 block text-[9px] text-slate-400">{overviewConfirmedPayments.length} transaction(s)</span>
-                    </div>
-                    <div className="rounded-xl bg-emerald-50 p-4">
-                      <span className="text-[8px] font-black uppercase text-emerald-700">Conversion payante</span>
-                      <b className="mt-2 block text-xl font-black text-emerald-700">{users.length ? Math.round((paidUsers.length / users.length) * 100) : 0}%</b>
-                      <span className="mt-1 block text-[9px] text-emerald-700">{paidUsers.length} utilisateurs payants</span>
-                    </div>
-                    <div className="rounded-xl bg-amber-50 p-4">
-                      <span className="text-[8px] font-black uppercase text-amber-700">En attente</span>
-                      <b className="mt-2 block text-xl font-black text-amber-800">{pendingPayments.length}</b>
-                      <span className="mt-1 block text-[9px] text-amber-700">à vérifier</span>
-                    </div>
-                  </div>
-                  <div className="mt-5 rounded-xl border border-slate-100 p-4">
-                    <div className="mb-3 flex items-center justify-between">
-                      <span className="text-[9px] font-black uppercase tracking-wider text-slate-400">Répartition des abonnements</span>
-                      <span className="text-[9px] font-bold text-slate-400">{paidUsers.length} actifs</span>
-                    </div>
-                    <div className="flex h-3 overflow-hidden rounded-full bg-slate-100">
-                      <div className="bg-blue-600" style={{ width: paidUsers.length ? ((users.filter(u => u.plan === 'pro').length / paidUsers.length) * 100) + '%' : '0%' }} />
-                      <div className="bg-violet-500" style={{ width: paidUsers.length ? ((users.filter(u => u.plan === 'community').length / paidUsers.length) * 100) + '%' : '0%' }} />
-                    </div>
-                    <div className="mt-3 flex flex-wrap gap-4 text-[9px] font-semibold text-slate-500">
-                      <span><i className="mr-1 inline-block h-2 w-2 rounded-full bg-blue-600" />Plus · {users.filter(u => u.plan === 'pro').length}</span>
-                      <span><i className="mr-1 inline-block h-2 w-2 rounded-full bg-violet-500" />Community · {users.filter(u => u.plan === 'community').length}</span>
-                    </div>
-                  </div>
-                </section>
-
-                <section className="rounded-2xl bg-[#0b1f35] p-5 text-white shadow-sm">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <div className="text-[8px] font-black uppercase tracking-[.18em] text-emerald-300">Centre opérationnel</div>
-                      <h2 className="mt-2 text-lg font-black">À traiter maintenant</h2>
-                      <p className="mt-1 text-[10px] text-slate-300">Les éléments qui nécessitent une intervention.</p>
-                    </div>
-                    <Activity className="h-5 w-5 text-emerald-300" />
-                  </div>
-                  <div className="mt-5 space-y-2">
-                    {[
-                      ['Paiements à confirmer', pendingPayments.length, 'payments', 'amber'],
-                      ['Demandes de plan', users.filter(u => u.planRequest).length, 'subscriptions', 'blue'],
-                      ['Support non traité', openTickets.length, 'support', 'violet'],
-                      ['Échéances proches', expiringUsers.length, 'subscriptions', 'rose']
-                    ].map(([label, value, target, tone]) => (
-                      <button key={String(label)} onClick={() => setAdminTab(target as typeof adminTab)} className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-left hover:bg-white/10">
-                        <span className="text-[10px] font-bold">{String(label)}</span>
-                        <span className={'rounded-full px-2 py-1 text-[9px] font-black ' + (tone === 'amber' ? 'bg-amber-100 text-amber-800' : tone === 'rose' ? 'bg-rose-100 text-rose-800' : tone === 'blue' ? 'bg-blue-100 text-blue-800' : 'bg-violet-100 text-violet-800')}>{String(value)} →</span>
-                      </button>
-                    ))}
-                  </div>
-                </section>
-              </div>
-
-              <div className="grid gap-4 lg:grid-cols-3">
-                <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+              {[
+                ['Utilisateurs actifs', users.filter(u => u.status === 'active').length, 'bg-emerald-50 text-emerald-700', '↗'],
+                ['Revenu confirmé', '$ ' + overviewRevenue.toFixed(2), 'bg-blue-50 text-blue-700', '$'],
+                ['Abonnements actifs', overviewPaidUsers.length, 'bg-violet-50 text-violet-700', '●'],
+                ['Paiements à confirmer', overviewPendingPayments.length, 'bg-amber-50 text-amber-700', '!'],
+                ['Tickets ouverts', overviewOpenTickets.length, 'bg-sky-50 text-sky-700', '?'],
+                ['Échéances ≤ 5 jours', overviewExpiringUsers.length, 'bg-rose-50 text-rose-700', '◷']
+              ].map(([label, value, tone, icon]) => (
+                <div key={String(label)} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                   <div className="flex items-center justify-between">
-                    <div><h2 className="text-sm font-black text-[#0b1f35]">Activité récente</h2><p className="mt-1 text-[10px] text-slate-400">Derniers profils créés.</p></div>
-                    <Users className="h-4 w-4 text-slate-400" />
+                    <span className="text-[8px] font-black uppercase tracking-wider text-slate-400">{String(label)}</span>
+                    <span className={'flex h-7 w-7 items-center justify-center rounded-lg text-[11px] font-black ' + String(tone)}>{String(icon)}</span>
                   </div>
-                  <div className="mt-3 divide-y divide-slate-100">
-                    {overviewRecentUsers.map(u => <div key={u.uid} className="flex items-center justify-between gap-3 py-3">
-                      <div className="min-w-0"><b className="block truncate text-[10px] text-slate-800">{u.displayName || u.email}</b><span className="text-[8px] text-slate-400">{fmt(u.createdAt)}</span></div>
-                      <span className={'shrink-0 rounded-full px-2 py-1 text-[8px] font-black ' + (u.plan === 'free' ? 'bg-slate-100 text-slate-500' : 'bg-emerald-50 text-emerald-700')}>{planLabel(u.plan)}</span>
-                    </div>)}
-                    {!recentUsers.length && <div className="py-8 text-center text-[10px] text-slate-400">Aucune activité récente.</div>}
-                  </div>
-                </section>
+                  <b className="mt-3 block text-2xl font-black tracking-tight text-[#0b1f35]">{String(value)}</b>
+                </div>
+              ))}
+            </div>
 
-                <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                  <div className="flex items-center justify-between"><div><h2 className="text-sm font-black text-[#0b1f35]">Santé du trading</h2><p className="mt-1 text-[10px] text-slate-400">Engagement réel des traders.</p></div><Activity className="h-4 w-4 text-emerald-600" /></div>
-                  <div className="mt-4 space-y-1">
-                    <div className="flex items-center justify-between py-2"><span className="text-[10px] text-slate-500">Comptes créés</span><b className="text-sm">{accounts.length}</b></div>
-                    <div className="flex items-center justify-between border-t border-slate-100 py-2"><span className="text-[10px] text-slate-500">Trades enregistrés</span><b className="text-sm">{trades.length}</b></div>
-                    <div className="flex items-center justify-between border-t border-slate-100 py-2"><span className="text-[10px] text-slate-500">Traders actifs</span><b className="text-sm text-emerald-700">{overviewActiveTraders}</b></div>
+            <div className="grid gap-4 xl:grid-cols-[1.55fr_.8fr]">
+              <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h2 className="text-sm font-black text-[#0b1f35]">Revenus & activité commerciale</h2>
+                    <p className="mt-1 text-[10px] text-slate-400">Lecture rapide des paiements et de la croissance des abonnements.</p>
                   </div>
-                  <button onClick={() => setAdminTab('analytics')} className="mt-4 w-full rounded-xl border border-slate-200 py-2.5 text-[9px] font-bold text-slate-600 hover:bg-slate-50">Explorer Analytics</button>
-                </section>
+                  <button onClick={() => setAdminTab('payments')} className="rounded-xl bg-slate-50 px-3 py-2 text-[9px] font-bold text-slate-600 hover:bg-slate-100">Voir les paiements</button>
+                </div>
+                <div className="mt-5 grid gap-3 md:grid-cols-3">
+                  <div className="rounded-xl bg-slate-50 p-4"><span className="text-[8px] font-black uppercase text-slate-400">CA confirmé</span><b className="mt-2 block text-xl font-black text-[#0b1f35]">$ {overviewRevenue.toFixed(2)}</b><span className="mt-1 block text-[9px] text-slate-400">{overviewConfirmedPayments.length} transaction(s)</span></div>
+                  <div className="rounded-xl bg-emerald-50 p-4"><span className="text-[8px] font-black uppercase text-emerald-700">Conversion payante</span><b className="mt-2 block text-xl font-black text-emerald-700">{users.length ? Math.round((overviewPaidUsers.length / users.length) * 100) : 0}%</b><span className="mt-1 block text-[9px] text-emerald-700">{overviewPaidUsers.length} utilisateurs payants</span></div>
+                  <div className="rounded-xl bg-amber-50 p-4"><span className="text-[8px] font-black uppercase text-amber-700">En attente</span><b className="mt-2 block text-xl font-black text-amber-800">{overviewPendingPayments.length}</b><span className="mt-1 block text-[9px] text-amber-700">à vérifier</span></div>
+                </div>
+                <div className="mt-5 rounded-xl border border-slate-100 p-4">
+                  <div className="mb-3 flex items-center justify-between"><span className="text-[9px] font-black uppercase tracking-wider text-slate-400">Répartition des abonnements</span><span className="text-[9px] font-bold text-slate-400">{overviewPaidUsers.length} actifs</span></div>
+                  <div className="flex h-3 overflow-hidden rounded-full bg-slate-100">
+                    <div className="bg-blue-600" style={{width: overviewPaidUsers.length ? ((users.filter(u => u.plan === 'pro').length / overviewPaidUsers.length) * 100) + '%' : '0%'}} />
+                    <div className="bg-violet-500" style={{width: overviewPaidUsers.length ? ((users.filter(u => u.plan === 'community').length / overviewPaidUsers.length) * 100) + '%' : '0%'}} />
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-4 text-[9px] font-semibold text-slate-500"><span><i className="mr-1 inline-block h-2 w-2 rounded-full bg-blue-600" />Plus · {users.filter(u => u.plan === 'pro').length}</span><span><i className="mr-1 inline-block h-2 w-2 rounded-full bg-violet-500" />Community · {users.filter(u => u.plan === 'community').length}</span></div>
+                </div>
+              </section>
 
-                <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                  <div className="flex items-center justify-between"><div><h2 className="text-sm font-black text-[#0b1f35]">État de la plateforme</h2><p className="mt-1 text-[10px] text-slate-400">Indicateurs de surveillance.</p></div><ShieldCheck className="h-4 w-4 text-emerald-600" /></div>
-                  <div className="mt-4 space-y-2">
-                    <div className="flex items-center justify-between rounded-xl bg-emerald-50 px-3 py-3"><span className="text-[9px] font-bold text-emerald-800">Services</span><b className="text-[9px] text-emerald-700">OPÉRATIONNELS</b></div>
-                    <div className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-3"><span className="text-[9px] font-bold text-slate-600">Utilisateurs actifs</span><b className="text-[10px]">{users.filter(u => u.status === 'active').length}</b></div>
-                    <div className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-3"><span className="text-[9px] font-bold text-slate-600">Expirés</span><b className="text-[10px]">{users.filter(u => remaining(u) !== null && (remaining(u) as number) < 0).length}</b></div>
-                  </div>
-                </section>
-              </div>
-            </section>;
-          })()}
+              <section className="rounded-2xl bg-[#0b1f35] p-5 text-white shadow-sm">
+                <div className="flex items-start justify-between"><div><div className="text-[8px] font-black uppercase tracking-[.18em] text-emerald-300">Centre opérationnel</div><h2 className="mt-2 text-lg font-black">À traiter maintenant</h2><p className="mt-1 text-[10px] text-slate-300">Les éléments qui nécessitent une intervention.</p></div><Activity className="h-5 w-5 text-emerald-300" /></div>
+                <div className="mt-5 space-y-2">
+                  {[
+                    ['Paiements à confirmer', overviewPendingPayments.length, 'payments', 'amber'],
+                    ['Demandes de plan', users.filter(u => u.planRequest).length, 'subscriptions', 'blue'],
+                    ['Support non traité', overviewOpenTickets.length, 'support', 'violet'],
+                    ['Échéances proches', overviewExpiringUsers.length, 'subscriptions', 'rose']
+                  ].map(([label, value, target, tone]) => (
+                    <button key={String(label)} onClick={() => setAdminTab(target as typeof adminTab)} className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-left hover:bg-white/10">
+                      <span className="text-[10px] font-bold">{String(label)}</span>
+                      <span className={'rounded-full px-2 py-1 text-[9px] font-black ' + (tone === 'amber' ? 'bg-amber-100 text-amber-800' : tone === 'rose' ? 'bg-rose-100 text-rose-800' : tone === 'blue' ? 'bg-blue-100 text-blue-800' : 'bg-violet-100 text-violet-800')}>{String(value)} →</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-3">
+              <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="flex items-center justify-between"><div><h2 className="text-sm font-black text-[#0b1f35]">Activité récente</h2><p className="mt-1 text-[10px] text-slate-400">Derniers profils créés.</p></div><Users className="h-4 w-4 text-slate-400" /></div>
+                <div className="mt-3 divide-y divide-slate-100">
+                  {overviewRecentUsers.map(u => <div key={u.uid} className="flex items-center justify-between gap-3 py-3"><div className="min-w-0"><b className="block truncate text-[10px] text-slate-800">{u.displayName || u.email}</b><span className="text-[8px] text-slate-400">{fmt(u.createdAt)}</span></div><span className={'shrink-0 rounded-full px-2 py-1 text-[8px] font-black ' + (u.plan === 'free' ? 'bg-slate-100 text-slate-500' : 'bg-emerald-50 text-emerald-700')}>{planLabel(u.plan)}</span></div>)}
+                  {!overviewRecentUsers.length && <div className="py-8 text-center text-[10px] text-slate-400">Aucune activité récente.</div>}
+                </div>
+              </section>
+
+              <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="flex items-center justify-between"><div><h2 className="text-sm font-black text-[#0b1f35]">Santé du trading</h2><p className="mt-1 text-[10px] text-slate-400">Engagement réel des traders.</p></div><Activity className="h-4 w-4 text-emerald-600" /></div>
+                <div className="mt-4 space-y-1"><div className="flex items-center justify-between py-2"><span className="text-[10px] text-slate-500">Comptes créés</span><b className="text-sm">{accounts.length}</b></div><div className="flex items-center justify-between border-t border-slate-100 py-2"><span className="text-[10px] text-slate-500">Trades enregistrés</span><b className="text-sm">{trades.length}</b></div><div className="flex items-center justify-between border-t border-slate-100 py-2"><span className="text-[10px] text-slate-500">Traders actifs</span><b className="text-sm text-emerald-700">{overviewActiveTraders}</b></div></div>
+                <button onClick={() => setAdminTab('analytics')} className="mt-4 w-full rounded-xl border border-slate-200 py-2.5 text-[9px] font-bold text-slate-600 hover:bg-slate-50">Explorer Analytics</button>
+              </section>
+
+              <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="flex items-center justify-between"><div><h2 className="text-sm font-black text-[#0b1f35]">État de la plateforme</h2><p className="mt-1 text-[10px] text-slate-400">Indicateurs de surveillance.</p></div><ShieldCheck className="h-4 w-4 text-emerald-600" /></div>
+                <div className="mt-4 space-y-2"><div className="flex items-center justify-between rounded-xl bg-emerald-50 px-3 py-3"><span className="text-[9px] font-bold text-emerald-800">Services</span><b className="text-[9px] text-emerald-700">OPÉRATIONNELS</b></div><div className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-3"><span className="text-[9px] font-bold text-slate-600">Utilisateurs actifs</span><b className="text-[10px]">{users.filter(u => u.status === 'active').length}</b></div><div className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-3"><span className="text-[9px] font-bold text-slate-600">Expirés</span><b className="text-[10px]">{users.filter(u => { const d = remaining(u); return d !== null && d < 0; }).length}</b></div></div>
+              </section>
+            </div>
+          </section>}
 
           {adminTab==='users' && <section className="space-y-4">
             <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row"><div className="relative flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Rechercher un utilisateur..." className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-9 pr-3 text-xs outline-none"/></div><select value={filter} onChange={e=>setFilter(e.target.value as Filter)} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-xs font-semibold"><option value="all">Tous les profils</option><option value="active">Actifs</option><option value="suspended">Suspendus</option><option value="pending">Demandes de plan</option><option value="expiring">Échéance ≤ 5 j</option><option value="expired">Expirés</option></select></div>
