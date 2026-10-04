@@ -1,6 +1,8 @@
 const GOOGLE_TOKEN_URL = 'https://oauth2.googleapis.com/token';
 const FIRESTORE_BASE = 'https://firestore.googleapis.com/v1/projects/iamtrader/databases/(default)/documents';
 
+const PUBLIC_FIREBASE_API_KEY = 'AIzaSyAutt6qFIP9lx4Z0yJo-GG6KpfDBXmWFPQ';
+
 export interface PaymentEnv {
   FIREBASE_SERVICE_ACCOUNT_JSON?: string;
   FIREBASE_API_KEY?: string;
@@ -163,8 +165,8 @@ export async function firestorePatch(env: PaymentEnv, path: string, data: Record
 }
 
 export async function verifyFirebaseIdToken(env: PaymentEnv, idToken: string): Promise<{ uid: string; email?: string }> {
-  if (!env.FIREBASE_API_KEY) throw new Error('FIREBASE_API_KEY is not configured');
-  const response = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${encodeURIComponent(env.FIREBASE_API_KEY)}`, {
+  const apiKey = env.FIREBASE_API_KEY || PUBLIC_FIREBASE_API_KEY;
+  const response = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${encodeURIComponent(apiKey)}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ idToken })
