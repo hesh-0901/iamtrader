@@ -306,6 +306,5 @@ export function AdminConsole() {
         </div>
       </div>}
     </div>
-    </div>
   );
 }
