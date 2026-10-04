@@ -359,11 +359,8 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
     <div className="min-h-screen bg-[#f4f8f7] text-[#081827] flex flex-col selection:bg-[#00c796]/20">
       <header className="h-[72px] border-b border-white/70 px-5 sm:px-10 flex items-center justify-between sticky top-0 z-50 bg-white/80 backdrop-blur-xl shadow-[0_8px_30px_rgba(8,24,39,0.04)]">
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#00c796]/15 to-[#00a982]/5 border border-[#00a982]/20 flex items-center justify-center text-[#00a982] shadow-[0_6px_18px_rgba(0,169,130,0.12)]">
-            <Activity className="w-4 h-4 stroke-[2.5]" />
-          </div>
-          <span className="text-base font-black tracking-[-0.02em]">IAM<span className="text-[#00a982]">TRADER</span></span>
-        </div>
+           <img src="/brand/logo-iamtrader-full.png" alt="IAMTRADER" className="w-[138px] sm:w-[152px] h-auto object-contain" />
+         </div>
 
         <nav className="hidden md:flex items-center gap-1 rounded-full border border-[#e4ece9] bg-white/70 p-1.5 text-xs font-semibold text-[#60758d] shadow-sm">
           <a href="#features" className="rounded-full px-3 py-2 hover:bg-white hover:text-[#0a192f] transition-all">Plateforme</a>
@@ -746,7 +743,7 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
       <footer className="border-t border-[#dfe8ef] px-6 sm:px-12 py-12 bg-[#071725] text-white">
         <div className="max-w-6xl mx-auto grid md:grid-cols-4 gap-8 text-xs">
           <div className="md:col-span-2">
-            <div className="flex items-center gap-2 font-black text-sm">IAM<span className="text-[#00a982]">TRADER</span></div>
+            <img src="/brand/logo-iamtrader-full-white.png" alt="IAMTRADER" className="w-[145px] h-auto object-contain object-left" />
             <p className="mt-3 max-w-md text-slate-400 leading-relaxed">Station de performance pour traders : journal, analyse, risque, psychologie et progression.</p>
           </div>
           <div>
