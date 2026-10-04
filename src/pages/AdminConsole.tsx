@@ -339,17 +339,96 @@ export function AdminConsole() {
             <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"><div className="border-b border-slate-100 p-4"><div className="flex flex-wrap gap-2">{(['all','paid','processing','failed'] as const).map(s=><button key={s} onClick={()=>setPaymentFilter(s)} className={'rounded-xl px-3 py-2 text-[9px] font-bold '+(paymentFilter===s?'bg-[#0b1f35] text-white':'bg-slate-100 text-slate-500')}>{s==='all'?'Tous':s==='paid'?'Confirmés':s==='processing'?'En cours':'Échoués'}</button>)}</div></div><div className="divide-y divide-slate-100">{payments.filter(p=>paymentFilter==='all'||p.status===paymentFilter).map(p=><div key={p.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"><div><b className="block text-xs text-slate-800">{p.displayName||p.email}</b><span className="text-[9px] text-slate-400">{p.email} · {p.planName} · {p.reference}</span></div><div className="flex flex-wrap items-center gap-2 sm:gap-4"><div className="text-right"><b className="block text-sm">{Number(p.amount).toFixed(2)} {p.currency}</b><span className="text-[9px] text-slate-400">{new Date(p.createdAt||'').toLocaleString('fr-FR')}</span></div><span className={'rounded-full px-2.5 py-1 text-[8px] font-black '+(p.status==='paid'?'bg-emerald-50 text-emerald-700':p.status==='processing'||p.status==='initiated'?'bg-amber-50 text-amber-700':'bg-rose-50 text-rose-700')}>{p.status==='paid'?'PAYÉ':p.status==='processing'||p.status==='initiated'?'EN ATTENTE':p.status==='cancelled'?'ANNULÉ':p.status==='invalidated'?'INVALIDÉ':'ÉCHEC'}</span><button onClick={()=>setSelectedPayment(p)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-2.5 py-2 text-[8px] font-bold text-slate-600 hover:bg-slate-50"><Eye className="h-3 w-3"/>Détails</button>{(p.status==='processing'||p.status==='initiated')&&<><button disabled={paymentActionBusy} onClick={async()=>{setPaymentActionBusy(true);try{await adminUpdatePayment(p.id,{status:'paid',paidAt:new Date().toISOString(),confirmedAt:new Date().toISOString()});await refreshPayments();showToast('Paiement validé.');}catch(e:any){showToast(e?.message||'Validation impossible.');}finally{setPaymentActionBusy(false);}}} className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 px-2.5 py-2 text-[8px] font-black text-white disabled:opacity-50"><Check className="h-3 w-3"/>Valider</button><button disabled={paymentActionBusy} onClick={async()=>{setPaymentActionBusy(true);try{await adminUpdatePayment(p.id,{status:'invalidated',invalidatedAt:new Date().toISOString()});await refreshPayments();showToast('Paiement invalidé.');}catch(e:any){showToast(e?.message||'Invalidation impossible.');}finally{setPaymentActionBusy(false);}}} className="inline-flex items-center gap-1 rounded-lg border border-rose-200 bg-rose-50 px-2.5 py-2 text-[8px] font-black text-rose-700 disabled:opacity-50"><XCircle className="h-3 w-3"/>Invalider</button><button disabled={paymentActionBusy} onClick={async()=>{setPaymentActionBusy(true);try{await adminUpdatePayment(p.id,{status:'cancelled',cancelledAt:new Date().toISOString()});await refreshPayments();showToast('Paiement annulé.');}catch(e:any){showToast(e?.message||'Annulation impossible.');}finally{setPaymentActionBusy(false);}}} className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2.5 py-2 text-[8px] font-black text-slate-600 hover:bg-slate-50 disabled:opacity-50">Annuler</button></>}</div></div>)}</div></section>
           </section>}
 
-          {selectedPayment && <div className="fixed inset-0 z-[80] flex items-center justify-center bg-slate-950/45 p-4" onClick={()=>setSelectedPayment(null)}>
-            <div className="w-full max-w-xl rounded-2xl bg-white p-6 shadow-2xl" onClick={e=>e.stopPropagation()}>
-              <div className="flex items-start justify-between gap-4"><div><span className="text-[8px] font-black uppercase tracking-wider text-slate-400">Détails du paiement</span><h2 className="mt-1 text-lg font-black text-[#0b1f35]">{selectedPayment.reference || selectedPayment.id}</h2></div><button onClick={()=>setSelectedPayment(null)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100"><X className="h-4 w-4"/></button></div>
-              <div className="mt-5 grid grid-cols-2 gap-3">
-                {[
-                  ['Client', selectedPayment.displayName || '—'],['Email', selectedPayment.email || '—'],['Plan', selectedPayment.planName || '—'],['Montant', Number(selectedPayment.amount || 0).toFixed(2) + ' ' + (selectedPayment.currency || '')],['Statut', selectedPayment.status || '—'],['Créé le', selectedPayment.createdAt ? new Date(selectedPayment.createdAt).toLocaleString('fr-FR') : '—'],['Payé le', selectedPayment.paidAt ? new Date(selectedPayment.paidAt).toLocaleString('fr-FR') : '—'],['ID', selectedPayment.id || '—']
-                ].map(([label,value])=><div key={String(label)} className="rounded-xl bg-slate-50 p-3"><span className="block text-[8px] font-black uppercase text-slate-400">{String(label)}</span><b className="mt-1 block break-all text-[10px] text-slate-800">{String(value)}</b></div>)}
+          {selectedPayment && (() => {
+            const p = selectedPayment as PaymentRecord & Record<string, any>;
+            const invoice = p.invoiceNumber || ('INV-' + String(p.id || '').slice(-8).toUpperCase());
+            const fullName = p.fullName || p.payerName || p.displayName || '—';
+            const actionLabel = p.subscriptionAction === 'renewal' ? 'Renouvellement' : p.subscriptionAction === 'upgrade' ? 'Upgrade programmé' : 'Nouvelle souscription';
+            const statusLabel = p.status === 'paid' ? 'Paiement confirmé' : p.status === 'processing' || p.status === 'initiated' ? 'En traitement' : p.status === 'cancelled' ? 'Paiement annulé' : p.status === 'invalidated' ? 'Paiement invalidé' : 'Paiement échoué';
+            const statusTone = p.status === 'paid' ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : p.status === 'processing' || p.status === 'initiated' ? 'bg-amber-50 text-amber-700 border-amber-100' : p.status === 'cancelled' ? 'bg-slate-100 text-slate-600 border-slate-200' : 'bg-rose-50 text-rose-700 border-rose-100';
+            const dateTime = (value?: string) => value ? new Date(value).toLocaleString('fr-FR', { day:'2-digit', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit', second:'2-digit', hourCycle:'h23' }) : '—';
+            const dateOnly = (value?: string) => value ? new Date(value).toLocaleDateString('fr-FR', { day:'2-digit', month:'short', year:'numeric' }) : '—';
+            const money = (value: any) => new Intl.NumberFormat('fr-FR', { style:'currency', currency:p.currency || 'USD', minimumFractionDigits:2 }).format(Number(value || 0));
+            const baseAmount = p.baseAmount ?? Number(p.amount || 0) - Number(p.paymentFee || 0);
+            return <div className="fixed inset-0 z-[80] flex items-center justify-center bg-[#071a2d]/55 p-4 backdrop-blur-[2px]" onClick={()=>setSelectedPayment(null)}>
+              <div className="relative max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-[22px] border border-slate-200 bg-white shadow-[0_28px_80px_rgba(7,26,45,.22)]" onClick={e=>e.stopPropagation()}>
+                <div className="h-1.5 w-full bg-[#00a982]" />
+                <div className="p-6 sm:p-8">
+                  <div className="flex items-start justify-between gap-5 border-b border-slate-200 pb-6">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#071a2d] text-white"><ReceiptText className="h-5 w-5"/></div>
+                        <div><div className="text-[8px] font-black uppercase tracking-[.16em] text-slate-400">Détails de la transaction</div><h2 className="mt-1 truncate text-xl font-black tracking-tight text-[#071a2d]">{invoice}</h2></div>
+                      </div>
+                      <div className="mt-4 flex flex-wrap items-center gap-2">
+                        <span className={'rounded-full border px-2.5 py-1 text-[9px] font-black ' + statusTone}>{statusLabel}</span>
+                        <span className="rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[9px] font-bold text-slate-500">Réf. {p.reference || p.id}</span>
+                      </div>
+                    </div>
+                    <button onClick={()=>setSelectedPayment(null)} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-400 hover:bg-slate-50 hover:text-slate-700"><X className="h-4 w-4"/></button>
+                  </div>
+
+                  <div className="mt-6 grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4"><span className="text-[8px] font-black uppercase tracking-wider text-slate-400">Référence</span><b className="mt-1.5 block break-all text-[10px] font-black text-[#071a2d]">{p.reference || p.id || '—'}</b></div>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4"><span className="text-[8px] font-black uppercase tracking-wider text-slate-400">Facture</span><b className="mt-1.5 block text-[10px] font-black text-[#071a2d]">{invoice}</b></div>
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4"><span className="text-[8px] font-black uppercase tracking-wider text-slate-400">Émise le</span><b className="mt-1.5 block text-[10px] font-black text-[#071a2d]">{dateTime(p.createdAt)}</b></div>
+                  </div>
+
+                  <div className="mt-6 grid gap-6 md:grid-cols-[1.15fr_.85fr]">
+                    <section>
+                      <div className="mb-3 text-[8px] font-black uppercase tracking-[.16em] text-slate-400">Facturé à</div>
+                      <div className="rounded-2xl border border-slate-200 bg-white p-5">
+                        <div className="text-lg font-black tracking-tight text-[#071a2d]">{fullName}</div>
+                        <div className="mt-3 space-y-2 text-[10px] text-slate-500">
+                          <div><b className="text-slate-700">Nom affiché :</b> {p.displayName || '—'}</div>
+                          <div><b className="text-slate-700">Email :</b> {p.email || '—'}</div>
+                          <div><b className="text-slate-700">Mobile Money :</b> {p.phone || p.payerPhone || '—'}</div>
+                        </div>
+                      </div>
+                    </section>
+                    <section>
+                      <div className="mb-3 text-[8px] font-black uppercase tracking-[.16em] text-slate-400">Transaction</div>
+                      <div className="rounded-2xl border border-slate-200 bg-white p-5">
+                        <div className="space-y-2 text-[10px] text-slate-500">
+                          <div><b className="text-slate-700">Type :</b> {actionLabel}</div>
+                          <div><b className="text-slate-700">Paiement :</b> {dateTime(p.paidAt || p.createdAt)}</div>
+                          <div><b className="text-slate-700">Méthode :</b> {p.paymentMethod || 'Mobile Money'}</div>
+                          <div><b className="text-slate-700">Fournisseur :</b> {p.paymentProvider || p.provider || '—'}</div>
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+
+                  <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200">
+                    <div className="border-b border-slate-200 bg-slate-50 px-5 py-3 text-[8px] font-black uppercase tracking-[.14em] text-slate-400">Abonnement</div>
+                    <div className="grid gap-4 p-5 sm:grid-cols-[1.4fr_1fr_auto] sm:items-center">
+                      <div><b className="text-sm font-black text-[#071a2d]">Abonnement {p.planName || (p.plan === 'pro' ? 'Plus' : 'Community')}</b><div className="mt-1 text-[10px] text-slate-400">Accès aux fonctionnalités IAMTRADER</div></div>
+                      <div className="text-[10px] text-slate-500"><div><b className="text-slate-700">Activation :</b> {dateOnly(p.activationStartAt)} → {dateOnly(p.activationExpiresAt)}</div></div>
+                      <div className="text-right text-base font-black text-[#071a2d]">{money(p.baseAmount ?? p.amount)}</div>
+                    </div>
+                  </div>
+
+                  <div className="mt-5 ml-auto w-full max-w-sm space-y-2 text-[10px]">
+                    <div className="flex justify-between text-slate-500"><span>Sous-total</span><b className="text-slate-700">{money(baseAmount)}</b></div>
+                    <div className="flex justify-between text-slate-500"><span>Frais de paiement {p.paymentFeeRate ? '· ' + (Number(p.paymentFeeRate) * 100).toFixed(0) + ' %' : '· 3 %'}</span><b className="text-slate-700">+{money(p.paymentFee || 0)}</b></div>
+                    <div className="mt-2 flex justify-between border-t-2 border-[#071a2d] pt-3 text-base font-black text-[#071a2d]"><span>Total payé</span><span className="text-[#00a982]">{money(p.amount)}</span></div>
+                  </div>
+
+                  {p.status === 'paid' && <div className="mt-6 flex items-center justify-between gap-4 rounded-2xl border border-[#b7eadf] bg-gradient-to-r from-[#f0fbf8] to-white p-4"><div><div className="text-[9px] font-black uppercase tracking-[.14em] text-[#007f60]">Transaction réglée</div><div className="mt-1 text-[9px] text-slate-500">Paiement enregistré le {dateTime(p.paidAt || p.createdAt)}.</div></div><span className="rounded-full bg-[#071a2d] px-3 py-1.5 text-[8px] font-black tracking-[.1em] text-white">PAYÉ</span></div>}
+
+                  <div className="mt-6 flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0 text-[9px] text-slate-400"><b className="text-slate-600">ID transaction :</b> <span className="break-all">{p.id || '—'}</span></div>
+                    {(p.status==='processing'||p.status==='initiated') && <div className="flex flex-wrap justify-end gap-2">
+                      <button disabled={paymentActionBusy} onClick={async()=>{setPaymentActionBusy(true);try{await adminUpdatePayment(p.id,{status:'paid',paidAt:new Date().toISOString(),confirmedAt:new Date().toISOString()});await refreshPayments();setSelectedPayment(null);showToast('Paiement validé.');}catch(e:any){showToast(e?.message||'Action impossible.');}finally{setPaymentActionBusy(false);}}} className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2.5 text-[9px] font-black text-white disabled:opacity-50"><Check className="h-3.5 w-3.5"/>Valider</button>
+                      <button disabled={paymentActionBusy} onClick={async()=>{setPaymentActionBusy(true);try{await adminUpdatePayment(p.id,{status:'invalidated',invalidatedAt:new Date().toISOString()});await refreshPayments();setSelectedPayment(null);showToast('Paiement invalidé.');}catch(e:any){showToast(e?.message||'Action impossible.');}finally{setPaymentActionBusy(false);}}} className="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-[9px] font-black text-rose-700 disabled:opacity-50"><XCircle className="h-3.5 w-3.5"/>Invalider</button>
+                      <button disabled={paymentActionBusy} onClick={async()=>{setPaymentActionBusy(true);try{await adminUpdatePayment(p.id,{status:'cancelled',cancelledAt:new Date().toISOString()});await refreshPayments();setSelectedPayment(null);showToast('Paiement annulé.');}catch(e:any){showToast(e?.message||'Action impossible.');}finally{setPaymentActionBusy(false);}}} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[9px] font-black text-slate-600 disabled:opacity-50">Annuler</button>
+                    </div>}
+                  </div>
+                </div>
               </div>
-              {(selectedPayment.status==='processing'||selectedPayment.status==='initiated') && <div className="mt-5 flex flex-wrap justify-end gap-2"><button onClick={async()=>{setPaymentActionBusy(true);try{await adminUpdatePayment(selectedPayment.id,{status:'paid',paidAt:new Date().toISOString(),confirmedAt:new Date().toISOString()});await refreshPayments();setSelectedPayment(null);showToast('Paiement validé.');}catch(e:any){showToast(e?.message||'Action impossible.');}finally{setPaymentActionBusy(false);}}} className="rounded-xl bg-emerald-600 px-4 py-2.5 text-[9px] font-black text-white">Valider</button><button onClick={async()=>{setPaymentActionBusy(true);try{await adminUpdatePayment(selectedPayment.id,{status:'invalidated',invalidatedAt:new Date().toISOString()});await refreshPayments();setSelectedPayment(null);showToast('Paiement invalidé.');}catch(e:any){showToast(e?.message||'Action impossible.');}finally{setPaymentActionBusy(false);}}} className="rounded-xl bg-rose-50 px-4 py-2.5 text-[9px] font-black text-rose-700">Invalider</button><button onClick={async()=>{setPaymentActionBusy(true);try{await adminUpdatePayment(selectedPayment.id,{status:'cancelled',cancelledAt:new Date().toISOString()});await refreshPayments();setSelectedPayment(null);showToast('Paiement annulé.');}catch(e:any){showToast(e?.message||'Action impossible.');}finally{setPaymentActionBusy(false);}}} className="rounded-xl border border-slate-200 px-4 py-2.5 text-[9px] font-black text-slate-600">Annuler</button></div>}
-            </div>
-          </div>}
+            </div>;
+          })()}
+
           {adminTab==='support' && <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
             <div className="grid min-h-[620px] lg:grid-cols-[330px_1fr]">
               <aside className="border-b border-slate-100 bg-slate-50/70 lg:border-b-0 lg:border-r">
