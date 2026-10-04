@@ -256,6 +256,14 @@ function MainAppContent() {
     'admin': 'Console Administration'
   };
 
+  if (currentPage === 'admin' && userProfile?.role === 'admin') {
+    return (
+      <div className="min-h-screen bg-[#f5f8fb] text-slate-900">
+        <AdminConsole />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex selection:bg-blue-600/25 selection:text-blue-300">
       {/* Sidebar Navigation */}
