@@ -2,6 +2,7 @@ import { onRequest as handleAiChat } from '../functions/api/ai-chat';
 import { onRequestPost as handleContactReply } from '../functions/api/contact-reply';
 import { handlePaymentRequest, handlePaymentCallback, handleSimulatedPaymentRequest, handleSimulatedPaymentConfirm } from './payments';
 import type { PaymentEnv } from './firebaseAdmin';
+import { handleSubscriptionStatus } from './subscriptionStatus';
 
 interface Env {
   ASSETS: Fetcher;
@@ -36,6 +37,10 @@ export default {
 
     if (url.pathname === '/api/payments/simulate/confirm') {
       return handleSimulatedPaymentConfirm(request, env);
+    }
+
+    if (url.pathname === '/api/subscription/status') {
+      return handleSubscriptionStatus(request, env);
     }
 
     if (url.pathname === '/api/payments') {
