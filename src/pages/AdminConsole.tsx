@@ -297,7 +297,7 @@ export function AdminConsole() {
           </div>
         </header>
 
-        <section className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm">
+        {(adminTab === 'overview' || adminTab === 'payments') && <section className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm">
           <div className="border-b border-slate-100 p-4 sm:p-5">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-center gap-3">
@@ -329,11 +329,11 @@ export function AdminConsole() {
               </div>
             ))}
           </div>
-        </section>
+        </section>}
 
         {error && <div className="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-xs text-rose-700">{error}</div>}
 
-        {pendingPlanUsers.length > 0 && (
+        {(adminTab === 'overview' || adminTab === 'users' || adminTab === 'subscriptions') && pendingPlanUsers.length > 0 && (
           <button
             onClick={() => setFilter('pending')}
             className="group flex w-full items-center justify-between gap-4 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-left shadow-sm transition hover:border-blue-300 hover:bg-blue-100"
@@ -357,8 +357,9 @@ export function AdminConsole() {
           </button>
         )}
 
-        {!metricsReady && <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-[11px] text-amber-800"><b>Statistiques de trading indisponibles.</b> Publiez les nouvelles règles Firestore afin que l’administrateur puisse lire les comptes et les trades.</div>}
+        {(adminTab === 'users' || adminTab === 'subscriptions' || adminTab === 'analytics') && !metricsReady && <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-[11px] text-amber-800"><b>Statistiques de trading indisponibles.</b> Publiez les nouvelles règles Firestore afin que l’administrateur puisse lire les comptes et les trades.</div>}
 
+        {(adminTab === 'overview' || adminTab === 'users' || adminTab === 'subscriptions') && <>
         <section className="grid lg:grid-cols-[1fr_360px] gap-4">
           <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
@@ -387,8 +388,9 @@ export function AdminConsole() {
               return <tr key={u.uid} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/70"><td className="px-3 py-4 text-center"><span className="inline-flex h-6 min-w-6 items-center justify-center rounded-lg bg-slate-100 px-1.5 text-[9px] font-black text-slate-500">{(page - 1) * perPage + index + 1}</span></td><td className="px-5 py-4"><button onClick={() => openManage(u)} className="text-left"><b className="text-xs text-slate-800 hover:text-blue-700">{u.displayName || 'Sans nom'}</b><span className="mt-1 block text-[10px] text-slate-400">{u.email}</span></button></td><td className="px-3 py-4"><span className={'inline-flex rounded-lg border px-2.5 py-1 text-[10px] font-bold ' + planClass(u.plan)}>{planLabel(u.plan)}</span>{u.pendingPlan && <span className="mt-1 block text-[9px] text-blue-600">→ {planLabel(u.pendingPlan)}</span>}</td><td className="px-3 py-4"><b className={metrics.pnlPercent !== null ? (metrics.pnlPercent >= 0 ? 'text-[10px] text-emerald-600' : 'text-[10px] text-rose-600') : 'text-[10px] text-slate-400'}>{metrics.pnlPercent !== null ? (metrics.pnlPercent >= 0 ? '+' : '') + metrics.pnlPercent.toFixed(2) + '%' : '—'}</b><span className="mt-1 block text-[9px] text-slate-400">{metrics.totalPnl >= 0 ? '+' : ''}{metrics.totalPnl.toFixed(2)}</span></td><td className="px-3 py-4 text-[10px] font-semibold text-slate-700">{metricsReady && metrics.initialCapital > 0 ? metrics.initialCapital.toLocaleString('fr-FR', { maximumFractionDigits: 2 }) + ' ' + metrics.currency : '—'}</td><td className="px-3 py-4"><span className="inline-flex min-w-8 justify-center rounded-lg bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-700">{metricsReady ? metrics.tradeCount : '—'}</span></td><td className="px-3 py-4"><b className="text-[10px] text-slate-700">{u.paymentStatus === 'paid' ? 'Confirmé' : u.paymentStatus === 'refunded' ? 'Remboursé' : 'Non payé'}</b><span className="mt-1 block text-[9px] text-slate-400">{fmt(u.paymentDate)}</span></td><td className={'px-3 py-4 text-[10px] font-semibold ' + (expired ? 'text-rose-600' : soon ? 'text-amber-600' : 'text-slate-600')}>{d === null ? 'Aucune' : fmt(u.subscriptionExpiresAt)}</td><td className="px-3 py-4 text-[10px] font-bold">{d === null ? <span className="text-slate-400">Illimité</span> : <span className={expired ? 'text-rose-600' : soon ? 'text-amber-600' : 'text-emerald-600'}>{expired ? '-' + Math.abs(d) : d} j</span>}</td><td className="px-3 py-4"><span className={'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[9px] font-bold ' + (u.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700')}><span className={'h-1.5 w-1.5 rounded-full ' + (u.status === 'active' ? 'bg-emerald-500' : 'bg-rose-500')} />{u.status === 'active' ? 'Actif' : 'Suspendu'}</span></td><td className="px-5 py-4 text-right"><button onClick={() => openManage(u)} className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-3 py-2 text-[10px] font-bold text-white hover:bg-slate-800"><Edit3 className="w-3.5 h-3.5" />Gérer</button></td></tr>;
             })}</tbody></table></div><div className="flex items-center justify-between border-t border-slate-100 px-5 py-3"><span className="text-[10px] text-slate-400">Page {page} / {totalPages}</span><div className="flex gap-1"><button disabled={page === 1} onClick={() => setPage(page - 1)} className="rounded-lg border border-slate-200 p-2 disabled:opacity-30"><ChevronLeft className="w-3.5 h-3.5" /></button><button disabled={page === totalPages} onClick={() => setPage(page + 1)} className="rounded-lg border border-slate-200 p-2 disabled:opacity-30"><ChevronRight className="w-3.5 h-3.5" /></button></div></div></>}
         </section>
+        </>}
 
-        <section className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm">
+        {(adminTab === 'overview' || adminTab === 'support') && <section className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm">
           <div className="border-b border-slate-100 p-4 sm:p-5">
             <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex items-center gap-3">
@@ -409,12 +411,19 @@ export function AdminConsole() {
               </button>
             ))}
           </div>
-        </section>
+        </section>}
 
-        <section className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm">
+        {adminTab === 'audit' && <section className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm">
           <button onClick={() => setHistoryOpen(!historyOpen)} className="flex w-full items-center justify-between p-4 text-left"><span className="flex items-center gap-2"><History className="w-4 h-4 text-blue-600" /><span><b className="block text-sm text-slate-900">Historique administratif</b><small className="block mt-0.5 text-[10px] text-slate-400">Traçabilité des opérations.</small></span></span><span className="text-xs font-bold text-slate-400">{historyOpen ? 'Réduire' : 'Afficher'}</span></button>
           {historyOpen && <div className="divide-y divide-slate-100 border-t border-slate-100">{logs.length ? logs.slice(0, 12).map(l => <div key={l.id} className="flex gap-3 px-5 py-3"><div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600"><History className="w-3.5 h-3.5" /></div><div><b className="text-[11px] text-slate-700">{l.action} · {l.userName}</b><p className="mt-0.5 text-[10px] text-slate-400">{l.details}</p></div></div>) : <div className="p-6 text-xs text-slate-400">Aucune action.</div>}</div>}
-        </section>
+        </section>}
+
+        {adminTab === 'analytics' && <section className="grid gap-4 lg:grid-cols-3">
+          <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm"><div className="text-[9px] font-black uppercase tracking-[.14em] text-slate-400">Croissance</div><div className="mt-2 text-3xl font-black text-slate-950">{newUsers.length}</div><div className="mt-1 text-[11px] text-slate-500">nouveaux utilisateurs sur 7 jours</div></div>
+          <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm"><div className="text-[9px] font-black uppercase tracking-[.14em] text-slate-400">Conversion paiement</div><div className="mt-2 text-3xl font-black text-slate-950">{stats.total ? Math.round((stats.paid / stats.total) * 100) : 0}%</div><div className="mt-1 text-[11px] text-slate-500">{stats.paid} utilisateur(s) avec paiement confirmé</div></div>
+          <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm"><div className="text-[9px] font-black uppercase tracking-[.14em] text-slate-400">Performance trading</div><div className="mt-2 text-3xl font-black text-slate-950">{trades.length}</div><div className="mt-1 text-[11px] text-slate-500">trades enregistrés · {accounts.length} compte(s)</div></div>
+          <div className="lg:col-span-3 rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-center gap-2"><Activity className="h-4 w-4 text-emerald-600" /><div><h2 className="text-sm font-black text-slate-900">État temps réel</h2><p className="mt-1 text-[10px] text-slate-400">Les indicateurs sont alimentés par les données déjà synchronisées en temps réel.</p></div></div><div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4"><div className="rounded-2xl bg-slate-50 p-4"><b className="text-lg text-slate-900">{payments.length}</b><span className="mt-1 block text-[9px] text-slate-500">transactions</span></div><div className="rounded-2xl bg-emerald-50 p-4"><b className="text-lg text-emerald-700">{contactMessages.filter(m => m.status === 'new').length}</b><span className="mt-1 block text-[9px] text-emerald-600">tickets nouveaux</span></div><div className="rounded-2xl bg-blue-50 p-4"><b className="text-lg text-blue-700">{stats.pending}</b><span className="mt-1 block text-[9px] text-blue-600">changements en attente</span></div><div className="rounded-2xl bg-amber-50 p-4"><b className="text-lg text-amber-700">{stats.expiring}</b><span className="mt-1 block text-[9px] text-amber-600">échéances proches</span></div></div></div>
+        </section>}
       </div>
 
       {selectedMessage && <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm" onClick={() => setSelectedMessage(null)}>
