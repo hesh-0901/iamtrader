@@ -27,6 +27,7 @@ export async function handleAdminMutation(request: Request, env: AdminEnv) {
       action?: string;
       uid?: string;
       messageId?: string;
+      paymentId?: string;
       data?: Record<string, unknown>;
       log?: Record<string, unknown>;
     } | null;
@@ -36,6 +37,24 @@ export async function handleAdminMutation(request: Request, env: AdminEnv) {
     if (body.action === 'get-payments') {
       const payments = await firestoreQueryCollection(env, 'payments', 250, 'createdAt');
       return json({ success: true, payments });
+    }
+
+    if (body.action === 'update-payment') {
+      if (!body.paymentId || !body.data) return json({ error: 'Paiement ou données manquants.' }, 400);
+      const allowed = ['status','paidAt','confirmedAt','invalidatedAt','cancelledAt'];
+      const data = Object.fromEntries(Object.entries(body.data).filter(([key, value]) => allowed.includes(key) && value !== undefined));
+      if (!Object.keys(data).length) return json({ error: 'Aucune modification autorisée.' }, 400);
+      data.updatedAt = new Date().toISOString();
+      data.updatedBy = identity.uid;
+      await firestorePatch(env, `payments/${encodeURIComponent(body.paymentId)}`, data, Object.keys(data));
+      const logId = crypto.randomUUID();
+      await firestoreSet(env, `adminLogs/${encodeURIComponent(logId)}`, {
+        action: 'payment-' + String(data.status || 'update'),
+        paymentId: body.paymentId,
+        adminUid: identity.uid,
+        createdAt: new Date().toISOString()
+      });
+      return json({ success: true });
     }
 
     if (body.action === 'update-user') {
