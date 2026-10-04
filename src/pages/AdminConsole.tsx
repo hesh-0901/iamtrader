@@ -536,12 +536,11 @@ export function AdminConsole() {
 
                       <div className="min-h-0 flex-1 overflow-y-auto">
                         <div className="mx-auto w-full max-w-5xl px-7 py-8 sm:px-12">
-                          <div className="border-b border-slate-100 pb-6">
-                            <div className="grid gap-x-10 gap-y-3.5 text-[11px] sm:grid-cols-2">
-                              <div className="flex gap-3"><span className="w-24 shrink-0 font-medium text-slate-500">De</span><span className="font-semibold text-slate-700">{selectedMessage.name} &lt;{selectedMessage.email}&gt;</span></div>
-                              <div className="flex gap-3"><span className="w-20 shrink-0 text-slate-400">À</span><span className="font-semibold text-slate-700">Support IAMTRADER</span></div>
-                              <div className="flex gap-3"><span className="w-20 shrink-0 text-slate-400">Date</span><span className="text-slate-600">{selectedMessage.createdAt ? new Date(selectedMessage.createdAt).toLocaleString('fr-FR', { dateStyle:'full', timeStyle:'medium' }) : '—'}</span></div>
-                              <div className="flex gap-3"><span className="w-20 shrink-0 text-slate-400">Message ID</span><span className="break-all font-mono text-[9px] text-slate-500">{selectedMessage.id}</span></div>
+                          <div className="border-b border-slate-100 pb-5">
+                            <div className="flex flex-wrap items-center gap-x-7 gap-y-3 text-[11px]">
+                              <div className="min-w-0"><span className="mr-2 text-[9px] font-black uppercase tracking-wider text-slate-400">De</span><span className="font-semibold text-slate-700">{selectedMessage.name}</span><span className="ml-1 text-slate-400">&lt;{selectedMessage.email}&gt;</span></div>
+                              <div><span className="mr-2 text-[9px] font-black uppercase tracking-wider text-slate-400">À</span><span className="font-semibold text-slate-700">Support IAMTRADER</span></div>
+                              <div className="ml-auto min-w-0"><span className="mr-2 text-[9px] font-black uppercase tracking-wider text-slate-400">ID</span><span className="font-mono text-[9px] text-slate-500">{selectedMessage.id}</span></div>
                             </div>
                           </div>
 
@@ -549,20 +548,22 @@ export function AdminConsole() {
                             <div className="whitespace-pre-wrap break-words text-[15px] leading-8 text-slate-800 selection:bg-blue-100">{selectedMessage.message}</div>
                           </article>
 
-                          <div className="border-t border-slate-200 py-6">
+                          <div className="border-t border-slate-200 py-5">
                             <div className="mb-4 flex items-center justify-between">
-                              <span className="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Informations du dossier</span>
-                              <span className={'text-[9px] font-bold ' + (selectedMessage.status === 'new' ? 'text-blue-600' : selectedMessage.status === 'in_progress' ? 'text-amber-600' : 'text-emerald-600')}>{selectedMessage.status === 'new' ? 'Non lu' : selectedMessage.status === 'in_progress' ? 'En cours' : 'Traité'}</span>
+                              <div>
+                                <span className="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Dossier</span>
+                                <span className="ml-2 text-[9px] text-slate-400">Informations de traitement</span>
+                              </div>
+                              <span className={'rounded-full px-2.5 py-1 text-[9px] font-bold ' + (selectedMessage.status === 'new' ? 'bg-blue-50 text-blue-700' : selectedMessage.status === 'in_progress' ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700')}>{selectedMessage.status === 'new' ? 'Non lu' : selectedMessage.status === 'in_progress' ? 'En cours' : 'Traité'}</span>
                             </div>
-                            <div className="grid gap-x-10 gap-y-2.5 text-[11px] sm:grid-cols-2 lg:grid-cols-3">
-                              <div><span className="text-slate-400">Créé</span><b className="ml-2 font-semibold text-slate-600">{selectedMessage.createdAt || '—'}</b></div>
-                              <div><span className="text-slate-400">Mis à jour</span><b className="ml-2 font-semibold text-slate-600">{selectedMessage.updatedAt || '—'}</b></div>
-                              <div><span className="text-slate-400">Pris en charge</span><b className="ml-2 break-all font-semibold text-slate-600">{selectedMessage.handledBy || '—'}</b></div>
-                              <div><span className="text-slate-400">Pris en charge le</span><b className="ml-2 font-semibold text-slate-600">{selectedMessage.handledAt || '—'}</b></div>
-                              <div><span className="text-slate-400">Répondu le</span><b className="ml-2 font-semibold text-slate-600">{selectedMessage.repliedAt || '—'}</b></div>
-                              <div><span className="text-slate-400">Répondu par</span><b className="ml-2 break-all font-semibold text-slate-600">{selectedMessage.repliedBy || '—'}</b></div>
+                            <div className="grid overflow-hidden rounded-xl border border-slate-200 bg-slate-50/60 sm:grid-cols-2 lg:grid-cols-5">
+                              <div className="border-b border-slate-200 px-4 py-3 lg:border-b-0 lg:border-r"><div className="text-[8px] font-black uppercase tracking-wider text-slate-400">Créé</div><div className="mt-1 truncate text-[10px] font-semibold text-slate-700" title={selectedMessage.createdAt || ''}>{selectedMessage.createdAt || '—'}</div></div>
+                              <div className="border-b border-slate-200 px-4 py-3 lg:border-b-0 lg:border-r"><div className="text-[8px] font-black uppercase tracking-wider text-slate-400">Mis à jour</div><div className="mt-1 truncate text-[10px] font-semibold text-slate-700" title={selectedMessage.updatedAt || ''}>{selectedMessage.updatedAt || '—'}</div></div>
+                              <div className="border-b border-slate-200 px-4 py-3 lg:border-b-0 lg:border-r"><div className="text-[8px] font-black uppercase tracking-wider text-slate-400">Pris en charge</div><div className="mt-1 truncate text-[10px] font-semibold text-slate-700" title={selectedMessage.handledBy || ''}>{selectedMessage.handledBy || '—'}</div></div>
+                              <div className="border-b border-slate-200 px-4 py-3 lg:border-b-0 lg:border-r"><div className="text-[8px] font-black uppercase tracking-wider text-slate-400">Prise en charge</div><div className="mt-1 truncate text-[10px] font-semibold text-slate-700" title={selectedMessage.handledAt || ''}>{selectedMessage.handledAt || '—'}</div></div>
+                              <div className="px-4 py-3"><div className="text-[8px] font-black uppercase tracking-wider text-slate-400">Dernière réponse</div><div className="mt-1 truncate text-[10px] font-semibold text-slate-700" title={selectedMessage.repliedAt || ''}>{selectedMessage.repliedAt || '—'}</div></div>
                             </div>
-                            {selectedMessage.lastReply && <div className="mt-5 rounded-xl border border-slate-200 bg-[#f7f9fb] p-4"><div className="text-[9px] font-black uppercase tracking-wider text-slate-400">Dernière réponse</div><div className="mt-2 whitespace-pre-wrap text-[11px] leading-6 text-slate-600">{selectedMessage.lastReply}</div></div>}
+                            {selectedMessage.lastReply && <div className="mt-3 border-l-2 border-slate-300 pl-3"><div className="text-[8px] font-black uppercase tracking-wider text-slate-400">Réponse enregistrée</div><div className="mt-1 whitespace-pre-wrap text-[11px] leading-5 text-slate-600">{selectedMessage.lastReply}</div></div>}
                           </div>
 
                           <div className="border-t border-slate-100 py-5">
