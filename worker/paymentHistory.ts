@@ -1,4 +1,4 @@
-import { firestoreQueryByField, PaymentEnv, verifyFirebaseIdToken } from './firebaseAdmin';
+import { firestoreGet, firestoreQueryByField, PaymentEnv, verifyFirebaseIdToken } from './firebaseAdmin';
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
