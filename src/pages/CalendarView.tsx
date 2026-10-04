@@ -223,8 +223,6 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
               <p className="mt-1 text-[10px] text-[#8A9AAF]">Performance de {monthNames[month]} {year}</p>
             </div>
 
-            <div />
-
             {weeklyStats.map(item => {
               const profitable = item.pnl > 0;
               const loss = item.pnl < 0;
@@ -234,9 +232,9 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
 
               return (
                 <div key={item.week} className="flex min-h-0 items-center px-1">
-                  <div className={'flex h-[calc(100%-8px)] w-full flex-col justify-center rounded-xl border p-3 ' + tone}>
+                  <div className={'flex h-[calc(100%-10px)] w-full flex-col justify-center rounded-xl border p-3 ' + tone}>
                     <div className="flex items-center justify-between gap-2">
-                      <span className="text-[11px] font-extrabold text-[#60758D]">Week {item.week}</span>
+                      <span className="text-[11px] font-extrabold text-[#60758D]">Semaine {item.week}</span>
                       <span className={'rounded-full px-2 py-1 text-[8px] font-bold ' + badgeTone}>{item.activeDays}j</span>
                     </div>
                     <div className={'mt-1.5 text-[21px] font-black tracking-[-0.03em] tabular-nums ' + amountTone}>{formatCurrency(item.pnl)}</div>
@@ -249,7 +247,6 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
               );
             })}
 
-            <div />
           </div>
         </section>
       </div>
