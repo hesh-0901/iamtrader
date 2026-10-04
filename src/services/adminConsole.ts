@@ -29,3 +29,8 @@ export function adminDeleteContact(messageId: string) {
 export function adminAddLog(log: Record<string, unknown>) {
   return adminMutation({ action: 'add-log', log });
 }
+
+
+export async function adminGetPayments<T = unknown>(): Promise<T> {
+  return adminMutation<T>({ action: 'get-payments' });
+}
