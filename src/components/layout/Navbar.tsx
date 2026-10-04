@@ -26,7 +26,8 @@ export function Navbar({ userProfile, accounts, selectedAccountId, onSelectAccou
           <Menu className="w-5 h-5" />
         </button>
 
-        <div className="min-w-0">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <img src="/brand/logo-iamtrader-symbol.png" alt="" aria-hidden="true" className="w-7 h-7 object-contain shrink-0" />
           <h1 className="text-sm font-semibold text-[#10233a] truncate">{currentPageTitle}</h1>
         </div>
       </div>
