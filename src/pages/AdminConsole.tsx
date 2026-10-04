@@ -469,104 +469,116 @@ export function AdminConsole() {
           })()}
 
           {adminTab === 'support' && (
-            <section className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-[0_12px_40px_rgba(11,31,53,.07)]">
-              <div className="grid min-h-[700px] lg:grid-cols-[360px_1fr]">
-                <aside className="border-b border-slate-200 bg-[#f7f9fc] lg:border-b-0 lg:border-r">
-                  <div className="border-b border-slate-200 bg-white p-4">
+            <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+              <div className="flex h-[720px] min-h-[620px] flex-col lg:flex-row">
+                <aside className="flex w-full shrink-0 flex-col border-b border-slate-200 bg-white lg:w-[380px] lg:border-b-0 lg:border-r">
+                  <div className="border-b border-slate-200 px-5 py-4">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h2 className="text-sm font-black text-[#0b1f35]">Boîte de réception</h2>
-                        <p className="mt-1 text-[9px] text-slate-400">{contactMessages.length} conversation(s) · {contactMessages.filter(m => m.status === 'new').length} non lue(s)</p>
+                        <h2 className="text-[13px] font-black text-[#0b1f35]">Boîte de réception</h2>
+                        <p className="mt-1 text-[9px] text-slate-400">{contactMessages.length} message(s) · {contactMessages.filter(m => m.status === 'new').length} non lu(s)</p>
                       </div>
-                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#0b1f35] text-white"><Mail className="h-4 w-4" /></div>
+                      <Mail className="h-4 w-4 text-slate-400" />
                     </div>
-                    <div className="mt-4 flex flex-wrap gap-1.5">
+                    <div className="mt-4 flex border-b border-slate-100">
                       {(['all','new','in_progress','resolved'] as const).map(s => (
-                        <button key={s} onClick={() => setContactFilter(s)} className={'rounded-lg px-2.5 py-1.5 text-[8px] font-black ' + (contactFilter === s ? 'bg-[#0b1f35] text-white' : 'border border-slate-200 bg-white text-slate-500 hover:bg-slate-50')}>
+                        <button key={s} onClick={() => setContactFilter(s)} className={'mr-5 border-b-2 pb-2 text-[9px] font-bold transition ' + (contactFilter === s ? 'border-[#0b1f35] text-[#0b1f35]' : 'border-transparent text-slate-400 hover:text-slate-700')}>
                           {s === 'all' ? 'Tous' : s === 'new' ? 'Non lus' : s === 'in_progress' ? 'En cours' : 'Traités'}
                         </button>
                       ))}
                     </div>
                   </div>
-                  <div className="max-h-[620px] overflow-y-auto">
+
+                  <div className="min-h-0 flex-1 overflow-y-auto">
                     {contactMessages.filter(m => contactFilter === 'all' || m.status === contactFilter).map(m => {
                       const date = m.createdAt ? new Date(m.createdAt) : null;
                       const selectedItem = selectedMessage?.id === m.id;
                       return (
-                        <button key={m.id} onClick={() => { setSelectedMessage(m); setContactNote(m.adminNote || ''); setReplyText(''); }} className={'w-full border-b border-slate-100 p-4 text-left transition hover:bg-white ' + (selectedItem ? 'bg-white shadow-[inset_3px_0_0_#0b1f35]' : '')}>
-                          <div className="flex items-start gap-3">
-                            <div className={'mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ' + (m.status === 'new' ? 'bg-blue-50 text-blue-600' : m.status === 'in_progress' ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600')}><Mail className="h-3.5 w-3.5" /></div>
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-center justify-between gap-2">
-                                <b className={'truncate text-[10px] ' + (m.status === 'new' ? 'font-black text-[#0b1f35]' : 'font-bold text-slate-700')}>{m.subject || '(Sans objet)'}</b>
-                                <span className="shrink-0 text-[8px] text-slate-400">{date && !Number.isNaN(date.getTime()) ? date.toLocaleDateString('fr-FR', { day:'2-digit', month:'2-digit' }) : '—'}</span>
+                        <button key={m.id} onClick={() => { setSelectedMessage(m); setContactNote(m.adminNote || ''); setReplyText(''); }} className={'group flex w-full border-b border-slate-100 px-5 py-3.5 text-left transition ' + (selectedItem ? 'bg-[#f5f7fa] shadow-[inset_3px_0_0_#0b1f35]' : 'hover:bg-[#fafbfc]')}>
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="flex min-w-0 items-center gap-2">
+                                {m.status === 'new' && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-blue-600" />}
+                                <span className={'truncate text-[10px] ' + (m.status === 'new' ? 'font-black text-[#0b1f35]' : 'font-semibold text-slate-700')}>{m.name || m.email}</span>
                               </div>
-                              <div className="mt-1 truncate text-[9px] font-semibold text-slate-600">{m.name}</div>
-                              <div className="mt-0.5 truncate text-[8px] text-slate-400">{m.email}</div>
-                              <div className="mt-2 truncate text-[8px] text-slate-400">{m.message}</div>
+                              <span className="shrink-0 text-[8px] text-slate-400">{date && !Number.isNaN(date.getTime()) ? date.toLocaleDateString('fr-FR', { day:'2-digit', month:'short' }) : '—'}</span>
                             </div>
-                            {m.status === 'new' && <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-blue-500" />}
+                            <div className={'mt-1 truncate text-[10px] ' + (m.status === 'new' ? 'font-bold text-slate-800' : 'font-medium text-slate-600')}>{m.subject || '(Sans objet)'}</div>
+                            <div className="mt-0.5 truncate text-[9px] text-slate-400">{m.message}</div>
                           </div>
                         </button>
                       );
                     })}
-                    {contactMessages.filter(m => contactFilter === 'all' || m.status === contactFilter).length === 0 && <div className="p-10 text-center text-xs text-slate-400">Aucun message dans cette vue.</div>}
+                    {contactMessages.filter(m => contactFilter === 'all' || m.status === contactFilter).length === 0 && <div className="px-5 py-12 text-center text-[10px] text-slate-400">Aucun message dans cette vue.</div>}
                   </div>
                 </aside>
 
-                <div className="min-w-0 bg-white">
+                <div className="min-w-0 flex-1 bg-white">
                   {selectedMessage ? (
-                    <div className="h-full overflow-y-auto">
-                      <div className="border-b border-slate-200 bg-white px-6 py-5 sm:px-8">
-                        <div className="flex items-start justify-between gap-4">
+                    <div className="flex h-full flex-col">
+                      <header className="border-b border-slate-200 px-6 py-5 sm:px-8">
+                        <div className="flex items-start justify-between gap-5">
                           <div className="min-w-0">
-                            <div className="flex flex-wrap items-center gap-2">
-                              <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[8px] font-black uppercase tracking-wider text-blue-700">Message entrant</span>
-                              <span className={'rounded-full px-2.5 py-1 text-[8px] font-black uppercase tracking-wider ' + (selectedMessage.status === 'new' ? 'bg-blue-50 text-blue-700' : selectedMessage.status === 'in_progress' ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700')}>{selectedMessage.status === 'new' ? 'Non lu' : selectedMessage.status === 'in_progress' ? 'En cours' : 'Traité'}</span>
+                            <h2 className="truncate text-[18px] font-black tracking-tight text-[#0b1f35]">{selectedMessage.subject || '(Sans objet)'}</h2>
+                            <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[9px] text-slate-400">
+                              <span className="font-semibold text-slate-700">{selectedMessage.name}</span>
+                              <span>&lt;{selectedMessage.email}&gt;</span>
+                              <span>·</span>
+                              <span>{selectedMessage.createdAt ? new Date(selectedMessage.createdAt).toLocaleString('fr-FR', { dateStyle:'medium', timeStyle:'short' }) : '—'}</span>
                             </div>
-                            <h2 className="mt-3 text-xl font-black tracking-tight text-[#0b1f35]">{selectedMessage.subject || '(Sans objet)'}</h2>
                           </div>
-                          <div className="flex shrink-0 items-center gap-2">
-                            <button onClick={() => adminUpdateContact(selectedMessage.id, { status:'in_progress' }).then(() => showToast('Conversation marquée comme en cours.')).catch(() => showToast('Mise à jour impossible.'))} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-[9px] font-black text-slate-600 hover:bg-slate-50">En cours</button>
-                            <button onClick={() => adminDeleteContact(selectedMessage.id).then(() => { setSelectedMessage(null); showToast('Message supprimé.'); }).catch(() => showToast('Suppression impossible.'))} className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-rose-200 bg-rose-50 text-rose-600 hover:bg-rose-100" title="Supprimer"><Trash2 className="h-4 w-4" /></button>
+                          <div className="flex shrink-0 items-center gap-1">
+                            <button onClick={() => adminUpdateContact(selectedMessage.id, { status:'in_progress' }).then(() => showToast('Conversation marquée comme en cours.')).catch(() => showToast('Mise à jour impossible.'))} className="rounded-lg px-3 py-2 text-[9px] font-bold text-slate-500 hover:bg-slate-100 hover:text-slate-800">En cours</button>
+                            <button onClick={() => adminDeleteContact(selectedMessage.id).then(() => { setSelectedMessage(null); showToast('Message supprimé.'); }).catch(() => showToast('Suppression impossible.'))} className="rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600" title="Supprimer"><Trash2 className="h-4 w-4" /></button>
                           </div>
                         </div>
-                        <div className="mt-5 rounded-2xl border border-slate-200 bg-[#f8fafc] p-4">
-                          <div className="grid gap-4 sm:grid-cols-2">
-                            <div><div className="text-[8px] font-black uppercase tracking-[.15em] text-slate-400">De</div><div className="mt-1 text-[11px] font-black text-[#0b1f35]">{selectedMessage.name}</div><div className="mt-0.5 text-[10px] text-slate-500">{selectedMessage.email}</div></div>
-                            <div><div className="text-[8px] font-black uppercase tracking-[.15em] text-slate-400">À</div><div className="mt-1 text-[11px] font-black text-[#0b1f35]">Support IAMTRADER</div><div className="mt-0.5 text-[10px] text-slate-500">Boîte support</div></div>
-                            <div><div className="text-[8px] font-black uppercase tracking-[.15em] text-slate-400">Date de réception</div><div className="mt-1 text-[10px] font-semibold text-slate-700">{selectedMessage.createdAt ? new Date(selectedMessage.createdAt).toLocaleString('fr-FR', { dateStyle:'full', timeStyle:'medium' }) : '—'}</div></div>
-                            <div><div className="text-[8px] font-black uppercase tracking-[.15em] text-slate-400">Identifiant du message</div><div className="mt-1 break-all font-mono text-[9px] font-bold text-slate-700">{selectedMessage.id}</div></div>
-                          </div>
-                        </div>
-                      </div>
+                      </header>
 
-                      <div className="px-6 py-6 sm:px-8">
-                        <div className="max-w-4xl">
-                          <div className="mb-3 flex items-center gap-2"><div className="h-7 w-7 rounded-full bg-[#0b1f35] text-center text-[10px] leading-7 font-black text-white">{(selectedMessage.name || 'U').trim().charAt(0).toUpperCase()}</div><span className="text-[9px] font-black text-slate-700">{selectedMessage.name}</span><span className="text-[8px] text-slate-400">· {selectedMessage.email}</span></div>
-                          <article className="rounded-[20px] border border-slate-200 bg-white p-6 shadow-sm"><div className="whitespace-pre-wrap break-words text-[13px] leading-7 text-slate-700">{selectedMessage.message}</div></article>
-
-                          <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-5">
-                            <div className="flex items-center justify-between"><div><div className="text-[8px] font-black uppercase tracking-[.15em] text-slate-400">Métadonnées internes</div><div className="mt-1 text-[10px] text-slate-500">Informations disponibles dans le dossier de support.</div></div><Clock3 className="h-4 w-4 text-slate-400" /></div>
-                            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                              <div><span className="text-[8px] text-slate-400">Statut</span><b className="block text-[9px] text-slate-700">{selectedMessage.status}</b></div>
-                              <div><span className="text-[8px] text-slate-400">Créé le</span><b className="block text-[9px] text-slate-700">{selectedMessage.createdAt || '—'}</b></div>
-                              <div><span className="text-[8px] text-slate-400">Mis à jour</span><b className="block text-[9px] text-slate-700">{selectedMessage.updatedAt || '—'}</b></div>
-                              <div><span className="text-[8px] text-slate-400">Pris en charge par</span><b className="block break-all text-[9px] text-slate-700">{selectedMessage.handledBy || '—'}</b></div>
-                              <div><span className="text-[8px] text-slate-400">Pris en charge le</span><b className="block text-[9px] text-slate-700">{selectedMessage.handledAt || '—'}</b></div>
-                              <div><span className="text-[8px] text-slate-400">Répondu le</span><b className="block text-[9px] text-slate-700">{selectedMessage.repliedAt || '—'}</b></div>
+                      <div className="min-h-0 flex-1 overflow-y-auto">
+                        <div className="mx-auto w-full max-w-4xl px-6 py-7 sm:px-10">
+                          <div className="border-b border-slate-100 pb-6">
+                            <div className="grid gap-x-8 gap-y-3 text-[9px] sm:grid-cols-2">
+                              <div className="flex gap-3"><span className="w-20 shrink-0 text-slate-400">De</span><span className="font-semibold text-slate-700">{selectedMessage.name} &lt;{selectedMessage.email}&gt;</span></div>
+                              <div className="flex gap-3"><span className="w-20 shrink-0 text-slate-400">À</span><span className="font-semibold text-slate-700">Support IAMTRADER</span></div>
+                              <div className="flex gap-3"><span className="w-20 shrink-0 text-slate-400">Date</span><span className="text-slate-600">{selectedMessage.createdAt ? new Date(selectedMessage.createdAt).toLocaleString('fr-FR', { dateStyle:'full', timeStyle:'medium' }) : '—'}</span></div>
+                              <div className="flex gap-3"><span className="w-20 shrink-0 text-slate-400">Message ID</span><span className="break-all font-mono text-[8px] text-slate-500">{selectedMessage.id}</span></div>
                             </div>
-                            {selectedMessage.lastReply && <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50 p-4"><div className="text-[8px] font-black uppercase tracking-wider text-blue-700">Dernière réponse envoyée</div><div className="mt-2 whitespace-pre-wrap text-[10px] leading-6 text-slate-700">{selectedMessage.lastReply}</div></div>}
                           </div>
 
-                          <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-5">
-                            <div className="text-[8px] font-black uppercase tracking-[.15em] text-slate-400">Notes internes</div>
-                            <textarea value={contactNote} onChange={e => setContactNote(e.target.value)} onBlur={() => { if (selectedMessage) adminUpdateContact(selectedMessage.id, { adminNote:contactNote }).catch(() => {}); }} rows={3} placeholder="Ajouter une note interne..." className="mt-3 w-full resize-none rounded-xl border border-slate-200 bg-slate-50 p-3 text-[10px] outline-none focus:border-blue-300" />
+                          <article className="py-8">
+                            <div className="whitespace-pre-wrap break-words text-[13px] leading-7 text-slate-700">{selectedMessage.message}</div>
+                          </article>
+
+                          <div className="border-t border-slate-100 py-5">
+                            <div className="mb-3 flex items-center justify-between">
+                              <span className="text-[9px] font-black uppercase tracking-[.12em] text-slate-400">Informations du dossier</span>
+                              <span className={'text-[8px] font-bold ' + (selectedMessage.status === 'new' ? 'text-blue-600' : selectedMessage.status === 'in_progress' ? 'text-amber-600' : 'text-emerald-600')}>{selectedMessage.status === 'new' ? 'Non lu' : selectedMessage.status === 'in_progress' ? 'En cours' : 'Traité'}</span>
+                            </div>
+                            <div className="grid gap-x-8 gap-y-2 text-[9px] sm:grid-cols-2 lg:grid-cols-3">
+                              <div><span className="text-slate-400">Créé</span><b className="ml-2 font-semibold text-slate-600">{selectedMessage.createdAt || '—'}</b></div>
+                              <div><span className="text-slate-400">Mis à jour</span><b className="ml-2 font-semibold text-slate-600">{selectedMessage.updatedAt || '—'}</b></div>
+                              <div><span className="text-slate-400">Pris en charge</span><b className="ml-2 break-all font-semibold text-slate-600">{selectedMessage.handledBy || '—'}</b></div>
+                              <div><span className="text-slate-400">Pris en charge le</span><b className="ml-2 font-semibold text-slate-600">{selectedMessage.handledAt || '—'}</b></div>
+                              <div><span className="text-slate-400">Répondu le</span><b className="ml-2 font-semibold text-slate-600">{selectedMessage.repliedAt || '—'}</b></div>
+                              <div><span className="text-slate-400">Répondu par</span><b className="ml-2 break-all font-semibold text-slate-600">{selectedMessage.repliedBy || '—'}</b></div>
+                            </div>
+                            {selectedMessage.lastReply && <div className="mt-4 border-l-2 border-slate-300 pl-4"><div className="text-[8px] font-black uppercase tracking-wider text-slate-400">Dernière réponse</div><div className="mt-2 whitespace-pre-wrap text-[10px] leading-6 text-slate-600">{selectedMessage.lastReply}</div></div>}
                           </div>
 
-                          <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-5">
-                            <div className="flex items-center justify-between gap-3"><div><div className="text-[8px] font-black uppercase tracking-[.15em] text-slate-400">Répondre</div><div className="mt-1 text-[10px] text-slate-400">La réponse sera envoyée à {selectedMessage.email}.</div></div><Mail className="h-4 w-4 text-slate-400" /></div>
-                            <textarea value={replyText} onChange={e => setReplyText(e.target.value)} rows={7} placeholder="Écrire une réponse..." className="mt-4 w-full resize-none rounded-xl border border-slate-200 bg-slate-50 p-4 text-[11px] leading-6 outline-none focus:border-blue-300" />
+                          <div className="border-t border-slate-100 py-5">
+                            <label className="text-[9px] font-black uppercase tracking-[.12em] text-slate-400">Note interne</label>
+                            <textarea value={contactNote} onChange={e => setContactNote(e.target.value)} onBlur={() => { if (selectedMessage) adminUpdateContact(selectedMessage.id, { adminNote:contactNote }).catch(() => {}); }} rows={2} placeholder="Note visible uniquement par l'administration..." className="mt-3 w-full resize-none border-0 border-b border-slate-200 bg-transparent px-0 py-2 text-[10px] outline-none placeholder:text-slate-300 focus:border-[#0b1f35]" />
+                          </div>
+
+                          <div className="border-t border-slate-100 pt-6">
+                            <div className="mb-3 flex items-center justify-between">
+                              <div>
+                                <div className="text-[9px] font-black uppercase tracking-[.12em] text-slate-400">Répondre</div>
+                                <div className="mt-1 text-[9px] text-slate-400">À {selectedMessage.email}</div>
+                              </div>
+                              <Mail className="h-4 w-4 text-slate-300" />
+                            </div>
+                            <textarea value={replyText} onChange={e => setReplyText(e.target.value)} rows={6} placeholder="Écrire une réponse..." className="w-full resize-none rounded-xl border border-slate-200 bg-[#fafbfc] p-4 text-[11px] leading-6 outline-none focus:border-slate-400 focus:bg-white" />
                             <div className="mt-3 flex justify-end">
                               <button disabled={replyBusy || !replyText.trim()} onClick={async () => {
                                 if (!selectedMessage || !replyText.trim()) return;
@@ -588,14 +600,20 @@ export function AdminConsole() {
                                 } finally {
                                   setReplyBusy(false);
                                 }
-                              }} className="inline-flex items-center gap-2 rounded-xl bg-[#0b1f35] px-4 py-2.5 text-xs font-bold text-white disabled:opacity-50"><Send className="h-4 w-4" />{replyBusy ? 'Envoi...' : 'Envoyer'}</button>
+                              }} className="inline-flex items-center gap-2 rounded-lg bg-[#0b1f35] px-4 py-2.5 text-[10px] font-bold text-white disabled:opacity-50"><Send className="h-3.5 w-3.5" />{replyBusy ? 'Envoi...' : 'Envoyer'}</button>
                             </div>
                           </div>
                         </div>
                       </div>
                     </div>
                   ) : (
-                    <div className="flex h-full min-h-[620px] items-center justify-center bg-[#fbfcfe] text-center text-slate-300"><div><Mail className="mx-auto h-12 w-12" /><p className="mt-3 text-sm font-bold text-slate-400">Sélectionnez un message</p><p className="mt-1 text-[10px] text-slate-300">Le contenu complet et ses métadonnées apparaîtront ici.</p></div></div>
+                    <div className="flex h-full items-center justify-center bg-[#fafbfc] text-center">
+                      <div>
+                        <Mail className="mx-auto h-9 w-9 text-slate-300" />
+                        <p className="mt-3 text-[12px] font-bold text-slate-500">Sélectionnez un message</p>
+                        <p className="mt-1 text-[9px] text-slate-400">Le contenu complet s'affichera ici.</p>
+                      </div>
+                    </div>
                   )}
                 </div>
               </div>
