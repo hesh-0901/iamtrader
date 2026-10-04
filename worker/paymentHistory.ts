@@ -9,8 +9,8 @@ function json(data: unknown, status = 200) {
 
 function legacyTransactionReference(payment: Record<string, unknown>) {
   const id = String(payment.id || payment.reference || 'UNKNOWN');
-  const year = new Date(String(payment.createdAt || new Date().toISOString())).getUTCFullYear().toString().slice(-2);
-  return `TXN-${year}-${id.slice(-8).toUpperCase()}`;
+  const code = id.slice(-8).toUpperCase();
+  return `IMAT-${code.slice(0, 4)} ${code.slice(4)}`;
 }
 
 function legacyInvoiceNumber(payment: Record<string, unknown>) {
