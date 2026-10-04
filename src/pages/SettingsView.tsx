@@ -9,7 +9,7 @@ import { resetUserPassword, updateTraderProfile } from '../services/auth';
 import { useToast } from '../components/common/Toast';
 import { TradingJournalSettings } from '../components/settings/TradingJournalSettings';
 import { calculateTraderRating, formatCurrency } from '../utils/calculations';
-import { confirmSimulatedPayment, createPayment, createSimulatedPayment, getPaymentStatus, PaidPlan } from '../services/payments';
+import { confirmSimulatedPayment, createPayment, createSimulatedPayment, getPaymentStatus, PaidPlan, PaymentDetails } from '../services/payments';
 
 interface SettingsViewProps {
   userProfile: UserProfile | null;
@@ -70,6 +70,8 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
   const [paymentPlan, setPaymentPlan] = useState<PaidPlan | null>(null);
   const [paymentMode, setPaymentMode] = useState<'simulation' | 'live'>('simulation');
   const [paymentPhone, setPaymentPhone] = useState('');
+  const [paymentProvider, setPaymentProvider] = useState('Airtel Money');
+  const [paymentPayerName, setPaymentPayerName] = useState(userProfile?.displayName || [userProfile?.traderProfile?.firstName, userProfile?.traderProfile?.lastName].filter(Boolean).join(' ') || '');
   const [paymentId, setPaymentId] = useState<string | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<'idle' | 'processing' | 'paid' | 'failed'>('idle');
   const [paymentMessage, setPaymentMessage] = useState('');
@@ -224,15 +226,16 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
     localStorage.setItem('iamtrader-dashboard-mode', mode);
   };
 
-  const startPayment = (plan: PaidPlan) => { setPaymentPlan(plan); setPaymentMode('simulation'); setPaymentPhone(''); setPaymentId(null); setPaymentStatus('idle'); setPaymentMessage(''); };
+  const startPayment = (plan: PaidPlan) => { setPaymentPlan(plan); setPaymentMode('simulation'); setPaymentPhone(userProfile?.traderProfile?.whatsapp || ''); setPaymentProvider('Airtel Money'); setPaymentPayerName(userProfile?.displayName || [userProfile?.traderProfile?.firstName, userProfile?.traderProfile?.lastName].filter(Boolean).join(' ') || ''); setPaymentId(null); setPaymentStatus('idle'); setPaymentMessage(''); };
 
   const submitPayment = async () => {
     if (!paymentPlan) return;
     setIsPaymentLoading(true); setPaymentMessage('');
     try {
+      const details: PaymentDetails = { phone: paymentPhone, paymentMethod: 'mobile_money', paymentProvider, payerName: paymentPayerName.trim() };
       const payment = paymentMode === 'simulation'
-        ? await createSimulatedPayment(paymentPlan, paymentPhone)
-        : await createPayment(paymentPlan, paymentPhone);
+        ? await createSimulatedPayment(paymentPlan, details)
+        : await createPayment(paymentPlan, details);
       setPaymentId(payment.id);
       setPaymentStatus('processing');
       setPaymentMessage(payment.message || 'Paiement en cours de traitement.');
@@ -653,8 +656,16 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                     </div>
                   );
                 })()}
-                <div><label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Numéro Mobile Money</label><div className="relative"><Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input value={paymentPhone} onChange={e => setPaymentPhone(e.target.value)} placeholder="0812345678" inputMode="tel" autoComplete="tel" className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-3 text-sm font-semibold text-slate-950 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100" /></div><p className="mt-1.5 text-[10px] text-slate-400">{paymentMode === 'simulation' ? 'Numéro utilisé pour reproduire les données d’une transaction Mobile Money.' : 'Numéro qui recevra la demande de validation.'}</p></div>
-                <button onClick={submitPayment} disabled={isPaymentLoading || !paymentPhone.trim()} className="w-full rounded-xl bg-indigo-600 px-4 py-3 text-xs font-bold text-white shadow-lg shadow-indigo-200 transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50">{isPaymentLoading ? 'Initialisation du paiement…' : 'Continuer vers le paiement'}</button>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div><label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Titulaire du paiement</label><input value={paymentPayerName} onChange={e => setPaymentPayerName(e.target.value)} placeholder="Nom complet" autoComplete="name" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-950 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100" /></div>
+                  <div><label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Mode de paiement</label><select value="mobile_money" disabled className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-semibold text-slate-700"><option value="mobile_money">Mobile Money</option></select></div>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div><label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Opérateur</label><select value={paymentProvider} onChange={e => setPaymentProvider(e.target.value)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-900"><option>Airtel Money</option><option>M-Pesa</option><option>Orange Money</option></select></div>
+                  <div><label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Identifiant Mobile Money</label><div className="relative"><Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input value={paymentPhone} onChange={e => setPaymentPhone(e.target.value)} placeholder="0812345678" inputMode="tel" autoComplete="tel" className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-3 text-sm font-semibold text-slate-950 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100" /></div></div>
+                </div>
+                <p className="text-[10px] leading-4 text-slate-400">Le nom, l’opérateur et l’identifiant seront associés à la transaction. Pour un paiement réel, utilisez les informations du compte Mobile Money qui recevra la demande.</p>
+                <button onClick={submitPayment} disabled={isPaymentLoading || !paymentPhone.trim() || !paymentPayerName.trim() || !paymentProvider} className="w-full rounded-xl bg-indigo-600 px-4 py-3 text-xs font-bold text-white shadow-lg shadow-indigo-200 transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50">{isPaymentLoading ? 'Initialisation du paiement…' : 'Continuer vers le paiement'}</button>
               </>)}
               {paymentStatus === 'processing' && (<div className="py-5 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-indigo-50 text-indigo-600"><div className="h-6 w-6 animate-spin rounded-full border-2 border-indigo-200 border-t-indigo-600" /></div><h4 className="mt-4 text-base font-black text-slate-950">Paiement en traitement</h4><p className="mt-2 text-xs leading-5 text-slate-500">{paymentMessage || 'Nous attendons la confirmation du prestataire.'}</p>{paymentMode === 'simulation' ? <button onClick={confirmSimulation} disabled={isPaymentLoading} className="mt-5 w-full rounded-xl bg-emerald-600 px-4 py-3 text-xs font-bold text-white disabled:opacity-50">{isPaymentLoading ? 'Confirmation serveur…' : 'Simuler la validation du paiement'}</button> : <div className="mt-4 rounded-xl bg-amber-50 px-3 py-2 text-[10px] font-semibold text-amber-700">Validez la demande Mobile Money avant de fermer.</div>}</div>)}
               {paymentStatus === 'paid' && (<div className="py-6 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-600"><Check className="h-7 w-7" /></div><h4 className="mt-4 text-base font-black text-slate-950">Paiement confirmé</h4><p className="mt-2 text-xs text-slate-500">{paymentMessage}</p><div className="mt-4 rounded-xl bg-emerald-50 px-3 py-2 text-[10px] font-semibold text-emerald-700">Référence : {paymentId}</div></div>)}
