@@ -4,6 +4,7 @@ import { handlePaymentRequest, handlePaymentCallback, handleSimulatedPaymentRequ
 import type { PaymentEnv } from './firebaseAdmin';
 import { handleSubscriptionStatus } from './subscriptionStatus';
 import { handlePaymentHistory } from './paymentHistory';
+import { handleAdminMutation } from './admin';
 
 interface Env {
   ASSETS: Fetcher;
@@ -46,6 +47,10 @@ export default {
 
     if (url.pathname === '/api/payments/history') {
       return handlePaymentHistory(request, env);
+    }
+
+    if (url.pathname === '/api/admin/mutation') {
+      return handleAdminMutation(request, env);
     }
 
     if (url.pathname === '/api/payments') {
