@@ -329,7 +329,6 @@ export async function handleSimulatedPaymentRequest(request: Request, env: Payme
       currentPlanAtPurchase: decision.currentPlan,
       activationStartAt: decision.start.toISOString(),
       activationExpiresAt: decision.expires.toISOString(),
-      paymentMethod: 'Mobile Money — simulation',
       mode: 'simulation',
       status: 'processing',
       reference: idempotencyKey,
@@ -360,7 +359,7 @@ export async function handleSimulatedPaymentRequest(request: Request, env: Payme
       ? { name: error.name, message: error.message, stack: error.stack }
       : { error: String(error) };
     console.error('Simulated payment initiation error:', JSON.stringify(details));
-    return json({ success: false, message: 'Impossible de créer la simulation.' }, 500);
+    return json({ success: false, message: error instanceof Error ? error.message : 'Impossible de créer la simulation.' }, 500);
   }
 }
 
@@ -415,6 +414,6 @@ export async function handleSimulatedPaymentConfirm(request: Request, env: Payme
     return json({ success: true, payment: publicPayment(finalPayment || { ...payment, status: 'paid', paidAt }) });
   } catch (error) {
     console.error('Simulated payment confirmation error:', error);
-    return json({ success: false, message: 'Impossible de confirmer la simulation.' }, 500);
+    return json({ success: false, message: error instanceof Error ? error.message : 'Impossible de confirmer la simulation.' }, 500);
   }
 }
