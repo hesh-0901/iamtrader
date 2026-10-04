@@ -30,7 +30,6 @@ export function adminAddLog(log: Record<string, unknown>) {
   return adminMutation({ action: 'add-log', log });
 }
 
-
 export async function adminGetPayments<T = unknown>(): Promise<T> {
   return adminMutation<T>({ action: 'get-payments' });
 }
@@ -38,3 +37,5 @@ export async function adminGetPayments<T = unknown>(): Promise<T> {
 export function adminUpdatePayment(paymentId: string, data: Record<string, unknown>) {
   return adminMutation({ action: 'update-payment', paymentId, data });
 }
+
+// Keep payment mutations in the same secure admin service surface as payment reads.
