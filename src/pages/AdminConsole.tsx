@@ -66,6 +66,15 @@ export function AdminConsole() {
   const [analyticsTab, setAnalyticsTab] = useState<'profiles' | 'engagement' | 'trading' | 'subscriptions'>('profiles');
   const perPage = 10;
 
+  async function refreshPayments() {
+    try {
+      const paymentData = await adminGetPayments<{ success: boolean; payments: PaymentRecord[] }>();
+      setPayments(paymentData.payments || []);
+    } catch (e) {
+      console.warn('IAMTRADER Admin payment refresh unavailable:', e);
+    }
+  }
+
   async function load() {
     setLoading(true);
     setError('');
@@ -124,6 +133,7 @@ export function AdminConsole() {
       if (!user) return;
 
       load();
+      const paymentTimer = window.setInterval(refreshPayments, 15000);
       unsubscribeUsers = subscribeAllUsers((nextUsers, realtimeError) => {
         if (realtimeError) return;
         setUsers(nextUsers);
