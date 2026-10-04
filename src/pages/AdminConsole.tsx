@@ -153,6 +153,20 @@ export function AdminConsole() {
     };
   }, []);
 
+  const overviewPaidUsers = users.filter(u => u.plan !== 'free');
+  const overviewPendingPayments = payments.filter(p => p.status === 'processing' || p.status === 'initiated');
+  const overviewConfirmedPayments = payments.filter(p => p.status === 'paid');
+  const overviewOpenTickets = contactMessages.filter(m => m.status !== 'resolved');
+  const overviewExpiringUsers = users.filter(u => {
+    const d = remaining(u);
+    return d !== null && d >= 0 && d <= 5;
+  });
+  const overviewRevenue = overviewConfirmedPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
+  const overviewActiveTraders = users.filter(u => accounts.some(a => a.userId === u.uid) || trades.some(t => t.userId === u.uid)).length;
+  const overviewRecentUsers = [...users]
+    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+    .slice(0, 5);
+
   return (
     <div className="min-h-full bg-[#f5f8fb] -m-4 lg:-m-6">
       <div className="mx-auto max-w-[1600px] px-4 py-4 lg:px-6">
@@ -174,29 +188,15 @@ export function AdminConsole() {
             </div>
           </header>
 
-          {adminTab==='overview' && (() => {
-            const paidUsers = users.filter(u => u.plan !== 'free');
-            const pendingPayments = payments.filter(p => p.status === 'processing' || p.status === 'initiated');
-            const confirmedPayments = payments.filter(p => p.status === 'paid');
-            const openTickets = contactMessages.filter(m => m.status !== 'resolved');
-            const expiringUsers = users.filter(u => {
-              const d = remaining(u);
-              return d !== null && d >= 0 && d <= 5;
-            });
-            const revenue = confirmedPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
-            const activeTraders = users.filter(u => accounts.some(a => a.userId === u.uid) || trades.some(t => t.userId === u.uid)).length;
-            const recentUsers = [...users]
-              .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
-              .slice(0, 5);
-            return <section className="space-y-4">
+          {adminTab==='overview' && <section className="space-y-4">
               <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
                 {[
                   ['Utilisateurs actifs', users.filter(u => u.status === 'active').length, 'bg-emerald-50 text-emerald-700', '↗'],
-                  ['Revenu confirmé', '$ ' + revenue.toFixed(2), 'bg-blue-50 text-blue-700', '$'],
-                  ['Abonnements actifs', paidUsers.length, 'bg-violet-50 text-violet-700', '●'],
-                  ['Paiements à confirmer', pendingPayments.length, 'bg-amber-50 text-amber-700', '!'],
-                  ['Tickets ouverts', openTickets.length, 'bg-sky-50 text-sky-700', '?'],
-                  ['Échéances ≤ 5 jours', expiringUsers.length, 'bg-rose-50 text-rose-700', '◷']
+                  ['Revenu confirmé', '$ ' + overviewRevenue.toFixed(2), 'bg-blue-50 text-blue-700', '$'],
+                  ['Abonnements actifs', overviewPaidUsers.length, 'bg-violet-50 text-violet-700', '●'],
+                  ['Paiements à confirmer', overviewPendingPayments.length, 'bg-amber-50 text-amber-700', '!'],
+                  ['Tickets ouverts', overviewOpenTickets.length, 'bg-sky-50 text-sky-700', '?'],
+                  ['Échéances ≤ 5 jours', overviewExpiringUsers.length, 'bg-rose-50 text-rose-700', '◷']
                 ].map(([label, value, tone, icon]) => (
                   <div key={String(label)} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
                     <div className="flex items-center justify-between">
@@ -221,7 +221,7 @@ export function AdminConsole() {
                     <div className="rounded-xl bg-slate-50 p-4">
                       <span className="text-[8px] font-black uppercase text-slate-400">CA confirmé</span>
                       <b className="mt-2 block text-xl font-black text-[#0b1f35]">$ {revenue.toFixed(2)}</b>
-                      <span className="mt-1 block text-[9px] text-slate-400">{confirmedPayments.length} transaction(s)</span>
+                      <span className="mt-1 block text-[9px] text-slate-400">{overviewConfirmedPayments.length} transaction(s)</span>
                     </div>
                     <div className="rounded-xl bg-emerald-50 p-4">
                       <span className="text-[8px] font-black uppercase text-emerald-700">Conversion payante</span>
@@ -282,7 +282,7 @@ export function AdminConsole() {
                     <Users className="h-4 w-4 text-slate-400" />
                   </div>
                   <div className="mt-3 divide-y divide-slate-100">
-                    {recentUsers.map(u => <div key={u.uid} className="flex items-center justify-between gap-3 py-3">
+                    {overviewRecentUsers.map(u => <div key={u.uid} className="flex items-center justify-between gap-3 py-3">
                       <div className="min-w-0"><b className="block truncate text-[10px] text-slate-800">{u.displayName || u.email}</b><span className="text-[8px] text-slate-400">{fmt(u.createdAt)}</span></div>
                       <span className={'shrink-0 rounded-full px-2 py-1 text-[8px] font-black ' + (u.plan === 'free' ? 'bg-slate-100 text-slate-500' : 'bg-emerald-50 text-emerald-700')}>{planLabel(u.plan)}</span>
                     </div>)}
@@ -295,7 +295,7 @@ export function AdminConsole() {
                   <div className="mt-4 space-y-1">
                     <div className="flex items-center justify-between py-2"><span className="text-[10px] text-slate-500">Comptes créés</span><b className="text-sm">{accounts.length}</b></div>
                     <div className="flex items-center justify-between border-t border-slate-100 py-2"><span className="text-[10px] text-slate-500">Trades enregistrés</span><b className="text-sm">{trades.length}</b></div>
-                    <div className="flex items-center justify-between border-t border-slate-100 py-2"><span className="text-[10px] text-slate-500">Traders actifs</span><b className="text-sm text-emerald-700">{activeTraders}</b></div>
+                    <div className="flex items-center justify-between border-t border-slate-100 py-2"><span className="text-[10px] text-slate-500">Traders actifs</span><b className="text-sm text-emerald-700">{overviewActiveTraders}</b></div>
                   </div>
                   <button onClick={() => setAdminTab('analytics')} className="mt-4 w-full rounded-xl border border-slate-200 py-2.5 text-[9px] font-bold text-slate-600 hover:bg-slate-50">Explorer Analytics</button>
                 </section>
