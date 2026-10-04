@@ -172,6 +172,26 @@ export async function firestorePatch(env: PaymentEnv, path: string, data: Record
   return response.json();
 }
 
+export async function firestoreDelete(env: PaymentEnv, path: string) {
+  const token = await accessToken(env);
+  const response = await fetch(`${FIRESTORE_BASE}/${path}`, {
+    method: 'DELETE',
+    headers: { Authorization: `Bearer ${token}` }
+  });
+  if (!response.ok && response.status !== 404) throw new Error(`Firestore DELETE failed: ${response.status}`);
+}
+
+export async function firestoreSet(env: PaymentEnv, path: string, data: Record<string, unknown>) {
+  const token = await accessToken(env);
+  const response = await fetch(`${FIRESTORE_BASE}/${path}`, {
+    method: 'PATCH',
+    headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fields: firestoreFields(data) })
+  });
+  if (!response.ok) throw new Error(`Firestore SET failed: ${response.status}`);
+  return response.json();
+}
+
 export async function verifyFirebaseIdToken(env: PaymentEnv, idToken: string): Promise<{ uid: string; email?: string }> {
   const apiKey = env.FIREBASE_API_KEY || PUBLIC_FIREBASE_API_KEY;
   const response = await fetch(`https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${encodeURIComponent(apiKey)}`, {
