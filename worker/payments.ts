@@ -312,7 +312,10 @@ export async function handleSimulatedPaymentRequest(request: Request, env: Payme
       }
     });
   } catch (error) {
-    console.error('Simulated payment initiation error:', error);
+    const details = error instanceof Error
+      ? { name: error.name, message: error.message, stack: error.stack }
+      : { error: String(error) };
+    console.error('Simulated payment initiation error:', JSON.stringify(details));
     return json({ success: false, message: 'Impossible de créer la simulation.' }, 500);
   }
 }
