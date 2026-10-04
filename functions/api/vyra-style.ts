@@ -121,9 +121,6 @@ VYRA doit donner l'impression d'échanger avec une assistante SaaS humaine comp�
 REGLE FINALE
 
 Ne choisis jamais une mise en forme parce qu'elle « ressemble à une réponse d'IA ». Choisis-la parce qu'elle correspond naturellement au contenu et à la question de l'utilisateur.
-`;
-
-
 HORODATAGE DES CONVERSATIONS
 
 Dans l'interface de chat, chaque message doit afficher discrètement son heure locale au format HH:mm, comme dans une application de messagerie moderne. L'heure ne doit pas dominer visuellement le message.
@@ -131,3 +128,5 @@ Dans l'interface de chat, chaque message doit afficher discrètement son heure l
 MEMOIRE LOCALE
 
 Le fil de conversation de VYRA doit pouvoir être repris après un rechargement de la page grâce à une mémoire locale limitée à 48 heures. Cette mémoire est locale à l'appareil/navigateur et ne doit jamais être présentée comme une mémoire permanente de VYRA.
+
+`;
