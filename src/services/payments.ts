@@ -84,3 +84,24 @@ export async function confirmSimulatedPayment(id: string) {
   if (!response.ok || !data.success) throw new Error(data.message || 'Impossible de confirmer la simulation.');
   return data.payment as PaymentInitResult & { paidAt?: string };
 }
+
+
+export async function syncSubscriptionStatus() {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Vous devez être connecté.');
+  const idToken = await user.getIdToken();
+  const response = await fetch('/api/subscription/status', {
+    headers: { Authorization: `Bearer ${idToken}` }
+  });
+  const data = await response.json();
+  if (!response.ok || !data.success) throw new Error(data.message || 'Impossible de synchroniser l’abonnement.');
+  return data.subscription as {
+    plan: PaidPlan | 'free';
+    subscriptionStatus: 'pending' | 'active' | 'expired' | 'scheduled';
+    subscriptionStartAt?: string | null;
+    subscriptionExpiresAt?: string | null;
+    scheduledPlan?: PaidPlan | 'free' | null;
+    scheduledStartAt?: string | null;
+    scheduledExpiresAt?: string | null;
+  };
+}
