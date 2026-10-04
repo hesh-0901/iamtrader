@@ -42,7 +42,16 @@ function fromFirestoreDocument(doc: any): Record<string, unknown> {
 
 async function accessToken(env: PaymentEnv): Promise<string> {
   if (!env.FIREBASE_SERVICE_ACCOUNT_JSON) throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON is not configured');
-  const service = JSON.parse(env.FIREBASE_SERVICE_ACCOUNT_JSON);
+  let service: { client_email?: string; private_key?: string };
+  try {
+    service = JSON.parse(env.FIREBASE_SERVICE_ACCOUNT_JSON) as { client_email?: string; private_key?: string };
+  } catch {
+    throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON is not valid JSON');
+  }
+  if (!service.client_email || !service.private_key) {
+    throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON is missing client_email or private_key');
+  }
+
   const now = Math.floor(Date.now() / 1000);
   const header = base64Url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
   const payload = base64Url(JSON.stringify({
@@ -52,8 +61,11 @@ async function accessToken(env: PaymentEnv): Promise<string> {
     iat: now,
     exp: now + 3600
   }));
-  const pem = service.private_key.replace(/\\n/g, '\n');
-  const body = pem.replace('-----BEGIN PRIVATE KEY-----', '').replace('-----END PRIVATE KEY-----', '').replace(/\\s/g, '');
+  const pem = service.private_key.replace(/\\n/g, '\n').trim();
+  const body = pem
+    .replace('-----BEGIN PRIVATE KEY-----', '')
+    .replace('-----END PRIVATE KEY-----', '')
+    .replace(/\s/g, '');
   const key = await crypto.subtle.importKey('pkcs8', Uint8Array.from(atob(body), c => c.charCodeAt(0)), { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['sign']);
   const signature = await crypto.subtle.sign('RSASSA-PKCS1-v1_5', key, new TextEncoder().encode(header + '.' + payload));
   const response = await fetch(GOOGLE_TOKEN_URL, {
@@ -64,7 +76,10 @@ async function accessToken(env: PaymentEnv): Promise<string> {
       assertion: header + '.' + payload + '.' + base64Url(signature)
     })
   });
-  if (!response.ok) throw new Error('Unable to obtain Firebase service token');
+  if (!response.ok) {
+    const details = (await response.text()).slice(0, 300);
+    throw new Error(`Unable to obtain Firebase service token: HTTP ${response.status} ${details}`);
+  }
   const data = await response.json() as { access_token?: string };
   if (!data.access_token) throw new Error('Firebase service token missing');
   return data.access_token;
