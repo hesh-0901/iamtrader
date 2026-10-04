@@ -19,7 +19,7 @@ export async function handlePaymentHistory(request: Request, env: PaymentEnv) {
 
   try {
     const user = await verifyFirebaseIdToken(env, token);
-    const payments = await firestoreQueryByField(env, 'payments', 'uid', user.uid, 100, '');
+    const payments = await firestoreQueryByField(env, 'payments', 'uid', user.uid, 100, 'uid');
 
     return json({
       success: true,
@@ -44,6 +44,6 @@ export async function handlePaymentHistory(request: Request, env: PaymentEnv) {
     });
   } catch (error) {
     console.error('Payment history error:', error);
-    return json({ success: false, message: error instanceof Error ? error.message : 'Impossible de récupérer votre historique.' }, 500);
+    return json({ success: false, message: 'Impossible de récupérer votre historique pour le moment.' }, 500);
   }
 }
