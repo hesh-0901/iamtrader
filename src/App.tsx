@@ -19,7 +19,6 @@ import { Psychology } from './pages/Psychology';
 import { TraderScoreView } from './pages/TraderScoreView';
 import { AccountsView } from './pages/AccountsView';
 import { SettingsView } from './pages/SettingsView';
-import { PaymentHistory } from './pages/PaymentHistory';
 import { AdminConsole } from './pages/AdminConsole';
 import { TradeModal } from './components/journal/TradeModal';
 import { TradeDetailModal } from './components/journal/TradeDetailModal';
@@ -253,7 +252,6 @@ function MainAppContent() {
     'psychology': 'Matrice Psychologique',
     'trader-score': 'Trader Score™',
     'accounts': 'Comptes de Trading',
-    'history': 'Mon historique',
     'settings': 'Paramètres Système',
     'admin': 'Console Administration'
   };
@@ -353,8 +351,6 @@ function MainAppContent() {
               onSelectAccount={(id) => setSelectedAccountId(id)}
             />
           )}
-
-          {currentPage === 'history' && <PaymentHistory />}
 
           {currentPage === 'settings' && (
             <SettingsView
