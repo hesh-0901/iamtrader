@@ -42,7 +42,10 @@ const VYRA_CHAT_STORAGE_KEY = 'iamtrader_vyra_chat_v2';
 const VYRA_CHAT_RETENTION_MS = 48 * 60 * 60 * 1000;
 
 function formatVyraTime(timestamp: number): string {
-  return new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(timestamp));
+  if (!Number.isFinite(timestamp)) return '';
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', hour12: false }).format(date);
 }
 
 function loadVyraChat(): Array<{ role: 'assistant' | 'user'; text: string; createdAt: number }> | null {
