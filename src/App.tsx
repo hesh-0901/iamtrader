@@ -184,8 +184,8 @@ function MainAppContent() {
     return (
       <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center text-slate-400 gap-4 animate-in fade-in duration-300">
         <div className="relative flex items-center justify-center">
-          <div className="w-14 h-14 rounded-2xl bg-blue-600/15 border border-blue-500/30 flex items-center justify-center text-blue-400 font-bold shadow-xl shadow-blue-500/10">
-            <Activity className="w-7 h-7 stroke-[2.5] animate-pulse" />
+          <div className="w-14 h-14 rounded-2xl bg-white border border-slate-200 flex items-center justify-center shadow-xl shadow-slate-900/10">
+            <img src="/brand/logo-iamtrader-symbol.png" alt="IAMTRADER" className="w-10 h-10 object-contain animate-pulse" />
           </div>
           <span className="absolute -bottom-1 -right-1 flex h-3.5 w-3.5">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
