@@ -277,11 +277,13 @@ export async function handleSimulatedPaymentRequest(request: Request, env: Payme
     const planKey = body.plan;
     const plan = planKey ? PLANS[planKey] : undefined;
     const phone = normalizePhone(body.phone);
+    const paymentAmounts = plan ? calculatePaymentAmounts(plan.amount) : undefined;
     const idempotencyKey = String(body.idempotencyKey || '').replace(/[^a-f0-9]/gi, '').toLowerCase();
 
     if (!plan || !planKey) return json({ success: false, message: 'Formule invalide.' }, 400);
     if (!phone) return json({ success: false, message: 'Numéro Mobile Money invalide.' }, 400);
     if (idempotencyKey.length !== 64) return json({ success: false, message: 'Clé de paiement invalide.' }, 400);
+    if (!paymentAmounts) return json({ success: false, message: 'Montant de paiement invalide.' }, 400);
 
     const profile = await firestoreGet(env, `users/${encodeURIComponent(user.uid)}`);
     if (!profile) return json({ success: false, message: 'Profil utilisateur introuvable.' }, 404);
@@ -301,7 +303,10 @@ export async function handleSimulatedPaymentRequest(request: Request, env: Payme
       displayName: profile.displayName || user.email || '',
       plan: planKey,
       planName: plan.name,
-      amount: plan.amount,
+      amount: paymentAmounts.total,
+      baseAmount: paymentAmounts.baseAmount,
+      paymentFee: paymentAmounts.fee,
+      paymentFeeRate: PAYMENT_FEE_RATE,
       currency: plan.currency,
       phone,
       provider: 'SIMULATOR',
@@ -319,7 +324,9 @@ export async function handleSimulatedPaymentRequest(request: Request, env: Payme
         id: idempotencyKey,
         plan: planKey,
         planName: plan.name,
-        amount: plan.amount,
+        amount: paymentAmounts.total,
+        baseAmount: paymentAmounts.baseAmount,
+        paymentFee: paymentAmounts.fee,
         currency: plan.currency,
         status: 'processing',
         reference: idempotencyKey,
@@ -356,7 +363,7 @@ export async function handleSimulatedPaymentConfirm(request: Request, env: Payme
 
     const planKey = payment.plan as keyof typeof PLANS;
     const plan = PLANS[planKey];
-    if (!plan || Number(payment.amount) !== plan.amount || payment.currency !== plan.currency) {
+    if (!plan || Number(payment.amount) !== calculatePaymentAmounts(plan.amount).total || payment.currency !== plan.currency) {
       return json({ success: false, message: 'Le montant de la transaction ne correspond pas au tarif du plan.' }, 409);
     }
 
