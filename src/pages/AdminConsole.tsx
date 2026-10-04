@@ -167,6 +167,56 @@ export function AdminConsole() {
     .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
     .slice(0, 5);
 
+  const userMetrics = useMemo(() => {
+    const result: Record<string, { initialCapital: number; totalPnl: number; tradeCount: number; pnlPercent: number | null; currency: string }> = {};
+    users.forEach(u => {
+      const userAccounts = accounts.filter(a => a.userId === u.uid);
+      const userTrades = trades.filter(t => t.userId === u.uid);
+      const initialCapital = userAccounts.reduce((sum, a) => sum + Number((a as any).initialBalance ?? (a as any).initialCapital ?? (a as any).balance ?? 0), 0);
+      const totalPnl = userTrades.reduce((sum, t) => sum + Number((t as any).pnl ?? (t as any).profitLoss ?? (t as any).profit ?? (t as any).result ?? 0), 0);
+      result[u.uid] = {
+        initialCapital,
+        totalPnl,
+        tradeCount: userTrades.length,
+        pnlPercent: initialCapital > 0 ? (totalPnl / initialCapital) * 100 : null,
+        currency: 'USD'
+      };
+    });
+    return result;
+  }, [users, accounts, trades]);
+
+  const visible = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return users.filter(u => {
+      const matchesSearch = !query || [u.displayName, u.email].filter(Boolean).some(v => String(v).toLowerCase().includes(query));
+      const d = remaining(u);
+      const matchesFilter =
+        filter === 'all' ||
+        (filter === 'active' && u.status === 'active') ||
+        (filter === 'suspended' && u.status === 'suspended') ||
+        (filter === 'pending' && Boolean((u as any).planRequest)) ||
+        (filter === 'expiring' && d !== null && d >= 0 && d <= 5) ||
+        (filter === 'expired' && d !== null && d < 0);
+      return matchesSearch && matchesFilter;
+    });
+  }, [users, search, filter]);
+
+  const totalPages = Math.max(1, Math.ceil(visible.length / perPage));
+  const pagedUsers = visible.slice((page - 1) * perPage, page * perPage);
+  const newUsers = users.filter(u => {
+    const created = new Date(u.createdAt || '').getTime();
+    return Number.isFinite(created) && Date.now() - created <= 7 * DAY;
+  });
+  const stats = {
+    total: users.length,
+    paid: users.filter(u => u.plan !== 'free').length,
+    expiring: overviewExpiringUsers.length,
+    expired: users.filter(u => {
+      const d = remaining(u);
+      return d !== null && d < 0;
+    }).length
+  };
+
   return (
     <div className="min-h-full bg-[#f5f8fb] -m-4 lg:-m-6">
       <div className="mx-auto max-w-[1600px] px-4 py-4 lg:px-6">
@@ -274,7 +324,7 @@ export function AdminConsole() {
 
           {adminTab==='users' && <section className="space-y-4">
             <div className="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:flex-row"><div className="relative flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Rechercher un utilisateur..." className="w-full rounded-xl border border-slate-200 bg-slate-50 py-3 pl-9 pr-3 text-xs outline-none"/></div><select value={filter} onChange={e=>setFilter(e.target.value as Filter)} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-xs font-semibold"><option value="all">Tous les profils</option><option value="active">Actifs</option><option value="suspended">Suspendus</option><option value="pending">Demandes de plan</option><option value="expiring">Échéance ≤ 5 j</option><option value="expired">Expirés</option></select></div>
-            <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"><div className="overflow-x-auto"><table className="w-full min-w-[1050px]"><thead className="bg-slate-50"><tr className="text-left text-[8px] font-black uppercase tracking-wider text-slate-400"><th className="px-4 py-3">Utilisateur</th><th>Plan</th><th>P&L</th><th>Trades</th><th>Paiement</th><th>Échéance</th><th>Statut</th><th className="pr-4 text-right">Action</th></tr></thead><tbody>{visible.map(u=>{const m=userMetrics[u.uid]||{initialCapital:0,totalPnl:0,tradeCount:0,pnlPercent:null,currency:'USD'};const d=remaining(u);return <tr key={u.uid} className="border-t border-slate-100 hover:bg-slate-50/60"><td className="px-4 py-3.5"><button onClick={()=>openManage(u)} className="text-left"><b className="block text-xs text-slate-800">{u.displayName||'Sans nom'}</b><span className="text-[9px] text-slate-400">{u.email}</span></button></td><td><span className={'rounded-lg border px-2 py-1 text-[9px] font-bold '+planClass(u.plan)}>{planLabel(u.plan)}</span></td><td><b className={'text-[10px] '+(m.pnlPercent===null?'text-slate-400':m.pnlPercent>=0?'text-emerald-600':'text-rose-600')}>{m.pnlPercent===null?'—':(m.pnlPercent>=0?'+':'')+m.pnlPercent.toFixed(2)+'%'}</b></td><td><span className="rounded-lg bg-slate-100 px-2 py-1 text-[9px] font-bold">{m.tradeCount}</span></td><td className="text-[10px] font-semibold">{u.paymentStatus==='paid'?'Confirmé':'Non payé'}</td><td className="text-[10px] font-semibold">{d===null?'—':fmt(u.subscriptionExpiresAt)}</td><td><span className={'rounded-full px-2 py-1 text-[8px] font-bold '+(u.status==='active'?'bg-emerald-50 text-emerald-700':'bg-rose-50 text-rose-700')}>{u.status==='active'?'Actif':'Suspendu'}</span></td><td className="pr-4 text-right"><button onClick={()=>openManage(u)} className="rounded-xl bg-[#0b1f35] px-3 py-2 text-[9px] font-bold text-white">Gérer</button></td></tr>})}</tbody></table></div><div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-[9px] text-slate-400">Page {page} / {totalPages}<span className="flex gap-1"><button disabled={page===1} onClick={()=>setPage(page-1)} className="rounded-lg border p-1.5 disabled:opacity-30"><ChevronLeft className="h-3.5 w-3.5"/></button><button disabled={page===totalPages} onClick={()=>setPage(page+1)} className="rounded-lg border p-1.5 disabled:opacity-30"><ChevronRight className="h-3.5 w-3.5"/></button></span></div></section>
+            <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"><div className="overflow-x-auto"><table className="w-full min-w-[1050px]"><thead className="bg-slate-50"><tr className="text-left text-[8px] font-black uppercase tracking-wider text-slate-400"><th className="px-4 py-3">Utilisateur</th><th>Plan</th><th>P&L</th><th>Trades</th><th>Paiement</th><th>Échéance</th><th>Statut</th><th className="pr-4 text-right">Action</th></tr></thead><tbody>{pagedUsers.map(u=>{const m=userMetrics[u.uid]||{initialCapital:0,totalPnl:0,tradeCount:0,pnlPercent:null,currency:'USD'};const d=remaining(u);return <tr key={u.uid} className="border-t border-slate-100 hover:bg-slate-50/60"><td className="px-4 py-3.5"><button onClick={()=>openManage(u)} className="text-left"><b className="block text-xs text-slate-800">{u.displayName||'Sans nom'}</b><span className="text-[9px] text-slate-400">{u.email}</span></button></td><td><span className={'rounded-lg border px-2 py-1 text-[9px] font-bold '+planClass(u.plan)}>{planLabel(u.plan)}</span></td><td><b className={'text-[10px] '+(m.pnlPercent===null?'text-slate-400':m.pnlPercent>=0?'text-emerald-600':'text-rose-600')}>{m.pnlPercent===null?'—':(m.pnlPercent>=0?'+':'')+m.pnlPercent.toFixed(2)+'%'}</b></td><td><span className="rounded-lg bg-slate-100 px-2 py-1 text-[9px] font-bold">{m.tradeCount}</span></td><td className="text-[10px] font-semibold">{u.paymentStatus==='paid'?'Confirmé':'Non payé'}</td><td className="text-[10px] font-semibold">{d===null?'—':fmt(u.subscriptionExpiresAt)}</td><td><span className={'rounded-full px-2 py-1 text-[8px] font-bold '+(u.status==='active'?'bg-emerald-50 text-emerald-700':'bg-rose-50 text-rose-700')}>{u.status==='active'?'Actif':'Suspendu'}</span></td><td className="pr-4 text-right"><button onClick={()=>openManage(u)} className="rounded-xl bg-[#0b1f35] px-3 py-2 text-[9px] font-bold text-white">Gérer</button></td></tr>})}</tbody></table></div><div className="flex items-center justify-between border-t border-slate-100 px-4 py-3 text-[9px] text-slate-400">Page {page} / {totalPages}<span className="flex gap-1"><button disabled={page===1} onClick={()=>setPage(page-1)} className="rounded-lg border p-1.5 disabled:opacity-30"><ChevronLeft className="h-3.5 w-3.5"/></button><button disabled={page===totalPages} onClick={()=>setPage(page+1)} className="rounded-lg border p-1.5 disabled:opacity-30"><ChevronRight className="h-3.5 w-3.5"/></button></span></div></section>
           </section>}
 
           {adminTab==='subscriptions' && <section className="space-y-4">
