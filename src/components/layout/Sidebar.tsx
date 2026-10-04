@@ -38,8 +38,11 @@ export function Sidebar({ currentPage, onNavigate, userRole, isMobileOpen, onClo
       <div>
         <div className="h-[78px] flex items-center justify-between px-5 border-b border-[#19324D] bg-[#0A192F]">
           <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-2xl bg-[#e9faf4] border border-[#c8eee0] text-[#00a86b] flex items-center justify-center shrink-0"><Activity className="w-5 h-5 stroke-[2.4]" /></div>
-            {!isCollapsed && <div className="min-w-0"><div className="font-bold tracking-[-0.03em] text-white text-[15px] leading-none">iam<span className="text-[#00a86b]">trader</span></div><div className="text-[9px] text-[#8EA3B8] font-mono tracking-[.16em] mt-1.5 uppercase">Performance OS</div></div>}
+            <img
+              src={isCollapsed ? '/brand/logo-iamtrader-symbol-white.png' : '/brand/logo-iamtrader-full-white.png'}
+              alt="IAMTRADER"
+              className={isCollapsed ? 'w-10 h-10 object-contain shrink-0' : 'w-[142px] h-auto max-h-11 object-contain object-left shrink-0'}
+            />
           </div>
           <button onClick={onToggleCollapse} className="hidden lg:flex p-1.5 text-[#8EA3B8] hover:text-white rounded-lg hover:bg-[#132B47] transition-all cursor-pointer" title={isCollapsed ? 'Développer le menu' : 'Réduire le menu'}><ChevronLeft className={`w-4 h-4 transition-transform duration-200 ${isCollapsed ? 'rotate-180' : ''}`} /></button>
           <button onClick={onCloseMobile} className="lg:hidden p-1.5 text-[#8EA3B8] hover:text-white rounded-lg hover:bg-[#132B47] cursor-pointer" aria-label="Fermer le menu"><X className="w-5 h-5" /></button>
