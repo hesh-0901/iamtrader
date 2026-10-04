@@ -19,7 +19,7 @@ export async function handlePaymentHistory(request: Request, env: PaymentEnv) {
 
   try {
     const user = await verifyFirebaseIdToken(env, token);
-    const payments = await firestoreQueryByField(env, 'payments', 'uid', user.uid, 100, 'createdAt');
+    const payments = await firestoreQueryByField(env, 'payments', 'uid', user.uid, 100);
 
     return json({
       success: true,
