@@ -72,7 +72,8 @@ export function PaymentHistory() {
           <div className="divide-y divide-slate-100">
             {paginatedItems.map((item, index) => {
               const s = status(item), Icon = s.icon;
-              return <div key={item.id} className="grid gap-4 px-5 py-4 sm:grid-cols-[40px_1.5fr_1fr_auto] sm:items-center">\n                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-xs font-black text-slate-500 border border-slate-200">{(page - 1) * pageSize + index + 1}</div>
+              return <div key={item.id} className="grid gap-4 px-5 py-4 sm:grid-cols-[40px_1.5fr_1fr_auto] sm:items-center">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-xs font-black text-slate-500 border border-slate-200">{(page - 1) * pageSize + index + 1}</div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2"><span className="text-sm font-black text-slate-900">{item.planName || (item.plan === 'pro' ? 'Plus' : 'Community')}</span><span className={`rounded-full border px-2 py-0.5 text-[9px] font-bold ${s.cls}`}><Icon className="mr-1 inline h-3 w-3" />{s.label}</span></div>
                   <div className="mt-1 text-[10px] text-slate-400">Réf. {item.reference} · {date(item.paidAt || item.createdAt)}</div>
