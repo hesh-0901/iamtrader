@@ -116,8 +116,8 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
 
   return (
     <div className="space-y-4">
-      <div className="mx-auto grid w-full max-w-[1280px] grid-cols-1 gap-0 xl:grid-cols-[minmax(0,1fr)_220px]">
-        <section className="min-w-0 overflow-hidden rounded-[20px] border border-[#DCE7EE] bg-white text-[#0B1F35] shadow-[0_14px_40px_rgba(11,31,53,0.055)]">
+      <div className="mx-auto grid w-full max-w-[1280px] grid-cols-1 overflow-hidden rounded-[20px] border border-[#DCE7EE] bg-white text-[#0B1F35] shadow-[0_14px_40px_rgba(11,31,53,0.055)] xl:grid-cols-[minmax(0,1fr)_220px]">
+        <section className="min-w-0 overflow-hidden bg-white">
           <div className="border-b border-[#E8EEF2] px-4 py-4 sm:px-5">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="flex min-w-0 items-center gap-3">
@@ -215,10 +215,10 @@ export function CalendarView({ trades, accounts, onSelectTrade }: CalendarViewPr
             className="grid h-full gap-0"
             style={{
               gridTemplateRows:
-                '120px repeat(' + calendarWeekCount + ', 124px) 34px',
+                '120px repeat(' + calendarWeekCount + ', minmax(124px, 1fr)) 34px',
             }}
           >
-            <div className="flex flex-col justify-center border-b border-[#E5EDF1] bg-white px-4">
+            <div className="flex flex-col justify-center border-b border-[#E5EDF1] bg-[#F8FAFC] px-4">
               <h3 className="text-sm font-extrabold tracking-[-0.01em]">P&L par semaine</h3>
               <p className="mt-1 text-[10px] text-[#8A9AAF]">Performance de {monthNames[month]} {year}</p>
             </div>
