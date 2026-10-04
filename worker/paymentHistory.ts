@@ -7,6 +7,18 @@ function json(data: unknown, status = 200) {
   });
 }
 
+function legacyTransactionReference(payment: Record<string, unknown>) {
+  const id = String(payment.id || payment.reference || 'UNKNOWN');
+  const year = new Date(String(payment.createdAt || new Date().toISOString())).getUTCFullYear().toString().slice(-2);
+  return `TXN-${year}-${id.slice(-8).toUpperCase()}`;
+}
+
+function legacyInvoiceNumber(payment: Record<string, unknown>) {
+  const id = String(payment.id || payment.reference || 'UNKNOWN');
+  const year = new Date(String(payment.createdAt || new Date().toISOString())).getUTCFullYear().toString().slice(-2);
+  return `INV-${year}-${id.slice(-8).toUpperCase()}`;
+}
+
 function authHeader(request: Request) {
   const value = request.headers.get('Authorization') || '';
   return value.startsWith('Bearer ') ? value.slice(7) : null;
@@ -32,8 +44,8 @@ export async function handlePaymentHistory(request: Request, env: PaymentEnv) {
         paymentFee: Number(payment.paymentFee || 0),
         currency: payment.currency || 'USD',
         status: payment.status || 'initiated',
-        reference: payment.transactionReference || payment.reference || payment.id,
-        invoiceNumber: payment.invoiceNumber || null,
+        reference: payment.transactionReference || legacyTransactionReference(payment),
+        invoiceNumber: payment.invoiceNumber || legacyInvoiceNumber(payment),
         buyerUid: payment.uid || user.uid,
         buyerEmail: payment.email || user.email || null,
         payerName: payment.payerName || null,
