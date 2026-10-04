@@ -84,7 +84,7 @@ export type UserStatus = 'active' | 'suspended';
 export type SubscriptionStatus = 'pending' | 'active' | 'expired' | 'scheduled';
 export type PaymentStatus = 'unpaid' | 'paid' | 'refunded';
 
-export type PaymentRecordStatus = 'initiated' | 'processing' | 'paid' | 'failed' | 'refunded';
+export type PaymentRecordStatus = 'initiated' | 'processing' | 'paid' | 'failed' | 'refunded' | 'cancelled' | 'invalidated';
 export type PaymentMode = 'live' | 'simulation';
 
 export interface PaymentRecord {
