@@ -133,121 +133,290 @@ export function AdminConsole() {
       });
     });
 
-    return (
+    return () => {
+      unsubscribeUsers?.();
+      unsubscribeContacts?.();
+      unsubscribePayments?.();
+      unsubscribeAuth();
+    };
+  }, []);
+
+  const userMetrics = useMemo(() => {
+    const map: Record<string, { initialCapital: number; totalPnl: number; tradeCount: number; pnlPercent: number | null; currency: string }> = {};
+    users.forEach(u => {
+      const userAccounts = accounts.filter(a => a.userId === u.uid);
+      const userTrades = trades.filter(t => t.userId === u.uid);
+      const currencies = Array.from(new Set(userAccounts.map(a => a.currency).filter(Boolean)));
+      const initialCapital = userAccounts.reduce((sum, a) => sum + (Number(a.initialBalance) || 0), 0);
+      const totalPnl = userTrades.reduce((sum, t) => sum + (Number(t.pnl) || 0), 0);
+      map[u.uid] = {
+        initialCapital,
+        totalPnl,
+        tradeCount: userTrades.length,
+        pnlPercent: initialCapital > 0 ? (totalPnl / initialCapital) * 100 : null,
+        currency: currencies.length === 1 ? currencies[0] : currencies.length > 1 ? 'MULTI' : 'USD'
+      };
+    });
+    return map;
+  }, [users, accounts, trades]);
+
+  const stats = useMemo(() => ({
+    total: users.length,
+    active: users.filter(u => u.status === 'active').length,
+    paid: users.filter(u => u.paymentStatus === 'paid').length,
+    pending: users.filter(u => !!u.pendingPlan).length,
+    expiring: users.filter(u => { const d = remaining(u); return d !== null && d >= 0 && d <= 5; }).length,
+    expired: users.filter(u => { const d = remaining(u); return d !== null && d < 0; }).length
+  }), [users]);
+
+  const orderedUsers = useMemo(() => [...users].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()), [users]);
+  const recentCutoff = Date.now() - 7 * DAY;
+  const newUsers = orderedUsers.filter(u => new Date(u.createdAt).getTime() >= recentCutoff);
+  const pendingPlanUsers = orderedUsers.filter(u => !!u.pendingPlan);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return orderedUsers.filter(u => {
+      const d = remaining(u);
+      const text = !q || u.email.toLowerCase().includes(q) || (u.displayName || '').toLowerCase().includes(q);
+      const ok = filter === 'all' ||
+        (filter === 'active' && u.status === 'active') ||
+        (filter === 'suspended' && u.status === 'suspended') ||
+        (filter === 'pending' && !!u.pendingPlan) ||
+        (filter === 'expiring' && d !== null && d >= 0 && d <= 5) ||
+        (filter === 'expired' && d !== null && d < 0);
+      return text && ok;
+    });
+  }, [orderedUsers, search, filter]);
+
+  const totalPages = Math.max(1, Math.ceil(filtered.length / perPage));
+  const visible = filtered.slice((page - 1) * perPage, page * perPage);
+  useEffect(() => { setPage(1); }, [search, filter]);
+
+  function patch(uid: string, changes: Partial<UserProfile>) {
+    setUsers(prev => prev.map(u => u.uid === uid ? { ...u, ...changes } : u));
+    setSelected(prev => prev?.uid === uid ? { ...prev, ...changes } : prev);
+  }
+
+  async function audit(user: UserProfile, action: string, details: string) {
+    const adminUid = auth.currentUser?.uid;
+    if (!adminUid) return;
+    const item = { adminUid, action, userUid: user.uid, userName: user.displayName || user.email, details, createdAt: new Date().toISOString() };
+    try {
+      await addAdminLog(item);
+      setLogs(prev => [{ id: 'local-' + Date.now(), ...item }, ...prev].slice(0, 60));
+    } catch {}
+  }
+
+  function openManage(u: UserProfile) {
+    setSelected(u); setPlan(u.plan); setStatus(u.status); setPayment(u.paymentStatus || 'unpaid'); setExpiry(inputDate(u.subscriptionExpiresAt)); setDays('');
+  }
+
+  async function saveManual() {
+    if (!selected) return;
+    setBusy(true);
+    try {
+      const ex = isoDate(expiry);
+      const subStatus = ex && new Date(ex).getTime() >= Date.now() ? 'active' : 'expired';
+      await updateUserRoleAndPlan(selected.uid, { plan, status, paymentStatus: payment, subscriptionExpiresAt: ex, subscriptionStatus: subStatus });
+      patch(selected.uid, { plan, status, paymentStatus: payment, subscriptionExpiresAt: ex, subscriptionStatus: subStatus });
+      await audit(selected, 'Modification manuelle', 'Plan ' + planLabel(plan) + ', statut ' + status + ', échéance ' + (expiry || 'aucune') + '.');
+      showToast('Modifications enregistrées.', 'success');
+    } catch (e: any) { showToast(e?.message || 'Modification refusée par Firestore.', 'error'); }
+    finally { setBusy(false); }
+  }
+
+  async function adjustDays(amount: number) {
+    if (!selected) return;
+    const current = expiryOf(selected);
+    const base = current && current.getTime() > Date.now() ? current : new Date();
+    const next = new Date(base.getTime() + amount * DAY);
+    const value = next.toISOString();
+    setExpiry(inputDate(value)); setBusy(true);
+    try {
+      await updateUserRoleAndPlan(selected.uid, { subscriptionExpiresAt: value, subscriptionStatus: 'active' });
+      patch(selected.uid, { subscriptionExpiresAt: value, subscriptionStatus: 'active' });
+      await audit(selected, amount >= 0 ? 'Ajout de jours' : 'Retrait de jours', (amount >= 0 ? '+' : '') + amount + ' jour(s). Nouvelle échéance : ' + fmt(value) + '.');
+      showToast((amount >= 0 ? '+' : '') + amount + ' jour(s) appliqué(s).', 'success');
+    } catch (e: any) { showToast(e?.message || 'Impossible de modifier l’échéance.', 'error'); }
+    finally { setBusy(false); }
+  }
+
+  async function customDays() {
+    const n = Number(days);
+    if (!Number.isFinite(n) || n === 0) { showToast('Saisissez un nombre de jours différent de 0.', 'error'); return; }
+    await adjustDays(n); setDays('');
+  }
+
+  async function toggleStatus() {
+    if (!selected) return;
+    const next: UserStatus = selected.status === 'active' ? 'suspended' : 'active';
+    setBusy(true);
+    try {
+      await updateUserRoleAndPlan(selected.uid, { status: next });
+      patch(selected.uid, { status: next });
+      await audit(selected, next === 'active' ? 'Réactivation' : 'Suspension', next === 'active' ? 'Compte réactivé.' : 'Compte suspendu.');
+      showToast(next === 'active' ? 'Compte réactivé.' : 'Compte suspendu.', 'success');
+    } catch (e: any) { showToast(e?.message || 'Action refusée.', 'error'); }
+    finally { setBusy(false); }
+  }
+
+  return (
     <div className="min-h-full bg-[#f6f8fb] -m-4 lg:-m-6 p-3 sm:p-4 lg:p-6">
-      <div className="mx-auto flex max-w-[1560px] gap-4 lg:gap-6">
-        <aside className="hidden w-[220px] shrink-0 lg:block">
-          <div className="sticky top-4 overflow-hidden rounded-[22px] border border-slate-200 bg-white shadow-[0_8px_30px_rgba(15,23,42,.05)]">
-            <div className="border-b border-slate-100 p-5">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#0b1f35] text-white"><ShieldCheck className="h-5 w-5" /></div>
-                <div><div className="text-[11px] font-black tracking-wide text-slate-950">IAMTRADER</div><div className="mt-0.5 text-[9px] font-medium text-slate-400">Administration</div></div>
-              </div>
-            </div>
-            <div className="p-2.5">
-              <div className="px-3 pb-2 pt-1 text-[8px] font-black uppercase tracking-[.18em] text-slate-400">Workspace</div>
+      <div className="mx-auto max-w-[1560px] space-y-4">
+        <div className="flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm lg:hidden">
+          <div><div className="text-[9px] font-black uppercase tracking-[.15em] text-slate-400">IAMTRADER</div><div className="mt-0.5 text-xs font-black text-slate-950">Administration</div></div>
+          <button onClick={load} disabled={loading} className="rounded-xl border border-slate-200 p-2 text-slate-500"><RefreshCw className={'h-4 w-4 ' + (loading ? 'animate-spin' : '')}/></button>
+        </div>
+        <div className="flex gap-5">
+          <aside className="hidden w-56 shrink-0 lg:block"><div className="sticky top-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+            <div className="border-b border-slate-100 p-5"><div className="flex items-center gap-3"><div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#0b1f35] text-white"><ShieldCheck className="h-4 w-4"/></div><div><b className="block text-[11px] text-slate-950">IAMTRADER</b><span className="text-[9px] text-slate-400">Admin workspace</span></div></div></div>
+            <div className="p-2.5"><div className="px-3 pb-2 pt-1 text-[8px] font-black uppercase tracking-[.16em] text-slate-400">Workspace</div>
               {([
-                ['overview','Vue d’ensemble',Activity],
-                ['users','Utilisateurs',Users],
-                ['subscriptions','Abonnements',Clock3],
-                ['payments','Paiements',CreditCard],
-                ['support','Support',Mail],
-                ['analytics','Analytics',Activity],
-                ['audit','Journal d’audit',History]
-              ] as const).map(([key,label,Icon]) => (
-                <button key={key} onClick={() => setAdminTab(key)} className={'mb-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[10px] font-bold transition ' + (adminTab === key ? 'bg-[#0b1f35] text-white shadow-sm' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900')}>
-                  <Icon className="h-4 w-4 shrink-0" /><span>{label}</span>
-                  {key === 'support' && contactMessages.filter(m => m.status === 'new').length > 0 && <span className="ml-auto rounded-full bg-blue-100 px-1.5 py-0.5 text-[8px] font-black text-blue-700">{contactMessages.filter(m => m.status === 'new').length}</span>}
-                </button>
-              ))}
+                ['overview','Vue d’ensemble',Activity],['users','Utilisateurs',Users],['subscriptions','Abonnements',Clock3],['payments','Paiements',CreditCard],['support','Support',Mail],['analytics','Analytics',Activity],['audit','Journal d’audit',History]
+              ] as const).map(([key,label,Icon]) => <button key={key} onClick={()=>setAdminTab(key)} className={'mb-1 flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-[10px] font-bold '+(adminTab===key?'bg-[#0b1f35] text-white':'text-slate-500 hover:bg-slate-50 hover:text-slate-900')}><Icon className="h-4 w-4"/><span>{label}</span>{key==='support'&&contactMessages.filter(m=>m.status==='new').length>0&&<span className="ml-auto rounded-full bg-blue-100 px-1.5 py-0.5 text-[8px] font-black text-blue-700">{contactMessages.filter(m=>m.status==='new').length}</span>}</button>)}
             </div>
-            <div className="m-2.5 rounded-xl bg-slate-50 p-3">
-              <div className="flex items-center gap-2 text-[9px] font-bold text-emerald-700"><span className="h-2 w-2 rounded-full bg-emerald-500" />Temps réel actif</div>
-              <div className="mt-1 text-[8px] leading-4 text-slate-400">Utilisateurs, paiements et support synchronisés.</div>
+            <div className="m-2.5 rounded-xl bg-slate-50 p-3"><div className="text-[9px] font-bold text-emerald-700">● Temps réel actif</div><p className="mt-1 text-[8px] leading-4 text-slate-400">Données synchronisées automatiquement.</p></div>
+          </div></aside>
+          <main className="min-w-0 flex-1">
+            <div className="mb-4 flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+              <div className="min-w-0"><div className="text-[8px] font-black uppercase tracking-[.16em] text-slate-400">Admin Console</div><div className="mt-0.5 truncate text-sm font-black text-slate-950">{adminTab === 'overview' ? 'Vue d’ensemble' : adminTab === 'users' ? 'Utilisateurs' : adminTab === 'subscriptions' ? 'Abonnements' : adminTab === 'payments' ? 'Paiements' : adminTab === 'support' ? 'Support' : adminTab === 'analytics' ? 'Analytics' : 'Journal d’audit'}</div></div>
+              <div className="flex items-center gap-2"><span className="hidden rounded-full bg-emerald-50 px-2.5 py-1.5 text-[8px] font-black text-emerald-700 sm:inline-flex">LIVE</span><button onClick={load} disabled={loading} className="rounded-xl border border-slate-200 bg-white p-2 text-slate-500 hover:bg-slate-50"><RefreshCw className={'h-4 w-4 ' + (loading ? 'animate-spin' : '')}/></button></div>
             </div>
-          </div>
-        </aside>
-
-        <main className="min-w-0 flex-1">
-          <div className="sticky top-2 z-30 mb-4 flex items-center justify-between rounded-2xl border border-slate-200 bg-white/95 px-3 py-2.5 shadow-sm backdrop-blur lg:top-4">
-            <div className="min-w-0">
-              <div className="truncate text-[9px] font-black uppercase tracking-[.16em] text-slate-400">Admin Console / {adminTab === 'overview' ? 'Vue d’ensemble' : adminTab === 'users' ? 'Utilisateurs' : adminTab === 'subscriptions' ? 'Abonnements' : adminTab === 'payments' ? 'Paiements' : adminTab === 'support' ? 'Support' : adminTab === 'analytics' ? 'Analytics' : 'Journal d’audit'}</div>
-              <div className="mt-0.5 truncate text-sm font-black text-slate-950">Centre de contrôle IAMTRADER</div>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="hidden rounded-full bg-emerald-50 px-2.5 py-1.5 text-[9px] font-black text-emerald-700 sm:inline-flex">● LIVE</span>
-              <button onClick={load} disabled={loading} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-[10px] font-bold text-slate-600 hover:bg-slate-50"><RefreshCw className={'h-3.5 w-3.5 ' + (loading ? 'animate-spin' : '')} />Actualiser</button>
-            </div>
-          </div>
-
-          <div className="mb-4 flex gap-1.5 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-1.5 lg:hidden">
-            {([
+            <div className="mb-4 flex gap-1.5 overflow-x-auto lg:hidden">{([
               ['overview','Vue d’ensemble'],['users','Utilisateurs'],['subscriptions','Abonnements'],['payments','Paiements'],['support','Support'],['analytics','Analytics'],['audit','Audit']
-            ] as const).map(([key,label]) => <button key={key} onClick={() => setAdminTab(key)} className={'whitespace-nowrap rounded-xl px-3 py-2 text-[9px] font-bold ' + (adminTab === key ? 'bg-[#0b1f35] text-white' : 'text-slate-500 hover:bg-slate-50')}>{label}</button>)}
+            ] as const).map(([key,label])=><button key={key} onClick={()=>setAdminTab(key)} className={'whitespace-nowrap rounded-xl px-3 py-2 text-[9px] font-bold '+(adminTab===key?'bg-[#0b1f35] text-white':'bg-white text-slate-500 border border-slate-200')}>{label}</button>)}</div>
+
+
+        {(adminTab === 'overview' || adminTab === 'payments') && <section className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-100 p-4 sm:p-5">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600"><CreditCard className="h-4 w-4" /></div>
+                <div><h2 className="text-sm font-black text-slate-900">Réception des paiements</h2><p className="mt-1 text-[10px] text-slate-400">Registre transactionnel reçu côté serveur, mis à jour en temps réel.</p></div>
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5">
+                {(['all','paid','processing','failed'] as const).map(status => <button key={status} onClick={() => setPaymentFilter(status)} className={'rounded-xl px-3 py-2 text-[10px] font-bold ' + (paymentFilter === status ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200')}>{status === 'all' ? 'Tous' : status === 'paid' ? 'Confirmés' : status === 'processing' ? 'En cours' : 'Échoués'}</button>)}
+              </div>
+            </div>
+            <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <div className="rounded-xl bg-slate-50 p-3"><div className="text-[9px] font-bold uppercase tracking-wide text-slate-400">Transactions</div><b className="mt-1 block text-lg text-slate-900">{payments.length}</b></div>
+              <div className="rounded-xl bg-emerald-50 p-3"><div className="text-[9px] font-bold uppercase tracking-wide text-emerald-600">Confirmés</div><b className="mt-1 block text-lg text-emerald-700">{payments.filter(p => p.status === 'paid').length}</b></div>
+              <div className="rounded-xl bg-amber-50 p-3"><div className="text-[9px] font-bold uppercase tracking-wide text-amber-600">En cours</div><b className="mt-1 block text-lg text-amber-700">{payments.filter(p => p.status === 'processing').length}</b></div>
+              <div className="rounded-xl bg-blue-50 p-3"><div className="text-[9px] font-bold uppercase tracking-wide text-blue-600">CA confirmé</div><b className="mt-1 block text-lg text-blue-800">$ {payments.filter(p => p.status === 'paid').reduce((sum, p) => sum + Number(p.amount || 0), 0).toFixed(2)}</b></div>
+            </div>
           </div>
-
-          {adminTab === 'overview' && <>
-            <section className="mb-4 grid grid-cols-2 gap-3 xl:grid-cols-4">
-              {[
-                ['Utilisateurs',stats.total,Users,'bg-blue-50 text-blue-600'],
-                ['Actifs',stats.active,UserCheck,'bg-emerald-50 text-emerald-600'],
-                ['Paiements confirmés',stats.paid,CreditCard,'bg-violet-50 text-violet-600'],
-                ['Échéances proches',stats.expiring,AlertTriangle,'bg-amber-50 text-amber-600']
-              ].map(([label,value,Icon,cls]) => <div key={String(label)} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"><div className="flex items-center justify-between"><span className="text-[9px] font-black uppercase tracking-[.12em] text-slate-400">{String(label)}</span><span className={'flex h-8 w-8 items-center justify-center rounded-lg ' + String(cls)}><Icon className="h-4 w-4" /></span></div><div className="mt-3 text-2xl font-black tracking-tight text-slate-950">{String(value)}</div><div className="mt-1 text-[9px] text-slate-400">Données synchronisées en temps réel</div></div>)}
-            </section>
-            <div className="grid gap-4 xl:grid-cols-[1.35fr_.65fr]">
-              <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-                <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4"><div><h2 className="text-xs font-black text-slate-950">Activité récente</h2><p className="mt-1 text-[9px] text-slate-400">Dernières transactions enregistrées</p></div><button onClick={() => setAdminTab('payments')} className="text-[9px] font-black text-blue-600">Voir tout</button></div>
-                <div className="divide-y divide-slate-100">
-                  {payments.slice(0,6).length ? payments.slice(0,6).map(p => <div key={p.id} className="flex items-center gap-3 px-5 py-3.5"><div className={'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ' + (p.status === 'paid' ? 'bg-emerald-50 text-emerald-600' : p.status === 'processing' ? 'bg-amber-50 text-amber-600' : 'bg-rose-50 text-rose-600')}><CreditCard className="h-4 w-4" /></div><div className="min-w-0 flex-1"><b className="block truncate text-[10px] text-slate-800">{p.displayName || p.email}</b><span className="block truncate text-[9px] text-slate-400">{p.planName} · {p.reference}</span></div><div className="text-right"><b className="block text-[10px] font-black text-slate-900">{Number(p.amount).toFixed(2)} {p.currency}</b><span className="text-[8px] text-slate-400">{new Date(p.createdAt).toLocaleDateString('fr-FR')}</span></div></div>) : <div className="p-10 text-center text-[10px] text-slate-400">Aucune activité de paiement.</div>}
+          <div className="divide-y divide-slate-100">
+            {payments.filter(p => paymentFilter === 'all' || p.status === paymentFilter).slice(0, 12).length === 0 ? <div className="p-10 text-center"><CreditCard className="mx-auto h-8 w-8 text-slate-300" /><p className="mt-2 text-xs font-bold text-slate-500">Aucune transaction</p><p className="mt-1 text-[10px] text-slate-400">Les nouveaux paiements apparaîtront ici après leur création.</p></div> : payments.filter(p => paymentFilter === 'all' || p.status === paymentFilter).slice(0, 12).map(p => (
+              <div key={p.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between hover:bg-slate-50/70">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className={'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ' + (p.status === 'paid' ? 'bg-emerald-50 text-emerald-600' : p.status === 'processing' ? 'bg-amber-50 text-amber-600' : 'bg-rose-50 text-rose-600')}><CreditCard className="h-4 w-4" /></div>
+                  <div className="min-w-0"><b className="block truncate text-xs text-slate-800">{p.displayName || p.email}</b><span className="mt-0.5 block truncate text-[10px] text-slate-400">{p.email} · {p.planName} · {p.reference.slice(0, 12)}…</span></div>
                 </div>
-              </section>
-              <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="flex items-center gap-2"><div className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-600"><AlertTriangle className="h-4 w-4" /></div><div><h2 className="text-xs font-black text-slate-950">À surveiller</h2><p className="text-[9px] text-slate-400">Actions prioritaires</p></div></div>
-                <div className="mt-5 space-y-2.5">
-                  <button onClick={() => { setAdminTab('subscriptions'); setFilter('pending'); }} className="flex w-full items-center justify-between rounded-xl bg-slate-50 p-3 text-left hover:bg-slate-100"><span><b className="block text-[10px] text-slate-800">Changements en attente</b><span className="text-[8px] text-slate-400">Validation nécessaire</span></span><strong className="text-sm text-slate-950">{stats.pending}</strong></button>
-                  <button onClick={() => { setAdminTab('users'); setFilter('expiring'); }} className="flex w-full items-center justify-between rounded-xl bg-slate-50 p-3 text-left hover:bg-slate-100"><span><b className="block text-[10px] text-slate-800">Abonnements proches</b><span className="text-[8px] text-slate-400">5 jours ou moins</span></span><strong className="text-sm text-amber-600">{stats.expiring}</strong></button>
-                  <button onClick={() => setAdminTab('support')} className="flex w-full items-center justify-between rounded-xl bg-slate-50 p-3 text-left hover:bg-slate-100"><span><b className="block text-[10px] text-slate-800">Tickets nouveaux</b><span className="text-[8px] text-slate-400">Support client</span></span><strong className="text-sm text-blue-600">{contactMessages.filter(m => m.status === 'new').length}</strong></button>
+                <div className="flex items-center justify-between gap-5 sm:justify-end">
+                  <div className="text-right"><b className="block text-sm font-black text-slate-900">{Number(p.amount).toFixed(2)} {p.currency}</b><span className="mt-0.5 block text-[9px] text-slate-400">{new Date(p.createdAt).toLocaleString('fr-FR')}</span></div>
+                  <span className={'inline-flex rounded-full px-2.5 py-1 text-[9px] font-black ' + (p.status === 'paid' ? 'bg-emerald-50 text-emerald-700' : p.status === 'processing' ? 'bg-amber-50 text-amber-700' : 'bg-rose-50 text-rose-700')}>{p.status === 'paid' ? 'PAYÉ' : p.status === 'processing' ? 'EN COURS' : 'ÉCHEC'}</span>
                 </div>
-              </section>
-            </div>
-          </>}
-
-          {(adminTab === 'users' || adminTab === 'subscriptions') && <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="border-b border-slate-100 p-5">
-              <div className="flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
-                <div><div className="text-[9px] font-black uppercase tracking-[.15em] text-blue-600">{adminTab === 'users' ? 'Directory' : 'Subscription management'}</div><h2 className="mt-1 text-lg font-black text-slate-950">{adminTab === 'users' ? 'Utilisateurs' : 'Gestion des abonnements'}</h2><p className="mt-1 text-[10px] text-slate-400">Recherche, filtrage et gestion opérationnelle des comptes.</p></div>
-                <div className="relative w-full xl:w-80"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-300" /><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Rechercher un utilisateur..." className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-3 text-[10px] font-medium outline-none focus:border-blue-300 focus:bg-white" /></div>
               </div>
-              <div className="mt-4 flex gap-1.5 overflow-x-auto">
-                {([
-                  ['all','Tous',stats.total],['active','Actifs',stats.active],['suspended','Suspendus',users.filter(u=>u.status==='suspended').length],['pending','En attente',stats.pending],['expiring','≤ 5 jours',stats.expiring],['expired','Expirés',stats.expired]
-                ] as const).map(([key,label,count]) => <button key={key} onClick={() => setFilter(key)} className={'whitespace-nowrap rounded-lg px-2.5 py-2 text-[9px] font-bold ' + (filter===key ? 'bg-[#0b1f35] text-white' : 'bg-slate-50 text-slate-500 hover:bg-slate-100')}>{label} <span className={filter===key ? 'text-white/60' : 'text-slate-400'}>{count}</span></button>)}
+            ))}
+          </div>
+        </section>}
+
+        {error && <div className="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-xs text-rose-700">{error}</div>}
+
+        {(adminTab === 'overview' || adminTab === 'users' || adminTab === 'subscriptions') && pendingPlanUsers.length > 0 && (
+          <button
+            onClick={() => setFilter('pending')}
+            className="group flex w-full items-center justify-between gap-4 rounded-2xl border border-blue-200 bg-blue-50 px-4 py-3 text-left shadow-sm transition hover:border-blue-300 hover:bg-blue-100"
+          >
+            <span className="flex min-w-0 items-center gap-3">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white">
+                <BellRing className="h-4 w-4" />
+              </span>
+              <span className="min-w-0">
+                <b className="block text-xs font-black text-blue-950">
+                  Nouvelle demande de changement de plan
+                </b>
+                <span className="mt-0.5 block text-[10px] text-blue-700">
+                  {pendingPlanUsers.length} demande{pendingPlanUsers.length > 1 ? 's' : ''} en attente de traitement.
+                </span>
+              </span>
+            </span>
+            <span className="shrink-0 rounded-xl bg-white px-3 py-2 text-[9px] font-black text-blue-700 ring-1 ring-blue-200 group-hover:bg-blue-50">
+              Voir les demandes
+            </span>
+          </button>
+        )}
+
+        {(adminTab === 'users' || adminTab === 'subscriptions' || adminTab === 'analytics') && !metricsReady && <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-[11px] text-amber-800"><b>Statistiques de trading indisponibles.</b> Publiez les nouvelles règles Firestore afin que l’administrateur puisse lire les comptes et les trades.</div>}
+
+        {(adminTab === 'overview' || adminTab === 'users' || adminTab === 'subscriptions') && <>
+        <section className="grid lg:grid-cols-[1fr_360px] gap-4">
+          <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+              <div><h2 className="text-sm font-black text-slate-900">Utilisateurs & abonnements</h2><p className="mt-1 text-[11px] text-slate-400">{filtered.length} résultat(s)</p></div>
+              <div className="flex flex-col sm:flex-row gap-2">
+                <div className="relative"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" /><input value={search} onChange={e => setSearch(e.target.value)} placeholder="Nom ou e-mail..." className="w-full sm:w-64 rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-3 text-xs outline-none focus:border-blue-300" /></div>
+                <select value={filter} onChange={e => setFilter(e.target.value as Filter)} className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-xs font-semibold text-slate-600 outline-none"><option value="all">Tous</option><option value="active">Actifs</option><option value="suspended">Suspendus</option><option value="pending">À confirmer</option><option value="expiring">Échéance ≤ 5 j</option><option value="expired">Expirés</option></select>
               </div>
             </div>
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[760px] text-left">
-                <thead className="border-b border-slate-100 bg-slate-50/70"><tr>{['Utilisateur','Plan','Statut','Paiement','Échéance','Activité',''].map(h=><th key={h} className="px-5 py-3 text-[8px] font-black uppercase tracking-[.12em] text-slate-400">{h}</th>)}</tr></thead>
-                <tbody className="divide-y divide-slate-100">
-                  {visible.map(u => { const d=remaining(u); const m=userMetrics[u.uid]; return <tr key={u.uid} className="group hover:bg-slate-50/60"><td className="px-5 py-3.5"><div className="flex items-center gap-3"><div className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#0b1f35] text-[10px] font-black text-white">{(u.displayName||u.email).slice(0,1).toUpperCase()}</div><div className="min-w-0"><b className="block max-w-[220px] truncate text-[10px] text-slate-900">{u.displayName||'Sans nom'}</b><span className="block max-w-[220px] truncate text-[9px] text-slate-400">{u.email}</span></div></div></td><td className="px-5 py-3.5"><span className={'rounded-full border px-2 py-1 text-[8px] font-black ' + planClass(u.plan)}>{planLabel(u.plan)}</span></td><td className="px-5 py-3.5"><span className={'inline-flex items-center gap-1.5 text-[9px] font-bold ' + (u.status==='active'?'text-emerald-600':'text-rose-600')}><span className={'h-1.5 w-1.5 rounded-full ' + (u.status==='active'?'bg-emerald-500':'bg-rose-500')} />{u.status==='active'?'Actif':'Suspendu'}</span></td><td className="px-5 py-3.5 text-[9px] font-bold text-slate-600">{u.paymentStatus==='paid'?'Confirmé':u.paymentStatus==='refunded'?'Remboursé':'Non payé'}</td><td className="px-5 py-3.5"><span className={'text-[9px] font-bold ' + (d!==null&&d<6?'text-amber-600':'text-slate-600')}>{d===null?'Illimité':d<0?'Expiré':d+' j'}</span><span className="block text-[8px] text-slate-400">{fmt(u.subscriptionExpiresAt)}</span></td><td className="px-5 py-3.5"><span className="text-[9px] text-slate-500">{m?.tradeCount||0} trades</span>{m?.pnlPercent!==null&&m?.pnlPercent!==undefined&&<span className={'ml-2 text-[9px] font-bold ' + (m.pnlPercent>=0?'text-emerald-600':'text-rose-600')}>{m.pnlPercent>=0?'+':''}{m.pnlPercent.toFixed(1)}%</span>}</td><td className="px-5 py-3.5 text-right"><button onClick={()=>openManage(u)} className="rounded-lg border border-slate-200 bg-white px-2.5 py-2 text-[8px] font-black text-slate-600 opacity-80 hover:border-slate-300 hover:bg-slate-50 group-hover:opacity-100">Gérer</button></td></tr> })}
-                </tbody>
-              </table>
+          </div>
+          <div className="rounded-[24px] border border-slate-200 bg-white p-4 shadow-sm">
+            <div className="flex items-center justify-between"><div><div className="text-[9px] font-bold uppercase tracking-wider text-amber-600">À traiter</div><h2 className="mt-1 text-sm font-black text-slate-900">File opérationnelle</h2></div><Activity className="w-5 h-5 text-emerald-500" /></div>
+            <div className="mt-4 grid grid-cols-3 gap-2">
+              <button onClick={() => setFilter('pending')} className="rounded-xl bg-blue-50 p-3 text-left hover:bg-blue-100"><b className="text-lg text-blue-700">{stats.pending}</b><span className="block text-[9px] font-semibold text-blue-600">Confirmations</span></button>
+              <button onClick={() => setFilter('expiring')} className="rounded-xl bg-amber-50 p-3 text-left hover:bg-amber-100"><b className="text-lg text-amber-700">{stats.expiring}</b><span className="block text-[9px] font-semibold text-amber-600">Échéances</span></button>
+              <button onClick={() => setFilter('expired')} className="rounded-xl bg-rose-50 p-3 text-left hover:bg-rose-100"><b className="text-lg text-rose-700">{stats.expired}</b><span className="block text-[9px] font-semibold text-rose-600">Expirés</span></button>
             </div>
-            <div className="flex items-center justify-between border-t border-slate-100 px-5 py-3"><span className="text-[9px] text-slate-400">{filtered.length} résultat(s)</span><div className="flex items-center gap-1.5"><button disabled={page<=1} onClick={()=>setPage(p=>Math.max(1,p-1))} className="rounded-lg border border-slate-200 p-2 disabled:opacity-30"><ChevronLeft className="h-3.5 w-3.5"/></button><span className="text-[9px] font-bold text-slate-500">{page} / {totalPages}</span><button disabled={page>=totalPages} onClick={()=>setPage(p=>Math.min(totalPages,p+1))} className="rounded-lg border border-slate-200 p-2 disabled:opacity-30"><ChevronRight className="h-3.5 w-3.5"/></button></div></div>
-          </section>}
+          </div>
+        </section>
 
-          {(adminTab === 'payments') && <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="border-b border-slate-100 p-5"><div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between"><div><div className="text-[9px] font-black uppercase tracking-[.15em] text-emerald-600">Billing</div><h2 className="mt-1 text-lg font-black text-slate-950">Paiements</h2><p className="mt-1 text-[10px] text-slate-400">Registre des transactions en temps réel.</p></div><div className="flex gap-1.5">{(['all','paid','processing','failed'] as const).map(s=><button key={s} onClick={()=>setPaymentFilter(s)} className={'rounded-lg px-3 py-2 text-[9px] font-bold '+(paymentFilter===s?'bg-[#0b1f35] text-white':'bg-slate-50 text-slate-500')}>{s==='all'?'Tous':s==='paid'?'Confirmés':s==='processing'?'En cours':'Échoués'}</button>)}</div></div></div>
-            <div className="overflow-x-auto"><table className="w-full min-w-[720px] text-left"><thead className="border-b border-slate-100 bg-slate-50/70"><tr>{['Client','Plan','Référence','Montant','Statut','Date'].map(h=><th key={h} className="px-5 py-3 text-[8px] font-black uppercase tracking-[.12em] text-slate-400">{h}</th>)}</tr></thead><tbody className="divide-y divide-slate-100">{payments.filter(p=>paymentFilter==='all'||p.status===paymentFilter).map(p=><tr key={p.id} className="hover:bg-slate-50/60"><td className="px-5 py-3.5"><b className="block text-[10px] text-slate-800">{p.displayName||p.email}</b><span className="text-[9px] text-slate-400">{p.email}</span></td><td className="px-5 py-3.5 text-[9px] font-bold text-slate-600">{p.planName}</td><td className="px-5 py-3.5 font-mono text-[8px] text-slate-500">{p.reference}</td><td className="px-5 py-3.5 text-[10px] font-black text-slate-900">{Number(p.amount).toFixed(2)} {p.currency}</td><td className="px-5 py-3.5"><span className={'rounded-full px-2 py-1 text-[8px] font-black '+(p.status==='paid'?'bg-emerald-50 text-emerald-700':p.status==='processing'?'bg-amber-50 text-amber-700':'bg-rose-50 text-rose-700')}>{p.status==='paid'?'PAYÉ':p.status==='processing'?'EN COURS':'ÉCHEC'}</span></td><td className="px-5 py-3.5 text-[9px] text-slate-500">{new Date(p.createdAt).toLocaleString('fr-FR')}</td></tr>)}</tbody></table></div>
-          </section>}
+        <section className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm">
+          {loading ? <div className="p-16 text-center text-xs text-slate-400">Chargement des utilisateurs...</div> : visible.length === 0 ? <div className="p-16 text-center"><Users className="mx-auto w-9 h-9 text-slate-300" /><p className="mt-3 text-sm font-bold text-slate-600">Aucun utilisateur</p></div> :
+            <><div className="overflow-x-auto"><table className="w-full min-w-[1050px]"><thead className="border-b border-slate-100 bg-slate-50/80"><tr className="text-left text-[9px] font-bold uppercase tracking-[.14em] text-slate-400"><th className="px-3 py-3 text-center">#</th><th className="px-5 py-3">Utilisateur</th><th className="px-3 py-3">Plan</th><th className="px-3 py-3">P&L</th><th className="px-3 py-3">Capital initial</th><th className="px-3 py-3">Trades</th><th className="px-3 py-3">Paiement</th><th className="px-3 py-3">Échéance</th><th className="px-3 py-3">Temps</th><th className="px-3 py-3">Statut</th><th className="px-5 py-3 text-right">Action</th></tr></thead>
+            <tbody>{visible.map((u, index) => {
+              const d = remaining(u); const metrics = userMetrics[u.uid] || { initialCapital: 0, totalPnl: 0, tradeCount: 0, pnlPercent: null, currency: 'USD' }; const expired = d !== null && d < 0; const soon = d !== null && d >= 0 && d <= 5;
+              return <tr key={u.uid} className="border-b border-slate-100 last:border-0 hover:bg-slate-50/70"><td className="px-3 py-4 text-center"><span className="inline-flex h-6 min-w-6 items-center justify-center rounded-lg bg-slate-100 px-1.5 text-[9px] font-black text-slate-500">{(page - 1) * perPage + index + 1}</span></td><td className="px-5 py-4"><button onClick={() => openManage(u)} className="text-left"><b className="text-xs text-slate-800 hover:text-blue-700">{u.displayName || 'Sans nom'}</b><span className="mt-1 block text-[10px] text-slate-400">{u.email}</span></button></td><td className="px-3 py-4"><span className={'inline-flex rounded-lg border px-2.5 py-1 text-[10px] font-bold ' + planClass(u.plan)}>{planLabel(u.plan)}</span>{u.pendingPlan && <span className="mt-1 block text-[9px] text-blue-600">→ {planLabel(u.pendingPlan)}</span>}</td><td className="px-3 py-4"><b className={metrics.pnlPercent !== null ? (metrics.pnlPercent >= 0 ? 'text-[10px] text-emerald-600' : 'text-[10px] text-rose-600') : 'text-[10px] text-slate-400'}>{metrics.pnlPercent !== null ? (metrics.pnlPercent >= 0 ? '+' : '') + metrics.pnlPercent.toFixed(2) + '%' : '—'}</b><span className="mt-1 block text-[9px] text-slate-400">{metrics.totalPnl >= 0 ? '+' : ''}{metrics.totalPnl.toFixed(2)}</span></td><td className="px-3 py-4 text-[10px] font-semibold text-slate-700">{metricsReady && metrics.initialCapital > 0 ? metrics.initialCapital.toLocaleString('fr-FR', { maximumFractionDigits: 2 }) + ' ' + metrics.currency : '—'}</td><td className="px-3 py-4"><span className="inline-flex min-w-8 justify-center rounded-lg bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-700">{metricsReady ? metrics.tradeCount : '—'}</span></td><td className="px-3 py-4"><b className="text-[10px] text-slate-700">{u.paymentStatus === 'paid' ? 'Confirmé' : u.paymentStatus === 'refunded' ? 'Remboursé' : 'Non payé'}</b><span className="mt-1 block text-[9px] text-slate-400">{fmt(u.paymentDate)}</span></td><td className={'px-3 py-4 text-[10px] font-semibold ' + (expired ? 'text-rose-600' : soon ? 'text-amber-600' : 'text-slate-600')}>{d === null ? 'Aucune' : fmt(u.subscriptionExpiresAt)}</td><td className="px-3 py-4 text-[10px] font-bold">{d === null ? <span className="text-slate-400">Illimité</span> : <span className={expired ? 'text-rose-600' : soon ? 'text-amber-600' : 'text-emerald-600'}>{expired ? '-' + Math.abs(d) : d} j</span>}</td><td className="px-3 py-4"><span className={'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[9px] font-bold ' + (u.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700')}><span className={'h-1.5 w-1.5 rounded-full ' + (u.status === 'active' ? 'bg-emerald-500' : 'bg-rose-500')} />{u.status === 'active' ? 'Actif' : 'Suspendu'}</span></td><td className="px-5 py-4 text-right"><button onClick={() => openManage(u)} className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-3 py-2 text-[10px] font-bold text-white hover:bg-slate-800"><Edit3 className="w-3.5 h-3.5" />Gérer</button></td></tr>;
+            })}</tbody></table></div><div className="flex items-center justify-between border-t border-slate-100 px-5 py-3"><span className="text-[10px] text-slate-400">Page {page} / {totalPages}</span><div className="flex gap-1"><button disabled={page === 1} onClick={() => setPage(page - 1)} className="rounded-lg border border-slate-200 p-2 disabled:opacity-30"><ChevronLeft className="w-3.5 h-3.5" /></button><button disabled={page === totalPages} onClick={() => setPage(page + 1)} className="rounded-lg border border-slate-200 p-2 disabled:opacity-30"><ChevronRight className="w-3.5 h-3.5" /></button></div></div></>}
+        </section>
+        </>}
 
-          {adminTab === 'support' && <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"><div className="border-b border-slate-100 p-5"><div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between"><div><div className="text-[9px] font-black uppercase tracking-[.15em] text-blue-600">Customer care</div><h2 className="mt-1 text-lg font-black text-slate-950">Support</h2><p className="mt-1 text-[10px] text-slate-400">{contactMessages.filter(m=>m.status==='new').length} nouveau(x) · {contactMessages.length} message(s)</p></div><div className="flex gap-1.5">{(['all','new','in_progress','resolved'] as const).map(s=><button key={s} onClick={()=>setContactFilter(s)} className={'rounded-lg px-3 py-2 text-[9px] font-bold '+(contactFilter===s?'bg-[#0b1f35] text-white':'bg-slate-50 text-slate-500')}>{s==='all'?'Tous':s==='new'?'Nouveaux':s==='in_progress'?'En cours':'Traités'}</button>)}</div></div></div><div className="divide-y divide-slate-100">{contactMessages.filter(m=>contactFilter==='all'||m.status===contactFilter).map(m=><button key={m.id} onClick={()=>{setSelectedMessage(m);setContactNote(m.adminNote||'');setReplyText('')}} className="flex w-full items-center gap-3 p-4 text-left hover:bg-slate-50"><div className={'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl '+(m.status==='new'?'bg-blue-50 text-blue-600':m.status==='in_progress'?'bg-amber-50 text-amber-600':'bg-emerald-50 text-emerald-600')}>{m.status==='new'?<Mail className="h-4 w-4"/>:m.status==='in_progress'?<Clock3 className="h-4 w-4"/>:<CheckCircle2 className="h-4 w-4"/>}</div><div className="min-w-0 flex-1"><b className="block truncate text-[10px] text-slate-900">{m.subject}</b><span className="block truncate text-[9px] text-slate-400">{m.name} · {m.email}</span></div><span className="text-[8px] text-slate-400">{new Date(m.createdAt).toLocaleDateString('fr-FR')}</span></button>)}</div></section>}
+        {(adminTab === 'overview' || adminTab === 'support') && <section className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-100 p-4 sm:p-5">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600"><Mail className="h-4 w-4" /></div>
+                <div><h2 className="text-sm font-black text-slate-900">Messages de contact</h2><p className="mt-1 text-[10px] text-slate-400">{contactMessages.filter(m => m.status === 'new').length} nouveau(x) · {contactMessages.length} message(s)</p></div>
+              </div>
+              <div className="flex items-center gap-2">
+                {(['all','new','in_progress','resolved'] as const).map(s => <button key={s} onClick={() => setContactFilter(s)} className={'rounded-xl px-3 py-2 text-[10px] font-bold ' + (contactFilter === s ? 'bg-slate-900 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200')}>{s === 'all' ? 'Tous' : s === 'new' ? 'Nouveaux' : s === 'in_progress' ? 'En cours' : 'Traités'}</button>)}
+              </div>
+            </div>
+          </div>
+          <div className="divide-y divide-slate-100">
+            {contactMessages.filter(m => contactFilter === 'all' || m.status === contactFilter).length === 0 ? <div className="p-10 text-center"><Mail className="mx-auto h-8 w-8 text-slate-300" /><p className="mt-2 text-xs font-bold text-slate-500">Aucun message</p></div> : contactMessages.filter(m => contactFilter === 'all' || m.status === contactFilter).slice(0, 20).map(m => (
+              <button key={m.id} onClick={() => { setSelectedMessage(m); setContactNote(m.adminNote || ''); setReplyText(''); }} className="flex w-full items-center gap-3 p-4 text-left transition hover:bg-slate-50">
+                <div className={'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ' + (m.status === 'new' ? 'bg-blue-50 text-blue-600' : m.status === 'in_progress' ? 'bg-amber-50 text-amber-600' : 'bg-emerald-50 text-emerald-600')}>{m.status === 'new' ? <Mail className="h-4 w-4" /> : m.status === 'in_progress' ? <Clock3 className="h-4 w-4" /> : <CheckCircle2 className="h-4 w-4" />}</div>
+                <div className="min-w-0 flex-1"><div className="flex items-center gap-2"><b className={'truncate text-xs ' + (m.status === 'new' ? 'text-slate-900' : 'text-slate-700')}>{m.subject}</b>{m.status === 'new' && <span className="rounded-full bg-blue-100 px-2 py-0.5 text-[8px] font-black text-blue-700">NOUVEAU</span>}</div><p className="mt-1 truncate text-[10px] text-slate-400">{m.name} · {m.email}</p></div>
+                <span className="hidden shrink-0 text-[9px] font-semibold text-slate-400 sm:block">{new Date(m.createdAt).toLocaleDateString('fr-FR')}</span>
+              </button>
+            ))}
+          </div>
+        </section>}
 
-          {adminTab === 'analytics' && <section className="grid gap-4 md:grid-cols-3"><div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><span className="text-[9px] font-black uppercase tracking-[.12em] text-slate-400">Croissance</span><div className="mt-2 text-3xl font-black text-slate-950">{newUsers.length}</div><p className="mt-1 text-[10px] text-slate-400">nouveaux utilisateurs sur 7 jours</p></div><div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><span className="text-[9px] font-black uppercase tracking-[.12em] text-slate-400">Conversion</span><div className="mt-2 text-3xl font-black text-slate-950">{stats.total?Math.round(stats.paid/stats.total*100):0}%</div><p className="mt-1 text-[10px] text-slate-400">utilisateurs avec paiement confirmé</p></div><div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm"><span className="text-[9px] font-black uppercase tracking-[.12em] text-slate-400">Trading</span><div className="mt-2 text-3xl font-black text-slate-950">{trades.length}</div><p className="mt-1 text-[10px] text-slate-400">{accounts.length} compte(s) · trades enregistrés</p></div><div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm md:col-span-3"><div className="flex items-center gap-2"><Activity className="h-4 w-4 text-emerald-600"/><div><h2 className="text-xs font-black text-slate-950">État de la plateforme</h2><p className="mt-1 text-[9px] text-slate-400">Indicateurs opérationnels en temps réel.</p></div></div><div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">{[['Transactions',payments.length,'text-slate-900'],['Tickets',contactMessages.filter(m=>m.status==='new').length,'text-blue-600'],['En attente',stats.pending,'text-violet-600'],['Expirations',stats.expiring,'text-amber-600']].map(([l,v,cl])=><div key={String(l)} className="rounded-xl bg-slate-50 p-4"><b className={'text-xl font-black '+String(cl)}>{String(v)}</b><span className="mt-1 block text-[9px] text-slate-400">{String(l)}</span></div>)}</div></div></section>}
+        {adminTab === 'audit' && <section className="overflow-hidden rounded-[24px] border border-slate-200 bg-white shadow-sm">
+          <button onClick={() => setHistoryOpen(!historyOpen)} className="flex w-full items-center justify-between p-4 text-left"><span className="flex items-center gap-2"><History className="w-4 h-4 text-blue-600" /><span><b className="block text-sm text-slate-900">Historique administratif</b><small className="block mt-0.5 text-[10px] text-slate-400">Traçabilité des opérations.</small></span></span><span className="text-xs font-bold text-slate-400">{historyOpen ? 'Réduire' : 'Afficher'}</span></button>
+          {historyOpen && <div className="divide-y divide-slate-100 border-t border-slate-100">{logs.length ? logs.slice(0, 12).map(l => <div key={l.id} className="flex gap-3 px-5 py-3"><div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-blue-50 text-blue-600"><History className="w-3.5 h-3.5" /></div><div><b className="text-[11px] text-slate-700">{l.action} · {l.userName}</b><p className="mt-0.5 text-[10px] text-slate-400">{l.details}</p></div></div>) : <div className="p-6 text-xs text-slate-400">Aucune action.</div>}</div>}
+        </section>}
 
-          {adminTab === 'audit' && <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"><div className="border-b border-slate-100 p-5"><div className="text-[9px] font-black uppercase tracking-[.15em] text-slate-500">Compliance</div><h2 className="mt-1 text-lg font-black text-slate-950">Journal d’audit</h2><p className="mt-1 text-[10px] text-slate-400">Traçabilité des actions administratives.</p></div><div className="divide-y divide-slate-100">{logs.length?logs.slice(0,40).map(l=><div key={l.id} className="flex gap-3 px-5 py-4"><div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-500"><History className="h-3.5 w-3.5"/></div><div className="min-w-0"><b className="block text-[10px] text-slate-800">{l.action} · {l.userName}</b><p className="mt-1 text-[9px] text-slate-400">{l.details}</p><span className="mt-1 block text-[8px] text-slate-300">{new Date(l.createdAt).toLocaleString('fr-FR')}</span></div></div>):<div className="p-10 text-center text-[10px] text-slate-400">Aucune action enregistrée.</div>}</div></section>}
-        </main>
+        {adminTab === 'analytics' && <section className="grid gap-4 lg:grid-cols-3">
+          <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm"><div className="text-[9px] font-black uppercase tracking-[.14em] text-slate-400">Croissance</div><div className="mt-2 text-3xl font-black text-slate-950">{newUsers.length}</div><div className="mt-1 text-[11px] text-slate-500">nouveaux utilisateurs sur 7 jours</div></div>
+          <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm"><div className="text-[9px] font-black uppercase tracking-[.14em] text-slate-400">Conversion paiement</div><div className="mt-2 text-3xl font-black text-slate-950">{stats.total ? Math.round((stats.paid / stats.total) * 100) : 0}%</div><div className="mt-1 text-[11px] text-slate-500">{stats.paid} utilisateur(s) avec paiement confirmé</div></div>
+          <div className="rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm"><div className="text-[9px] font-black uppercase tracking-[.14em] text-slate-400">Performance trading</div><div className="mt-2 text-3xl font-black text-slate-950">{trades.length}</div><div className="mt-1 text-[11px] text-slate-500">trades enregistrés · {accounts.length} compte(s)</div></div>
+          <div className="lg:col-span-3 rounded-[24px] border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-center gap-2"><Activity className="h-4 w-4 text-emerald-600" /><div><h2 className="text-sm font-black text-slate-900">État temps réel</h2><p className="mt-1 text-[10px] text-slate-400">Les indicateurs sont alimentés par les données déjà synchronisées en temps réel.</p></div></div><div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4"><div className="rounded-2xl bg-slate-50 p-4"><b className="text-lg text-slate-900">{payments.length}</b><span className="mt-1 block text-[9px] text-slate-500">transactions</span></div><div className="rounded-2xl bg-emerald-50 p-4"><b className="text-lg text-emerald-700">{contactMessages.filter(m => m.status === 'new').length}</b><span className="mt-1 block text-[9px] text-emerald-600">tickets nouveaux</span></div><div className="rounded-2xl bg-blue-50 p-4"><b className="text-lg text-blue-700">{stats.pending}</b><span className="mt-1 block text-[9px] text-blue-600">changements en attente</span></div><div className="rounded-2xl bg-amber-50 p-4"><b className="text-lg text-amber-700">{stats.expiring}</b><span className="mt-1 block text-[9px] text-amber-600">échéances proches</span></div></div></div>
+        </section>}
       </div>
+
       {selectedMessage && <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/40 p-4 backdrop-blur-sm" onClick={() => setSelectedMessage(null)}>
         <div className="w-full max-w-2xl overflow-hidden rounded-[28px] border border-white bg-[#f7f9fc] shadow-2xl" onClick={e => e.stopPropagation()}>
           <div className="flex items-start justify-between border-b border-slate-100 bg-white px-5 py-5 sm:px-7"><div><div className="flex items-center gap-2"><Mail className="h-4 w-4 text-blue-600" /><span className="text-[9px] font-black uppercase tracking-wider text-blue-600">Message de contact</span></div><h2 className="mt-2 text-lg font-black text-slate-900">{selectedMessage.subject}</h2><p className="mt-1 text-[11px] text-slate-400">{selectedMessage.name} · {selectedMessage.email}</p></div><button onClick={() => setSelectedMessage(null)} className="rounded-xl p-2 text-slate-400 hover:bg-slate-100"><X className="h-5 w-5" /></button></div>
