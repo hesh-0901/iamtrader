@@ -78,6 +78,9 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
       maxWidth="max-w-md"
     >
       <form onSubmit={handleSubmit} className="space-y-4 text-xs text-neutral-300">
+        <div className="flex justify-center pb-1">
+          <img src="/brand/logo-iamtrader-symbol.png" alt="IAMTRADER" className="w-12 h-12 object-contain" />
+        </div>
         {mode === 'register' && (
           <div>
             <label className="block font-medium text-neutral-400 mb-1.5">Nom / Pseudo Trader *</label>
