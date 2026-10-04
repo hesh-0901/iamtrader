@@ -34,3 +34,7 @@ export function adminAddLog(log: Record<string, unknown>) {
 export async function adminGetPayments<T = unknown>(): Promise<T> {
   return adminMutation<T>({ action: 'get-payments' });
 }
+
+export function adminUpdatePayment(paymentId: string, data: Record<string, unknown>) {
+  return adminMutation({ action: 'update-payment', paymentId, data });
+}
