@@ -469,14 +469,14 @@ export function AdminConsole() {
           })()}
 
           {adminTab === 'support' && (
-            <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
-              <div className="flex h-[720px] min-h-[620px] flex-col lg:flex-row">
+            <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_10px_35px_rgba(11,31,53,.06)]">
+              <div className="flex h-[760px] min-h-[640px] flex-col lg:flex-row">
                 <aside className="flex w-full shrink-0 flex-col border-b border-slate-200 bg-white lg:w-[380px] lg:border-b-0 lg:border-r">
-                  <div className="border-b border-slate-200 px-5 py-4">
+                  <div className="border-b border-slate-200 bg-white px-5 py-5">
                     <div className="flex items-center justify-between">
                       <div>
                         <h2 className="text-[14px] font-black text-[#0b1f35]">Boîte de réception</h2>
-                        <p className="mt-1 text-[10px] text-slate-400">{contactMessages.length} message(s) · {contactMessages.filter(m => m.status === 'new').length} non lu(s)</p>
+                        <p className="mt-1 text-[11px] text-slate-500">{contactMessages.length} message(s) · {contactMessages.filter(m => m.status === 'new').length} non lu(s)</p>
                       </div>
                       <Mail className="h-4 w-4 text-slate-400" />
                     </div>
@@ -494,7 +494,7 @@ export function AdminConsole() {
                       const date = m.createdAt ? new Date(m.createdAt) : null;
                       const selectedItem = selectedMessage?.id === m.id;
                       return (
-                        <button key={m.id} onClick={() => { setSelectedMessage(m); setContactNote(m.adminNote || ''); setReplyText(''); }} className={'group flex w-full border-b border-slate-100 px-5 py-3.5 text-left transition ' + (selectedItem ? 'bg-[#f5f7fa] shadow-[inset_3px_0_0_#0b1f35]' : 'hover:bg-[#fafbfc]')}>
+                        <button key={m.id} onClick={() => { setSelectedMessage(m); setContactNote(m.adminNote || ''); setReplyText(''); }} className={'group flex w-full border-b border-slate-200 px-5 py-4 text-left transition ' + (selectedItem ? 'bg-white shadow-[inset_4px_0_0_#0b1f35]' : 'hover:bg-white')}>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center justify-between gap-3">
                               <div className="flex min-w-0 items-center gap-2">
@@ -519,8 +519,8 @@ export function AdminConsole() {
                       <header className="border-b border-slate-200 bg-white px-7 py-6 sm:px-9">
                         <div className="flex items-start justify-between gap-5">
                           <div className="min-w-0">
-                            <h2 className="truncate text-[18px] font-black tracking-tight text-[#0b1f35]">{selectedMessage.subject || '(Sans objet)'}</h2>
-                            <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[10px] text-slate-400">
+                            <h2 className="truncate text-[22px] font-black tracking-tight text-[#0b1f35]">{selectedMessage.subject || '(Sans objet)'}</h2>
+                            <div className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-[11px] text-slate-400">
                               <span className="font-semibold text-slate-700">{selectedMessage.name}</span>
                               <span>&lt;{selectedMessage.email}&gt;</span>
                               <span>·</span>
@@ -535,10 +535,10 @@ export function AdminConsole() {
                       </header>
 
                       <div className="min-h-0 flex-1 overflow-y-auto">
-                        <div className="mx-auto w-full max-w-4xl px-6 py-7 sm:px-10">
+                        <div className="mx-auto w-full max-w-5xl px-7 py-8 sm:px-12">
                           <div className="border-b border-slate-100 pb-6">
-                            <div className="grid gap-x-8 gap-y-3 text-[10px] sm:grid-cols-2">
-                              <div className="flex gap-3"><span className="w-20 shrink-0 text-slate-400">De</span><span className="font-semibold text-slate-700">{selectedMessage.name} &lt;{selectedMessage.email}&gt;</span></div>
+                            <div className="grid gap-x-10 gap-y-3.5 text-[11px] sm:grid-cols-2">
+                              <div className="flex gap-3"><span className="w-24 shrink-0 font-medium text-slate-500">De</span><span className="font-semibold text-slate-700">{selectedMessage.name} &lt;{selectedMessage.email}&gt;</span></div>
                               <div className="flex gap-3"><span className="w-20 shrink-0 text-slate-400">À</span><span className="font-semibold text-slate-700">Support IAMTRADER</span></div>
                               <div className="flex gap-3"><span className="w-20 shrink-0 text-slate-400">Date</span><span className="text-slate-600">{selectedMessage.createdAt ? new Date(selectedMessage.createdAt).toLocaleString('fr-FR', { dateStyle:'full', timeStyle:'medium' }) : '—'}</span></div>
                               <div className="flex gap-3"><span className="w-20 shrink-0 text-slate-400">Message ID</span><span className="break-all font-mono text-[9px] text-slate-500">{selectedMessage.id}</span></div>
@@ -546,15 +546,15 @@ export function AdminConsole() {
                           </div>
 
                           <article className="py-8">
-                            <div className="whitespace-pre-wrap break-words text-[15px] leading-8 text-slate-800">{selectedMessage.message}</div>
+                            <div className="whitespace-pre-wrap break-words text-[15px] leading-8 text-slate-800 selection:bg-blue-100">{selectedMessage.message}</div>
                           </article>
 
-                          <div className="border-t border-slate-100 py-5">
-                            <div className="mb-3 flex items-center justify-between">
+                          <div className="border-t border-slate-200 py-6">
+                            <div className="mb-4 flex items-center justify-between">
                               <span className="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Informations du dossier</span>
                               <span className={'text-[9px] font-bold ' + (selectedMessage.status === 'new' ? 'text-blue-600' : selectedMessage.status === 'in_progress' ? 'text-amber-600' : 'text-emerald-600')}>{selectedMessage.status === 'new' ? 'Non lu' : selectedMessage.status === 'in_progress' ? 'En cours' : 'Traité'}</span>
                             </div>
-                            <div className="grid gap-x-8 gap-y-2 text-[10px] sm:grid-cols-2 lg:grid-cols-3">
+                            <div className="grid gap-x-10 gap-y-2.5 text-[11px] sm:grid-cols-2 lg:grid-cols-3">
                               <div><span className="text-slate-400">Créé</span><b className="ml-2 font-semibold text-slate-600">{selectedMessage.createdAt || '—'}</b></div>
                               <div><span className="text-slate-400">Mis à jour</span><b className="ml-2 font-semibold text-slate-600">{selectedMessage.updatedAt || '—'}</b></div>
                               <div><span className="text-slate-400">Pris en charge</span><b className="ml-2 break-all font-semibold text-slate-600">{selectedMessage.handledBy || '—'}</b></div>
@@ -562,15 +562,15 @@ export function AdminConsole() {
                               <div><span className="text-slate-400">Répondu le</span><b className="ml-2 font-semibold text-slate-600">{selectedMessage.repliedAt || '—'}</b></div>
                               <div><span className="text-slate-400">Répondu par</span><b className="ml-2 break-all font-semibold text-slate-600">{selectedMessage.repliedBy || '—'}</b></div>
                             </div>
-                            {selectedMessage.lastReply && <div className="mt-4 border-l-2 border-slate-300 pl-4"><div className="text-[9px] font-black uppercase tracking-wider text-slate-400">Dernière réponse</div><div className="mt-2 whitespace-pre-wrap text-[11px] leading-6 text-slate-600">{selectedMessage.lastReply}</div></div>}
+                            {selectedMessage.lastReply && <div className="mt-5 rounded-xl border border-slate-200 bg-[#f7f9fb] p-4"><div className="text-[9px] font-black uppercase tracking-wider text-slate-400">Dernière réponse</div><div className="mt-2 whitespace-pre-wrap text-[11px] leading-6 text-slate-600">{selectedMessage.lastReply}</div></div>}
                           </div>
 
                           <div className="border-t border-slate-100 py-5">
                             <label className="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Note interne</label>
-                            <textarea value={contactNote} onChange={e => setContactNote(e.target.value)} onBlur={() => { if (selectedMessage) adminUpdateContact(selectedMessage.id, { adminNote:contactNote }).catch(() => {}); }} rows={2} placeholder="Note visible uniquement par l'administration..." className="mt-3 w-full resize-none border-0 border-b border-slate-200 bg-transparent px-0 py-2 text-[11px] outline-none placeholder:text-slate-300 focus:border-[#0b1f35]" />
+                            <textarea value={contactNote} onChange={e => setContactNote(e.target.value)} onBlur={() => { if (selectedMessage) adminUpdateContact(selectedMessage.id, { adminNote:contactNote }).catch(() => {}); }} rows={2} placeholder="Note visible uniquement par l'administration..." className="mt-3 w-full resize-none rounded-xl border border-slate-300 bg-white px-4 py-3 text-[12px] outline-none placeholder:text-slate-300 focus:border-[#0b1f35]" />
                           </div>
 
-                          <div className="border-t border-slate-100 pt-6">
+                          <div className="border-t border-slate-200 pt-7">
                             <div className="mb-3 flex items-center justify-between">
                               <div>
                                 <div className="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Répondre</div>
@@ -578,7 +578,7 @@ export function AdminConsole() {
                               </div>
                               <Mail className="h-4 w-4 text-slate-300" />
                             </div>
-                            <textarea value={replyText} onChange={e => setReplyText(e.target.value)} rows={6} placeholder="Écrire une réponse..." className="w-full resize-none rounded-xl border border-slate-300 bg-white p-4 text-[12px] leading-6 outline-none focus:border-slate-400 focus:bg-white" />
+                            <textarea value={replyText} onChange={e => setReplyText(e.target.value)} rows={6} placeholder="Écrire une réponse..." className="w-full resize-none rounded-xl border-2 border-slate-200 bg-[#f8fafc] p-4 text-[12px] leading-7 focus:border-[#0b1f35] outline-none focus:border-slate-400 focus:bg-white" />
                             <div className="mt-3 flex justify-end">
                               <button disabled={replyBusy || !replyText.trim()} onClick={async () => {
                                 if (!selectedMessage || !replyText.trim()) return;
