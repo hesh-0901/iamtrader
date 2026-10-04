@@ -38,7 +38,36 @@ const hooks = [
   'Et si chaque trade pouvait vous apprendre quelque chose ?',
 ];
 
-const VYRA_CHAT_STORAGE_KEY = 'iamtrader_vyra_chat_v1';
+const VYRA_CHAT_STORAGE_KEY = 'iamtrader_vyra_chat_v2';
+const VYRA_CHAT_RETENTION_MS = 48 * 60 * 60 * 1000;
+
+function formatVyraTime(timestamp: number): string {
+  return new Intl.DateTimeFormat(undefined, { hour: '2-digit', minute: '2-digit', hour12: false }).format(new Date(timestamp));
+}
+
+function loadVyraChat(): Array<{ role: 'assistant' | 'user'; text: string; createdAt: number }> | null {
+  try {
+    const raw = window.localStorage.getItem(VYRA_CHAT_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return null;
+    const cutoff = Date.now() - VYRA_CHAT_RETENTION_MS;
+    const valid = parsed.filter((message) =>
+      message &&
+      (message.role === 'assistant' || message.role === 'user') &&
+      typeof message.text === 'string' &&
+      typeof message.createdAt === 'number' &&
+      message.createdAt >= cutoff
+    );
+    if (!valid.length) {
+      window.localStorage.removeItem(VYRA_CHAT_STORAGE_KEY);
+      return null;
+    }
+    return valid;
+  } catch {
+    return null;
+  }
+}
 
 function renderVyraInline(text: string): React.ReactNode[] {
   return text.split(/(\*\*[^*]+\*\*|\*[^*]+\*)/g).map((part, index) => {
@@ -190,7 +219,7 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
   const [hookIndex, setHookIndex] = useState(0);
   const [openFaq, setOpenFaq] = useState<number | null>(0);
   const [aiInput, setAiInput] = useState('');
-  const [aiMessages, setAiMessages] = useState<Array<{ role: 'assistant' | 'user'; text: string }>>([
+  const [aiMessages, setAiMessages] = useState<Array<{ role: 'assistant' | 'user'; text: string; createdAt: number }>>([
     {
       role: 'assistant',
       text: 'Bonjour. Je suis VYRA, l’assistante IA d’IAMTRADER. Je peux vous aider à comprendre la plateforme et ses fonctionnalités.',
@@ -198,6 +227,16 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
   ]);
   const [isAiTyping, setIsAiTyping] = useState(false);
   const [isAiExpanded, setIsAiExpanded] = useState(false);
+
+  useEffect(() => {
+    try {
+      const cutoff = Date.now() - VYRA_CHAT_RETENTION_MS;
+      const validMessages = aiMessages.filter((message) => message.createdAt >= cutoff);
+      window.localStorage.setItem(VYRA_CHAT_STORAGE_KEY, JSON.stringify(validMessages));
+    } catch (error) {
+      console.warn('VYRA local chat persistence unavailable:', error);
+    }
+  }, [aiMessages]);
 
   const aiSuggestions = [
     'Comment fonctionne IAMTRADER ?',
@@ -210,7 +249,7 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
     const text = (preset ?? aiInput).trim();
     if (!text || isAiTyping) return;
 
-    const userMessage = { role: 'user' as const, text };
+    const userMessage = { role: 'user' as const, text, createdAt: Date.now() };
     const nextMessages = [...aiMessages, userMessage];
 
     setAiMessages(nextMessages);
@@ -237,7 +276,7 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
 
       setAiMessages((messages) => [
         ...messages,
-        { role: 'assistant', text: data.reply },
+        { role: 'assistant', text: data.reply, createdAt: Date.now() },
       ]);
     } catch (error) {
       console.error('AI assistant request failed:', error);
@@ -246,6 +285,7 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
         {
           role: 'assistant',
           text: 'Je rencontre actuellement un problème de connexion. Vous pouvez réessayer dans quelques instants ou contacter notre équipe via le support e-mail.',
+          createdAt: Date.now(),
         },
       ]);
     } finally {
@@ -625,7 +665,12 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
                             ? 'rounded-br-md bg-[#081827] text-white'
                             : 'rounded-bl-md border border-[#dcebe5] bg-white text-[#43586b] shadow-[0_6px_20px_rgba(8,24,39,0.04)]'
                         }`}>
-                          {renderVyraText(message.text)}
+                          <div>
+                            {renderVyraText(message.text)}
+                            <div className={`mt-1.5 text-right text-[9px] font-medium ${message.role === 'user' ? 'text-white/55' : 'text-[#9aa9b5]'}`}>
+                              {formatVyraTime(message.createdAt)}
+                            </div>
+                          </div>
                         </div>
                       </div>
                     ))}
@@ -674,7 +719,7 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
                       <Send className="h-4 w-4" />
                     </button>
                   </form>
-                  <p className="mt-2 text-center text-[9px] font-medium text-[#9aa9b5]">VYRA est connectée au moteur IAMTRADER.</p>
+                  <p className="mt-2 text-center text-[9px] font-medium text-[#9aa9b5]">VYRA est connectée au moteur IAMTRADER · conversation conservée localement 48 h.</p>
                 </div>
               </div>
             </div>
