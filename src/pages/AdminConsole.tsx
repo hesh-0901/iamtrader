@@ -61,6 +61,7 @@ export function AdminConsole() {
   const [replyText, setReplyText] = useState('');
   const [contactBusy, setContactBusy] = useState(false);
   const [replyBusy, setReplyBusy] = useState(false);
+  const [adminTab, setAdminTab] = useState<'overview' | 'users' | 'subscriptions' | 'payments' | 'support' | 'analytics' | 'audit'>('overview');
   const perPage = 10;
 
   async function load() {
@@ -263,6 +264,22 @@ export function AdminConsole() {
   return (
     <div className="min-h-full bg-[#f4f7fa] -m-4 lg:-m-6 p-4 lg:p-6">
       <div className="max-w-[1500px] mx-auto space-y-5">
+        <nav className="sticky top-0 z-20 flex overflow-x-auto rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm">
+          {([
+            ['overview','Vue d’ensemble'],
+            ['users','Utilisateurs'],
+            ['subscriptions','Abonnements'],
+            ['payments','Paiements'],
+            ['support','Support'],
+            ['analytics','Analytics'],
+            ['audit','Journal d’audit']
+          ] as const).map(([key,label]) => (
+            <button key={key} onClick={() => setAdminTab(key)} className={'whitespace-nowrap rounded-xl px-4 py-2.5 text-[10px] font-black transition ' + (adminTab === key ? 'bg-[#0b1f35] text-white shadow-sm' : 'text-slate-500 hover:bg-slate-100 hover:text-slate-900')}>
+              {label}
+            </button>
+          ))}
+        </nav>
+
         <header className="relative overflow-hidden rounded-[28px] bg-[#0b1f35] p-5 sm:p-7 text-white shadow-[0_20px_60px_rgba(11,31,53,.13)]">
           <div className="absolute -right-24 -top-28 h-80 w-80 rounded-full bg-emerald-400/10 blur-3xl" />
           <div className="relative flex flex-col xl:flex-row xl:items-end xl:justify-between gap-5">
