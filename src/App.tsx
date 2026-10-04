@@ -25,6 +25,7 @@ import { TradeDetailModal } from './components/journal/TradeDetailModal';
 import { AccountModal } from './components/accounts/AccountModal';
 import { AuthModal } from './components/auth/AuthModal';
 import { ShieldAlert, LogOut, Loader2, Activity } from 'lucide-react';
+import { syncSubscriptionStatus } from './services/payments';
 
 function MainAppContent() {
   const { showToast } = useToast();
@@ -59,6 +60,7 @@ function MainAppContent() {
       setCurrentUser(user);
       if (user) {
         try {
+          try { await syncSubscriptionStatus(); } catch (subscriptionError: any) { console.warn('Subscription lifecycle notice:', subscriptionError?.message); }
           const profile = await getUserProfile(user.uid);
           const isAdmin = await checkIsAdmin(user);
 
