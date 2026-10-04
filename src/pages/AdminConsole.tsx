@@ -4,6 +4,7 @@ import { AdminLog, PaymentRecord, SubscriptionPlan, UserProfile, UserStatus, Tra
 import { addAdminLog, deleteContactMessage, getAdminLogs, getAllAccounts, getAllTrades, getAllUsers, subscribeAllPayments, subscribeAllUsers, subscribeContactMessages, updateContactMessage, updateUserRoleAndPlan } from '../services/firestore';
 import { useToast } from '../components/common/Toast';
 import { auth } from '../firebase/config';
+import { adminAddLog, adminDeleteContact, adminUpdateContact, adminUpdateUser } from '../services/adminConsole';
 
 type Filter = 'all' | 'active' | 'suspended' | 'expiring' | 'expired' | 'pending';
 const DAY = 86400000;
@@ -203,7 +204,7 @@ export function AdminConsole() {
     if (!adminUid) return;
     const item = { adminUid, action, userUid: user.uid, userName: user.displayName || user.email, details, createdAt: new Date().toISOString() };
     try {
-      await addAdminLog(item);
+      await adminAddLog(item);
       setLogs(prev => [{ id: 'local-' + Date.now(), ...item }, ...prev].slice(0, 60));
     } catch {}
   }
@@ -218,7 +219,7 @@ export function AdminConsole() {
     try {
       const ex = isoDate(expiry);
       const subStatus = ex && new Date(ex).getTime() >= Date.now() ? 'active' : 'expired';
-      await updateUserRoleAndPlan(selected.uid, { plan, status, paymentStatus: payment, subscriptionExpiresAt: ex, subscriptionStatus: subStatus });
+      await adminUpdateUser(selected.uid, { plan, status, paymentStatus: payment, subscriptionExpiresAt: ex, subscriptionStatus: subStatus });
       patch(selected.uid, { plan, status, paymentStatus: payment, subscriptionExpiresAt: ex, subscriptionStatus: subStatus });
       await audit(selected, 'Modification manuelle', 'Plan ' + planLabel(plan) + ', statut ' + status + ', échéance ' + (expiry || 'aucune') + '.');
       showToast('Modifications enregistrées.', 'success');
@@ -234,7 +235,7 @@ export function AdminConsole() {
     const value = next.toISOString();
     setExpiry(inputDate(value)); setBusy(true);
     try {
-      await updateUserRoleAndPlan(selected.uid, { subscriptionExpiresAt: value, subscriptionStatus: 'active' });
+      await adminUpdateUser(selected.uid, { subscriptionExpiresAt: value, subscriptionStatus: 'active' });
       patch(selected.uid, { subscriptionExpiresAt: value, subscriptionStatus: 'active' });
       await audit(selected, amount >= 0 ? 'Ajout de jours' : 'Retrait de jours', (amount >= 0 ? '+' : '') + amount + ' jour(s). Nouvelle échéance : ' + fmt(value) + '.');
       showToast((amount >= 0 ? '+' : '') + amount + ' jour(s) appliqué(s).', 'success');
@@ -253,7 +254,7 @@ export function AdminConsole() {
     const next: UserStatus = selected.status === 'active' ? 'suspended' : 'active';
     setBusy(true);
     try {
-      await updateUserRoleAndPlan(selected.uid, { status: next });
+      await adminUpdateUser(selected.uid, { status: next });
       patch(selected.uid, { status: next });
       await audit(selected, next === 'active' ? 'Réactivation' : 'Suspension', next === 'active' ? 'Compte réactivé.' : 'Compte suspendu.');
       showToast(next === 'active' ? 'Compte réactivé.' : 'Compte suspendu.', 'success');
@@ -423,7 +424,7 @@ export function AdminConsole() {
           <div className="space-y-4 p-5 sm:p-7">
             <div className="rounded-2xl border border-slate-200 bg-white p-5"><p className="whitespace-pre-wrap text-sm leading-7 text-slate-700">{selectedMessage.message}</p><p className="mt-4 text-[9px] text-slate-400">{new Date(selectedMessage.createdAt).toLocaleString('fr-FR')}</p></div>
             <div className="grid gap-3 sm:grid-cols-3">
-              {(['new','in_progress','resolved'] as const).map(s => <button key={s} disabled={contactBusy} onClick={async () => { setContactBusy(true); try { const adminUid = auth.currentUser?.uid; await updateContactMessage(selectedMessage.id, { status: s, handledBy: adminUid, handledAt: new Date().toISOString(), adminNote: contactNote }); const next = { ...selectedMessage, status: s, handledBy: adminUid, handledAt: new Date().toISOString(), adminNote: contactNote, updatedAt: new Date().toISOString() }; setSelectedMessage(next); showToast(s === 'new' ? 'Message marqué comme nouveau.' : s === 'in_progress' ? 'Message placé en cours.' : 'Message marqué comme traité.', 'success'); } catch (e: any) { showToast(e?.message || 'Impossible de mettre à jour le message.', 'error'); } finally { setContactBusy(false); } }} className={'rounded-xl px-3 py-2.5 text-[10px] font-bold ' + (selectedMessage.status === s ? (s === 'new' ? 'bg-blue-600 text-white' : s === 'in_progress' ? 'bg-amber-500 text-white' : 'bg-emerald-600 text-white') : 'bg-slate-100 text-slate-600 hover:bg-slate-200')}>{s === 'new' ? 'Nouveau' : s === 'in_progress' ? 'En cours' : 'Traité'}</button>)}
+              {(['new','in_progress','resolved'] as const).map(s => <button key={s} disabled={contactBusy} onClick={async () => { setContactBusy(true); try { const adminUid = auth.currentUser?.uid; await adminUpdateContact(selectedMessage.id, { status: s, handledBy: adminUid, handledAt: new Date().toISOString(), adminNote: contactNote }); const next = { ...selectedMessage, status: s, handledBy: adminUid, handledAt: new Date().toISOString(), adminNote: contactNote, updatedAt: new Date().toISOString() }; setSelectedMessage(next); showToast(s === 'new' ? 'Message marqué comme nouveau.' : s === 'in_progress' ? 'Message placé en cours.' : 'Message marqué comme traité.', 'success'); } catch (e: any) { showToast(e?.message || 'Impossible de mettre à jour le message.', 'error'); } finally { setContactBusy(false); } }} className={'rounded-xl px-3 py-2.5 text-[10px] font-bold ' + (selectedMessage.status === s ? (s === 'new' ? 'bg-blue-600 text-white' : s === 'in_progress' ? 'bg-amber-500 text-white' : 'bg-emerald-600 text-white') : 'bg-slate-100 text-slate-600 hover:bg-slate-200')}>{s === 'new' ? 'Nouveau' : s === 'in_progress' ? 'En cours' : 'Traité'}</button>)}
             </div>
             <label className="block text-[10px] font-bold text-slate-500">Note interne<textarea value={contactNote} onChange={e => setContactNote(e.target.value)} rows={3} placeholder="Note visible uniquement par l'administration..." className="mt-1.5 w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs outline-none focus:border-blue-300" /></label>
             <div className="rounded-2xl border border-slate-200 bg-white p-4">
@@ -448,7 +449,7 @@ export function AdminConsole() {
                      const payload = await response.json().catch(() => ({}));
                      if (!response.ok) throw new Error(payload?.error || 'L’envoi de l’e-mail a échoué.');
                      const now = new Date().toISOString();
-                     await updateContactMessage(selectedMessage.id, { status: 'resolved', handledBy: currentUser.uid, handledAt: now, lastReply: replyText.trim(), repliedAt: now, repliedBy: currentUser.uid });
+                     await adminUpdateContact(selectedMessage.id, { status: 'resolved', handledBy: currentUser.uid, handledAt: now, lastReply: replyText.trim(), repliedAt: now, repliedBy: currentUser.uid });
                      setSelectedMessage(prev => prev ? { ...prev, status: 'resolved', handledBy: currentUser.uid, handledAt: now, lastReply: replyText.trim(), repliedAt: now, repliedBy: currentUser.uid, updatedAt: now } : prev);
                      setReplyText('');
                      showToast('Réponse envoyée au client.', 'success');
@@ -458,7 +459,7 @@ export function AdminConsole() {
                      setReplyBusy(false);
                    }
                  }} className="inline-flex items-center gap-2 rounded-xl bg-[#0b1f35] px-4 py-2.5 text-xs font-bold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"><Send className="h-4 w-4" />{replyBusy ? 'Envoi...' : 'Envoyer la réponse'}</button>
-                 <button disabled={contactBusy || replyBusy} onClick={async () => { if (!window.confirm('Supprimer définitivement ce message ?')) return; setContactBusy(true); try { await deleteContactMessage(selectedMessage.id); setSelectedMessage(null); showToast('Message supprimé.', 'success'); } catch (e: any) { showToast(e?.message || 'Suppression refusée.', 'error'); } finally { setContactBusy(false); } }} className="inline-flex items-center gap-2 rounded-xl bg-rose-50 px-4 py-2.5 text-xs font-bold text-rose-700 hover:bg-rose-100 disabled:opacity-50"><Trash2 className="h-4 w-4" />Supprimer</button>
+                 <button disabled={contactBusy || replyBusy} onClick={async () => { if (!window.confirm('Supprimer définitivement ce message ?')) return; setContactBusy(true); try { await adminDeleteContact(selectedMessage.id); setSelectedMessage(null); showToast('Message supprimé.', 'success'); } catch (e: any) { showToast(e?.message || 'Suppression refusée.', 'error'); } finally { setContactBusy(false); } }} className="inline-flex items-center gap-2 rounded-xl bg-rose-50 px-4 py-2.5 text-xs font-bold text-rose-700 hover:bg-rose-100 disabled:opacity-50"><Trash2 className="h-4 w-4" />Supprimer</button>
                </div>
              </div>
           </div>
