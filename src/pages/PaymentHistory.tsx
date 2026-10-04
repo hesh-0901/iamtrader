@@ -21,6 +21,11 @@ export function PaymentHistory() {
   const [items, setItems] = useState<PaymentHistoryItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [page, setPage] = useState(1);
+  const pageSize = 10;
+
+  const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
+  const paginatedItems = items.slice((page - 1) * pageSize, page * pageSize);
 
   useEffect(() => {
     getPaymentHistory().then(setItems).catch((e) => setError(e?.message || 'Impossible de charger l’historique.')).finally(() => setLoading(false));
@@ -38,6 +43,10 @@ export function PaymentHistory() {
         return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth();
       }).reduce((sum, item) => sum + item.amount, 0)
     };
+  }, [items]);
+
+  useEffect(() => {
+    setPage(1);
   }, [items]);
 
   return (
@@ -61,9 +70,9 @@ export function PaymentHistory() {
           error ? <div className="py-16 text-center text-xs text-rose-600">{error}</div> :
           items.length === 0 ? <div className="py-16 text-center text-xs text-slate-500">Aucun paiement enregistré pour le moment.</div> :
           <div className="divide-y divide-slate-100">
-            {items.map((item, index) => {
+            {paginatedItems.map((item, index) => {
               const s = status(item), Icon = s.icon;
-              return <div key={item.id} className="grid gap-4 px-5 py-4 sm:grid-cols-[40px_1.5fr_1fr_auto] sm:items-center">\n                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-xs font-black text-slate-500 border border-slate-200">{index + 1}</div>
+              return <div key={item.id} className="grid gap-4 px-5 py-4 sm:grid-cols-[40px_1.5fr_1fr_auto] sm:items-center">\n                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-50 text-xs font-black text-slate-500 border border-slate-200">{(page - 1) * pageSize + index + 1}</div>
                 <div className="min-w-0">
                   <div className="flex items-center gap-2"><span className="text-sm font-black text-slate-900">{item.planName || (item.plan === 'pro' ? 'Plus' : 'Community')}</span><span className={`rounded-full border px-2 py-0.5 text-[9px] font-bold ${s.cls}`}><Icon className="mr-1 inline h-3 w-3" />{s.label}</span></div>
                   <div className="mt-1 text-[10px] text-slate-400">Réf. {item.reference} · {date(item.paidAt || item.createdAt)}</div>
