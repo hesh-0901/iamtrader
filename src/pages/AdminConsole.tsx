@@ -346,6 +346,7 @@ export function AdminConsole() {
 
           {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">{error}</div>}
         </main>
+      </div>
     </div>
   );
 }
