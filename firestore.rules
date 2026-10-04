@@ -41,6 +41,16 @@ service cloud.firestore {
       allow update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
     }
 
+    match /contactMessages/{messageId} {
+      // Contact forms may create a new ticket; only administrators can read or manage tickets.
+      allow create: if request.resource.data.status == 'new'
+        && request.resource.data.name is string
+        && request.resource.data.email is string
+        && request.resource.data.subject is string
+        && request.resource.data.message is string;
+      allow read, update, delete: if isAdmin();
+    }
+
     match /adminLogs/{logId} {
       allow read, create: if isAdmin();
       allow update, delete: if false;
