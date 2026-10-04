@@ -35,6 +35,14 @@ function fromFirestoreValue(value: any): unknown {
   if ('doubleValue' in value) return value.doubleValue;
   if ('booleanValue' in value) return value.booleanValue;
   if ('timestampValue' in value) return value.timestampValue;
+  if ('mapValue' in value) {
+    return Object.fromEntries(
+      Object.entries(value.mapValue?.fields || {}).map(([key, nested]) => [key, fromFirestoreValue(nested)])
+    );
+  }
+  if ('arrayValue' in value) {
+    return (value.arrayValue?.values || []).map((nested: any) => fromFirestoreValue(nested));
+  }
   return null;
 }
 
