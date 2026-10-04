@@ -24,7 +24,7 @@ import { TradeModal } from './components/journal/TradeModal';
 import { TradeDetailModal } from './components/journal/TradeDetailModal';
 import { AccountModal } from './components/accounts/AccountModal';
 import { AuthModal } from './components/auth/AuthModal';
-import { ShieldAlert, LogOut, Loader2 } from 'lucide-react';
+import { ShieldAlert, LogOut, Loader2, Menu } from 'lucide-react';
 import { syncSubscriptionStatus } from './services/payments';
 
 function MainAppContent() {
@@ -258,8 +258,26 @@ function MainAppContent() {
 
   if (currentPage === 'admin' && userProfile?.role === 'admin') {
     return (
-      <div className="min-h-screen bg-[#f5f8fb] text-slate-900">
-        <AdminConsole />
+      <div className="min-h-screen bg-[#f5f8fb] text-slate-900 flex">
+        <Sidebar
+          currentPage={currentPage}
+          onNavigate={(page) => setCurrentPage(page)}
+          userRole={userProfile?.role}
+          isMobileOpen={isMobileSidebarOpen}
+          onCloseMobile={() => setIsMobileSidebarOpen(false)}
+          isCollapsed={isSidebarCollapsed}
+          onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        />
+        <div className="flex-1 min-w-0 relative">
+          <button
+            onClick={() => setIsMobileSidebarOpen(true)}
+            className="lg:hidden fixed left-4 top-4 z-40 flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-[#0b1f35] shadow-lg"
+            aria-label="Ouvrir le menu"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+          <AdminConsole />
+        </div>
       </div>
     );
   }
