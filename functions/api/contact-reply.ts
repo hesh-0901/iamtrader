@@ -13,9 +13,11 @@ function escapeHtml(value:string) {
 export async function onRequestPost(context:{request:Request;env:Env}) {
   const authHeader=context.request.headers.get('Authorization')||'';
   if(!authHeader.startsWith('Bearer ')) return json({error:'Authentification requise.'},401);
-  let body:{to?:string;subject?:string;reply?:string;originalMessage?:string;name?:string};
+  let body:{to?:string;subject?:string;reply?:string;originalMessage?:string;name?:string;inReplyTo?:string;references?:string};
   try { body=await context.request.json(); } catch { return json({error:'Requête invalide.'},400); }
   const to=String(body.to||'').trim(), subject=String(body.subject||'').trim(), reply=String(body.reply||'').trim();
+  const inReplyTo=String(body.inReplyTo||'').trim();
+  const references=String(body.references||'').trim();
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return json({error:'Adresse e-mail du destinataire invalide.'},400);
   if(!subject||!reply) return json({error:'Sujet et réponse obligatoires.'},400);
   if(reply.length>10000) return json({error:'La réponse est trop longue.'},400);
@@ -63,7 +65,7 @@ Trading Performance Management
 hello@iamtrader.trade
 iamtrader.trade
 Trade. Measure. Improve.`;
-  const resendResponse=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:'Bearer '+context.env.RESEND_API_KEY,'Content-Type':'application/json'},body:JSON.stringify({from:context.env.RESEND_FROM_EMAIL,to:[to],subject:/^re:/i.test(subject)?subject:'Re: '+subject,html,text,...(context.env.RESEND_REPLY_TO?{reply_to:context.env.RESEND_REPLY_TO}:{})})});
+  const resendResponse=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:'Bearer '+context.env.RESEND_API_KEY,'Content-Type':'application/json'},body:JSON.stringify({from:context.env.RESEND_FROM_EMAIL,to:[to],subject:/^re:/i.test(subject)?subject:'Re: '+subject,html,text,...(context.env.RESEND_REPLY_TO?{reply_to:context.env.RESEND_REPLY_TO}:{}),...(inReplyTo?{headers:{'In-Reply-To':inReplyTo,'References':references||inReplyTo}}:{})})});
   const resendData=await resendResponse.json().catch(()=>({}));
   if(!resendResponse.ok) return json({error:'Resend a refusé l’envoi.',details:resendData},502);
   return json({success:true,id:(resendData as {id?:string}).id||null});
