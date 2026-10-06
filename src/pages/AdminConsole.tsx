@@ -272,7 +272,8 @@ export function AdminConsole() {
           reply: replyText.trim(),
           name: selectedMessage.name,
           inReplyTo: lastInbound?.messageId || '',
-          references: thread.map(item => item.messageId).filter(Boolean).slice(-20).join(' ')
+          references: thread.map(item => item.messageId).filter(Boolean).slice(-20).join(' '),
+          conversationId: selectedMessage.id
         })
       });
       const payload = await response.json().catch(() => ({}));
