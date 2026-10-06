@@ -172,10 +172,19 @@ export async function handlePaymentRequest(request: Request, env: CinetPayEnv) {
     if (!plan || !planKey) return json({ success: false, message: 'Formule invalide.' }, 400);
     if (!phone) return json({ success: false, message: 'Numéro Mobile Money invalide. Utilisez un numéro RDC à 10 chiffres.' }, 400);
     if (!env.CINETPAY_API_KEY || !env.CINETPAY_API_PASSWORD) {
-      return json({ success: false, message: 'CinetPay n’est pas encore configuré côté serveur.' }, 503);
+      const configState = [
+        'API_KEY=' + (env.CINETPAY_API_KEY ? 'OK' : 'MISSING'),
+        'API_PASSWORD=' + (env.CINETPAY_API_PASSWORD ? 'OK' : 'MISSING'),
+        'COUNTRY=' + (env.CINETPAY_COUNTRY || 'CD')
+      ].join(', ');
+      console.error('CinetPay runtime configuration incomplete:', configState);
+      return json({
+        success: false,
+        message: 'Configuration CinetPay serveur incomplète (' + configState + '). Vérifiez les secrets du Worker de production.'
+      }, 503);
     }
     if ((env.CINETPAY_COUNTRY || 'CD') !== 'CD') {
-      return json({ success: false, message: 'La configuration CinetPay doit utiliser le pays CD pour les paiements IAMTRADER.' }, 503);
+      return json({ success: false, message: 'La configuration CinetPay doit utiliser le pays CD (configuration actuelle: ' + env.CINETPAY_COUNTRY + ').' }, 503);
     }
 
     const profile = await firestoreGet(env, `users/${encodeURIComponent(user.uid)}`);
