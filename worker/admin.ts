@@ -88,7 +88,7 @@ export async function handleAdminMutation(request: Request, env: AdminEnv) {
 
     if (body.action === 'update-contact') {
       if (!body.messageId || !body.data) return json({ error: 'Message ou données manquants.' }, 400);
-      const allowed = ['status','adminNote','handledBy','handledAt','lastReply','repliedAt','repliedBy'];
+      const allowed = ['status','adminNote','handledBy','handledAt','lastReply','repliedAt','repliedBy','conversation'];
       const data = Object.fromEntries(Object.entries(body.data).filter(([key]) => allowed.includes(key)));
       data.updatedAt = new Date().toISOString();
       await firestorePatch(env, `contactMessages/${encodeURIComponent(body.messageId)}`, data, Object.keys(data));
