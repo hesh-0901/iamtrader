@@ -34,8 +34,9 @@ function decodeMimeSubject(value?: string) {
         const bytes = Uint8Array.from(atob(String(encoded).replace(/\s+/g, '')), c => c.charCodeAt(0));
         return new TextDecoder(String(charset || 'utf-8')).decode(bytes);
       }
-      const bytes = String(encoded).replace(/_/g, ' ').replace(/=([0-9A-F]{2})/gi, (_m: string, hex: string) => String.fromCharCode(parseInt(hex, 16)));
-      return new TextDecoder(String(charset || 'utf-8')).decode(new Uint8Array([...bytes].map(char => char.charCodeAt(0))));
+      const q = String(encoded).replace(/_/g, ' ').replace(/=([0-9A-F]{2})/gi, (_m: string, hex: string) => String.fromCharCode(parseInt(hex, 16)));
+      const bytes = Uint8Array.from([...q].map(char => char.charCodeAt(0)));
+      return new TextDecoder(String(charset || 'utf-8')).decode(bytes);
     } catch {
       return String(encoded);
     }
@@ -234,6 +235,75 @@ export function AdminConsole() {
       return d !== null && d < 0;
     }).length
   };
+
+  async function sendSupportReply() {
+    if (!selectedMessage || !replyText.trim() || replyBusy) return;
+    const currentUser = auth.currentUser;
+    if (!currentUser) return;
+
+    setReplyBusy(true);
+    try {
+      const idToken = await currentUser.getIdToken();
+      const thread = Array.isArray(selectedMessage.conversation) ? selectedMessage.conversation : [];
+      const lastInbound = [...thread].reverse().find(item => item.direction === 'inbound');
+      const response = await fetch('/api/contact-reply', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
+        body: JSON.stringify({
+          to: selectedMessage.email,
+          subject: decodeMimeSubject(selectedMessage.subject),
+          reply: replyText.trim(),
+          name: selectedMessage.name,
+          inReplyTo: lastInbound?.messageId || '',
+          references: thread.map(item => item.messageId).filter(Boolean).slice(-20).join(' ')
+        })
+      });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload?.error || 'Envoi impossible');
+
+      const now = new Date().toISOString();
+      const outbound = {
+        id: 'outbound-' + Date.now(),
+        direction: 'outbound' as const,
+        body: replyText.trim(),
+        at: now,
+        from: 'hello@iamtrader.trade',
+        to: selectedMessage.email,
+        messageId: payload?.id || undefined
+      };
+      const conversation = Array.isArray(selectedMessage.conversation) && selectedMessage.conversation.length
+        ? [...selectedMessage.conversation, outbound]
+        : [
+            { id:'legacy-inbound', direction:'inbound' as const, body:selectedMessage.message, at:selectedMessage.createdAt || now, from:selectedMessage.email, to:'hello@iamtrader.trade' },
+            ...(selectedMessage.lastReply ? [{
+              id:'legacy-last-reply',
+              direction:selectedMessage.repliedBy ? 'outbound' as const : 'inbound' as const,
+              body:selectedMessage.lastReply,
+              at:selectedMessage.repliedAt || selectedMessage.updatedAt || now,
+              from:selectedMessage.repliedBy ? 'hello@iamtrader.trade' : selectedMessage.email,
+              to:selectedMessage.repliedBy ? selectedMessage.email : 'hello@iamtrader.trade'
+            }] : []),
+            outbound
+          ];
+
+      await adminUpdateContact(selectedMessage.id, {
+        status:'resolved',
+        handledBy:currentUser.uid,
+        handledAt:now,
+        lastReply:replyText.trim(),
+        repliedAt:now,
+        repliedBy:currentUser.uid,
+        conversation
+      });
+      setSelectedMessage(prev => prev ? { ...prev, status:'resolved', lastReply:replyText.trim(), repliedAt:now, repliedBy:currentUser.uid, conversation } : prev);
+      setReplyText('');
+      showToast('Message envoyé.', 'success');
+    } catch (e:any) {
+      showToast(e?.message || 'Envoi impossible.', 'error');
+    } finally {
+      setReplyBusy(false);
+    }
+  }
 
   return (
     <div className="min-h-full bg-[#f5f8fb] -m-4 lg:-m-6">
@@ -485,20 +555,20 @@ export function AdminConsole() {
           })()}
 
           {adminTab === 'support' && (
-            <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_12px_40px_rgba(11,31,53,.07)]">
-              <div className="flex h-[780px] min-h-[650px] flex-col lg:flex-row">
-                <aside className="flex w-full shrink-0 flex-col border-b border-slate-200 bg-white lg:w-[350px] lg:border-b-0 lg:border-r">
-                  <div className="border-b border-slate-200 px-4 py-4">
+            <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_8px_30px_rgba(11,31,53,.05)]">
+              <div className="flex h-[760px] min-h-[620px] flex-col lg:flex-row">
+                <aside className="flex w-full shrink-0 flex-col border-b border-slate-200 bg-white lg:w-[330px] lg:border-b-0 lg:border-r">
+                  <div className="border-b border-slate-200 px-4 py-3">
                     <div className="flex items-center justify-between">
                       <div>
-                        <h2 className="text-[14px] font-black tracking-tight text-[#0b1f35]">Messages</h2>
-                        <p className="mt-1 text-[10px] text-slate-400">{contactMessages.length} conversation(s)</p>
+                        <div className="text-[13px] font-black text-[#0b1f35]">Messages</div>
+                        <div className="mt-0.5 text-[9px] text-slate-400">{contactMessages.length} conversation(s)</div>
                       </div>
-                      <button onClick={load} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700" title="Actualiser"><RefreshCw className="h-3.5 w-3.5" /></button>
+                      <button onClick={load} disabled={loading} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100" title="Actualiser"><RefreshCw className={'h-3.5 w-3.5 '+(loading?'animate-spin':'')} /></button>
                     </div>
-                    <div className="mt-4 flex gap-1 rounded-lg bg-slate-50 p-1">
+                    <div className="mt-3 flex items-center gap-4 border-b border-slate-100">
                       {(['all','new','in_progress','resolved'] as const).map(s => (
-                        <button key={s} onClick={() => setContactFilter(s)} className={'flex-1 rounded-md px-2 py-2 text-[9px] font-bold ' + (contactFilter === s ? 'bg-white text-[#0b1f35] shadow-sm' : 'text-slate-400 hover:text-slate-700')}>
+                        <button key={s} onClick={() => setContactFilter(s)} className={'border-b-2 pb-2 text-[9px] font-bold ' + (contactFilter === s ? 'border-[#0b1f35] text-[#0b1f35]' : 'border-transparent text-slate-400')}>
                           {s === 'all' ? 'Tous' : s === 'new' ? 'Non lus' : s === 'in_progress' ? 'En cours' : 'Traités'}
                         </button>
                       ))}
@@ -515,63 +585,58 @@ export function AdminConsole() {
                       const selectedItem = selectedMessage?.id === m.id;
                       const unread = m.status === 'new';
                       return (
-                        <button key={m.id} onClick={() => { setSelectedMessage(m); setContactNote(m.adminNote || ''); setReplyText(''); }} className={'flex w-full gap-3 border-b border-slate-100 px-4 py-3.5 text-left transition ' + (selectedItem ? 'bg-[#f1f5f9] shadow-[inset_3px_0_0_#0b1f35]' : 'hover:bg-slate-50')}>
-                          <div className={'mt-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[10px] font-black ' + (unread ? 'bg-[#0b1f35] text-white' : 'bg-slate-100 text-slate-500')}>
+                        <button key={m.id} onClick={() => { setSelectedMessage(m); setContactNote(m.adminNote || ''); setReplyText(''); }} className={'flex w-full gap-3 border-b border-slate-100 px-4 py-3 text-left ' + (selectedItem ? 'bg-slate-50 shadow-[inset_3px_0_0_#0b1f35]' : 'hover:bg-slate-50')}>
+                          <div className={'mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[9px] font-black ' + (unread ? 'bg-[#0b1f35] text-white' : 'bg-slate-100 text-slate-500')}>
                             {(m.name || m.email || '?').trim().charAt(0).toUpperCase()}
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
-                              <span className={'min-w-0 flex-1 truncate text-[11px] ' + (unread ? 'font-black text-[#0b1f35]' : 'font-semibold text-slate-700')}>{m.name || m.email}</span>
-                              <span className="shrink-0 text-[8px] text-slate-400">{date && !Number.isNaN(date.getTime()) ? date.toLocaleDateString('fr-FR', { day:'2-digit', month:'short' }) : '—'}</span>
+                              <span className={'min-w-0 flex-1 truncate text-[10px] ' + (unread ? 'font-black text-[#0b1f35]' : 'font-semibold text-slate-700')}>{m.name || m.email}</span>
+                              <span className="shrink-0 text-[8px] text-slate-400">{date && !Number.isNaN(date.getTime()) ? date.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) : '—'}</span>
                             </div>
-                            <div className={'mt-0.5 truncate text-[10px] ' + (unread ? 'font-bold text-slate-700' : 'font-medium text-slate-500')}>{decodeMimeSubject(m.subject) || '(Sans objet)'}</div>
+                            <div className={'mt-0.5 truncate text-[10px] ' + (unread ? 'font-bold text-slate-700' : 'text-slate-500')}>{decodeMimeSubject(m.subject) || '(Sans objet)'}</div>
                             <div className="mt-0.5 flex items-center gap-1.5">
-                              <span className="truncate text-[9px] text-slate-400">{preview}</span>
-                              {thread.length > 1 && <span className="shrink-0 rounded-full bg-slate-100 px-1.5 py-0.5 text-[8px] font-bold text-slate-500">{thread.length}</span>}
+                              <span className="min-w-0 truncate text-[9px] text-slate-400">{preview}</span>
+                              {thread.length > 1 && <span className="shrink-0 text-[8px] font-bold text-slate-400">{thread.length}</span>}
                             </div>
                           </div>
                         </button>
                       );
                     })}
-                    {contactMessages.filter(m => contactFilter === 'all' || m.status === contactFilter).length === 0 && <div className="p-10 text-center text-[10px] text-slate-400">Aucune conversation.</div>}
                   </div>
                 </aside>
 
-                <div className="min-w-0 flex-1 bg-[#f8fafc]">
+                <div className="min-w-0 flex-1 bg-white">
                   {selectedMessage ? (
                     <div className="flex h-full min-h-0 flex-col">
-                      <header className="shrink-0 border-b border-slate-200 bg-white px-5 py-4 sm:px-7">
+                      <header className="shrink-0 border-b border-slate-200 bg-white px-5 py-3.5 sm:px-7">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#0b1f35] text-[11px] font-black text-white">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#0b1f35] text-[10px] font-black text-white">
                             {(selectedMessage.name || selectedMessage.email || '?').trim().charAt(0).toUpperCase()}
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
                               <h2 className="truncate text-[13px] font-black text-[#0b1f35]">{selectedMessage.name || selectedMessage.email}</h2>
-                              {selectedMessage.status === 'new' && <span className="rounded-full bg-blue-50 px-2 py-0.5 text-[8px] font-bold text-blue-700">Nouveau</span>}
-                              {selectedMessage.status === 'in_progress' && <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[8px] font-bold text-amber-700">En cours</span>}
-                              {selectedMessage.status === 'resolved' && <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[8px] font-bold text-emerald-700">Traité</span>}
+                              {selectedMessage.status === 'new' && <span className="h-1.5 w-1.5 rounded-full bg-blue-600" />}
                             </div>
-                            <div className="mt-0.5 truncate text-[9px] text-slate-400">{selectedMessage.email}</div>
+                            <div className="truncate text-[9px] text-slate-400">{selectedMessage.email}</div>
                           </div>
-                          <div className="hidden text-right sm:block">
-                            <div className="text-[9px] font-bold text-slate-500">{decodeMimeSubject(selectedMessage.subject) || '(Sans objet)'}</div>
-                            <div className="mt-0.5 text-[8px] text-slate-400">{selectedMessage.createdAt ? new Date(selectedMessage.createdAt).toLocaleDateString('fr-FR', { dateStyle:'medium' }) : '—'}</div>
+                          <div className="hidden min-w-0 max-w-[42%] text-right sm:block">
+                            <div className="truncate text-[10px] font-semibold text-slate-600">{decodeMimeSubject(selectedMessage.subject) || '(Sans objet)'}</div>
                           </div>
                           <button onClick={async () => {
                             try {
                               const now = new Date().toISOString();
                               await adminUpdateContact(selectedMessage.id, { status:'in_progress', handledBy:auth.currentUser?.uid || '', handledAt:now });
-                              setSelectedMessage(prev => prev ? { ...prev, status:'in_progress', handledBy:auth.currentUser?.uid || '', handledAt:now } : prev);
-                              showToast('Conversation marquée comme en cours.');
+                              setSelectedMessage(prev => prev ? {...prev,status:'in_progress',handledBy:auth.currentUser?.uid || '',handledAt:now}:prev);
                             } catch { showToast('Mise à jour impossible.'); }
-                          }} className="hidden rounded-lg px-2.5 py-2 text-[9px] font-bold text-slate-500 hover:bg-slate-100 sm:block">En cours</button>
+                          }} className="hidden rounded-lg px-2 py-1.5 text-[9px] font-semibold text-slate-500 hover:bg-slate-100 sm:block">En cours</button>
                           <button onClick={() => adminDeleteContact(selectedMessage.id).then(() => { setSelectedMessage(null); showToast('Conversation supprimée.'); }).catch(() => showToast('Suppression impossible.'))} className="rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600" title="Supprimer"><Trash2 className="h-4 w-4" /></button>
                         </div>
                       </header>
 
-                      <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-8">
-                        <div className="mx-auto flex w-full max-w-3xl flex-col gap-5">
+                      <div className="min-h-0 flex-1 overflow-y-auto bg-white px-5 py-6 sm:px-10">
+                        <div className="mx-auto w-full max-w-3xl">
                           {(() => {
                             const legacyConversation = [
                               { id:'legacy-inbound', direction:'inbound' as const, body:selectedMessage.message, at:selectedMessage.createdAt || new Date().toISOString(), from:selectedMessage.email, to:'hello@iamtrader.trade' },
@@ -581,24 +646,25 @@ export function AdminConsole() {
                             return conversation.map((item, index) => {
                               const outbound = item.direction === 'outbound';
                               const at = item.at ? new Date(item.at) : null;
+                              const previous = conversation[index - 1];
+                              const sameDay = previous && new Date(previous.at).toDateString() === new Date(item.at).toDateString();
+                              const dayLabel = at && !Number.isNaN(at.getTime()) ? at.toLocaleDateString('fr-FR', { day:'numeric', month:'long', year:'numeric' }) : '';
                               return (
-                                <div key={item.id || index} className={'flex w-full ' + (outbound ? 'justify-end' : 'justify-start')}>
-                                  <div className={'flex max-w-[88%] items-end gap-2 sm:max-w-[72%] ' + (outbound ? 'flex-row-reverse' : '')}>
-                                    <div className={'flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-[8px] font-black ' + (outbound ? 'bg-[#0b1f35] text-white' : 'bg-white text-slate-500 border border-slate-200')}>
-                                      {(outbound ? 'I' : (selectedMessage.name || selectedMessage.email || '?').trim().charAt(0)).toUpperCase()}
-                                    </div>
-                                    <div className={outbound ? 'text-right' : 'text-left'}>
+                                <React.Fragment key={item.id || index}>
+                                  {!sameDay && <div className="my-4 flex items-center gap-3"><span className="h-px flex-1 bg-slate-100" /><span className="text-[8px] font-bold uppercase tracking-wider text-slate-400">{dayLabel === new Date().toLocaleDateString('fr-FR', {day:'numeric',month:'long',year:'numeric'}) ? 'Aujourd’hui' : dayLabel}</span><span className="h-px flex-1 bg-slate-100" /></div>}
+                                  <div className={'mb-4 flex ' + (outbound ? 'justify-end' : 'justify-start')}>
+                                    <div className={'max-w-[82%] sm:max-w-[68%] ' + (outbound ? 'text-right' : 'text-left')}>
                                       <div className={'mb-1 flex items-center gap-1.5 text-[8px] text-slate-400 ' + (outbound ? 'justify-end' : '')}>
-                                        <span className="font-bold text-slate-500">{outbound ? 'IAMTRADER' : (selectedMessage.name || selectedMessage.email)}</span>
+                                        <span className="font-semibold text-slate-500">{outbound ? 'IAMTRADER' : (selectedMessage.name || selectedMessage.email)}</span>
                                         <span>·</span>
-                                        <span>{at && !Number.isNaN(at.getTime()) ? at.toLocaleString('fr-FR', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' }) : '—'}</span>
+                                        <span>{at && !Number.isNaN(at.getTime()) ? at.toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'}) : '—'}</span>
                                       </div>
-                                      <div className={'rounded-2xl px-4 py-3 shadow-sm ' + (outbound ? 'rounded-br-md bg-[#0b1f35] text-white' : 'rounded-bl-md border border-slate-200 bg-white text-slate-800')}>
-                                        <div className="whitespace-pre-wrap break-words text-[13px] leading-6">{item.body || '(Message sans contenu textuel)'}</div>
+                                      <div className={'inline-block rounded-xl px-3.5 py-2.5 ' + (outbound ? 'bg-[#0b1f35] text-white' : 'border border-slate-200 bg-slate-50 text-slate-800')}>
+                                        <div className="whitespace-pre-wrap break-words text-[12px] leading-5">{item.body || '(Message vide)'}</div>
                                       </div>
                                     </div>
                                   </div>
-                                </div>
+                                </React.Fragment>
                               );
                             });
                           })()}
@@ -607,104 +673,34 @@ export function AdminConsole() {
 
                       <div className="shrink-0 border-t border-slate-200 bg-white px-4 py-3 sm:px-7">
                         <div className="mx-auto max-w-3xl">
-                          <div className="flex items-end gap-2 rounded-2xl border border-slate-300 bg-slate-50 p-2 focus-within:border-[#0b1f35] focus-within:bg-white focus-within:shadow-sm">
-                            <textarea
-                              value={replyText}
-                              onChange={e => setReplyText(e.target.value)}
-                              onKeyDown={e => {
-                                if (e.key === 'Enter' && !e.shiftKey) {
-                                  e.preventDefault();
-                                  if (!replyBusy && replyText.trim()) (e.currentTarget.form as HTMLFormElement | null)?.requestSubmit();
-                                }
-                              }}
-                              rows={2}
-                              placeholder="Écrire un message…"
-                              className="min-h-[52px] max-h-36 flex-1 resize-none bg-transparent px-2 py-2 text-[12px] leading-6 text-slate-800 outline-none placeholder:text-slate-400"
-                            />
-                            <button
-                              type="button"
-                              disabled={replyBusy || !replyText.trim()}
-                              onClick={async () => {
-                                if (!selectedMessage || !replyText.trim()) return;
-                                const currentUser = auth.currentUser;
-                                if (!currentUser) return;
-                                setReplyBusy(true);
-                                try {
-                                  const idToken = await currentUser.getIdToken();
-                                  const thread = Array.isArray(selectedMessage.conversation) ? selectedMessage.conversation : [];
-                                  const lastInbound = [...thread].reverse().find(item => item.direction === 'inbound');
-                                  const response = await fetch('/api/contact-reply', {
-                                    method:'POST',
-                                    headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+idToken },
-                                    body:JSON.stringify({
-                                      to:selectedMessage.email,
-                                      subject:decodeMimeSubject(selectedMessage.subject),
-                                      reply:replyText.trim(),
-                                      name:selectedMessage.name,
-                                      inReplyTo:lastInbound?.messageId || '',
-                                      references:thread.map(item => item.messageId).filter(Boolean).slice(-20).join(' ')
-                                    })
-                                  });
-                                  const payload = await response.json().catch(() => ({}));
-                                  if (!response.ok) throw new Error(payload?.error || 'Envoi impossible');
-                                  const now = new Date().toISOString();
-                                  const outbound = {
-                                    id:'outbound-' + Date.now(),
-                                    direction:'outbound' as const,
-                                    body:replyText.trim(),
-                                    at:now,
-                                    from:'hello@iamtrader.trade',
-                                    to:selectedMessage.email,
-                                    messageId:payload?.id || undefined
-                                  };
-                                  const conversation = Array.isArray(selectedMessage.conversation) && selectedMessage.conversation.length
-                                    ? [...selectedMessage.conversation, outbound]
-                                    : [
-                                        { id:'legacy-inbound', direction:'inbound' as const, body:selectedMessage.message, at:selectedMessage.createdAt || now, from:selectedMessage.email, to:'hello@iamtrader.trade' },
-                                        ...(selectedMessage.lastReply ? [{ id:'legacy-last-reply', direction:selectedMessage.repliedBy ? 'outbound' as const : 'inbound' as const, body:selectedMessage.lastReply, at:selectedMessage.repliedAt || selectedMessage.updatedAt || now, from:selectedMessage.repliedBy ? 'hello@iamtrader.trade' : selectedMessage.email, to:selectedMessage.repliedBy ? selectedMessage.email : 'hello@iamtrader.trade' }] : []),
-                                        outbound
-                                      ];
-                                  await adminUpdateContact(selectedMessage.id, { status:'resolved', handledBy:currentUser.uid, handledAt:now, lastReply:replyText.trim(), repliedAt:now, repliedBy:currentUser.uid, conversation });
-                                  setSelectedMessage(prev => prev ? { ...prev, status:'resolved', lastReply:replyText.trim(), repliedAt:now, repliedBy:currentUser.uid, conversation } : prev);
-                                  setReplyText('');
-                                  showToast('Message envoyé.', 'success');
-                                } catch (e:any) {
-                                  showToast(e?.message || 'Envoi impossible.', 'error');
-                                } finally {
-                                  setReplyBusy(false);
-                                }
-                              }}
-                              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#0b1f35] text-white shadow-sm transition hover:bg-[#102a46] disabled:cursor-not-allowed disabled:opacity-40"
-                              title="Envoyer"
-                            >
-                              <Send className="h-4 w-4" />
+                          <div className="flex items-end gap-2 rounded-xl border border-slate-300 bg-white p-1.5 shadow-sm focus-within:border-[#0b1f35] focus-within:ring-2 focus-within:ring-slate-100">
+                            <textarea value={replyText} onChange={e => setReplyText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void sendSupportReply(); } }} rows={2} maxLength={10000} placeholder="Écrire un message…" className="min-h-[44px] max-h-32 flex-1 resize-none bg-transparent px-2.5 py-1.5 text-[12px] leading-5 outline-none placeholder:text-slate-400" />
+                            <button type="button" disabled={replyBusy || !replyText.trim()} onClick={() => void sendSupportReply()} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#0b1f35] text-white transition hover:bg-[#142d47] disabled:opacity-30" title="Envoyer">
+                              <Send className="h-3.5 w-3.5" />
                             </button>
                           </div>
-                          <div className="mt-1.5 flex items-center justify-between px-1 text-[8px] text-slate-400">
-                            <span>Entrée pour envoyer · Maj + Entrée pour aller à la ligne</span>
-                            <span>{replyText.length}/10 000</span>
-                          </div>
+                          <div className="mt-1 flex justify-between px-1 text-[8px] text-slate-400"><span>Entrée pour envoyer · Maj + Entrée pour une nouvelle ligne</span><span>{replyText.length}/10 000</span></div>
                         </div>
                       </div>
 
-                      <details className="shrink-0 border-t border-slate-100 bg-white px-4 py-2 sm:px-7">
-                        <summary className="mx-auto max-w-3xl cursor-pointer list-none text-[8px] font-bold uppercase tracking-wider text-slate-400">Informations internes</summary>
-                        <div className="mx-auto mt-3 max-w-3xl pb-3">
+                      <details className="shrink-0 border-t border-slate-100 bg-slate-50/50 px-4 py-2 sm:px-7">
+                        <summary className="mx-auto max-w-3xl cursor-pointer list-none text-[8px] font-bold uppercase tracking-wider text-slate-400">Détails internes</summary>
+                        <div className="mx-auto mt-2 max-w-3xl pb-2">
                           <div className="grid gap-2 text-[9px] sm:grid-cols-3">
-                            <div className="rounded-lg bg-slate-50 p-2"><span className="text-slate-400">ID</span><b className="ml-1 font-mono text-slate-600">{selectedMessage.id}</b></div>
-                            <div className="rounded-lg bg-slate-50 p-2"><span className="text-slate-400">Créé</span><b className="ml-1 text-slate-600">{selectedMessage.createdAt || '—'}</b></div>
-                            <div className="rounded-lg bg-slate-50 p-2"><span className="text-slate-400">Mis à jour</span><b className="ml-1 text-slate-600">{selectedMessage.updatedAt || '—'}</b></div>
+                            <div><span className="text-slate-400">ID</span><b className="ml-1 font-mono text-slate-600">{selectedMessage.id}</b></div>
+                            <div><span className="text-slate-400">Créé</span><b className="ml-1 text-slate-600">{selectedMessage.createdAt || '—'}</b></div>
+                            <div><span className="text-slate-400">Mis à jour</span><b className="ml-1 text-slate-600">{selectedMessage.updatedAt || '—'}</b></div>
                           </div>
-                          <textarea value={contactNote} onChange={e => setContactNote(e.target.value)} onBlur={() => { if (selectedMessage) adminUpdateContact(selectedMessage.id, { adminNote:contactNote }).catch(() => {}); }} rows={2} placeholder="Note interne…" className="mt-2 w-full resize-none rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-[10px] outline-none focus:border-[#0b1f35]" />
+                          <textarea value={contactNote} onChange={e => setContactNote(e.target.value)} onBlur={() => { if (selectedMessage) adminUpdateContact(selectedMessage.id, { adminNote:contactNote }).catch(() => {}); }} rows={2} placeholder="Note interne…" className="mt-2 w-full resize-none rounded-lg border border-slate-200 bg-white px-3 py-2 text-[10px] outline-none focus:border-[#0b1f35]" />
                         </div>
                       </details>
                     </div>
                   ) : (
-                    <div className="flex h-full items-center justify-center px-6 text-center">
+                    <div className="flex h-full items-center justify-center bg-slate-50/60 text-center">
                       <div>
-                        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-white shadow-sm ring-1 ring-slate-200"><Mail className="h-6 w-6 text-slate-300" /></div>
-                        <p className="mt-4 text-[13px] font-bold text-slate-500">Vos conversations</p>
-                        <p className="mt-1 max-w-xs text-[10px] leading-5 text-slate-400">Sélectionnez un contact pour poursuivre la discussion.</p>
+                        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-white ring-1 ring-slate-200"><Mail className="h-5 w-5 text-slate-300" /></div>
+                        <p className="mt-3 text-[12px] font-bold text-slate-500">Sélectionnez une conversation</p>
+                        <p className="mt-1 text-[9px] text-slate-400">Le fil complet s'affichera ici.</p>
                       </div>
                     </div>
                   )}
