@@ -472,11 +472,11 @@ export function AdminConsole() {
             <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_10px_35px_rgba(11,31,53,.06)]">
               <div className="flex h-[760px] min-h-[640px] flex-col lg:flex-row">
                 <aside className="flex w-full shrink-0 flex-col border-b border-slate-200 bg-white lg:w-[380px] lg:border-b-0 lg:border-r">
-                  <div className="border-b border-slate-200 bg-white px-5 py-5">
+                  <div className="border-b border-slate-200 px-5 py-5">
                     <div className="flex items-center justify-between">
                       <div>
                         <h2 className="text-[14px] font-black text-[#0b1f35]">Boîte de réception</h2>
-                        <p className="mt-1 text-[11px] text-slate-500">{contactMessages.length} message(s) · {contactMessages.filter(m => m.status === 'new').length} non lu(s)</p>
+                        <p className="mt-1 text-[11px] text-slate-500">{contactMessages.length} conversation(s) · {contactMessages.filter(m => m.status === 'new').length} non lu(s)</p>
                       </div>
                       <Mail className="h-4 w-4 text-slate-400" />
                     </div>
@@ -488,13 +488,15 @@ export function AdminConsole() {
                       ))}
                     </div>
                   </div>
-
                   <div className="min-h-0 flex-1 overflow-y-auto">
                     {contactMessages.filter(m => contactFilter === 'all' || m.status === contactFilter).map(m => {
-                      const date = m.createdAt ? new Date(m.createdAt) : null;
+                      const date = m.updatedAt || m.createdAt ? new Date(m.updatedAt || m.createdAt) : null;
                       const selectedItem = selectedMessage?.id === m.id;
+                      const thread = Array.isArray(m.conversation) ? m.conversation : [];
+                      const lastThreadMessage = thread.length ? thread[thread.length - 1] : null;
+                      const preview = lastThreadMessage?.body || m.lastReply || m.message || '';
                       return (
-                        <button key={m.id} onClick={() => { setSelectedMessage(m); setContactNote(m.adminNote || ''); setReplyText(''); }} className={'group flex w-full border-b border-slate-200 px-5 py-4 text-left transition ' + (selectedItem ? 'bg-white shadow-[inset_4px_0_0_#0b1f35]' : 'hover:bg-white')}>
+                        <button key={m.id} onClick={() => { setSelectedMessage(m); setContactNote(m.adminNote || ''); setReplyText(''); }} className={'group flex w-full border-b border-slate-200 px-5 py-4 text-left transition ' + (selectedItem ? 'bg-white shadow-[inset_4px_0_0_#0b1f35]' : 'hover:bg-slate-50')}>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center justify-between gap-3">
                               <div className="flex min-w-0 items-center gap-2">
@@ -504,83 +506,96 @@ export function AdminConsole() {
                               <span className="shrink-0 text-[9px] text-slate-400">{date && !Number.isNaN(date.getTime()) ? date.toLocaleDateString('fr-FR', { day:'2-digit', month:'short' }) : '—'}</span>
                             </div>
                             <div className={'mt-1 truncate text-[11px] ' + (m.status === 'new' ? 'font-bold text-slate-800' : 'font-medium text-slate-600')}>{m.subject || '(Sans objet)'}</div>
-                            <div className="mt-0.5 truncate text-[10px] text-slate-400">{m.message}</div>
+                            <div className="mt-0.5 truncate text-[10px] text-slate-400">{preview}</div>
                           </div>
                         </button>
                       );
                     })}
-                    {contactMessages.filter(m => contactFilter === 'all' || m.status === contactFilter).length === 0 && <div className="px-5 py-12 text-center text-[11px] text-slate-400">Aucun message dans cette vue.</div>}
+                    {contactMessages.filter(m => contactFilter === 'all' || m.status === contactFilter).length === 0 && <div className="px-5 py-12 text-center text-[11px] text-slate-400">Aucune conversation dans cette vue.</div>}
                   </div>
                 </aside>
 
-                <div className="min-w-0 flex-1 bg-white">
+                <div className="min-w-0 flex-1 bg-[#f7f9fc]">
                   {selectedMessage ? (
                     <div className="flex h-full flex-col">
-                      <header className="border-b border-slate-200 bg-white px-7 py-6 sm:px-9">
+                      <header className="border-b border-slate-200 bg-white px-7 py-5 sm:px-9">
                         <div className="flex items-start justify-between gap-5">
                           <div className="min-w-0">
-                            <h2 className="truncate text-[22px] font-black tracking-tight text-[#0b1f35]">{selectedMessage.subject || '(Sans objet)'}</h2>
-                            <div className="mt-2.5 flex flex-wrap items-center gap-x-2 gap-y-1.5 text-[11px] text-slate-400">
+                            <div className="flex items-center gap-2">
+                              <span className="rounded-full bg-slate-100 px-2 py-1 text-[8px] font-black uppercase tracking-wider text-slate-500">Conversation</span>
+                              {selectedMessage.status === 'new' && <span className="rounded-full bg-blue-50 px-2 py-1 text-[8px] font-black text-blue-700">Nouveau</span>}
+                              {selectedMessage.status === 'in_progress' && <span className="rounded-full bg-amber-50 px-2 py-1 text-[8px] font-black text-amber-700">En cours</span>}
+                              {selectedMessage.status === 'resolved' && <span className="rounded-full bg-emerald-50 px-2 py-1 text-[8px] font-black text-emerald-700">Traité</span>}
+                            </div>
+                            <h2 className="mt-2 truncate text-[21px] font-black tracking-tight text-[#0b1f35]">{selectedMessage.subject || '(Sans objet)'}</h2>
+                            <div className="mt-1.5 flex flex-wrap items-center gap-x-2 text-[10px] text-slate-400">
                               <span className="font-semibold text-slate-700">{selectedMessage.name}</span>
                               <span>&lt;{selectedMessage.email}&gt;</span>
                               <span>·</span>
-                              <span>{selectedMessage.createdAt ? new Date(selectedMessage.createdAt).toLocaleString('fr-FR', { dateStyle:'medium', timeStyle:'short' }) : '—'}</span>
+                              <span>{selectedMessage.updatedAt || selectedMessage.createdAt ? new Date(selectedMessage.updatedAt || selectedMessage.createdAt || '').toLocaleString('fr-FR', { dateStyle:'medium', timeStyle:'short' }) : '—'}</span>
                             </div>
                           </div>
                           <div className="flex shrink-0 items-center gap-1">
-                            <button onClick={() => adminUpdateContact(selectedMessage.id, { status:'in_progress' }).then(() => showToast('Conversation marquée comme en cours.')).catch(() => showToast('Mise à jour impossible.'))} className="rounded-lg px-3 py-2 text-[10px] font-bold text-slate-500 hover:bg-slate-100 hover:text-slate-800">En cours</button>
-                            <button onClick={() => adminDeleteContact(selectedMessage.id).then(() => { setSelectedMessage(null); showToast('Message supprimé.'); }).catch(() => showToast('Suppression impossible.'))} className="rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600" title="Supprimer"><Trash2 className="h-4 w-4" /></button>
+                            <button onClick={async () => {
+                              try {
+                                const now = new Date().toISOString();
+                                await adminUpdateContact(selectedMessage.id, { status:'in_progress', handledBy:auth.currentUser?.uid || '', handledAt:now });
+                                setSelectedMessage(prev => prev ? { ...prev, status:'in_progress', handledBy:auth.currentUser?.uid || '', handledAt:now } : prev);
+                                showToast('Conversation marquée comme en cours.');
+                              } catch { showToast('Mise à jour impossible.'); }
+                            }} className="rounded-lg px-3 py-2 text-[10px] font-bold text-slate-500 hover:bg-slate-100 hover:text-slate-800">En cours</button>
+                            <button onClick={() => adminDeleteContact(selectedMessage.id).then(() => { setSelectedMessage(null); showToast('Conversation supprimée.'); }).catch(() => showToast('Suppression impossible.'))} className="rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600" title="Supprimer"><Trash2 className="h-4 w-4" /></button>
                           </div>
                         </div>
                       </header>
 
                       <div className="min-h-0 flex-1 overflow-y-auto">
-                        <div className="mx-auto w-full max-w-5xl px-7 py-8 sm:px-12">
-                          <div className="border-b border-slate-100 pb-5">
-                            <div className="flex flex-wrap items-center gap-x-7 gap-y-3 text-[11px]">
-                              <div className="min-w-0"><span className="mr-2 text-[9px] font-black uppercase tracking-wider text-slate-400">De</span><span className="font-semibold text-slate-700">{selectedMessage.name}</span><span className="ml-1 text-slate-400">&lt;{selectedMessage.email}&gt;</span></div>
-                              <div><span className="mr-2 text-[9px] font-black uppercase tracking-wider text-slate-400">À</span><span className="font-semibold text-slate-700">Support IAMTRADER</span></div>
-                              <div className="ml-auto min-w-0"><span className="mr-2 text-[9px] font-black uppercase tracking-wider text-slate-400">ID</span><span className="font-mono text-[9px] text-slate-500">{selectedMessage.id}</span></div>
-                            </div>
+                        <div className="mx-auto w-full max-w-4xl px-6 py-7 sm:px-10">
+                          <div className="mb-6 flex items-center gap-3 text-[9px] text-slate-400">
+                            <span className="h-px flex-1 bg-slate-200" />
+                            <span className="font-bold uppercase tracking-[.14em]">Historique de la conversation</span>
+                            <span className="h-px flex-1 bg-slate-200" />
                           </div>
 
-                          <article className="py-8">
-                            <div className="whitespace-pre-wrap break-words text-[15px] leading-8 text-slate-800 selection:bg-blue-100">{selectedMessage.message}</div>
-                          </article>
+                          {(() => {
+                            const legacyConversation = [
+                              { id:'legacy-inbound', direction:'inbound' as const, body:selectedMessage.message, at:selectedMessage.createdAt || new Date().toISOString(), from:selectedMessage.email, to:'hello@iamtrader.trade' },
+                              ...(selectedMessage.lastReply ? [{ id:'legacy-last-reply', direction:'outbound' as const, body:selectedMessage.lastReply, at:selectedMessage.repliedAt || selectedMessage.updatedAt || selectedMessage.createdAt || new Date().toISOString(), from:'hello@iamtrader.trade', to:selectedMessage.email }] : [])
+                            ];
+                            const conversation = Array.isArray(selectedMessage.conversation) && selectedMessage.conversation.length ? selectedMessage.conversation : legacyConversation;
+                            return <div className="space-y-5">
+                              {conversation.map((item, index) => {
+                                const outbound = item.direction === 'outbound';
+                                const at = item.at ? new Date(item.at) : null;
+                                return (
+                                  <div key={item.id || index} className={'flex ' + (outbound ? 'justify-end' : 'justify-start')}>
+                                    <div className="max-w-[88%] sm:max-w-[76%]">
+                                      <div className={'mb-1.5 flex items-center gap-2 text-[9px] text-slate-400 ' + (outbound ? 'justify-end' : '')}>
+                                        <span className="font-bold text-slate-500">{outbound ? 'IAMTRADER Support' : selectedMessage.name}</span>
+                                        <span>·</span>
+                                        <span>{at && !Number.isNaN(at.getTime()) ? at.toLocaleString('fr-FR', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '—'}</span>
+                                      </div>
+                                      <div className={'rounded-2xl border px-5 py-4 shadow-sm ' + (outbound ? 'rounded-br-md border-[#c8d9e8] bg-[#eaf2f8] text-[#0b1f35]' : 'rounded-bl-md border-slate-200 bg-white text-slate-800')}>
+                                        <div className="whitespace-pre-wrap break-words text-[14px] leading-7">{item.body || '(Message sans contenu textuel)'}</div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>;
+                          })()}
 
-                          <div className="border-t border-slate-200 py-5">
-                            <div className="mb-4 flex items-center justify-between">
-                              <div>
-                                <span className="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Dossier</span>
-                                <span className="ml-2 text-[9px] text-slate-400">Informations de traitement</span>
-                              </div>
-                              <span className={'rounded-full px-2.5 py-1 text-[9px] font-bold ' + (selectedMessage.status === 'new' ? 'bg-blue-50 text-blue-700' : selectedMessage.status === 'in_progress' ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700')}>{selectedMessage.status === 'new' ? 'Non lu' : selectedMessage.status === 'in_progress' ? 'En cours' : 'Traité'}</span>
-                            </div>
-                            <div className="grid overflow-hidden rounded-xl border border-slate-200 bg-slate-50/60 sm:grid-cols-2 lg:grid-cols-5">
-                              <div className="border-b border-slate-200 px-4 py-3 lg:border-b-0 lg:border-r"><div className="text-[8px] font-black uppercase tracking-wider text-slate-400">Créé</div><div className="mt-1 truncate text-[10px] font-semibold text-slate-700" title={selectedMessage.createdAt || ''}>{selectedMessage.createdAt || '—'}</div></div>
-                              <div className="border-b border-slate-200 px-4 py-3 lg:border-b-0 lg:border-r"><div className="text-[8px] font-black uppercase tracking-wider text-slate-400">Mis à jour</div><div className="mt-1 truncate text-[10px] font-semibold text-slate-700" title={selectedMessage.updatedAt || ''}>{selectedMessage.updatedAt || '—'}</div></div>
-                              <div className="border-b border-slate-200 px-4 py-3 lg:border-b-0 lg:border-r"><div className="text-[8px] font-black uppercase tracking-wider text-slate-400">Pris en charge</div><div className="mt-1 truncate text-[10px] font-semibold text-slate-700" title={selectedMessage.handledBy || ''}>{selectedMessage.handledBy || '—'}</div></div>
-                              <div className="border-b border-slate-200 px-4 py-3 lg:border-b-0 lg:border-r"><div className="text-[8px] font-black uppercase tracking-wider text-slate-400">Prise en charge</div><div className="mt-1 truncate text-[10px] font-semibold text-slate-700" title={selectedMessage.handledAt || ''}>{selectedMessage.handledAt || '—'}</div></div>
-                              <div className="px-4 py-3"><div className="text-[8px] font-black uppercase tracking-wider text-slate-400">Dernière réponse</div><div className="mt-1 truncate text-[10px] font-semibold text-slate-700" title={selectedMessage.repliedAt || ''}>{selectedMessage.repliedAt || '—'}</div></div>
-                            </div>
-                            {selectedMessage.lastReply && <div className="mt-3 border-l-2 border-slate-300 pl-3"><div className="text-[8px] font-black uppercase tracking-wider text-slate-400">Réponse enregistrée</div><div className="mt-1 whitespace-pre-wrap text-[11px] leading-5 text-slate-600">{selectedMessage.lastReply}</div></div>}
-                          </div>
-
-                          <div className="border-t border-slate-100 py-5">
-                            <label className="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Note interne</label>
-                            <textarea value={contactNote} onChange={e => setContactNote(e.target.value)} onBlur={() => { if (selectedMessage) adminUpdateContact(selectedMessage.id, { adminNote:contactNote }).catch(() => {}); }} rows={2} placeholder="Note visible uniquement par l'administration..." className="mt-3 w-full resize-none rounded-xl border border-slate-300 bg-white px-4 py-3 text-[12px] outline-none placeholder:text-slate-300 focus:border-[#0b1f35]" />
-                          </div>
-
-                          <div className="border-t border-slate-200 pt-7">
+                          <div className="mt-8 border-t border-slate-200 pt-6">
                             <div className="mb-3 flex items-center justify-between">
                               <div>
                                 <div className="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Répondre</div>
-                                <div className="mt-1 text-[10px] text-slate-400">À {selectedMessage.email}</div>
+                                <div className="mt-1 text-[10px] text-slate-400">La réponse sera ajoutée à cette conversation et envoyée à {selectedMessage.email}.</div>
                               </div>
                               <Mail className="h-4 w-4 text-slate-300" />
                             </div>
-                            <textarea value={replyText} onChange={e => setReplyText(e.target.value)} rows={6} placeholder="Écrire une réponse..." className="w-full resize-none rounded-xl border-2 border-slate-200 bg-[#f8fafc] p-4 text-[12px] leading-7 focus:border-[#0b1f35] outline-none focus:border-slate-400 focus:bg-white" />
-                            <div className="mt-3 flex justify-end">
+                            <textarea value={replyText} onChange={e => setReplyText(e.target.value)} rows={6} placeholder="Écrire votre réponse..." className="w-full resize-none rounded-2xl border-2 border-slate-200 bg-white p-4 text-[13px] leading-7 shadow-sm outline-none focus:border-[#0b1f35]" />
+                            <div className="mt-3 flex items-center justify-between gap-3">
+                              <span className="text-[9px] text-slate-400">Discussion suivie automatiquement à chaque réponse reçue.</span>
                               <button disabled={replyBusy || !replyText.trim()} onClick={async () => {
                                 if (!selectedMessage || !replyText.trim()) return;
                                 const currentUser = auth.currentUser;
@@ -588,12 +603,41 @@ export function AdminConsole() {
                                 setReplyBusy(true);
                                 try {
                                   const idToken = await currentUser.getIdToken();
-                                  const response = await fetch('/api/contact-reply', { method:'POST', headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+idToken }, body:JSON.stringify({ to:selectedMessage.email, subject:selectedMessage.subject, reply:replyText.trim(), originalMessage:selectedMessage.message, name:selectedMessage.name }) });
+                                  const thread = Array.isArray(selectedMessage.conversation) ? selectedMessage.conversation : [];
+                                  const lastInbound = [...thread].reverse().find(item => item.direction === 'inbound');
+                                  const response = await fetch('/api/contact-reply', {
+                                    method:'POST',
+                                    headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+idToken },
+                                    body:JSON.stringify({
+                                      to:selectedMessage.email,
+                                      subject:selectedMessage.subject,
+                                      reply:replyText.trim(),
+                                      name:selectedMessage.name,
+                                      inReplyTo:lastInbound?.messageId || '',
+                                      references:thread.map(item => item.messageId).filter(Boolean).slice(-20).join(' ')
+                                    })
+                                  });
                                   const payload = await response.json().catch(() => ({}));
                                   if (!response.ok) throw new Error(payload?.error || 'Envoi impossible');
                                   const now = new Date().toISOString();
-                                  await adminUpdateContact(selectedMessage.id, { status:'resolved', handledBy:currentUser.uid, handledAt:now, lastReply:replyText.trim(), repliedAt:now, repliedBy:currentUser.uid });
-                                  setSelectedMessage(prev => prev ? { ...prev, status:'resolved', lastReply:replyText.trim(), repliedAt:now, repliedBy:currentUser.uid } : prev);
+                                  const outbound = {
+                                    id: 'outbound-' + Date.now(),
+                                    direction: 'outbound' as const,
+                                    body: replyText.trim(),
+                                    at: now,
+                                    from: 'hello@iamtrader.trade',
+                                    to: selectedMessage.email,
+                                    messageId: payload?.id || undefined
+                                  };
+                                  const conversation = Array.isArray(selectedMessage.conversation) && selectedMessage.conversation.length
+                                    ? [...selectedMessage.conversation, outbound]
+                                    : [
+                                        { id:'legacy-inbound', direction:'inbound' as const, body:selectedMessage.message, at:selectedMessage.createdAt || now, from:selectedMessage.email, to:'hello@iamtrader.trade' },
+                                        ...(selectedMessage.lastReply ? [{ id:'legacy-last-reply', direction:'outbound' as const, body:selectedMessage.lastReply, at:selectedMessage.repliedAt || selectedMessage.updatedAt || now, from:'hello@iamtrader.trade', to:selectedMessage.email }] : []),
+                                        outbound
+                                      ];
+                                  await adminUpdateContact(selectedMessage.id, { status:'resolved', handledBy:currentUser.uid, handledAt:now, lastReply:replyText.trim(), repliedAt:now, repliedBy:currentUser.uid, conversation });
+                                  setSelectedMessage(prev => prev ? { ...prev, status:'resolved', lastReply:replyText.trim(), repliedAt:now, repliedBy:currentUser.uid, conversation } : prev);
                                   setReplyText('');
                                   showToast('Réponse envoyée.', 'success');
                                 } catch (e:any) {
@@ -601,8 +645,28 @@ export function AdminConsole() {
                                 } finally {
                                   setReplyBusy(false);
                                 }
-                              }} className="inline-flex items-center gap-2 rounded-lg bg-[#0b1f35] px-4 py-2.5 text-[11px] font-bold text-white disabled:opacity-50"><Send className="h-3.5 w-3.5" />{replyBusy ? 'Envoi...' : 'Envoyer'}</button>
+                              }} className="inline-flex items-center gap-2 rounded-xl bg-[#0b1f35] px-5 py-3 text-[11px] font-bold text-white shadow-sm disabled:opacity-50"><Send className="h-3.5 w-3.5" />{replyBusy ? 'Envoi...' : 'Envoyer'}</button>
                             </div>
+                          </div>
+
+                          <div className="mt-6 border-t border-slate-100 pt-5">
+                            <div className="mb-3 flex items-center justify-between">
+                              <div>
+                                <span className="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Dossier</span>
+                                <span className="ml-2 text-[9px] text-slate-400">Métadonnées techniques</span>
+                              </div>
+                              <span className="font-mono text-[9px] text-slate-400">{selectedMessage.id}</span>
+                            </div>
+                            <div className="grid overflow-hidden rounded-xl border border-slate-200 bg-white sm:grid-cols-3">
+                              <div className="border-b border-slate-200 px-4 py-3 sm:border-b-0 sm:border-r"><div className="text-[8px] font-black uppercase tracking-wider text-slate-400">Créé</div><div className="mt-1 truncate text-[10px] font-semibold text-slate-700">{selectedMessage.createdAt || '—'}</div></div>
+                              <div className="border-b border-slate-200 px-4 py-3 sm:border-b-0 sm:border-r"><div className="text-[8px] font-black uppercase tracking-wider text-slate-400">Mis à jour</div><div className="mt-1 truncate text-[10px] font-semibold text-slate-700">{selectedMessage.updatedAt || '—'}</div></div>
+                              <div className="px-4 py-3"><div className="text-[8px] font-black uppercase tracking-wider text-slate-400">Dernier échange</div><div className="mt-1 truncate text-[10px] font-semibold text-slate-700">{selectedMessage.repliedAt || '—'}</div></div>
+                            </div>
+                          </div>
+
+                          <div className="mt-5 border-t border-slate-100 pt-5">
+                            <label className="text-[10px] font-black uppercase tracking-[.12em] text-slate-400">Note interne</label>
+                            <textarea value={contactNote} onChange={e => setContactNote(e.target.value)} onBlur={() => { if (selectedMessage) adminUpdateContact(selectedMessage.id, { adminNote:contactNote }).catch(() => {}); }} rows={2} placeholder="Note visible uniquement par l'administration..." className="mt-3 w-full resize-none rounded-xl border border-slate-300 bg-white px-4 py-3 text-[12px] outline-none placeholder:text-slate-300 focus:border-[#0b1f35]" />
                           </div>
                         </div>
                       </div>
@@ -611,8 +675,8 @@ export function AdminConsole() {
                     <div className="flex h-full items-center justify-center bg-[#f5f7fa] text-center">
                       <div>
                         <Mail className="mx-auto h-9 w-9 text-slate-300" />
-                        <p className="mt-3 text-[13px] font-bold text-slate-500">Sélectionnez un message</p>
-                        <p className="mt-1 text-[10px] text-slate-400">Le contenu complet s'affichera ici.</p>
+                        <p className="mt-3 text-[13px] font-bold text-slate-500">Sélectionnez une conversation</p>
+                        <p className="mt-1 text-[10px] text-slate-400">Chaque message entrant et chaque réponse sera affiché dans l'ordre.</p>
                       </div>
                     </div>
                   )}
