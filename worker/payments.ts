@@ -36,7 +36,7 @@ function normalizePhone(value: unknown) {
 }
 
 function randomId() {
-  return crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '');
+  return crypto.randomUUID().replace(/-/g, '').slice(0, 24);
 }
 
 function paymentReference(paymentId: string) {
@@ -69,133 +69,379 @@ function publicPayment(payment: Record<string, unknown>) {
   };
 }
 
-export async function handlePaymentRequest(request: Request, env: PaymentEnv & { CINETPAY_API_KEY?: string; CINETPAY_SITE_ID?: string }) {
+type CinetPayEnv = PaymentEnv & {
+  CINETPAY_API_KEY?: string;
+  CINETPAY_API_PASSWORD?: string;
+  CINETPAY_COUNTRY?: string;
+  CINETPAY_PLUS_AMOUNT_CDF?: string;
+  CINETPAY_COMMUNITY_AMOUNT_CDF?: string;
+};
+
+function cinetPayBaseUrl(apiKey: string) {
+  return apiKey.startsWith('sk_test_') ? 'https://api.cinetpay.net' : 'https://api.cinetpay.co';
+}
+
+function cinetPayCurrency(country: string) {
+  return country === 'CD' ? 'CDF' : 'USD';
+}
+
+function cinetPayAmount(env: CinetPayEnv, planKey: keyof typeof PLANS) {
+  const configured = planKey === 'pro' ? env.CINETPAY_PLUS_AMOUNT_CDF : env.CINETPAY_COMMUNITY_AMOUNT_CDF;
+  const amount = Number(configured);
+  if (Number.isInteger(amount) && amount >= 100 && amount <= 2500000) return amount;
+  return planKey === 'pro' ? 23335 : 210196;
+}
+
+function cinetPayPaymentMethod(provider: string) {
+  const normalized = provider.trim().toLowerCase();
+  if (normalized.includes('airtel')) return 'AIRTEL_CD';
+  if (normalized.includes('m-pesa') || normalized.includes('mpesa')) return 'MPESA_CD';
+  if (normalized.includes('orange')) return 'OM_CD';
+  if (normalized.includes('africell')) return 'AFRICELL_CD';
+  return undefined;
+}
+
+async function cinetPayAccessToken(env: CinetPayEnv) {
+  if (!env.CINETPAY_API_KEY || !env.CINETPAY_API_PASSWORD) {
+    throw new Error('CinetPay n’est pas configuré côté serveur.');
+  }
+  const response = await fetch(`${cinetPayBaseUrl(env.CINETPAY_API_KEY)}/v1/oauth/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      api_key: env.CINETPAY_API_KEY,
+      api_password: env.CINETPAY_API_PASSWORD
+    })
+  });
+  const result = await response.json() as any;
+  const token = result?.access_token || result?.data?.access_token;
+  if (!response.ok || !token) {
+    throw new Error(result?.description || result?.message || 'Authentification CinetPay impossible.');
+  }
+  return String(token);
+}
+
+async function cinetPayRequest(env: CinetPayEnv, path: string, init: RequestInit = {}) {
+  if (!env.CINETPAY_API_KEY || !env.CINETPAY_API_PASSWORD) {
+    throw new Error('CinetPay n’est pas configuré côté serveur.');
+  }
+  const token = await cinetPayAccessToken(env);
+  const headers = new Headers(init.headers);
+  headers.set('Authorization', `Bearer ${token}`);
+  headers.set('Content-Type', 'application/json');
+  return fetch(`${cinetPayBaseUrl(env.CINETPAY_API_KEY)}${path}`, { ...init, headers });
+}
+
+export async function handlePaymentRequest(request: Request, env: CinetPayEnv) {
   if (request.method === 'GET') {
     const token = authHeader(request);
     if (!token) return json({ success: false, message: 'Authentification requise.' }, 401);
     try {
       const user = await verifyFirebaseIdToken(env, token);
       const id = new URL(request.url).searchParams.get('id');
-      if (!id || !/^[a-f0-9]{64}$/.test(id)) return json({ success: false, message: 'Référence de paiement invalide.' }, 400);
+      if (!id || !/^(?:[a-f0-9]{24}|[a-f0-9]{64})$/.test(id)) {
+        return json({ success: false, message: 'Référence de paiement invalide.' }, 400);
+      }
       const payment = await firestoreGet(env, `payments/${id}`);
       if (!payment || payment.uid !== user.uid) return json({ success: false, message: 'Paiement introuvable.' }, 404);
       return json({ success: true, payment: publicPayment(payment) });
-    } catch { return json({ success: false, message: 'Impossible de consulter le paiement.' }, 500); }
+    } catch {
+      return json({ success: false, message: 'Impossible de consulter le paiement.' }, 500);
+    }
   }
+
   if (request.method !== 'POST') return json({ success: false, message: 'Méthode non autorisée.' }, 405);
+
   const token = authHeader(request);
   if (!token) return json({ success: false, message: 'Authentification requise.' }, 401);
+
   try {
     const user = await verifyFirebaseIdToken(env, token);
-    const body = await request.json() as { plan?: keyof typeof PLANS; phone?: string; paymentMethod?: string; paymentProvider?: string; payerName?: string };
+    const body = await request.json() as {
+      plan?: keyof typeof PLANS;
+      phone?: string;
+      paymentMethod?: string;
+      paymentProvider?: string;
+      payerName?: string;
+    };
     const planKey = body.plan;
     const plan = planKey ? PLANS[planKey] : undefined;
     const phone = normalizePhone(body.phone);
     const amounts = plan ? calculatePaymentAmounts(plan.amount) : undefined;
+
     if (!plan || !planKey) return json({ success: false, message: 'Formule invalide.' }, 400);
     if (!phone) return json({ success: false, message: 'Numéro Mobile Money invalide. Utilisez un numéro RDC à 10 chiffres.' }, 400);
-    if (!env.CINETPAY_API_KEY || !env.CINETPAY_SITE_ID) return json({ success: false, message: 'CinetPay n’est pas encore configuré côté serveur.' }, 503);
+    if (!env.CINETPAY_API_KEY || !env.CINETPAY_API_PASSWORD) {
+      return json({ success: false, message: 'CinetPay n’est pas encore configuré côté serveur.' }, 503);
+    }
+    if ((env.CINETPAY_COUNTRY || 'CD') !== 'CD') {
+      return json({ success: false, message: 'La configuration CinetPay doit utiliser le pays CD pour les paiements IAMTRADER.' }, 503);
+    }
+
     const profile = await firestoreGet(env, `users/${encodeURIComponent(user.uid)}`);
     if (!profile) return json({ success: false, message: 'Profil utilisateur introuvable.' }, 404);
     if (profile.status === 'suspended') return json({ success: false, message: 'Ce compte est suspendu.' }, 403);
+
     const decision = decideSubscription(profile, planKey, new Date());
     if ('error' in decision) return json({ success: false, message: decision.error }, 409);
+
     const payerName = String(body.payerName || profile.displayName || user.email || '').trim();
     if (!payerName || !amounts) return json({ success: false, message: 'Données de paiement invalides.' }, 400);
+
+    const chargedAmount = cinetPayAmount(env, planKey);
+    const currency = cinetPayCurrency(env.CINETPAY_COUNTRY || 'CD');
     const paymentId = randomId();
     const now = new Date().toISOString();
+
     await firestoreCreate(env, 'payments', paymentId, {
-      id: paymentId, uid: user.uid, email: user.email || profile.email || '',
+      id: paymentId,
+      uid: user.uid,
+      email: user.email || profile.email || '',
       displayName: profile.displayName || user.email || '',
       fullName: [profile.traderProfile?.firstName, profile.traderProfile?.lastName].filter(Boolean).join(' ') || '',
-      plan: planKey, planName: plan.name, amount: amounts.total, baseAmount: amounts.baseAmount,
-      paymentFee: amounts.fee, paymentFeeRate: PAYMENT_FEE_RATE, currency: plan.currency, phone, payerName,
-      paymentMethod: String(body.paymentMethod || 'mobile_money'), paymentProvider: String(body.paymentProvider || 'CinetPay'),
-      provider: 'CINETPAY', subscriptionAction: decision.action, currentPlanAtPurchase: decision.currentPlan,
-      activationStartAt: decision.start.toISOString(), activationExpiresAt: decision.expires.toISOString(),
-      status: 'initiated', reference: paymentId, transactionReference: paymentReference(paymentId),
-      invoiceNumber: invoiceNumber(paymentId, now), createdAt: now
+      plan: planKey,
+      planName: plan.name,
+      amount: chargedAmount,
+      amountUsd: amounts.total,
+      baseAmount: amounts.baseAmount,
+      paymentFee: amounts.fee,
+      paymentFeeRate: PAYMENT_FEE_RATE,
+      currency,
+      phone,
+      payerName,
+      paymentMethod: String(body.paymentMethod || 'mobile_money'),
+      paymentProvider: String(body.paymentProvider || 'CinetPay'),
+      provider: 'CINETPAY',
+      subscriptionAction: decision.action,
+      currentPlanAtPurchase: decision.currentPlan,
+      activationStartAt: decision.start.toISOString(),
+      activationExpiresAt: decision.expires.toISOString(),
+      status: 'initiated',
+      reference: paymentId,
+      transactionReference: paymentReference(paymentId),
+      invoiceNumber: invoiceNumber(paymentId, now),
+      createdAt: now
     });
+
     const origin = new URL(request.url).origin;
     const notifyUrl = new URL('/api/payments/cinetpay/notify', origin).toString();
     const returnUrl = new URL('/?payment=' + encodeURIComponent(paymentId), origin).toString();
+    const failedUrl = new URL('/?payment=failed&paymentId=' + encodeURIComponent(paymentId), origin).toString();
     const parts = payerName.split(/\s+/).filter(Boolean);
-    const response = await fetch('https://api-checkout.cinetpay.com/v2/payment', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+    const paymentMethod = cinetPayPaymentMethod(String(body.paymentProvider || ''));
+
+    const response = await cinetPayRequest(env, '/v1/payment', {
+      method: 'POST',
       body: JSON.stringify({
-        apikey: env.CINETPAY_API_KEY, site_id: env.CINETPAY_SITE_ID, transaction_id: paymentId,
-        amount: amounts.total, currency: plan.currency, description: `IAMTRADER ${plan.name} - abonnement`,
-        customer_id: user.uid, customer_name: parts[0] || 'Trader',
-        customer_surname: parts.slice(1).join(' ') || 'Trader',
-        customer_email: user.email || profile.email || '',
-        customer_phone_number: '+243' + phone.slice(1), customer_country: 'CD',
-        notify_url: notifyUrl, return_url: returnUrl, channels: 'ALL', lang: 'FR',
-        metadata: paymentId, invoice_data: { Formule: plan.name, Reference: paymentReference(paymentId), Client: payerName }
+        currency,
+        merchant_transaction_id: paymentId,
+        amount: chargedAmount,
+        lang: 'fr',
+        designation: `IAMTRADER ${plan.name} - abonnement`,
+        client_email: user.email || profile.email || '',
+        client_first_name: parts[0] || 'Trader',
+        client_last_name: parts.slice(1).join(' ') || 'Trader',
+        client_phone_number: '+243' + phone.slice(1),
+        client_country: 'CD',
+        success_url: returnUrl,
+        failed_url: failedUrl,
+        notify_url: notifyUrl,
+        channel: 'PUSH',
+        ...(paymentMethod ? { payment_method: paymentMethod } : {}),
+        direct_pay: false
       })
     });
+
     const result = await response.json() as any;
-    const paymentUrl = result?.data?.payment_url;
-    if (!response.ok || String(result?.code) !== '201' || !paymentUrl) {
-      await firestorePatch(env, `payments/${paymentId}`, { status:'failed', failureMessage:result?.description || result?.message || 'CinetPay a refusé la transaction.', updatedAt:new Date().toISOString() }, ['status','failureMessage','updatedAt']);
-      return json({ success:false, message:result?.description || result?.message || 'Impossible d’initier le paiement CinetPay.' },400);
+    const data = result?.data || result;
+    const paymentUrl = data?.payment_url || data?.paymentUrl;
+    const paymentToken = data?.payment_token || data?.paymentToken;
+    const notifyToken = data?.notify_token || data?.notifyToken;
+    const transactionId = data?.transaction_id || data?.transactionId;
+
+    if (!response.ok || !paymentUrl || !paymentToken || !notifyToken || !transactionId) {
+      await firestorePatch(env, `payments/${paymentId}`, {
+        status: 'failed',
+        failureMessage: result?.description || result?.message || 'CinetPay a refusé la transaction.',
+        cinetpayCode: result?.code || null,
+        updatedAt: new Date().toISOString()
+      }, ['status', 'failureMessage', 'cinetpayCode', 'updatedAt']);
+      return json({
+        success: false,
+        message: result?.description || result?.message || 'Impossible d’initier le paiement CinetPay.'
+      }, 400);
     }
-    await firestorePatch(env, `payments/${paymentId}`, { status:'processing', provider:'CINETPAY', paymentUrl, cinetpayPaymentToken:result.data.payment_token || '', updatedAt:new Date().toISOString() }, ['status','provider','paymentUrl','cinetpayPaymentToken','updatedAt']);
-    return json({ success:true, payment:{ id:paymentId, plan:planKey, planName:plan.name, amount:amounts.total, baseAmount:amounts.baseAmount, paymentFee:amounts.fee, currency:plan.currency, status:'processing', reference:paymentReference(paymentId), paymentUrl, subscriptionAction:decision.action, activationStartAt:decision.start.toISOString(), activationExpiresAt:decision.expires.toISOString(), message:'Paiement initialisé. Ouvrez le guichet CinetPay pour finaliser la transaction.' }});
+
+    await firestorePatch(env, `payments/${paymentId}`, {
+      status: 'processing',
+      provider: 'CINETPAY',
+      paymentUrl,
+      cinetpayPaymentToken: paymentToken,
+      cinetpayNotifyToken: notifyToken,
+      cinetpayTransactionId: transactionId,
+      cinetpayStatus: result?.status || data?.status || 'INITIATED',
+      updatedAt: new Date().toISOString()
+    }, ['status', 'provider', 'paymentUrl', 'cinetpayPaymentToken', 'cinetpayNotifyToken', 'cinetpayTransactionId', 'cinetpayStatus', 'updatedAt']);
+
+    return json({
+      success: true,
+      payment: {
+        id: paymentId,
+        plan: planKey,
+        planName: plan.name,
+        amount: chargedAmount,
+        amountUsd: amounts.total,
+        baseAmount: amounts.baseAmount,
+        paymentFee: amounts.fee,
+        currency,
+        status: 'processing',
+        reference: paymentReference(paymentId),
+        paymentUrl,
+        paymentToken,
+        subscriptionAction: decision.action,
+        activationStartAt: decision.start.toISOString(),
+        activationExpiresAt: decision.expires.toISOString(),
+        message: 'Paiement initialisé. Vous allez être redirigé vers le guichet sécurisé CinetPay.'
+      }
+    });
   } catch (error) {
     console.error('CinetPay payment initiation error:', error);
-    return json({ success:false, message:error instanceof Error ? error.message : 'Impossible d’initier le paiement.' },500);
+    return json({
+      success: false,
+      message: error instanceof Error ? error.message : 'Impossible d’initier le paiement.'
+    }, 500);
   }
 }
 
-async function handleCinetPayNotification(request: Request, env: PaymentEnv & { CINETPAY_API_KEY?: string; CINETPAY_SITE_ID?: string }) {
-  if (request.method === 'GET') return json({ received:true });
-  if (request.method !== 'POST') return json({ received:false },405);
+export async function handleCinetPayNotification(request: Request, env: CinetPayEnv) {
+  if (request.method === 'GET') return json({ received: true });
+  if (request.method !== 'POST') return json({ received: false }, 405);
+
   try {
-    const type=request.headers.get('content-type') || '';
-    const payload=type.includes('application/json') ? await request.json() as any : Object.fromEntries((await request.formData()).entries()) as any;
-    const transactionId=String(payload.cpm_trans_id || payload.transaction_id || '').trim();
-    if (!transactionId) return json({ received:true });
-    const payment=await firestoreGet(env,`payments/${transactionId}`);
-    if (!payment) return json({ received:false },404);
-    if (payment.status==='paid') return json({ received:true });
-    if (!env.CINETPAY_API_KEY || !env.CINETPAY_SITE_ID) return json({ received:false },503);
-    const check=await fetch('https://api-checkout.cinetpay.com/v2/payment/check',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({apikey:env.CINETPAY_API_KEY,site_id:env.CINETPAY_SITE_ID,transaction_id:transactionId})});
-    const result=await check.json() as any;
-    const data=result?.data || {};
-    const status=String(data.status || '').toUpperCase();
-    if (Number(data.amount) && Number(data.amount)!==Number(payment.amount)) {
-      await firestorePatch(env,`payments/${transactionId}`,{status:'failed',failureMessage:'Montant CinetPay différent de la commande.',updatedAt:new Date().toISOString()},['status','failureMessage','updatedAt']);
-      return json({received:true});
+    const contentType = request.headers.get('content-type') || '';
+    const payload = contentType.includes('application/json')
+      ? await request.json() as any
+      : Object.fromEntries((await request.formData()).entries()) as any;
+
+    const merchantTransactionId = String(
+      payload.merchant_transaction_id || payload.merchantTransactionId || ''
+    ).trim();
+    const notifyToken = String(payload.notify_token || payload.notifyToken || '').trim();
+    const cinetpayTransactionId = String(
+      payload.transaction_id || payload.transactionId || ''
+    ).trim();
+
+    if (!merchantTransactionId) return json({ received: true });
+
+    const payment = await firestoreGet(env, `payments/${merchantTransactionId}`);
+    if (!payment) return json({ received: false }, 404);
+    if (payment.status === 'paid') return json({ received: true });
+
+    if (!notifyToken || !payment.cinetpayNotifyToken || notifyToken !== String(payment.cinetpayNotifyToken)) {
+      return json({ received: false, message: 'Notification CinetPay invalide.' }, 401);
     }
-    if (data.currency && String(data.currency)!==String(payment.currency)) {
-      await firestorePatch(env,`payments/${transactionId}`,{status:'failed',failureMessage:'Devise CinetPay différente de la commande.',updatedAt:new Date().toISOString()},['status','failureMessage','updatedAt']);
-      return json({received:true});
+
+    if (!env.CINETPAY_API_KEY || !env.CINETPAY_API_PASSWORD) return json({ received: false }, 503);
+
+    const statusResponse = await cinetPayRequest(
+      env,
+      `/v1/payment/${encodeURIComponent(merchantTransactionId)}`,
+      { method: 'GET', headers: { 'Content-Type': 'application/json' } }
+    );
+    const statusResult = await statusResponse.json() as any;
+    const canonical = statusResult?.data || statusResult;
+    const status = String(canonical?.status || '').toUpperCase();
+    const canonicalMerchantId = String(
+      canonical?.merchant_transaction_id || canonical?.merchantTransactionId || ''
+    );
+
+    if (canonicalMerchantId && canonicalMerchantId !== merchantTransactionId) {
+      return json({ received: false, message: 'Transaction CinetPay non correspondante.' }, 400);
     }
-    if (String(result?.code)==='00' && status==='ACCEPTED') {
-      const planKey=payment.plan as keyof typeof PLANS;
-      const profile=await firestoreGet(env,`users/${encodeURIComponent(String(payment.uid))}`);
-      if (!PLANS[planKey] || !profile) return json({received:false},404);
-      const decision=decideSubscription(profile,planKey,new Date());
-      if ('error' in decision) return json({received:false},409);
-      const paidAt=String(data.payment_date || new Date().toISOString());
-      await firestorePatch(env,`payments/${transactionId}`,{status:'paid',paidAt,provider:'CINETPAY',cinetpayStatus:status,cinetpayOperatorId:data.operator_id || '',cinetpayPaymentMethod:data.payment_method || '',updatedAt:paidAt},['status','paidAt','provider','cinetpayStatus','cinetpayOperatorId','cinetpayPaymentMethod','updatedAt']);
-      await firestorePatch(env,`users/${encodeURIComponent(String(payment.uid))}`,subscriptionFields(profile,planKey,(payment.subscriptionAction as SubscriptionAction)||decision.action,decision.start.toISOString(),decision.expires.toISOString(),paidAt),['plan','paymentDate','subscriptionStartAt','subscriptionExpiresAt','subscriptionStatus','paymentStatus','planChangeConfirmedAt','pendingPlan','planChangeRequestedAt','scheduledPlan','scheduledStartAt','scheduledExpiresAt','updatedAt']);
-      return json({received:true});
+
+    if (cinetpayTransactionId && canonical?.transaction_id && String(canonical.transaction_id) !== cinetpayTransactionId) {
+      return json({ received: false, message: 'Identifiant de transaction CinetPay non correspondant.' }, 400);
     }
-    if (['REFUSED','CANCELLED','CANCELED'].includes(status) || String(result?.code)==='627') {
-      await firestorePatch(env,`payments/${transactionId}`,{status:'failed',failureMessage:result?.message || 'Paiement CinetPay refusé ou annulé.',cinetpayStatus:status,updatedAt:new Date().toISOString()},['status','failureMessage','cinetpayStatus','updatedAt']);
+
+    if (status === 'SUCCESS' || String(statusResult?.code) === '100') {
+      if (Number(canonical?.amount) && Number(canonical.amount) !== Number(payment.amount)) {
+        await firestorePatch(env, `payments/${merchantTransactionId}`, {
+          status: 'failed',
+          failureMessage: 'Montant CinetPay différent de la commande.',
+          updatedAt: new Date().toISOString()
+        }, ['status', 'failureMessage', 'updatedAt']);
+        return json({ received: true });
+      }
+
+      if (canonical?.currency && String(canonical.currency) !== String(payment.currency)) {
+        await firestorePatch(env, `payments/${merchantTransactionId}`, {
+          status: 'failed',
+          failureMessage: 'Devise CinetPay différente de la commande.',
+          updatedAt: new Date().toISOString()
+        }, ['status', 'failureMessage', 'updatedAt']);
+        return json({ received: true });
+      }
+
+      const planKey = payment.plan as keyof typeof PLANS;
+      const profile = await firestoreGet(env, `users/${encodeURIComponent(String(payment.uid))}`);
+      if (!PLANS[planKey] || !profile) return json({ received: false }, 404);
+
+      const decision = decideSubscription(profile, planKey, new Date());
+      if ('error' in decision) return json({ received: false }, 409);
+
+      const paidAt = String(canonical?.payment_date || canonical?.paymentDate || new Date().toISOString());
+
+      await firestorePatch(env, `payments/${merchantTransactionId}`, {
+        status: 'paid',
+        paidAt,
+        provider: 'CINETPAY',
+        cinetpayStatus: 'SUCCESS',
+        cinetpayTransactionId: canonical?.transaction_id || cinetpayTransactionId || '',
+        cinetpayPaymentMethod: canonical?.payment_method || canonical?.paymentMethod || '',
+        updatedAt: paidAt
+      }, ['status', 'paidAt', 'provider', 'cinetpayStatus', 'cinetpayTransactionId', 'cinetpayPaymentMethod', 'updatedAt']);
+
+      await firestorePatch(
+        env,
+        `users/${encodeURIComponent(String(payment.uid))}`,
+        subscriptionFields(
+          profile,
+          planKey,
+          (payment.subscriptionAction as SubscriptionAction) || decision.action,
+          decision.start.toISOString(),
+          decision.expires.toISOString(),
+          paidAt
+        ),
+        ['plan', 'paymentDate', 'subscriptionStartAt', 'subscriptionExpiresAt', 'subscriptionStatus', 'paymentStatus', 'planChangeConfirmedAt', 'pendingPlan', 'planChangeRequestedAt', 'scheduledPlan', 'scheduledStartAt', 'scheduledExpiresAt', 'updatedAt']
+      );
+
+      return json({ received: true });
+    }
+
+    if ([2010, 2005].includes(Number(statusResult?.code)) || ['FAILED', 'INSUFFICIENT_BALANCE', 'EXPIRED'].includes(status)) {
+      await firestorePatch(env, `payments/${merchantTransactionId}`, {
+        status: 'failed',
+        failureMessage: statusResult?.description || statusResult?.message || `Paiement CinetPay ${status || 'échoué'}.`,
+        cinetpayStatus: status || 'FAILED',
+        updatedAt: new Date().toISOString()
+      }, ['status', 'failureMessage', 'cinetpayStatus', 'updatedAt']);
     } else {
-      await firestorePatch(env,`payments/${transactionId}`,{status:'processing',cinetpayStatus:status || 'PENDING',updatedAt:new Date().toISOString()},['status','cinetpayStatus','updatedAt']);
+      await firestorePatch(env, `payments/${merchantTransactionId}`, {
+        status: 'processing',
+        cinetpayStatus: status || 'PENDING',
+        updatedAt: new Date().toISOString()
+      }, ['status', 'cinetpayStatus', 'updatedAt']);
     }
-    return json({received:true});
-  } catch(error) {
-    console.error('CinetPay notification error:',error);
-    return json({received:false},500);
+
+    return json({ received: true });
+  } catch (error) {
+    console.error('CinetPay notification error:', error);
+    return json({ received: false }, 500);
   }
 }
 
-export async function handlePaymentCallback(request: Request, env: PaymentEnv & { CINETPAY_API_KEY?: string; CINETPAY_SITE_ID?: string }) {
-  return handleCinetPayNotification(request,env);
+export async function handlePaymentCallback(request: Request, env: CinetPayEnv) {
+  return handleCinetPayNotification(request, env);
 }
 
 export async function handleSimulatedPaymentRequest(request: Request, env: PaymentEnv & { PAYMENT_SIMULATION_ENABLED?: string }) {
