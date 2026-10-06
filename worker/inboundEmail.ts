@@ -134,6 +134,13 @@ function extractEmail(value: string): string {
   return (match?.[1] || value).trim().toLowerCase();
 }
 
+function extractConversationIdFromAddress(value: string): string {
+  const email = extractEmail(value);
+  const local = email.split('@')[0] || '';
+  const plusIndex = local.indexOf('+');
+  return plusIndex > 0 ? local.slice(plusIndex + 1).trim() : '';
+}
+
 export async function handleInboundEmail(
   message: { from: string; to: string; headers: Headers; raw: ReadableStream; forward: (recipient: string) => Promise<unknown> },
   env: InboundEmailEnv,
@@ -142,7 +149,9 @@ export async function handleInboundEmail(
   const messageId = message.headers.get('message-id') || '';
   const inReplyTo = message.headers.get('in-reply-to') || '';
   const references = message.headers.get('references') || '';
-  const conversationId = (message.headers.get('x-iamtrader-conversation-id') || '').trim();
+  const headerConversationId = (message.headers.get('x-iamtrader-conversation-id') || '').trim();
+  const recipientConversationId = extractConversationIdFromAddress(message.to);
+  const conversationId = headerConversationId || recipientConversationId;
   const receivedAt = new Date().toISOString();
   const senderEmail = extractEmail(message.from);
   const raw = await new Response(message.raw).text();
