@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Activity, AlertTriangle, BellRing, Check, CheckCircle2, ChevronLeft, Eye, ChevronRight, Clock3, CreditCard, Edit3, History, Mail, ReceiptText, RefreshCw, Search, Send, ShieldCheck, Trash2, UserCheck, UserX, Users, X, XCircle } from 'lucide-react';
+import { Activity, AlertTriangle, BellRing, Check, CheckCircle2, ChevronLeft, Eye, ChevronRight, Clock3, CreditCard, Edit3, History, Mail, ReceiptText, RefreshCw, Search, Send, ShieldCheck, Trash2, UserCheck, UserX, Users, X, XCircle, Copy } from 'lucide-react';
 import { AdminLog, PaymentRecord, SubscriptionPlan, UserProfile, UserStatus, TradingAccount, Trade } from '../types';
 import { getAdminLogs, getAllAccounts, getAllTrades, getAllUsers, subscribeAllUsers, subscribeContactMessages } from '../services/firestore';
 import { adminAddLog, adminDeleteContact, adminGetPayments, adminUpdateContact, adminUpdatePayment, adminUpdateUser } from '../services/adminConsole';
@@ -41,6 +41,12 @@ function decodeMimeSubject(value?: string) {
       return String(encoded);
     }
   });
+}
+
+function emailParts(value?: string) {
+  const email = String(value || '').trim().toLowerCase();
+  const at = email.indexOf('@');
+  return at > 0 ? { local: email.slice(0, at), domain: email.slice(at) } : { local: email, domain: '' };
 }
 
 function inputDate(v?: string) {
@@ -591,7 +597,10 @@ export function AdminConsole() {
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
-                              <span className={'min-w-0 flex-1 truncate text-[10px] ' + (unread ? 'font-black text-[#0b1f35]' : 'font-semibold text-slate-700')}>{m.name || m.email}</span>
+                              <div className="min-w-0 flex-1">
+  <span className={'block truncate text-[10px] ' + (unread ? 'font-black text-[#0b1f35]' : 'font-semibold text-slate-700')}>{m.name || m.email}</span>
+  <span className="mt-0.5 block truncate text-[8px] font-normal text-slate-400">{emailParts(m.email).local}<span className="text-slate-300">{emailParts(m.email).domain}</span></span>
+</div>
                               <span className="shrink-0 text-[8px] text-slate-400">{date && !Number.isNaN(date.getTime()) ? date.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) : '—'}</span>
                             </div>
                             <div className={'mt-0.5 truncate text-[10px] ' + (unread ? 'font-bold text-slate-700' : 'text-slate-500')}>{decodeMimeSubject(m.subject) || '(Sans objet)'}</div>
@@ -619,7 +628,14 @@ export function AdminConsole() {
                               <h2 className="truncate text-[13px] font-black text-[#0b1f35]">{selectedMessage.name || selectedMessage.email}</h2>
                               {selectedMessage.status === 'new' && <span className="h-1.5 w-1.5 rounded-full bg-blue-600" />}
                             </div>
-                            <div className="truncate text-[9px] text-slate-400">{selectedMessage.email}</div>
+                            <div className="flex min-w-0 items-center gap-1.5 text-[9px]">
+  <a href={'mailto:' + String(selectedMessage.email || '').toLowerCase()} className="min-w-0 truncate font-mono text-[9px] font-normal text-slate-500 hover:text-blue-600" title={String(selectedMessage.email || '').toLowerCase()}>
+    <span>{emailParts(selectedMessage.email).local}</span><span className="text-slate-300">{emailParts(selectedMessage.email).domain}</span>
+  </a>
+  <button type="button" onClick={() => { navigator.clipboard?.writeText(String(selectedMessage.email || '').toLowerCase()); showToast('Adresse e-mail copiée.', 'success'); }} className="shrink-0 rounded p-0.5 text-slate-300 hover:bg-slate-100 hover:text-slate-600" title="Copier l'adresse e-mail">
+    <Copy className="h-3 w-3" />
+  </button>
+</div>
                           </div>
                           <div className="hidden min-w-0 max-w-[42%] text-right sm:block">
                             <div className="truncate text-[10px] font-semibold text-slate-600">{decodeMimeSubject(selectedMessage.subject) || '(Sans objet)'}</div>
