@@ -147,6 +147,12 @@ export function AdminConsole() {
     }
   }
   useEffect(() => {
+    if (!selectedMessage) return;
+    const liveMessage = contactMessages.find(message => message.id === selectedMessage.id);
+    if (liveMessage) setSelectedMessage(liveMessage);
+  }, [contactMessages, selectedMessage?.id]);
+
+  useEffect(() => {
     let unsubscribeUsers: (() => void) | undefined;
     let unsubscribeContacts: (() => void) | undefined;
     let paymentTimer: number | undefined;
