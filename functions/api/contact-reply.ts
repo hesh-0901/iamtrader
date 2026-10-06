@@ -33,7 +33,15 @@ export async function onRequestPost(context:{request:Request;env:Env}) {
   if(!profile || profile.role!=='admin' || profile.status==='suspended') {
     return json({error:'Accès administrateur requis.'},403);
   }
-  if(!context.env.RESEND_API_KEY||!context.env.RESEND_FROM_EMAIL) return json({error:'Configuration e-mail du serveur incomplète.'},500);
+  const resendApiKey = String(context.env.RESEND_API_KEY || '').trim();
+  const resendFromEmail = String(context.env.RESEND_FROM_EMAIL || '').trim();
+  const resendReplyTo = String(context.env.RESEND_REPLY_TO || '').trim();
+  if(!resendApiKey || !resendFromEmail) {
+    return json({
+      error:'Configuration e-mail du serveur incomplète.',
+      code: !resendApiKey ? 'RESEND_API_KEY_MISSING' : 'RESEND_FROM_EMAIL_MISSING'
+    },500);
+  }
 
   const safeReply=escapeHtml(reply);
   const logoUrl='https://iamtrader.trade/brand/logo-iamtrader-full.png';
@@ -65,8 +73,27 @@ Trading Performance Management
 hello@iamtrader.trade
 iamtrader.trade
 Trade. Measure. Improve.`;
-  const resendResponse=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:'Bearer '+context.env.RESEND_API_KEY,'Content-Type':'application/json'},body:JSON.stringify({from:context.env.RESEND_FROM_EMAIL,to:[to],subject:/^re:/i.test(subject)?subject:'Re: '+subject,html,text,...(context.env.RESEND_REPLY_TO?{reply_to:context.env.RESEND_REPLY_TO}:{}),...(inReplyTo?{headers:{'In-Reply-To':inReplyTo,'References':references||inReplyTo}}:{})})});
-  const resendData=await resendResponse.json().catch(()=>({}));
-  if(!resendResponse.ok) return json({error:'Resend a refusé l’envoi.',details:resendData},502);
+  let resendResponse: Response;
+  let resendData: unknown = {};
+  try {
+    resendResponse = await fetch('https://api.resend.com/emails',{
+      method:'POST',
+      headers:{Authorization:'Bearer '+resendApiKey,'Content-Type':'application/json'},
+      body:JSON.stringify({
+        from:resendFromEmail,
+        to:[to],
+        subject:/^re:/i.test(subject)?subject:'Re: '+subject,
+        html,
+        text,
+        ...(resendReplyTo?{reply_to:resendReplyTo}:{}),
+        ...(inReplyTo?{headers:{'In-Reply-To':inReplyTo,'References':references||inReplyTo}}:{})
+      })
+    });
+    resendData = await resendResponse.json().catch(()=>({}));
+  } catch (error) {
+    console.error('IAMTRADER Resend request failed:', error);
+    return json({error:'Impossible de joindre le service e-mail.',code:'RESEND_NETWORK_ERROR'},502);
+  }
+  if(!resendResponse.ok) return json({error:'Resend a refusé l’envoi.',details:resendData,code:'RESEND_API_ERROR'},502);
   return json({success:true,id:(resendData as {id?:string}).id||null});
 }
