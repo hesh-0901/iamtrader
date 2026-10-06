@@ -301,6 +301,18 @@ export async function requestUserPlanChange(uid: string, plan: 'pro' | 'communit
 
 export type ContactMessageStatus = 'new' | 'in_progress' | 'resolved';
 
+export interface ContactConversationMessage {
+  id?: string;
+  direction: 'inbound' | 'outbound';
+  body: string;
+  at: string;
+  from?: string;
+  to?: string;
+  messageId?: string;
+  inReplyTo?: string;
+  references?: string;
+}
+
 export interface ContactMessage {
   id: string;
   name: string;
@@ -316,6 +328,7 @@ export interface ContactMessage {
   lastReply?: string;
   repliedAt?: string;
   repliedBy?: string;
+  conversation?: ContactConversationMessage[];
 }
 
 export async function addContactMessage(data: Omit<ContactMessage, 'id' | 'status' | 'createdAt' | 'updatedAt' | 'handledBy' | 'handledAt' | 'adminNote'>): Promise<string> {
