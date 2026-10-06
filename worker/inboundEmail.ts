@@ -149,17 +149,19 @@ export async function handleInboundEmail(
 
   try {
     const existing = await firestoreQueryCollection(env, 'contactMessages', 200, 'createdAt');
-    const matching = existing.find(item => {
-      const itemEmail = String(item.email || '').trim().toLowerCase();
-      if (itemEmail !== senderEmail) return false;
-      const itemSubject = normalizeSubject(String(item.subject || ''));
-      const sameSubject = itemSubject === normalizeSubject(subject);
+    const senderCandidates = existing.filter(item => String(item.email || '').trim().toLowerCase() === senderEmail);
+    const normalizedIncomingSubject = normalizeSubject(subject);
+    const referenceCandidates = senderCandidates.filter(item => {
       const ids = Array.isArray(item.conversation)
         ? item.conversation.flatMap((entry: any) => [entry?.messageId, entry?.id]).filter(Boolean).map(String)
         : [];
-      const referencesMatch = [messageId, inReplyTo, ...references.split(/\s+/).filter(Boolean)].some(id => ids.includes(id));
-      return referencesMatch || sameSubject;
+      return [messageId, inReplyTo, ...references.split(/\s+/).filter(Boolean)].some(id => id && ids.includes(id));
     });
+    const subjectCandidates = senderCandidates.filter(item => normalizeSubject(String(item.subject || '')) === normalizedIncomingSubject);
+    // Prefer explicit email threading. If unavailable, only use a subject match when it is unambiguous;
+    // otherwise continue the most recently updated conversation from this sender.
+    const matching = referenceCandidates[0]
+      || (subjectCandidates.length === 1 ? subjectCandidates[0] : [...senderCandidates].sort((a, b) => new Date(String(b.updatedAt || b.createdAt || 0)).getTime() - new Date(String(a.updatedAt || a.createdAt || 0)).getTime())[0]);
 
     const inboundEntry = {
       id: 'inbound-' + Date.now() + '-' + crypto.randomUUID().slice(0, 8),
