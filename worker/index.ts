@@ -23,7 +23,7 @@ interface Env {
 type EnvWithPayments = Env & PaymentEnv;
 
 export default {
-  async email(message: ForwardableEmailMessage, env: EnvWithPayments): Promise<void> {
+  async email(message: any, env: EnvWithPayments): Promise<void> {
     await handleInboundEmail(message, env);
   },
 
