@@ -18,9 +18,31 @@ function base64Url(input: string | ArrayBuffer): string {
 }
 
 function firestoreValue(value: unknown): Record<string, unknown> {
-  if (value === null) return { nullValue: null };
+  if (value === null || value === undefined) return { nullValue: null };
   if (typeof value === 'boolean') return { booleanValue: value };
-  if (typeof value === 'number') return { doubleValue: value };
+  if (typeof value === 'number') {
+    if (Number.isInteger(value)) return { integerValue: value };
+    return { doubleValue: value };
+  }
+  if (typeof value === 'string') return { stringValue: value };
+  if (Array.isArray(value)) {
+    return {
+      arrayValue: {
+        values: value.map(item => firestoreValue(item))
+      }
+    };
+  }
+  if (typeof value === 'object') {
+    return {
+      mapValue: {
+        fields: Object.fromEntries(
+          Object.entries(value as Record<string, unknown>)
+            .filter(([, item]) => item !== undefined)
+            .map(([key, item]) => [key, firestoreValue(item)])
+        )
+      }
+    };
+  }
   return { stringValue: String(value) };
 }
 
