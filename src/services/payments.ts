@@ -12,6 +12,7 @@ export interface PaymentInitResult {
   currency: string;
   status: 'processing';
   reference: string;
+  paymentUrl?: string;
   message: string;
   subscriptionAction?: 'initial' | 'renewal' | 'upgrade';
   activationStartAt?: string;
