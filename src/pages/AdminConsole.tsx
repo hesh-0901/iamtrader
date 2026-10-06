@@ -295,23 +295,14 @@ export function AdminConsole() {
         let direction = item.direction;
         if (from === customerEmail) direction = 'inbound';
         else if (from === 'hello@iamtrader.trade' || to === customerEmail) direction = 'outbound';
-        else if (String(item.body || '') === String(selectedMessage.message || '')) direction = 'inbound';
-        else if (String(item.body || '') === String(selectedMessage.lastReply || '')) direction = selectedMessage.repliedBy ? 'outbound' : 'inbound';
+        else if (!from && !to && String(item.body || '') === String(selectedMessage.message || '')) direction = 'inbound';
         return { ...item, direction };
       });
 
       const existingConversation = Array.isArray(selectedMessage.conversation) && selectedMessage.conversation.length
         ? normalizeConversation(selectedMessage.conversation)
         : normalizeConversation([
-            { id:'legacy-inbound', direction:'inbound' as const, body:selectedMessage.message, at:selectedMessage.createdAt || now, from:selectedMessage.email, to:'hello@iamtrader.trade' },
-            ...(selectedMessage.lastReply ? [{
-              id:'legacy-last-reply',
-              direction:selectedMessage.repliedBy ? 'outbound' as const : 'inbound' as const,
-              body:selectedMessage.lastReply,
-              at:selectedMessage.repliedAt || selectedMessage.updatedAt || now,
-              from:selectedMessage.repliedBy ? 'hello@iamtrader.trade' : selectedMessage.email,
-              to:selectedMessage.repliedBy ? selectedMessage.email : 'hello@iamtrader.trade'
-            }] : [])
+            { id:'legacy-inbound', direction:'inbound' as const, body:selectedMessage.message, at:selectedMessage.createdAt || now, from:selectedMessage.email, to:'hello@iamtrader.trade' }
           ]);
       const conversation = [...existingConversation, outbound];
 
@@ -695,7 +686,7 @@ export function AdminConsole() {
                           {(() => {
                             const legacyConversation = [
                               { id:'legacy-inbound', direction:'inbound' as const, body:selectedMessage.message, at:selectedMessage.createdAt || new Date().toISOString(), from:selectedMessage.email, to:'hello@iamtrader.trade' },
-                              ...(selectedMessage.lastReply ? [{ id:'legacy-last-reply', direction:selectedMessage.repliedBy ? 'outbound' as const : 'inbound' as const, body:selectedMessage.lastReply, at:selectedMessage.repliedAt || selectedMessage.updatedAt || new Date().toISOString(), from:selectedMessage.repliedBy ? 'hello@iamtrader.trade' : selectedMessage.email, to:selectedMessage.repliedBy ? selectedMessage.email : 'hello@iamtrader.trade' }] : [])
+
                             ];
                             const customerEmail = String(selectedMessage.email || '').trim().toLowerCase();
                             const rawConversation = Array.isArray(selectedMessage.conversation) && selectedMessage.conversation.length ? selectedMessage.conversation : legacyConversation;
@@ -705,8 +696,7 @@ export function AdminConsole() {
                               let direction = item.direction;
                               if (senderEmail === customerEmail) direction = 'inbound';
                               else if (senderEmail === 'hello@iamtrader.trade' || recipientEmail === customerEmail) direction = 'outbound';
-                              else if (String(item.body || '') === String(selectedMessage.message || '')) direction = 'inbound';
-                              else if (String(item.body || '') === String(selectedMessage.lastReply || '')) direction = selectedMessage.repliedBy ? 'outbound' : 'inbound';
+                              else if (!senderEmail && !recipientEmail && String(item.body || '') === String(selectedMessage.message || '')) direction = 'inbound';
                               return { ...item, direction };
                             }).sort((a, b) => new Date(a.at || 0).getTime() - new Date(b.at || 0).getTime());
                             return conversation.map((item, index) => {
