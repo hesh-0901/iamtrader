@@ -42,9 +42,33 @@ function stripHtml(value: string): string {
     .trim();
 }
 
+function decodeMimeHeader(value: string): string {
+  return value.replace(/=\?([^?]+)\?([bqBQ])\?([^?]+)\?=/g, (_, charset, encoding, encoded) => {
+    try {
+      if (String(encoding).toLowerCase() === 'b') {
+        const bytes = Uint8Array.from(atob(String(encoded).replace(/\s+/g, '')), c => c.charCodeAt(0));
+        return new TextDecoder(String(charset || 'utf-8')).decode(bytes);
+      }
+      const bytes = String(encoded).replace(/_/g, ' ').replace(/=([0-9A-F]{2})/gi, (_m: string, hex: string) => String.fromCharCode(parseInt(hex, 16)));
+      return new TextDecoder(String(charset || 'utf-8')).decode(new Uint8Array([...bytes].map(char => char.charCodeAt(0))));
+    } catch {
+      return String(encoded);
+    }
+  });
+}
+
 function headerValue(headers: string, name: string): string {
   const match = headers.match(new RegExp('^' + name + ':\\s*(.*(?:\\r?\\n[ \\t]+.*)*)$', 'im'));
-  return match ? match[1].replace(/\r?\n[ \t]+/g, ' ').trim() : '';
+  return match ? decodeMimeHeader(match[1].replace(/\r?\n[ \t]+/g, ' ').trim()) : '';
+}
+
+function cleanReplyBody(value: string): string {
+  return value
+    .split(/\r?\n/)
+    .filter(line => !/^>/.test(line.trim()) && !/^On .+wrote:$/i.test(line.trim()) && !/^Le .+a écrit :$/i.test(line.trim()))
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 }
 
 function extractBody(raw: string): string {
@@ -103,38 +127,77 @@ export async function handleInboundEmail(
   const receivedAt = new Date().toISOString();
   const senderEmail = extractEmail(message.from);
   const raw = await new Response(message.raw).text();
-  const messageText = extractBody(raw).slice(0, 30000);
+  const messageText = cleanReplyBody(extractBody(raw)).slice(0, 30000);
 
   try {
     const existing = await firestoreQueryCollection(env, 'contactMessages', 200, 'createdAt');
     const matching = existing.find(item => {
       const itemEmail = String(item.email || '').trim().toLowerCase();
+      if (itemEmail !== senderEmail) return false;
       const itemSubject = normalizeSubject(String(item.subject || ''));
-      return itemEmail === senderEmail && itemSubject === normalizeSubject(subject);
+      const sameSubject = itemSubject === normalizeSubject(subject);
+      const ids = Array.isArray(item.conversation)
+        ? item.conversation.flatMap((entry: any) => [entry?.messageId, entry?.id]).filter(Boolean).map(String)
+        : [];
+      const referencesMatch = [messageId, inReplyTo, ...references.split(/\s+/).filter(Boolean)].some(id => ids.includes(id));
+      return referencesMatch || sameSubject;
     });
 
+    const inboundEntry = {
+      id: 'inbound-' + Date.now() + '-' + crypto.randomUUID().slice(0, 8),
+      direction: 'inbound',
+      body: messageText || '(Message sans contenu textuel)',
+      at: receivedAt,
+      from: senderEmail,
+      to: message.to,
+      messageId,
+      inReplyTo,
+      references,
+    };
+
     if (matching?.id) {
+      const existingConversation = Array.isArray(matching.conversation) && matching.conversation.length
+        ? matching.conversation
+        : [{
+            id: 'legacy-inbound',
+            direction: 'inbound',
+            body: String(matching.message || ''),
+            at: String(matching.createdAt || receivedAt),
+            from: String(matching.email || senderEmail),
+            to: message.to,
+          }, ...(matching.lastReply ? [{
+            id: 'legacy-last-reply',
+            direction: 'outbound',
+            body: String(matching.lastReply),
+            at: String(matching.repliedAt || matching.updatedAt || receivedAt),
+            from: 'hello@iamtrader.trade',
+            to: String(matching.email || senderEmail),
+          }] : [])];
+
+      const conversation = [...existingConversation, inboundEntry];
       await firestorePatch(env, 'contactMessages/' + encodeURIComponent(String(matching.id)), {
         status: 'new',
         updatedAt: receivedAt,
         lastReply: messageText,
         repliedAt: receivedAt,
+        conversation,
         inboundMessageId: messageId,
         inboundInReplyTo: inReplyTo,
         inboundReferences: references,
         lastInboundFrom: message.from,
-      }, ['status','updatedAt','lastReply','repliedAt','inboundMessageId','inboundInReplyTo','inboundReferences','lastInboundFrom']);
+      }, ['status','updatedAt','lastReply','repliedAt','conversation','inboundMessageId','inboundInReplyTo','inboundReferences','lastInboundFrom']);
     } else {
       const id = 'inbound-' + Date.now() + '-' + crypto.randomUUID().slice(0, 8);
       await firestoreCreate(env, 'contactMessages', id, {
         id,
-        name: message.from.replace(/\s*<[^>]+>/, '').trim() || senderEmail,
+        name: decodeMimeHeader(message.from.replace(/\s*<[^>]+>/, '').trim()) || senderEmail,
         email: senderEmail,
         subject,
         message: messageText || '(Message sans contenu textuel)',
         status: 'new',
         createdAt: receivedAt,
         updatedAt: receivedAt,
+        conversation: [inboundEntry],
         inboundMessageId: messageId,
         inboundInReplyTo: inReplyTo,
         inboundReferences: references,
