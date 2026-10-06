@@ -69,7 +69,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
   const [theme, setTheme] = useState<'light'>('light');
   const [dashboardMode, setDashboardMode] = useState<'standard' | 'focus' | 'analysis' | 'compact'>(() => (localStorage.getItem('iamtrader-dashboard-mode') as any) || 'standard');
   const [paymentPlan, setPaymentPlan] = useState<PaidPlan | null>(null);
-  const [paymentMode, setPaymentMode] = useState<'simulation' | 'live'>('simulation');
+  const [paymentMode, setPaymentMode] = useState<'simulation' | 'live'>('live');
   const [paymentPhone, setPaymentPhone] = useState('');
   const [paymentProvider, setPaymentProvider] = useState('Airtel Money');
   const [paymentPayerName, setPaymentPayerName] = useState(userProfile?.displayName || [userProfile?.traderProfile?.firstName, userProfile?.traderProfile?.lastName].filter(Boolean).join(' ') || '');
@@ -237,7 +237,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
     localStorage.setItem('iamtrader-dashboard-mode', mode);
   };
 
-  const startPayment = (plan: PaidPlan) => { setPaymentPlan(plan); setPaymentMode('simulation'); setPaymentPhone(userProfile?.traderProfile?.whatsapp || ''); setPaymentProvider('Airtel Money'); setPaymentPayerName(userProfile?.displayName || [userProfile?.traderProfile?.firstName, userProfile?.traderProfile?.lastName].filter(Boolean).join(' ') || ''); setPaymentId(null); setPaymentStatus('idle'); setPaymentMessage(''); setPaymentAction(null); setPaymentActivationStart(null); setPaymentActivationExpires(null); };
+  const startPayment = (plan: PaidPlan) => { setPaymentPlan(plan); setPaymentMode('live'); setPaymentPhone(userProfile?.traderProfile?.whatsapp || ''); setPaymentProvider('Airtel Money'); setPaymentPayerName(userProfile?.displayName || [userProfile?.traderProfile?.firstName, userProfile?.traderProfile?.lastName].filter(Boolean).join(' ') || ''); setPaymentId(null); setPaymentStatus('idle'); setPaymentMessage(''); setPaymentAction(null); setPaymentActivationStart(null); setPaymentActivationExpires(null); };
 
   const submitPayment = async () => {
     if (!paymentPlan) return;
@@ -253,6 +253,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
       setPaymentActivationExpires(payment.activationExpiresAt || null);
       setPaymentStatus('processing');
       setPaymentMessage(payment.message || 'Paiement en cours de traitement.');
+      if (paymentMode === 'live' && payment.paymentUrl) window.location.assign(payment.paymentUrl);
     } catch (error: any) {
       setPaymentStatus('failed');
       setPaymentMessage(error?.message || 'Impossible d’initier le paiement.');
