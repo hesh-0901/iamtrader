@@ -677,7 +677,10 @@ export function AdminConsole() {
                             ];
                             const conversation = Array.isArray(selectedMessage.conversation) && selectedMessage.conversation.length ? selectedMessage.conversation : legacyConversation;
                             return conversation.map((item, index) => {
-                              const outbound = item.direction === 'outbound';
+                              const senderEmail = String(item.from || '').trim().toLowerCase();
+                              const recipientEmail = String(item.to || '').trim().toLowerCase();
+                              const customerEmail = String(selectedMessage.email || '').trim().toLowerCase();
+                              const outbound = senderEmail === 'hello@iamtrader.trade' || (item.direction === 'outbound' && senderEmail !== customerEmail && recipientEmail === customerEmail);
                               const at = item.at ? new Date(item.at) : null;
                               const previous = conversation[index - 1];
                               const sameDay = previous && new Date(previous.at).toDateString() === new Date(item.at).toDateString();
