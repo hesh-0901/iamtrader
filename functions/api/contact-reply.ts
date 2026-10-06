@@ -76,6 +76,13 @@ iamtrader.trade
 Trade. Measure. Improve.`;
   let resendResponse: Response;
   let resendData: unknown = {};
+  const buildThreadReplyTo = (base: string, threadId: string) => {
+    if (!threadId) return base;
+    const match = base.match(/^([^@+]+)@(.+)$/);
+    return match ? `${match[1]}+${threadId}@${match[2]}` : base;
+  };
+  const threadReplyTo = buildThreadReplyTo(resendReplyTo || resendFromEmail, conversationId);
+
   try {
     resendResponse = await fetch('https://api.resend.com/emails',{
       method:'POST',
@@ -86,7 +93,7 @@ Trade. Measure. Improve.`;
         subject:/^re:/i.test(subject)?subject:'Re: '+subject,
         html,
         text,
-        ...(resendReplyTo?{reply_to:resendReplyTo}:{}),
+        ...(threadReplyTo?{reply_to:threadReplyTo}:{}),
         ...(inReplyTo||conversationId?{headers:{...(inReplyTo?{'In-Reply-To':inReplyTo,'References':references||inReplyTo}:{}),...(conversationId?{'X-IAMTRADER-Conversation-ID':conversationId}:{})}}:{})
       })
     });
@@ -96,5 +103,23 @@ Trade. Measure. Improve.`;
     return json({error:'Impossible de joindre le service e-mail.',code:'RESEND_NETWORK_ERROR'},502);
   }
   if(!resendResponse.ok) return json({error:'Resend a refusé l’envoi.',details:resendData,code:'RESEND_API_ERROR'},502);
-  return json({success:true,id:(resendData as {id?:string}).id||null});
+
+  const resendEmailId = String((resendData as {id?:string}).id || '').trim();
+  let messageId = '';
+  if (resendEmailId) {
+    try {
+      const emailResponse = await fetch(`https://api.resend.com/emails/${encodeURIComponent(resendEmailId)}`, {
+        method: 'GET',
+        headers: { Authorization: 'Bearer ' + resendApiKey }
+      });
+      if (emailResponse.ok) {
+        const emailData = await emailResponse.json().catch(() => ({})) as { message_id?: string };
+        messageId = String(emailData.message_id || '').trim();
+      }
+    } catch (error) {
+      console.warn('IAMTRADER could not retrieve Resend Message-ID:', error);
+    }
+  }
+
+  return json({success:true,id:resendEmailId||null,messageId:messageId||null,replyTo:threadReplyTo||null});
 }
