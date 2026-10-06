@@ -508,7 +508,7 @@ export async function handleSimulatedPaymentRequest(request: Request, env: Payme
       mode: 'simulation',
       status: 'processing',
       reference: idempotencyKey,
-      transactionReference: paymentReference(idempotencyKey, now),
+      transactionReference: paymentReference(idempotencyKey),
       invoiceNumber: invoiceNumber(idempotencyKey, now),
       createdAt: now,
       updatedAt: now
