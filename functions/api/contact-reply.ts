@@ -76,12 +76,7 @@ iamtrader.trade
 Trade. Measure. Improve.`;
   let resendResponse: Response;
   let resendData: unknown = {};
-  const buildThreadReplyTo = (base: string, threadId: string) => {
-    if (!threadId) return base;
-    const match = base.match(/^([^@+]+)@(.+)$/);
-    return match ? `${match[1]}+${threadId}@${match[2]}` : base;
-  };
-  const threadReplyTo = buildThreadReplyTo(resendReplyTo || resendFromEmail, conversationId);
+  const threadReplyTo = resendReplyTo || resendFromEmail;
 
   try {
     resendResponse = await fetch('https://api.resend.com/emails',{
