@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Activity, AlertTriangle, BellRing, Check, CheckCircle2, ChevronLeft, Eye, ChevronRight, Clock3, CreditCard, Edit3, History, Mail, ReceiptText, RefreshCw, Search, Send, ShieldCheck, Trash2, UserCheck, UserX, Users, X, XCircle, Copy } from 'lucide-react';
+import { Activity, AlertTriangle, BellRing, Check, CheckCircle2, ChevronLeft, Eye, ChevronRight, Clock3, CreditCard, Edit3, History, Mail, ReceiptText, RefreshCw, Search, Send, ShieldCheck, Trash2, UserCheck, UserX, Users, X, XCircle, Copy, Paperclip, Smile, MoreVertical, Info, Plus, Filter, PenLine } from 'lucide-react';
 import { AdminLog, PaymentRecord, SubscriptionPlan, UserProfile, UserStatus, TradingAccount, Trade } from '../types';
 import { getAdminLogs, getAllAccounts, getAllTrades, getAllUsers, subscribeAllUsers, subscribeContactMessages } from '../services/firestore';
 import { adminAddLog, adminDeleteContact, adminGetPayments, adminUpdateContact, adminUpdatePayment, adminUpdateUser } from '../services/adminConsole';
@@ -83,6 +83,7 @@ export function AdminConsole() {
   const [contactMessages, setContactMessages] = useState<import('../services/firestore').ContactMessage[]>([]);
   const [selectedMessage, setSelectedMessage] = useState<import('../services/firestore').ContactMessage | null>(null);
   const [contactFilter, setContactFilter] = useState<'all' | 'new' | 'in_progress' | 'resolved'>('all');
+  const [supportSearch, setSupportSearch] = useState('');
   const [contactNote, setContactNote] = useState('');
   const [replyText, setReplyText] = useState('');
   const [contactBusy, setContactBusy] = useState(false);
@@ -563,55 +564,72 @@ export function AdminConsole() {
           {adminTab === 'support' && (
             <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_8px_30px_rgba(11,31,53,.05)]">
               <div className="flex h-[760px] min-h-[620px] flex-col lg:flex-row">
-                <aside className="flex w-full shrink-0 flex-col border-b border-slate-200 bg-white lg:w-[330px] lg:border-b-0 lg:border-r">
+                <aside className="flex w-full shrink-0 flex-col border-b border-slate-200 bg-white lg:w-[360px] lg:border-b-0 lg:border-r">
                   <div className="border-b border-slate-200 px-4 py-3">
                     <div className="flex items-center justify-between">
                       <div>
-                        <div className="text-[13px] font-black text-[#0b1f35]">Messages</div>
-                        <div className="mt-0.5 text-[9px] text-slate-400">{contactMessages.length} conversation(s)</div>
+                        <div className="text-[13px] font-black text-[#0b1f35]">Conversations</div>
+                        <div className="mt-0.5 text-[9px] text-slate-400">{contactMessages.length} conversation(s) · {contactMessages.filter(m => m.status === 'new').length} non lue(s)</div>
                       </div>
-                      <button onClick={load} disabled={loading} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100" title="Actualiser"><RefreshCw className={'h-3.5 w-3.5 '+(loading?'animate-spin':'')} /></button>
+                      <button onClick={() => { setSupportSearch(''); load(); }} disabled={loading} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100" title="Actualiser"><RefreshCw className={'h-3.5 w-3.5 '+(loading?'animate-spin':'')} /></button>
+                    </div>
+                    <div className="mt-3 flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                      <Search className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                      <input value={supportSearch} onChange={e => setSupportSearch(e.target.value)} placeholder="Rechercher une conversation…" className="min-w-0 flex-1 bg-transparent text-[10px] outline-none placeholder:text-slate-400" />
+                      <Filter className="h-3 w-3 text-slate-300" />
                     </div>
                     <div className="mt-3 flex items-center gap-4 border-b border-slate-100">
                       {(['all','new','in_progress','resolved'] as const).map(s => (
-                        <button key={s} onClick={() => setContactFilter(s)} className={'border-b-2 pb-2 text-[9px] font-bold ' + (contactFilter === s ? 'border-[#0b1f35] text-[#0b1f35]' : 'border-transparent text-slate-400')}>
+                        <button key={s} onClick={() => setContactFilter(s)} className={'relative border-b-2 pb-2 text-[9px] font-bold ' + (contactFilter === s ? 'border-[#0b1f35] text-[#0b1f35]' : 'border-transparent text-slate-400')}>
                           {s === 'all' ? 'Tous' : s === 'new' ? 'Non lus' : s === 'in_progress' ? 'En cours' : 'Traités'}
+                          {s === 'new' && contactMessages.filter(m => m.status === 'new').length > 0 && <span className="ml-1.5 rounded-full bg-blue-600 px-1.5 py-0.5 text-[7px] font-black text-white">{contactMessages.filter(m => m.status === 'new').length}</span>}
                         </button>
                       ))}
                     </div>
                   </div>
 
                   <div className="min-h-0 flex-1 overflow-y-auto">
-                    {contactMessages.filter(m => contactFilter === 'all' || m.status === contactFilter).map(m => {
-                      const dateValue = m.updatedAt || m.createdAt;
-                      const date = dateValue ? new Date(dateValue) : null;
-                      const thread = Array.isArray(m.conversation) ? m.conversation : [];
-                      const last = thread.length ? thread[thread.length - 1] : null;
-                      const preview = last?.body || m.lastReply || m.message || '';
-                      const selectedItem = selectedMessage?.id === m.id;
-                      const unread = m.status === 'new';
-                      return (
-                        <button key={m.id} onClick={() => { setSelectedMessage(m); setContactNote(m.adminNote || ''); setReplyText(''); }} className={'flex w-full gap-3 border-b border-slate-100 px-4 py-3 text-left ' + (selectedItem ? 'bg-slate-50 shadow-[inset_3px_0_0_#0b1f35]' : 'hover:bg-slate-50')}>
-                          <div className={'mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[9px] font-black ' + (unread ? 'bg-[#0b1f35] text-white' : 'bg-slate-100 text-slate-500')}>
-                            {(m.name || m.email || '?').trim().charAt(0).toUpperCase()}
-                          </div>
-                          <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <div className="min-w-0 flex-1">
-  <span className={'block truncate text-[10px] ' + (unread ? 'font-black text-[#0b1f35]' : 'font-semibold text-slate-700')}>{m.name || m.email}</span>
-  <span className="mt-0.5 block truncate text-[8px] font-normal text-slate-400">{emailParts(m.email).local}<span className="text-slate-300">{emailParts(m.email).domain}</span></span>
-</div>
-                              <span className="shrink-0 text-[8px] text-slate-400">{date && !Number.isNaN(date.getTime()) ? date.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) : '—'}</span>
+                    {contactMessages
+                      .filter(m => contactFilter === 'all' || m.status === contactFilter)
+                      .filter(m => {
+                        const q = supportSearch.trim().toLowerCase();
+                        return !q || [m.name, m.email, decodeMimeSubject(m.subject), m.message].some(v => String(v || '').toLowerCase().includes(q));
+                      })
+                      .map(m => {
+                        const dateValue = m.updatedAt || m.createdAt;
+                        const date = dateValue ? new Date(dateValue) : null;
+                        const thread = Array.isArray(m.conversation) ? m.conversation : [];
+                        const last = thread.length ? thread[thread.length - 1] : null;
+                        const preview = last?.body || m.lastReply || m.message || '';
+                        const selectedItem = selectedMessage?.id === m.id;
+                        const unread = m.status === 'new';
+                        const email = emailParts(m.email);
+                        return (
+                          <button key={m.id} onClick={() => { setSelectedMessage(m); setContactNote(m.adminNote || ''); setReplyText(''); }} className={'flex w-full gap-3 border-b border-slate-100 px-4 py-3.5 text-left transition ' + (selectedItem ? 'bg-blue-50/50 shadow-[inset_3px_0_0_#2563eb]' : 'hover:bg-slate-50')}>
+                            <div className={'mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[9px] font-black ' + (unread ? 'bg-[#0b1f35] text-white' : 'bg-slate-100 text-slate-500')}>
+                              {(m.name || m.email || '?').trim().charAt(0).toUpperCase()}
                             </div>
-                            <div className={'mt-0.5 truncate text-[10px] ' + (unread ? 'font-bold text-slate-700' : 'text-slate-500')}>{decodeMimeSubject(m.subject) || '(Sans objet)'}</div>
-                            <div className="mt-0.5 flex items-center gap-1.5">
-                              <span className="min-w-0 truncate text-[9px] text-slate-400">{preview}</span>
-                              {thread.length > 1 && <span className="shrink-0 text-[8px] font-bold text-slate-400">{thread.length}</span>}
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <div className="min-w-0 flex-1">
+                                  <span className={'block truncate text-[10px] ' + (unread ? 'font-black text-[#0b1f35]' : 'font-semibold text-slate-700')}>{m.name || m.email}</span>
+                                  <span className="mt-0.5 block truncate text-[8px] text-slate-400">{email.local}<span className="text-slate-300">{email.domain}</span></span>
+                                </div>
+                                <span className="shrink-0 text-[8px] text-slate-400">{date && !Number.isNaN(date.getTime()) ? date.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) : '—'}</span>
+                              </div>
+                              <div className={'mt-1 truncate text-[10px] ' + (unread ? 'font-bold text-slate-700' : 'font-semibold text-slate-600')}>{decodeMimeSubject(m.subject) || '(Sans objet)'}</div>
+                              <div className="mt-0.5 flex items-center gap-1.5">
+                                <span className="min-w-0 truncate text-[9px] text-slate-400">{preview}</span>
+                                {thread.length > 1 && <span className="shrink-0 rounded-full bg-blue-50 px-1.5 py-0.5 text-[7px] font-black text-blue-600">{thread.length}</span>}
+                              </div>
                             </div>
-                          </div>
-                        </button>
-                      );
-                    })}
+                          </button>
+                        );
+                      })}
+                    {contactMessages.filter(m => contactFilter === 'all' || m.status === contactFilter).filter(m => {
+                      const q = supportSearch.trim().toLowerCase();
+                      return !q || [m.name, m.email, decodeMimeSubject(m.subject), m.message].some(v => String(v || '').toLowerCase().includes(q));
+                    }).length === 0 && <div className="p-10 text-center text-[10px] text-slate-400">Aucune conversation.</div>}
                   </div>
                 </aside>
 
@@ -620,22 +638,20 @@ export function AdminConsole() {
                     <div className="flex h-full min-h-0 flex-col">
                       <header className="shrink-0 border-b border-slate-200 bg-white px-5 py-3.5 sm:px-7">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#0b1f35] text-[10px] font-black text-white">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#0b1f35] text-[10px] font-black text-white">
                             {(selectedMessage.name || selectedMessage.email || '?').trim().charAt(0).toUpperCase()}
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
-                              <h2 className="truncate text-[13px] font-black text-[#0b1f35]">{selectedMessage.name || selectedMessage.email}</h2>
-                              {selectedMessage.status === 'new' && <span className="h-1.5 w-1.5 rounded-full bg-blue-600" />}
+                              <h2 className="truncate text-[14px] font-black text-[#0b1f35]">{selectedMessage.name || selectedMessage.email}</h2>
+                              {selectedMessage.status === 'new' && <span className="h-2 w-2 rounded-full bg-blue-600" />}
                             </div>
                             <div className="flex min-w-0 items-center gap-1.5 text-[9px]">
-  <a href={'mailto:' + String(selectedMessage.email || '').toLowerCase()} className="min-w-0 truncate font-mono text-[9px] font-normal text-slate-500 hover:text-blue-600" title={String(selectedMessage.email || '').toLowerCase()}>
-    <span>{emailParts(selectedMessage.email).local}</span><span className="text-slate-300">{emailParts(selectedMessage.email).domain}</span>
-  </a>
-  <button type="button" onClick={() => { navigator.clipboard?.writeText(String(selectedMessage.email || '').toLowerCase()); showToast('Adresse e-mail copiée.', 'success'); }} className="shrink-0 rounded p-0.5 text-slate-300 hover:bg-slate-100 hover:text-slate-600" title="Copier l'adresse e-mail">
-    <Copy className="h-3 w-3" />
-  </button>
-</div>
+                              <a href={'mailto:' + String(selectedMessage.email || '').toLowerCase()} className="min-w-0 truncate font-mono text-[9px] font-normal text-slate-500 hover:text-blue-600" title={String(selectedMessage.email || '').toLowerCase()}>
+                                <span>{emailParts(selectedMessage.email).local}</span><span className="text-slate-300">{emailParts(selectedMessage.email).domain}</span>
+                              </a>
+                              <button type="button" onClick={() => { navigator.clipboard?.writeText(String(selectedMessage.email || '').toLowerCase()); showToast('Adresse e-mail copiée.', 'success'); }} className="shrink-0 rounded p-0.5 text-slate-300 hover:bg-slate-100 hover:text-slate-600" title="Copier l'adresse e-mail"><Copy className="h-3 w-3" /></button>
+                            </div>
                           </div>
                           <div className="hidden min-w-0 max-w-[42%] text-right sm:block">
                             <div className="truncate text-[10px] font-semibold text-slate-600">{decodeMimeSubject(selectedMessage.subject) || '(Sans objet)'}</div>
@@ -646,13 +662,14 @@ export function AdminConsole() {
                               await adminUpdateContact(selectedMessage.id, { status:'in_progress', handledBy:auth.currentUser?.uid || '', handledAt:now });
                               setSelectedMessage(prev => prev ? {...prev,status:'in_progress',handledBy:auth.currentUser?.uid || '',handledAt:now}:prev);
                             } catch { showToast('Mise à jour impossible.'); }
-                          }} className="hidden rounded-lg px-2 py-1.5 text-[9px] font-semibold text-slate-500 hover:bg-slate-100 sm:block">En cours</button>
+                          }} className="hidden items-center gap-1.5 rounded-lg bg-emerald-50 px-2.5 py-2 text-[9px] font-bold text-emerald-700 sm:flex">En cours <ChevronRight className="h-3 w-3 rotate-90" /></button>
                           <button onClick={() => adminDeleteContact(selectedMessage.id).then(() => { setSelectedMessage(null); showToast('Conversation supprimée.'); }).catch(() => showToast('Suppression impossible.'))} className="rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600" title="Supprimer"><Trash2 className="h-4 w-4" /></button>
+                          <button className="hidden rounded-lg p-2 text-slate-400 hover:bg-slate-100 sm:block" title="Plus d'actions"><MoreVertical className="h-4 w-4" /></button>
                         </div>
                       </header>
 
                       <div className="min-h-0 flex-1 overflow-y-auto bg-white px-5 py-6 sm:px-10">
-                        <div className="mx-auto w-full max-w-3xl">
+                        <div className="mx-auto w-full max-w-4xl">
                           {(() => {
                             const legacyConversation = [
                               { id:'legacy-inbound', direction:'inbound' as const, body:selectedMessage.message, at:selectedMessage.createdAt || new Date().toISOString(), from:selectedMessage.email, to:'hello@iamtrader.trade' },
@@ -667,16 +684,15 @@ export function AdminConsole() {
                               const dayLabel = at && !Number.isNaN(at.getTime()) ? at.toLocaleDateString('fr-FR', { day:'numeric', month:'long', year:'numeric' }) : '';
                               return (
                                 <React.Fragment key={item.id || index}>
-                                  {!sameDay && <div className="my-4 flex items-center gap-3"><span className="h-px flex-1 bg-slate-100" /><span className="text-[8px] font-bold uppercase tracking-wider text-slate-400">{dayLabel === new Date().toLocaleDateString('fr-FR', {day:'numeric',month:'long',year:'numeric'}) ? 'Aujourd’hui' : dayLabel}</span><span className="h-px flex-1 bg-slate-100" /></div>}
-                                  <div className={'mb-4 flex ' + (outbound ? 'justify-end' : 'justify-start')}>
-                                    <div className={'max-w-[82%] sm:max-w-[68%] ' + (outbound ? 'text-right' : 'text-left')}>
-                                      <div className={'mb-1 flex items-center gap-1.5 text-[8px] text-slate-400 ' + (outbound ? 'justify-end' : '')}>
-                                        <span className="font-semibold text-slate-500">{outbound ? 'IAMTRADER' : (selectedMessage.name || selectedMessage.email)}</span>
-                                        <span>·</span>
+                                  {!sameDay && <div className="my-5 flex items-center gap-4"><span className="h-px flex-1 bg-slate-100" /><span className="whitespace-nowrap text-[8px] font-black uppercase tracking-wider text-slate-400">{dayLabel === new Date().toLocaleDateString('fr-FR', {day:'numeric',month:'long',year:'numeric'}) ? 'Aujourd’hui' : dayLabel}</span><span className="h-px flex-1 bg-slate-100" /></div>}
+                                  <div className={'mb-5 flex ' + (outbound ? 'justify-end' : 'justify-start')}>
+                                    <div className={'max-w-[78%] sm:max-w-[62%] ' + (outbound ? 'text-right' : 'text-left')}>
+                                      <div className={'mb-1.5 flex items-center gap-2 text-[8px] text-slate-400 ' + (outbound ? 'justify-end' : '')}>
+                                        <span className="font-bold text-slate-600">{outbound ? 'IAMTRADER Support' : (selectedMessage.name || selectedMessage.email)}</span>
                                         <span>{at && !Number.isNaN(at.getTime()) ? at.toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'}) : '—'}</span>
                                       </div>
-                                      <div className={'inline-block rounded-xl px-3.5 py-2.5 ' + (outbound ? 'bg-[#0b1f35] text-white' : 'border border-slate-200 bg-slate-50 text-slate-800')}>
-                                        <div className="whitespace-pre-wrap break-words text-[12px] leading-5">{item.body || '(Message vide)'}</div>
+                                      <div className={'inline-block rounded-xl px-4 py-3 ' + (outbound ? 'bg-[#eaf4ff] text-[#0b1f35] ring-1 ring-blue-100' : 'border border-slate-200 bg-slate-50 text-slate-800')}>
+                                        <div className="whitespace-pre-wrap break-words text-[12px] leading-6">{item.body || '(Message vide)'}</div>
                                       </div>
                                     </div>
                                   </div>
@@ -688,20 +704,20 @@ export function AdminConsole() {
                       </div>
 
                       <div className="shrink-0 border-t border-slate-200 bg-white px-4 py-3 sm:px-7">
-                        <div className="mx-auto max-w-3xl">
-                          <div className="flex items-end gap-2 rounded-xl border border-slate-300 bg-white p-1.5 shadow-sm focus-within:border-[#0b1f35] focus-within:ring-2 focus-within:ring-slate-100">
+                        <div className="mx-auto max-w-4xl">
+                          <div className="flex items-end gap-2 rounded-xl border border-slate-300 bg-white p-1.5 shadow-sm focus-within:border-[#0b1f35] focus-within:ring-2 focus-within:ring-blue-50">
+                            <button type="button" className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 sm:flex" title="Joindre un fichier"><Paperclip className="h-4 w-4" /></button>
                             <textarea value={replyText} onChange={e => setReplyText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void sendSupportReply(); } }} rows={2} maxLength={10000} placeholder="Écrire un message…" className="min-h-[44px] max-h-32 flex-1 resize-none bg-transparent px-2.5 py-1.5 text-[12px] leading-5 outline-none placeholder:text-slate-400" />
-                            <button type="button" disabled={replyBusy || !replyText.trim()} onClick={() => void sendSupportReply()} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#0b1f35] text-white transition hover:bg-[#142d47] disabled:opacity-30" title="Envoyer">
-                              <Send className="h-3.5 w-3.5" />
-                            </button>
+                            <button type="button" className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 sm:flex" title="Emoji"><Smile className="h-4 w-4" /></button>
+                            <button type="button" disabled={replyBusy || !replyText.trim()} onClick={() => void sendSupportReply()} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#0b1f35] text-white transition hover:bg-[#142d47] disabled:opacity-30" title="Envoyer"><Send className="h-3.5 w-3.5" /></button>
                           </div>
                           <div className="mt-1 flex justify-between px-1 text-[8px] text-slate-400"><span>Entrée pour envoyer · Maj + Entrée pour une nouvelle ligne</span><span>{replyText.length}/10 000</span></div>
                         </div>
                       </div>
 
-                      <details className="shrink-0 border-t border-slate-100 bg-slate-50/50 px-4 py-2 sm:px-7">
-                        <summary className="mx-auto max-w-3xl cursor-pointer list-none text-[8px] font-bold uppercase tracking-wider text-slate-400">Détails internes</summary>
-                        <div className="mx-auto mt-2 max-w-3xl pb-2">
+                      <details className="shrink-0 border-t border-slate-100 bg-slate-50/40 px-4 py-2 sm:px-7">
+                        <summary className="mx-auto flex max-w-4xl cursor-pointer list-none items-center gap-2 text-[8px] font-bold uppercase tracking-wider text-slate-400"><Info className="h-3 w-3" />Détails internes</summary>
+                        <div className="mx-auto mt-2 max-w-4xl pb-2">
                           <div className="grid gap-2 text-[9px] sm:grid-cols-3">
                             <div><span className="text-slate-400">ID</span><b className="ml-1 font-mono text-slate-600">{selectedMessage.id}</b></div>
                             <div><span className="text-slate-400">Créé</span><b className="ml-1 text-slate-600">{selectedMessage.createdAt || '—'}</b></div>
