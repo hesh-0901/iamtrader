@@ -161,7 +161,7 @@ export async function handleInboundEmail(
     // Prefer explicit email threading. If unavailable, only use a subject match when it is unambiguous;
     // otherwise continue the most recently updated conversation from this sender.
     const matching = referenceCandidates[0]
-      || (subjectCandidates.length === 1 ? subjectCandidates[0] : [...senderCandidates].sort((a, b) => new Date(String(b.updatedAt || b.createdAt || 0)).getTime() - new Date(String(a.updatedAt || a.createdAt || 0)).getTime())[0]);
+      || (subjectCandidates.length === 1 ? subjectCandidates[0] : undefined);
 
     const inboundEntry = {
       id: 'inbound-' + Date.now() + '-' + crypto.randomUUID().slice(0, 8),
@@ -194,7 +194,8 @@ export async function handleInboundEmail(
             to: matching.repliedBy ? String(matching.email || senderEmail) : message.to,
           }] : [])];
 
-      const conversation = [...existingConversation, inboundEntry];
+      const alreadyStored = messageId && existingConversation.some((entry: any) => String(entry?.messageId || '').trim() === messageId);
+      const conversation = alreadyStored ? existingConversation : [...existingConversation, inboundEntry];
       await firestorePatch(env, 'contactMessages/' + encodeURIComponent(String(matching.id)), {
         status: 'new',
         updatedAt: receivedAt,
