@@ -10,7 +10,9 @@
     "run_worker_first": ["/api/*"]
   },
   "vars": {
-    "PAYMENT_SIMULATION_ENABLED": "true"
+    "PAYMENT_SIMULATION_ENABLED": "true",
+    "RESEND_FROM_EMAIL": "hello@iamtrader.trade",
+    "RESEND_REPLY_TO": "hello@iamtrader.trade"
   },
   "observability": {
     "enabled": true
