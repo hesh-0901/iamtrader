@@ -5,22 +5,36 @@ interface InboundEmailEnv {
   FIREBASE_API_KEY?: string;
 }
 
-function decodeQuotedPrintable(value: string): string {
-  return value
-    .replace(/=\r?\n/g, '')
-    .replace(/=([0-9A-F]{2})/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+function decodeQuotedPrintable(value: string, charset = 'utf-8'): string {
+  try {
+    const softWrapped = value.replace(/=\r?\n/g, '');
+    const bytes: number[] = [];
+    for (let i = 0; i < softWrapped.length; i += 1) {
+      if (softWrapped[i] === '=' && /^[0-9A-F]{2}$/i.test(softWrapped.slice(i + 1, i + 3))) {
+        bytes.push(parseInt(softWrapped.slice(i + 1, i + 3), 16));
+        i += 2;
+      } else {
+        const code = softWrapped.charCodeAt(i);
+        if (code <= 0x7f) bytes.push(code);
+        else bytes.push(...new TextEncoder().encode(softWrapped[i]));
+      }
+    }
+    return new TextDecoder(charset || 'utf-8').decode(new Uint8Array(bytes));
+  } catch {
+    return value;
+  }
 }
 
-function decodeTransferEncoding(value: string, encoding: string): string {
+function decodeTransferEncoding(value: string, encoding: string, charset = 'utf-8'): string {
   const normalized = encoding.toLowerCase().trim();
   if (normalized === 'base64') {
     try {
-      return new TextDecoder().decode(Uint8Array.from(atob(value.replace(/\s+/g, '')), c => c.charCodeAt(0)));
+      return new TextDecoder(charset || 'utf-8').decode(Uint8Array.from(atob(value.replace(/\s+/g, '')), c => c.charCodeAt(0)));
     } catch {
       return value;
     }
   }
-  if (normalized === 'quoted-printable') return decodeQuotedPrintable(value);
+  if (normalized === 'quoted-printable') return decodeQuotedPrintable(value, charset);
   return value;
 }
 
@@ -37,6 +51,8 @@ function stripHtml(value: string): string {
     .replace(/&gt;/gi, '>')
     .replace(/&#39;|&#039;/gi, "'")
     .replace(/&quot;/gi, '"')
+    .replace(/&#(\d+);/g, (_, code) => String.fromCharCode(Number(code)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, code) => String.fromCodePoint(parseInt(code, 16)))
     .replace(/[ \t]+\n/g, '\n')
     .replace(/\n{3,}/g, '\n\n')
     .trim();
@@ -63,12 +79,10 @@ function headerValue(headers: string, name: string): string {
 }
 
 function cleanReplyBody(value: string): string {
-  return value
-    .split(/\r?\n/)
-    .filter(line => !/^>/.test(line.trim()) && !/^On .+wrote:$/i.test(line.trim()) && !/^Le .+a écrit :$/i.test(line.trim()))
-    .join('\n')
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
+  let text = value.replace(/\r/g, '').trim();
+  text = text.replace(/\n(?:On .+?wrote:|Le .+?(?:a écrit\s*:|\na écrit\s*:))[\s\S]*$/i, '');
+  text = text.split('\n').filter(line => !/^\s*>/.test(line)).join('\n');
+  return text.replace(/\n{3,}/g, '\n\n').trim();
 }
 
 function extractBody(raw: string): string {
@@ -78,12 +92,14 @@ function extractBody(raw: string): string {
   const body = raw.slice(separator).replace(/^\r?\n\r?\n/, '');
 
   const contentType = headerValue(headerBlock, 'Content-Type');
+  const charsetMatch = contentType.match(/charset\s*=\s*["']?([^;"'\s]+)/i);
+  const charset = charsetMatch?.[1] || 'utf-8';
   const transferEncoding = headerValue(headerBlock, 'Content-Transfer-Encoding');
   const boundaryMatch = contentType.match(/boundary\s*=\s*(?:"([^"]+)"|([^;\s]+))/i);
 
   if (!boundaryMatch) {
-    if (/text\/html/i.test(contentType)) return stripHtml(decodeTransferEncoding(body, transferEncoding));
-    return decodeTransferEncoding(body, transferEncoding).trim();
+    if (/text\/html/i.test(contentType)) return stripHtml(decodeTransferEncoding(body, transferEncoding, charset));
+    return decodeTransferEncoding(body, transferEncoding, charset).trim();
   }
 
   const boundary = boundaryMatch[1] || boundaryMatch[2];
@@ -98,7 +114,9 @@ function extractBody(raw: string): string {
     const partBody = part.slice(partSeparator).replace(/^\r?\n\r?\n/, '');
     const partType = headerValue(partHeaders, 'Content-Type');
     const partEncoding = headerValue(partHeaders, 'Content-Transfer-Encoding');
-    const decoded = decodeTransferEncoding(partBody, partEncoding).trim();
+    const partCharsetMatch = partType.match(/charset\s*=\s*["']?([^;"'\s]+)/i);
+    const partCharset = partCharsetMatch?.[1] || 'utf-8';
+    const decoded = decodeTransferEncoding(partBody, partEncoding, partCharset).trim();
 
     if (/text\/plain/i.test(partType) && decoded) return decoded;
     if (/text\/html/i.test(partType) && decoded) htmlPart = decoded;
