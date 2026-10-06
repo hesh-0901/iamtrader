@@ -13,11 +13,12 @@ function escapeHtml(value:string) {
 export async function onRequestPost(context:{request:Request;env:Env}) {
   const authHeader=context.request.headers.get('Authorization')||'';
   if(!authHeader.startsWith('Bearer ')) return json({error:'Authentification requise.'},401);
-  let body:{to?:string;subject?:string;reply?:string;originalMessage?:string;name?:string;inReplyTo?:string;references?:string};
+  let body:{to?:string;subject?:string;reply?:string;originalMessage?:string;name?:string;inReplyTo?:string;references?:string;conversationId?:string};
   try { body=await context.request.json(); } catch { return json({error:'Requête invalide.'},400); }
   const to=String(body.to||'').trim(), subject=String(body.subject||'').trim(), reply=String(body.reply||'').trim();
   const inReplyTo=String(body.inReplyTo||'').trim();
   const references=String(body.references||'').trim();
+  const conversationId=String(body.conversationId||'').trim();
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return json({error:'Adresse e-mail du destinataire invalide.'},400);
   if(!subject||!reply) return json({error:'Sujet et réponse obligatoires.'},400);
   if(reply.length>10000) return json({error:'La réponse est trop longue.'},400);
@@ -86,7 +87,7 @@ Trade. Measure. Improve.`;
         html,
         text,
         ...(resendReplyTo?{reply_to:resendReplyTo}:{}),
-        ...(inReplyTo?{headers:{'In-Reply-To':inReplyTo,'References':references||inReplyTo}}:{})
+        ...(inReplyTo||conversationId?{headers:{...(inReplyTo?{'In-Reply-To':inReplyTo,'References':references||inReplyTo}:{}),...(conversationId?{'X-IAMTRADER-Conversation-ID':conversationId}:{})}}:{})
       })
     });
     resendData = await resendResponse.json().catch(()=>({}));
