@@ -35,6 +35,7 @@ export async function onRequestPost(context:{request:Request;env:Env}) {
 
   const safeReply=escapeHtml(reply);
   const logoUrl='https://iamtrader.trade/brand/logo-iamtrader-full.png';
+  const linkStyle='color:#2563eb;text-decoration:underline;text-decoration-color:#93c5fd;text-underline-offset:2px;';
   const html=`<div style="margin:0;padding:32px 20px;background:#f5f8fb;font-family:Arial,Helvetica,sans-serif;color:#172033">
     <div style="max-width:680px;margin:0 auto;background:#ffffff;border:1px solid #e6ebf0">
       <div style="padding:30px 34px 28px">
@@ -46,8 +47,8 @@ export async function onRequestPost(context:{request:Request;env:Env}) {
           <div style="font-size:13px;font-weight:700;color:#0b1f35">Équipe Support IAMTRADER</div>
           <div style="margin-top:3px;font-size:11px;color:#64748b">Trading Performance Management</div>
           <div style="margin-top:13px;font-size:11px;line-height:1.8;color:#475569">
-            <a href="mailto:hello@iamtrader.trade" style="color:#0b1f35;text-decoration:none">hello@iamtrader.trade</a><br>
-            <a href="https://iamtrader.trade" style="color:#0b1f35;text-decoration:none">iamtrader.trade</a>
+            <a href="mailto:hello@iamtrader.trade" style="${linkStyle}">hello@iamtrader.trade</a><br>
+            <a href="https://iamtrader.trade" style="${linkStyle}">iamtrader.trade</a>
           </div>
           <div style="margin-top:14px;font-size:10px;font-weight:700;letter-spacing:.08em;color:#94a3b8">TRADE. MEASURE. IMPROVE.</div>
         </div>
