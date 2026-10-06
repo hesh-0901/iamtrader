@@ -1,7 +1,6 @@
 import { firestoreCreate, firestoreGet, firestorePatch, PaymentEnv, verifyFirebaseIdToken } from './firebaseAdmin';
 import { decideSubscription, subscriptionFields, SubscriptionAction } from './subscription';
 
-const LABYRINTHE_URL = 'https://api.labyrinthe-rdc.com/api/V1/payment/mobile';
 
 const PLANS = {
   pro: { name: 'Plus', amount: 9.99, currency: 'USD', durationDays: 30 },
