@@ -140,11 +140,13 @@ async function cinetPayRequest(env: CinetPayEnv, path: string, init: RequestInit
 }
 
 export async function handlePaymentRequest(request: Request, env: CinetPayEnv) {
+  let paymentStage = 'start';
   if (request.method === 'GET') {
     const token = authHeader(request);
     if (!token) return json({ success: false, message: 'Authentification requise.' }, 401);
     try {
-      const user = await verifyFirebaseIdToken(env, token);
+      paymentStage = 'firebase-auth';
+    const user = await verifyFirebaseIdToken(env, token);
       const id = new URL(request.url).searchParams.get('id');
       if (!id || !/^(?:[a-f0-9]{24}|[a-f0-9]{64})$/.test(id)) {
         return json({ success: false, message: 'Référence de paiement invalide.' }, 400);
@@ -194,6 +196,7 @@ export async function handlePaymentRequest(request: Request, env: CinetPayEnv) {
       return json({ success: false, message: 'La configuration CinetPay doit utiliser le pays CD (configuration actuelle: ' + env.CINETPAY_COUNTRY + ').' }, 503);
     }
 
+    paymentStage = 'firestore-profile';
     const profile = await firestoreGet(env, `users/${encodeURIComponent(user.uid)}`);
     if (!profile) return json({ success: false, message: 'Profil utilisateur introuvable.' }, 404);
     if (profile.status === 'suspended') return json({ success: false, message: 'Ce compte est suspendu.' }, 403);
@@ -209,6 +212,7 @@ export async function handlePaymentRequest(request: Request, env: CinetPayEnv) {
     const paymentId = randomId();
     const now = new Date().toISOString();
 
+    paymentStage = 'firestore-create';
     await firestoreCreate(env, 'payments', paymentId, {
       id: paymentId,
       uid: user.uid,
@@ -246,6 +250,7 @@ export async function handlePaymentRequest(request: Request, env: CinetPayEnv) {
     const parts = payerName.split(/\s+/).filter(Boolean);
     const paymentMethod = cinetPayPaymentMethod(String(body.paymentProvider || ''));
 
+    paymentStage = 'cinetpay-init';
     const response = await cinetPayRequest(env, '/v1/payment', {
       method: 'POST',
       body: JSON.stringify({
@@ -282,7 +287,8 @@ export async function handlePaymentRequest(request: Request, env: CinetPayEnv) {
     const transactionId = data?.transaction_id || data?.transactionId;
 
     if (!response.ok || !paymentUrl || !paymentToken || !notifyToken || !transactionId) {
-      await firestorePatch(env, `payments/${paymentId}`, {
+      paymentStage = 'firestore-payment-update';
+    await firestorePatch(env, `payments/${paymentId}`, {
         status: 'failed',
         failureMessage: result?.description || result?.message || 'CinetPay a refusé la transaction.',
         cinetpayCode: result?.code || null,
@@ -327,10 +333,11 @@ export async function handlePaymentRequest(request: Request, env: CinetPayEnv) {
       }
     });
   } catch (error) {
-    console.error('CinetPay payment initiation error:', error);
+    const message = error instanceof Error ? error.message : 'Impossible d’initier le paiement.';
+    console.error('CinetPay payment initiation error:', paymentStage, message);
     return json({
       success: false,
-      message: error instanceof Error ? error.message : 'Impossible d’initier le paiement.'
+      message: `Échec du paiement à l’étape "${paymentStage}": ${message}`
     }, 500);
   }
 }
