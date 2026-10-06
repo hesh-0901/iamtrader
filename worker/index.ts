@@ -1,6 +1,6 @@
 import { onRequest as handleAiChat } from '../functions/api/ai-chat';
 import { onRequestPost as handleContactReply } from '../functions/api/contact-reply';
-import { handlePaymentRequest, handlePaymentCallback, handleSimulatedPaymentRequest, handleSimulatedPaymentConfirm } from './payments';
+import { handlePaymentRequest, handlePaymentCallback, handleCinetPayNotification, handleSimulatedPaymentRequest, handleSimulatedPaymentConfirm } from './payments';
 import type { PaymentEnv } from './firebaseAdmin';
 import { handleSubscriptionStatus } from './subscriptionStatus';
 import { handlePaymentHistory } from './paymentHistory';
@@ -14,7 +14,8 @@ interface Env {
   RESEND_API_KEY?: string;
   RESEND_FROM_EMAIL?: string;
   RESEND_REPLY_TO?: string;
-  LABYRINTHE_API_TOKEN?: string;
+  CINETPAY_API_KEY?: string;
+  CINETPAY_SITE_ID?: string;
   FIREBASE_API_KEY?: string;
   FIREBASE_SERVICE_ACCOUNT_JSON?: string;
   PAYMENT_SIMULATION_ENABLED?: string;
@@ -60,6 +61,10 @@ export default {
 
     if (url.pathname === '/api/payments') {
       return handlePaymentRequest(request, env);
+    }
+
+    if (url.pathname === '/api/payments/cinetpay/notify') {
+      return handleCinetPayNotification(request, env);
     }
 
     if (url.pathname === '/api/payments/callback') {
