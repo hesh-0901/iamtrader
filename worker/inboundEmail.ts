@@ -93,7 +93,7 @@ function extractEmail(value: string): string {
 }
 
 export async function handleInboundEmail(
-  message: ForwardableEmailMessage,
+  message: { from: string; to: string; headers: Headers; raw: ReadableStream; forward: (recipient: string) => Promise<unknown> },
   env: InboundEmailEnv,
 ): Promise<void> {
   const subject = message.headers.get('subject') || '(Sans objet)';
