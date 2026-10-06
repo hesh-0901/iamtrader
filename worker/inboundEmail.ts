@@ -199,14 +199,7 @@ export async function handleInboundEmail(
             at: String(matching.createdAt || receivedAt),
             from: String(matching.email || senderEmail),
             to: message.to,
-          }, ...(matching.lastReply ? [{
-            id: 'legacy-last-reply',
-            direction: matching.repliedBy ? 'outbound' : 'inbound',
-            body: String(matching.lastReply),
-            at: String(matching.repliedAt || matching.updatedAt || receivedAt),
-            from: matching.repliedBy ? 'hello@iamtrader.trade' : String(matching.email || senderEmail),
-            to: matching.repliedBy ? String(matching.email || senderEmail) : message.to,
-          }] : [])];
+          }];
 
       const alreadyStored = messageId && existingConversation.some((entry: any) => String(entry?.messageId || '').trim() === messageId);
       const conversation = alreadyStored ? existingConversation : [...existingConversation, inboundEntry];
