@@ -287,11 +287,22 @@ export function AdminConsole() {
         at: now,
         from: 'hello@iamtrader.trade',
         to: selectedMessage.email,
-        messageId: payload?.id || undefined
+        messageId: payload?.messageId || payload?.id || undefined
       };
-      const conversation = Array.isArray(selectedMessage.conversation) && selectedMessage.conversation.length
-        ? [...selectedMessage.conversation, outbound]
-        : [
+      const normalizeConversation = (items: import('../services/firestore').ContactConversationMessage[]) => items.map(item => {
+        const from = String(item.from || '').trim().toLowerCase();
+        const to = String(item.to || '').trim().toLowerCase();
+        let direction = item.direction;
+        if (from === customerEmail) direction = 'inbound';
+        else if (from === 'hello@iamtrader.trade' || to === customerEmail) direction = 'outbound';
+        else if (String(item.body || '') === String(selectedMessage.message || '')) direction = 'inbound';
+        else if (String(item.body || '') === String(selectedMessage.lastReply || '')) direction = selectedMessage.repliedBy ? 'outbound' : 'inbound';
+        return { ...item, direction };
+      });
+
+      const existingConversation = Array.isArray(selectedMessage.conversation) && selectedMessage.conversation.length
+        ? normalizeConversation(selectedMessage.conversation)
+        : normalizeConversation([
             { id:'legacy-inbound', direction:'inbound' as const, body:selectedMessage.message, at:selectedMessage.createdAt || now, from:selectedMessage.email, to:'hello@iamtrader.trade' },
             ...(selectedMessage.lastReply ? [{
               id:'legacy-last-reply',
@@ -300,9 +311,9 @@ export function AdminConsole() {
               at:selectedMessage.repliedAt || selectedMessage.updatedAt || now,
               from:selectedMessage.repliedBy ? 'hello@iamtrader.trade' : selectedMessage.email,
               to:selectedMessage.repliedBy ? selectedMessage.email : 'hello@iamtrader.trade'
-            }] : []),
-            outbound
-          ];
+            }] : [])
+          ]);
+      const conversation = [...existingConversation, outbound];
 
       await adminUpdateContact(selectedMessage.id, {
         status:'resolved',
@@ -686,12 +697,20 @@ export function AdminConsole() {
                               { id:'legacy-inbound', direction:'inbound' as const, body:selectedMessage.message, at:selectedMessage.createdAt || new Date().toISOString(), from:selectedMessage.email, to:'hello@iamtrader.trade' },
                               ...(selectedMessage.lastReply ? [{ id:'legacy-last-reply', direction:selectedMessage.repliedBy ? 'outbound' as const : 'inbound' as const, body:selectedMessage.lastReply, at:selectedMessage.repliedAt || selectedMessage.updatedAt || new Date().toISOString(), from:selectedMessage.repliedBy ? 'hello@iamtrader.trade' : selectedMessage.email, to:selectedMessage.repliedBy ? selectedMessage.email : 'hello@iamtrader.trade' }] : [])
                             ];
-                            const conversation = Array.isArray(selectedMessage.conversation) && selectedMessage.conversation.length ? selectedMessage.conversation : legacyConversation;
-                            return conversation.map((item, index) => {
+                            const customerEmail = String(selectedMessage.email || '').trim().toLowerCase();
+                            const rawConversation = Array.isArray(selectedMessage.conversation) && selectedMessage.conversation.length ? selectedMessage.conversation : legacyConversation;
+                            const conversation = rawConversation.map(item => {
                               const senderEmail = String(item.from || '').trim().toLowerCase();
                               const recipientEmail = String(item.to || '').trim().toLowerCase();
-                              const customerEmail = String(selectedMessage.email || '').trim().toLowerCase();
-                              const outbound = senderEmail === 'hello@iamtrader.trade' || (item.direction === 'outbound' && senderEmail !== customerEmail && recipientEmail === customerEmail);
+                              let direction = item.direction;
+                              if (senderEmail === customerEmail) direction = 'inbound';
+                              else if (senderEmail === 'hello@iamtrader.trade' || recipientEmail === customerEmail) direction = 'outbound';
+                              else if (String(item.body || '') === String(selectedMessage.message || '')) direction = 'inbound';
+                              else if (String(item.body || '') === String(selectedMessage.lastReply || '')) direction = selectedMessage.repliedBy ? 'outbound' : 'inbound';
+                              return { ...item, direction };
+                            }).sort((a, b) => new Date(a.at || 0).getTime() - new Date(b.at || 0).getTime());
+                            return conversation.map((item, index) => {
+                              const outbound = item.direction === 'outbound';
                               const at = item.at ? new Date(item.at) : null;
                               const previous = conversation[index - 1];
                               const sameDay = previous && new Date(previous.at).toDateString() === new Date(item.at).toDateString();
