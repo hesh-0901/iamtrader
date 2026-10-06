@@ -24,12 +24,14 @@ const starterLimit = 5;
 
 const PAYMENT_FEE_RATE = 0.03;
 const PAYMENT_PRICES = { pro: 9.99, community: 89.99 } as const;
+const CINETPAY_CDF_PRICES = { pro: 23335, community: 210196 } as const;
 
 function getPaymentAmounts(plan: PaidPlan) {
   const baseAmount = PAYMENT_PRICES[plan];
   const paymentFee = Math.round(baseAmount * PAYMENT_FEE_RATE * 100) / 100;
   const total = Math.round((baseAmount + paymentFee) * 100) / 100;
-  return { baseAmount, paymentFee, total };
+  const cdfTotal = CINETPAY_CDF_PRICES[plan];
+  return { baseAmount, paymentFee, total, cdfTotal };
 }
 
 function formatDate(value?: string) {
@@ -667,10 +669,10 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                         </div>
                         <div className="mt-3 flex items-end justify-between border-t border-slate-200 pt-3">
                           <span className="text-xs font-bold text-slate-700">Total à payer</span>
-                          <span className="text-xl font-black text-slate-950">${amounts.total.toFixed(2)}</span>
+                          <div className="text-right"><span className="block text-xl font-black text-slate-950">{amounts.cdfTotal.toLocaleString('fr-FR')} CDF</span><span className="text-[10px] font-semibold text-slate-400">≈ ${amounts.total.toFixed(2)}</span></div>
                         </div>
                       </div>
-                      <p className="mt-3 text-[10px] leading-4 text-slate-400">Les frais de paiement correspondent à 3 % du prix de l’abonnement et sont intégrés au montant envoyé au prestataire.</p>
+                      <p className="mt-3 text-[10px] leading-4 text-slate-400">Le montant CinetPay est débité en CDF. Le total de référence inclut les frais de paiement de 3 % et la conversion utilisée pour le checkout RDC.</p>
                       <p className="mt-1 text-[10px] text-slate-500">L’activation intervient uniquement après confirmation serveur de la transaction.</p>
                       {(() => {
                         const currentExpiry = userProfile?.subscriptionExpiresAt ? new Date(userProfile.subscriptionExpiresAt) : null;
