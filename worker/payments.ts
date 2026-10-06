@@ -113,10 +113,17 @@ async function cinetPayAccessToken(env: CinetPayEnv) {
       api_password: env.CINETPAY_API_PASSWORD
     })
   });
-  const result = await response.json() as any;
+  const raw = await response.text();
+  let result: any = {};
+  try {
+    result = raw ? JSON.parse(raw) : {};
+  } catch {
+    result = {};
+  }
   const token = result?.access_token || result?.data?.access_token;
   if (!response.ok || !token) {
-    throw new Error(result?.description || result?.message || 'Authentification CinetPay impossible.');
+    const detail = result?.description || result?.message || result?.error || raw.slice(0, 300);
+    throw new Error(`Authentification CinetPay impossible (HTTP ${response.status}). ${detail}`);
   }
   return String(token);
 }
@@ -261,7 +268,13 @@ export async function handlePaymentRequest(request: Request, env: CinetPayEnv) {
       })
     });
 
-    const result = await response.json() as any;
+    const raw = await response.text();
+    let result: any = {};
+    try {
+      result = raw ? JSON.parse(raw) : {};
+    } catch {
+      result = {};
+    }
     const data = result?.data || result;
     const paymentUrl = data?.payment_url || data?.paymentUrl;
     const paymentToken = data?.payment_token || data?.paymentToken;
