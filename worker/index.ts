@@ -5,6 +5,7 @@ import type { PaymentEnv } from './firebaseAdmin';
 import { handleSubscriptionStatus } from './subscriptionStatus';
 import { handlePaymentHistory } from './paymentHistory';
 import { handleAdminMutation } from './admin';
+import { handleInboundEmail } from './inboundEmail';
 
 interface Env {
   ASSETS: Fetcher;
@@ -22,6 +23,10 @@ interface Env {
 type EnvWithPayments = Env & PaymentEnv;
 
 export default {
+  async email(message: ForwardableEmailMessage, env: EnvWithPayments): Promise<void> {
+    await handleInboundEmail(message, env);
+  },
+
   async fetch(request: Request, env: EnvWithPayments): Promise<Response> {
     const url = new URL(request.url);
 
