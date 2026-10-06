@@ -16,7 +16,6 @@ export async function onRequestPost(context:{request:Request;env:Env}) {
   let body:{to?:string;subject?:string;reply?:string;originalMessage?:string;name?:string};
   try { body=await context.request.json(); } catch { return json({error:'Requête invalide.'},400); }
   const to=String(body.to||'').trim(), subject=String(body.subject||'').trim(), reply=String(body.reply||'').trim();
-  const originalMessage=String(body.originalMessage||'').trim(), name=String(body.name||'').trim();
   if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return json({error:'Adresse e-mail du destinataire invalide.'},400);
   if(!subject||!reply) return json({error:'Sujet et réponse obligatoires.'},400);
   if(reply.length>10000) return json({error:'La réponse est trop longue.'},400);
@@ -33,9 +32,36 @@ export async function onRequestPost(context:{request:Request;env:Env}) {
     return json({error:'Accès administrateur requis.'},403);
   }
   if(!context.env.RESEND_API_KEY||!context.env.RESEND_FROM_EMAIL) return json({error:'Configuration e-mail du serveur incomplète.'},500);
-  const safeName=escapeHtml(name||'Trader'), safeReply=escapeHtml(reply), safeOriginal=escapeHtml(originalMessage||'—');
-  const html='<div style="font-family:Arial,sans-serif;line-height:1.6;color:#172033;max-width:680px;margin:auto"><h2 style="color:#0b1f35">IAMTRADER</h2><p>Bonjour '+safeName+',</p><div style="white-space:pre-wrap">'+safeReply+'</div><hr style="margin:28px 0;border:0;border-top:1px solid #e5e7eb"><p style="font-size:12px;color:#64748b">Votre message initial :<br>'+safeOriginal+'</p></div>';
-  const text='Bonjour '+(name||'Trader')+',\n\n'+reply+'\n\n---\nVotre message initial :\n'+(originalMessage||'—');
+
+  const safeReply=escapeHtml(reply);
+  const logoUrl='https://iamtrader.trade/brand/logo-iamtrader-full.png';
+  const html=`<div style="margin:0;padding:32px 20px;background:#f5f8fb;font-family:Arial,Helvetica,sans-serif;color:#172033">
+    <div style="max-width:680px;margin:0 auto;background:#ffffff;border:1px solid #e6ebf0">
+      <div style="padding:30px 34px 28px">
+        <div style="margin:0 0 28px">
+          <img src="${logoUrl}" alt="IAMTRADER" width="170" style="display:block;width:170px;max-width:100%;height:auto;border:0">
+        </div>
+        <div style="font-size:15px;line-height:1.75;color:#172033;white-space:pre-wrap">${safeReply}</div>
+        <div style="margin-top:34px;padding-top:20px;border-top:1px solid #e5e7eb">
+          <div style="font-size:13px;font-weight:700;color:#0b1f35">Équipe Support IAMTRADER</div>
+          <div style="margin-top:3px;font-size:11px;color:#64748b">Trading Performance Management</div>
+          <div style="margin-top:13px;font-size:11px;line-height:1.8;color:#475569">
+            <a href="mailto:hello@iamtrader.trade" style="color:#0b1f35;text-decoration:none">hello@iamtrader.trade</a><br>
+            <a href="https://iamtrader.trade" style="color:#0b1f35;text-decoration:none">iamtrader.trade</a>
+          </div>
+          <div style="margin-top:14px;font-size:10px;font-weight:700;letter-spacing:.08em;color:#94a3b8">TRADE. MEASURE. IMPROVE.</div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+  const text=`${reply}
+
+---
+Équipe Support IAMTRADER
+Trading Performance Management
+hello@iamtrader.trade
+iamtrader.trade
+Trade. Measure. Improve.`;
   const resendResponse=await fetch('https://api.resend.com/emails',{method:'POST',headers:{Authorization:'Bearer '+context.env.RESEND_API_KEY,'Content-Type':'application/json'},body:JSON.stringify({from:context.env.RESEND_FROM_EMAIL,to:[to],subject:/^re:/i.test(subject)?subject:'Re: '+subject,html,text,...(context.env.RESEND_REPLY_TO?{reply_to:context.env.RESEND_REPLY_TO}:{})})});
   const resendData=await resendResponse.json().catch(()=>({}));
   if(!resendResponse.ok) return json({error:'Resend a refusé l’envoi.',details:resendData},502);
