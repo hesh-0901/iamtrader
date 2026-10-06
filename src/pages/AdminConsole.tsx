@@ -560,7 +560,7 @@ export function AdminConsole() {
                           {(() => {
                             const legacyConversation = [
                               { id:'legacy-inbound', direction:'inbound' as const, body:selectedMessage.message, at:selectedMessage.createdAt || new Date().toISOString(), from:selectedMessage.email, to:'hello@iamtrader.trade' },
-                              ...(selectedMessage.lastReply ? [{ id:'legacy-last-reply', direction:'outbound' as const, body:selectedMessage.lastReply, at:selectedMessage.repliedAt || selectedMessage.updatedAt || selectedMessage.createdAt || new Date().toISOString(), from:'hello@iamtrader.trade', to:selectedMessage.email }] : [])
+                              ...(selectedMessage.lastReply ? [{ id:'legacy-last-reply', direction:selectedMessage.repliedBy ? 'outbound' as const : 'inbound' as const, body:selectedMessage.lastReply, at:selectedMessage.repliedAt || selectedMessage.updatedAt || new Date().toISOString(), from:selectedMessage.repliedBy ? 'hello@iamtrader.trade' : selectedMessage.email, to:selectedMessage.repliedBy ? selectedMessage.email : 'hello@iamtrader.trade' }] : [])
                             ];
                             const conversation = Array.isArray(selectedMessage.conversation) && selectedMessage.conversation.length ? selectedMessage.conversation : legacyConversation;
                             return <div className="space-y-5">
