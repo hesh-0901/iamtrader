@@ -12,7 +12,10 @@
   "vars": {
     "PAYMENT_SIMULATION_ENABLED": "true",
     "RESEND_FROM_EMAIL": "hello@iamtrader.trade",
-    "RESEND_REPLY_TO": "hello@iamtrader.trade"
+    "RESEND_REPLY_TO": "hello@iamtrader.trade",
+    "CINETPAY_COUNTRY": "CD",
+    "CINETPAY_PLUS_AMOUNT_CDF": "23335",
+    "CINETPAY_COMMUNITY_AMOUNT_CDF": "210196"
   },
   "observability": {
     "enabled": true
