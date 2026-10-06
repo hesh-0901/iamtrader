@@ -258,7 +258,11 @@ export function AdminConsole() {
     try {
       const idToken = await currentUser.getIdToken();
       const thread = Array.isArray(selectedMessage.conversation) ? selectedMessage.conversation : [];
-      const lastInbound = [...thread].reverse().find(item => item.direction === 'inbound');
+      const customerEmail = String(selectedMessage.email || '').trim().toLowerCase();
+      const lastInbound = [...thread].reverse().find(item => {
+        const from = String(item.from || '').trim().toLowerCase();
+        return from === customerEmail || (item.direction === 'inbound' && from !== 'hello@iamtrader.trade');
+      });
       const response = await fetch('/api/contact-reply', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
