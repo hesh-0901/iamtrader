@@ -142,6 +142,7 @@ export async function handleInboundEmail(
   const messageId = message.headers.get('message-id') || '';
   const inReplyTo = message.headers.get('in-reply-to') || '';
   const references = message.headers.get('references') || '';
+  const conversationId = (message.headers.get('x-iamtrader-conversation-id') || '').trim();
   const receivedAt = new Date().toISOString();
   const senderEmail = extractEmail(message.from);
   const raw = await new Response(message.raw).text();
@@ -150,6 +151,9 @@ export async function handleInboundEmail(
   try {
     const existing = await firestoreQueryCollection(env, 'contactMessages', 200, 'createdAt');
     const senderCandidates = existing.filter(item => String(item.email || '').trim().toLowerCase() === senderEmail);
+    const explicitConversation = conversationId
+      ? existing.find(item => String(item.id || '').trim() === conversationId)
+      : undefined;
     const normalizedIncomingSubject = normalizeSubject(subject);
     const referenceCandidates = senderCandidates.filter(item => {
       const ids = Array.isArray(item.conversation)
@@ -160,7 +164,8 @@ export async function handleInboundEmail(
     const subjectCandidates = senderCandidates.filter(item => normalizeSubject(String(item.subject || '')) === normalizedIncomingSubject);
     // Prefer explicit email threading. If unavailable, only use a subject match when it is unambiguous;
     // otherwise continue the most recently updated conversation from this sender.
-    const matching = referenceCandidates[0]
+    const matching = explicitConversation
+      || referenceCandidates[0]
       || (subjectCandidates.length === 1 ? subjectCandidates[0] : undefined);
 
     const inboundEntry = {
