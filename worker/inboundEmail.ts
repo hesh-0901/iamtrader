@@ -167,11 +167,11 @@ export async function handleInboundEmail(
             to: message.to,
           }, ...(matching.lastReply ? [{
             id: 'legacy-last-reply',
-            direction: 'outbound',
+            direction: matching.repliedBy ? 'outbound' : 'inbound',
             body: String(matching.lastReply),
             at: String(matching.repliedAt || matching.updatedAt || receivedAt),
-            from: 'hello@iamtrader.trade',
-            to: String(matching.email || senderEmail),
+            from: matching.repliedBy ? 'hello@iamtrader.trade' : String(matching.email || senderEmail),
+            to: matching.repliedBy ? String(matching.email || senderEmail) : message.to,
           }] : [])];
 
       const conversation = [...existingConversation, inboundEntry];
