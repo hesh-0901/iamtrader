@@ -139,6 +139,23 @@ export async function updateAccount(accountId: string, data: Partial<TradingAcco
 }
 
 export async function deleteAccount(accountId: string): Promise<void> {
+  if (!auth.currentUser) {
+    throw new Error('Utilisateur non authentifié');
+  }
+
+  // Deleting an account must also remove every trade owned by that account.
+  // Otherwise orphaned trades continue to appear in the journal/dashboard.
+  const userId = auth.currentUser.uid;
+  const tradesQuery = query(
+    collection(db, 'trades'),
+    where('userId', '==', userId),
+    where('accountId', '==', accountId)
+  );
+  const tradesSnapshot = await getDocs(tradesQuery);
+
+  // Delete related trades first, then remove the account itself.
+  await Promise.all(tradesSnapshot.docs.map((tradeDoc) => deleteDoc(tradeDoc.ref)));
+
   const accountRef = doc(db, 'accounts', accountId);
   await deleteDoc(accountRef);
 }
