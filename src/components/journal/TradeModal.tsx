@@ -50,6 +50,7 @@ export function TradeModal({ isOpen, onClose, userId, accounts, selectedAccountI
   const [exitPrice, setExitPrice] = useState('');
   const [stopLoss, setStopLoss] = useState('');
   const [takeProfit, setTakeProfit] = useState('');
+  const [commission, setCommission] = useState('');
   const [positionSize, setPositionSize] = useState('');
   const [setup, setSetup] = useState('');
   const [timeframe, setTimeframe] = useState<TradingTimeframe | ''>('');
@@ -67,18 +68,21 @@ export function TradeModal({ isOpen, onClose, userId, accounts, selectedAccountI
     const entry = Number(entryPrice);
     const exit = Number(exitPrice);
     const sl = Number(stopLoss);
+    const commissionAmount = Number(commission);
     const size = Number(positionSize);
     const multiplier = selectedInstrument ? Number(selectedInstrument.valuePerPriceUnit) : 0;
 
     const hasEntry = Number.isFinite(entry) && entry > 0;
     const hasExit = Number.isFinite(exit) && exit > 0;
     const hasSize = Number.isFinite(size) && size > 0;
+    const hasCommission = Number.isFinite(commissionAmount) && commissionAmount >= 0;
     const hasMultiplier = Number.isFinite(multiplier) && multiplier > 0;
 
     let pnl: number | undefined;
     if (hasEntry && hasExit && hasSize && hasMultiplier && direction) {
       const priceMove = direction === 'BUY' ? exit - entry : entry - exit;
-      pnl = priceMove * size * multiplier;
+      const grossPnl = priceMove * size * multiplier;
+      pnl = grossPnl - (hasCommission ? commissionAmount : 0);
     }
 
     let risk: number | undefined;
@@ -96,7 +100,7 @@ export function TradeModal({ isOpen, onClose, userId, accounts, selectedAccountI
       result,
       session: getSessionFromDate(entryDate)
     };
-  }, [entryDate, entryPrice, exitPrice, stopLoss, positionSize, selectedInstrument, direction]);
+  }, [entryDate, entryPrice, exitPrice, stopLoss, commission, positionSize, selectedInstrument, direction]);
 
   useEffect(() => {
     if (!isOpen || !userId) return;
@@ -132,6 +136,7 @@ export function TradeModal({ isOpen, onClose, userId, accounts, selectedAccountI
       setExitPrice(tradeToEdit.exitPrice?.toString() || '');
       setStopLoss(tradeToEdit.stopLoss?.toString() || '');
       setTakeProfit(tradeToEdit.takeProfit?.toString() || '');
+      setCommission(tradeToEdit.commission?.toString() || '');
       setPositionSize(tradeToEdit.positionSize?.toString() || '');
       setSetup(tradeToEdit.setup || '');
       setTimeframe(tradeToEdit.timeframe || '');
@@ -149,6 +154,7 @@ export function TradeModal({ isOpen, onClose, userId, accounts, selectedAccountI
       setExitPrice('');
       setStopLoss('');
       setTakeProfit('');
+      setCommission('');
       setPositionSize('');
       setSetup('');
       setTimeframe('');
@@ -197,6 +203,7 @@ export function TradeModal({ isOpen, onClose, userId, accounts, selectedAccountI
         ...(exitPrice ? { exitPrice: Number(exitPrice) } : {}),
         ...(stopLoss ? { stopLoss: Number(stopLoss) } : {}),
         ...(takeProfit ? { takeProfit: Number(takeProfit) } : {}),
+        ...(commission ? { commission: Math.max(0, Number(commission)) } : {}),
         positionSize: Number(positionSize),
         riskAmount: calculations.risk,
         result: calculations.result,
@@ -274,17 +281,19 @@ export function TradeModal({ isOpen, onClose, userId, accounts, selectedAccountI
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <div><label className={labelClass}>Stop Loss *</label><input type="number" step="any" min="0" value={stopLoss} onChange={e => setStopLoss(e.target.value)} className={inputClass} required /></div>
               <div><label className={labelClass}>Take Profit</label><input type="number" step="any" min="0" value={takeProfit} onChange={e => setTakeProfit(e.target.value)} className={inputClass} /></div>
+              <div><label className={labelClass}>Commission ($)</label><input type="number" step="0.01" min="0" value={commission} onChange={e => setCommission(e.target.value)} placeholder="0.00" className={inputClass} /></div>
               <div><label className={labelClass}>Taille *</label><input type="number" step="any" min="0" value={positionSize} onChange={e => setPositionSize(e.target.value)} className={inputClass} required /></div>
               <div><label className={labelClass}>Session</label><div className={`${inputClass} bg-slate-50 flex items-center justify-between`}><span>{calculations.session ? calculations.session : 'Automatique après la date'}</span><span className="text-[9px] text-slate-400">AUTO</span></div></div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
               <div className="rounded-xl border border-[#dfe9e5] bg-[#f7fbf9] px-3 py-2.5"><label className={labelClass}>Risque initial</label><div className="flex items-center gap-2"><Calculator className="w-3.5 h-3.5 text-[#08b77a]" /><span className="text-sm font-bold text-[#10233a]">{calculations.risk !== undefined ? calculations.risk.toFixed(2) : '—'}</span><span className="text-[10px] text-slate-400">AUTO</span></div></div>
+              <div className="rounded-xl border border-[#dfe9e5] bg-[#f7fbf9] px-3 py-2.5"><label className={labelClass}>Commission</label><div className="text-sm font-bold text-[#10233a]">{commission ? Number(commission).toFixed(2) : '0.00'}</div></div>
               <div className="rounded-xl border border-[#dfe9e5] bg-[#f7fbf9] px-3 py-2.5"><label className={labelClass}>P&L net</label><div className={`text-sm font-bold ${calculations.pnl === undefined ? 'text-slate-400' : calculations.pnl >= 0 ? 'text-[#00a86b]' : 'text-[#f04f63]'}`}>{calculations.pnl !== undefined ? calculations.pnl.toFixed(2) : '—'}</div></div>
               <div className="rounded-xl border border-[#dfe9e5] bg-[#f7fbf9] px-3 py-2.5"><label className={labelClass}>Multiple R</label><div className="text-sm font-bold text-[#10233a]">{calculations.rMultiple !== undefined ? `${calculations.rMultiple >= 0 ? '+' : ''}${calculations.rMultiple.toFixed(2)}R` : '—'}</div></div>
               <div className="rounded-xl border border-[#dfe9e5] bg-[#f7fbf9] px-3 py-2.5"><label className={labelClass}>Résultat</label><div className="text-sm font-bold text-[#10233a]">{calculations.result === 'OPEN' ? 'Ouvert' : calculations.result === 'WIN' ? 'Gagnant' : calculations.result === 'LOSS' ? 'Perdant' : 'Break-even'}</div></div>
             </div>
-            <p className="text-[10px] text-slate-500">Le risque, le P&L, le Multiple R, le résultat et la session sont calculés automatiquement. Aucun de ces champs n’est saisissable manuellement.</p>
+            <p className="text-[10px] text-slate-500">Le risque, la commission, le P&L net, le Multiple R, le résultat et la session sont calculés automatiquement. Aucun de ces champs n’est saisissable manuellement.</p>
           </section>
         )}
 
