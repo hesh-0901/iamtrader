@@ -44,6 +44,7 @@ export interface Trade {
   takeProfit?: number;
   positionSize: number;
   riskAmount?: number;
+  commission?: number;
   result: TradeResult;
   pnl: number;
   rMultiple?: number;
