@@ -37,6 +37,10 @@ export function AccountsView({
     if (confirm('Confirmez-vous la suppression de ce compte de trading ?')) {
       try {
         await deleteAccount(accountId);
+        // The deleted account can no longer remain selected in the global app state.
+        if (selectedAccountId === accountId) {
+          onSelectAccount('all');
+        }
         showToast('Compte supprimé avec succès', 'success');
       } catch (err: any) {
         showToast(`Erreur: ${err.message}`, 'error');
