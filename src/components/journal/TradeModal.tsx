@@ -283,7 +283,7 @@ export function TradeModal({ isOpen, onClose, userId, accounts, selectedAccountI
               <div><label className={labelClass}>Take Profit</label><input type="number" step="any" min="0" value={takeProfit} onChange={e => setTakeProfit(e.target.value)} className={inputClass} /></div>
               <div><label className={labelClass}>Commission ($)</label><input type="number" step="0.01" min="0" value={commission} onChange={e => setCommission(e.target.value)} placeholder="0.00" className={inputClass} /></div>
               <div><label className={labelClass}>Taille *</label><input type="number" step="any" min="0" value={positionSize} onChange={e => setPositionSize(e.target.value)} className={inputClass} required /></div>
-              <div><label className={labelClass}>Session</label><div className={`${inputClass} bg-slate-50 flex items-center justify-between`}><span>{calculations.session ? calculations.session : 'Automatique après la date'}</span><span className="text-[9px] text-slate-400">AUTO</span></div></div>
+
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
