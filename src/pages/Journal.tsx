@@ -135,13 +135,14 @@ export function Journal({
   // Export CSV
   const exportCsv = () => {
     if (filteredTrades.length === 0) return;
-    const headers = ['Date', 'Symbol', 'Direction', 'Result', 'PnL', 'R_Multiple', 'EntryPrice', 'ExitPrice', 'Setup', 'Session', 'Emotion', 'Notes'];
+    const headers = ['Date', 'Symbol', 'Direction', 'Result', 'PnL', 'Commission', 'R_Multiple', 'EntryPrice', 'ExitPrice', 'Setup', 'Session', 'Emotion', 'Notes'];
     const rows = filteredTrades.map(t => [
       t.entryDate,
       t.symbol,
       t.direction,
       t.result,
       t.pnl,
+      t.commission ?? 0,
       t.rMultiple ?? '',
       t.entryPrice ?? '',
       t.exitPrice ?? '',
