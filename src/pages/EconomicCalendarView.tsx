@@ -122,7 +122,7 @@ function getWeekDates(value: string) {
 
 function localDateTime(value: unknown, fallbackDate?: string, fallbackTime?: string) {
   if (typeof value === 'string' && value) {
-    const sourceDate = value.match(/^(\\d{4}-\\d{2}-\\d{2})/)?.[1] || '';
+    const sourceDate = value.match(/^(\d{4}-\d{2}-\d{2})/)?.[1] || '';
 
     const parsed = new Date(value);
     if (!Number.isNaN(parsed.getTime())) {
@@ -141,7 +141,7 @@ function localDateTime(value: unknown, fallbackDate?: string, fallbackTime?: str
     }
 
     if (sourceDate) {
-      const timeMatch = value.match(/T(\\d{2}:\\d{2})/);
+      const timeMatch = value.match(/T(\d{2}:\d{2})/);
       return {
         date: sourceDate,
         time: timeMatch?.[1] || fallbackTime || '—',
