@@ -21,6 +21,7 @@ import { TraderScoreView } from './pages/TraderScoreView';
 import { AccountsView } from './pages/AccountsView';
 import { SettingsView } from './pages/SettingsView';
 import { AdminConsole } from './pages/AdminConsole';
+import { CommunityView } from './pages/CommunityView';
 import { TradeModal } from './components/journal/TradeModal';
 import { TradeDetailModal } from './components/journal/TradeDetailModal';
 import { AccountModal } from './components/accounts/AccountModal';
@@ -255,6 +256,7 @@ function MainAppContent() {
     'trader-score': 'Trader Score™',
     'accounts': 'Comptes de Trading',
     'settings': 'Paramètres Système',
+    'community': 'Community',
     'admin': 'Console Administration'
   };
 
@@ -379,6 +381,10 @@ function MainAppContent() {
               selectedAccountId={selectedAccountId}
               onSelectAccount={(id) => setSelectedAccountId(id)}
             />
+          )}
+
+          {currentPage === 'community' && (
+            <CommunityView />
           )}
 
           {currentPage === 'settings' && (
