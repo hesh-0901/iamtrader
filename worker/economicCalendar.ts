@@ -36,8 +36,9 @@ function normalizeEvent(raw: ForexFactoryEvent, index: number) {
     id: `${rawDate || 'unknown'}-${raw.country || 'unknown'}-${raw.title || 'event'}-${index}`,
     title: String(raw.title || 'Economic Event').trim(),
     country: String(raw.country || '').trim().toUpperCase(),
-    date,
-    time,
+    date: dateMatch?.[1] || '',
+    time: timeMatch?.[1] || '',
+    datetime: rawDate,
     impact: normalizeImpact(raw.impact),
     actual: raw.actual ?? '',
     forecast: raw.forecast ?? '',
@@ -62,7 +63,7 @@ export async function handleEconomicCalendar(request: Request): Promise<Response
     return json({ error: 'Méthode non autorisée.' }, 405);
   }
 
-  const cacheKey = new Request(new URL('/api/economic-calendar?source=forex-factory-week', request.url).toString(), {
+  const cacheKey = new Request(new URL('/api/economic-calendar?source=forex-factory-week-v2', request.url).toString(), {
     method: 'GET',
   });
 
