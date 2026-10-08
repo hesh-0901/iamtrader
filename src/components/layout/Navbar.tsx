@@ -59,13 +59,9 @@ export function Navbar({ userProfile, accounts, selectedAccountId, onSelectAccou
           title="Ouvrir VYRA"
           aria-label="Ouvrir VYRA"
         >
-          <img
-            src="/vyra-avatar.png"
-            alt="VYRA"
-            className="h-full w-full rounded-full object-cover object-[50%_42%]"
-          />
-          <span className="absolute -right-1 -bottom-1 flex h-3.5 w-3.5 items-center justify-center rounded-full border-2 border-white bg-[#00a982] text-white shadow-sm">
-            <Sparkles className="h-1.5 w-1.5" />
+          <span className="relative flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-[#00c796] to-[#00a982] text-white shadow-[0_4px_12px_rgba(0,169,130,0.28)] animate-pulse">
+            <Sparkles className="h-3.5 w-3.5 animate-[spin_3s_linear_infinite]" />
+            <span className="absolute inset-0 rounded-full ring-2 ring-[#00c796]/20 animate-ping" />
           </span>
         </button>
 
