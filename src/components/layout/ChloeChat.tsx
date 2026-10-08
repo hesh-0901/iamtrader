@@ -149,7 +149,15 @@ export function ChloeChat({ isOpen, onClose, userId, userProfile, accounts, trad
         throw new Error(diagnostic ? `${data.error || 'Chloé est indisponible.'} [${diagnostic}]` : (data.error || 'Chloé est indisponible.'));
       }
       setMessages(prev => [...prev, { role: 'assistant', content: data.reply || 'Je n’ai pas de réponse exploitable.' }]);
-      setPendingAction(data.action || null);
+      setPendingAction(data.action ? {
+        ...data.action,
+        trade: {
+          ...data.action.trade,
+          ...(data.action.trade?.commission != null && data.action.trade?.commission !== ''
+            ? { commission: Math.abs(Number(data.action.trade.commission)) }
+            : {}),
+        },
+      } : null);
       setAttachments([]);
     } catch (error: any) {
       setMessages(prev => [...prev, { role: 'assistant', content: error?.message || 'Une erreur est survenue.' }]);
@@ -177,7 +185,7 @@ export function ChloeChat({ isOpen, onClose, userId, userProfile, accounts, trad
     const size = Number(t.positionSize);
     const sl = Number(t.stopLoss);
     const multiplier = Number(instrument.valuePerPriceUnit);
-    const commission = t.commission == null || t.commission === '' ? 0 : Math.max(0, Number(t.commission));
+    const commission = t.commission == null || t.commission === '' ? 0 : Math.abs(Number(t.commission));
     const priceMove = exit === undefined ? 0 : t.direction === 'BUY' ? exit - entry : entry - exit;
     const pnl = exit === undefined ? 0 : priceMove * size * multiplier - commission;
     const risk = Math.abs(entry - sl) * size * multiplier;
@@ -185,33 +193,38 @@ export function ChloeChat({ isOpen, onClose, userId, userProfile, accounts, trad
     const result = exit === undefined ? 'OPEN' : pnl > 0 ? 'WIN' : pnl < 0 ? 'LOSS' : 'BREAKEVEN';
     const entryIso = new Date(t.entryDate).toISOString();
 
-    await addTrade({
-      userId,
-      accountId: account.id,
-      symbol: String(t.symbol).toUpperCase(),
-      direction: t.direction,
-      entryDate: entryIso,
-      ...(t.exitDate ? { exitDate: new Date(t.exitDate).toISOString() } : {}),
-      entryPrice: entry,
-      ...(exit !== undefined ? { exitPrice: exit } : {}),
-      stopLoss: sl,
-      ...(t.takeProfit != null && t.takeProfit !== '' ? { takeProfit: Number(t.takeProfit) } : {}),
-      ...(commission > 0 ? { commission } : {}),
-      positionSize: size,
-      riskAmount: risk,
-      result,
-      pnl,
-      ...(rMultiple !== undefined ? { rMultiple } : {}),
-      setup: String(t.setup),
-      session: getSession(entryIso),
-      timeframe: String(t.timeframe),
-      emotion: String(t.emotion),
-      notes: String(t.notes || ''),
-    } as any);
+    try {
+      await addTrade({
+        userId,
+        accountId: account.id,
+        symbol: String(t.symbol).toUpperCase(),
+        direction: t.direction,
+        entryDate: entryIso,
+        ...(t.exitDate ? { exitDate: new Date(t.exitDate).toISOString() } : {}),
+        entryPrice: entry,
+        ...(exit !== undefined ? { exitPrice: exit } : {}),
+        stopLoss: sl,
+        ...(t.takeProfit != null && t.takeProfit !== '' ? { takeProfit: Number(t.takeProfit) } : {}),
+        ...(commission > 0 ? { commission } : {}),
+        positionSize: size,
+        riskAmount: risk,
+        result,
+        pnl,
+        ...(rMultiple !== undefined ? { rMultiple } : {}),
+        setup: String(t.setup),
+        session: getSession(entryIso),
+        timeframe: String(t.timeframe),
+        emotion: String(t.emotion),
+        notes: String(t.notes || ''),
+      } as any);
 
-    setPendingAction(null);
-    setMessages(prev => [...prev, { role: 'assistant', content: 'Le trade a été enregistré dans votre journal IAMTRADER.' }]);
-    showToast('Trade enregistré par Chloé.', 'success');
+      setPendingAction(null);
+      setMessages(prev => [...prev, { role: 'assistant', content: 'Le trade a été enregistré dans votre journal IAMTRADER.' }]);
+      showToast('Trade enregistré par Chloé.', 'success');
+    } catch (error) {
+      console.error('Chloé trade save failed:', error);
+      showToast(error instanceof Error ? error.message : 'Impossible d’enregistrer le trade dans IAMTRADER.', 'error');
+    }
   };
 
   const startRecording = async () => {
@@ -279,8 +292,28 @@ export function ChloeChat({ isOpen, onClose, userId, userProfile, accounts, trad
                 <div className="text-xs font-black text-[#08795f]">Action proposée : enregistrer ce trade</div>
                 <p className="mt-1 text-[10px] text-[#4f6f65]">{pendingAction.reason || 'Les informations semblent suffisantes.'}</p>
                 <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-2 text-[10px]">
-                  {Object.entries(pendingAction.trade).filter(([,v]) => v !== null && v !== '' && v !== undefined).slice(0, 12).map(([key,value]) => <div key={key} className="rounded-lg bg-white/80 px-2 py-1.5"><span className="block text-[#8a9aab]">{key}</span><strong className="text-[#10233a]">{String(value)}</strong></div>)}
+                  {Object.entries(pendingAction.trade).filter(([,v]) => v !== null && v !== '' && v !== undefined).slice(0, 12).map(([key,value]) => <div key={key} className="rounded-lg bg-white/80 px-2 py-1.5"><span className="block text-[#8a9aab]">{key}</span><strong className="text-[#10233a]">{key === 'commission' ? Math.abs(Number(value)).toFixed(2) : String(value)}</strong></div>)}
                 </div>
+                {(() => {
+                  const t = pendingAction.trade;
+                  const account = accounts.find(a => a.id === t.accountId) || accounts[0];
+                  const instruments = (userProfile as any)?.settings?.instruments || [];
+                  const instrument = instruments.find((x: any) => String(x.symbol).toUpperCase() === String(t.symbol || '').toUpperCase());
+                  const missing = [
+                    !account ? 'compte' : '',
+                    !instrument ? 'instrument configuré' : '',
+                    !t.symbol ? 'symbole' : '',
+                    !t.direction ? 'direction' : '',
+                    !t.entryDate ? 'date d’entrée' : '',
+                    !t.entryPrice ? 'prix d’entrée' : '',
+                    !t.positionSize ? 'taille de position' : '',
+                    !t.stopLoss ? 'stop loss' : '',
+                    !t.setup ? 'setup' : '',
+                    !t.timeframe ? 'timeframe' : '',
+                    !t.emotion ? 'émotion' : '',
+                  ].filter(Boolean);
+                  return missing.length > 0 ? <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[10px] text-amber-800">Informations manquantes avant enregistrement : <strong>{missing.join(', ')}</strong>. Chloé doit les obtenir avant de pouvoir créer le trade.</p> : null;
+                })()}
                 <div className="mt-3 flex gap-2">
                   <button type="button" onClick={executeTrade} className="inline-flex items-center gap-1.5 rounded-xl bg-[#00a982] px-3 py-2 text-[10px] font-bold text-white hover:bg-[#008f70]"><Check className="h-3.5 w-3.5" /> Enregistrer</button>
                   <button type="button" onClick={() => setPendingAction(null)} className="rounded-xl border border-[#cfe3dc] bg-white px-3 py-2 text-[10px] font-bold text-[#5d7183]">Annuler</button>
