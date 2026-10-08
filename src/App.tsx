@@ -9,6 +9,7 @@ import {
 import { Trade, TradingAccount, UserProfile, SubscriptionPlan } from './types';
 import { ToastProvider, useToast } from './components/common/Toast';
 import { Navbar } from './components/layout/Navbar';
+import { VyraChat } from './components/layout/VyraChat';
 import { Sidebar, NavigationPage } from './components/layout/Sidebar';
 import { LandingPage } from './pages/LandingPage';
 import { Dashboard } from './pages/Dashboard';
@@ -53,6 +54,7 @@ function MainAppContent() {
   const [tradeToEdit, setTradeToEdit] = useState<Trade | null>(null);
   const [inspectingTrade, setInspectingTrade] = useState<Trade | null>(null);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
+  const [isVyraOpen, setIsVyraOpen] = useState(false);
 
   // 1. Auth Subscription
   useEffect(() => {
@@ -307,6 +309,7 @@ function MainAppContent() {
           onOpenNewAccount={handleOpenNewAccount}
           onLogout={handleLogout}
           onToggleSidebar={() => setIsMobileSidebarOpen(true)}
+          onOpenVyra={() => setIsVyraOpen(true)}
           currentPageTitle={pageTitles[currentPage]}
         />
 
@@ -429,6 +432,11 @@ function MainAppContent() {
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
         defaultMode={authModalDefaultMode}
+      />
+
+      <VyraChat
+        isOpen={isVyraOpen}
+        onClose={() => setIsVyraOpen(false)}
       />
     </div>
   );
