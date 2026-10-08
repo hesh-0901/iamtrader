@@ -36,6 +36,8 @@ const currencyFlags: Record<string, string> = {
   USD: '🇺🇸', EUR: '🇪🇺', GBP: '🇬🇧', JPY: '🇯🇵', CAD: '🇨🇦', AUD: '🇦🇺', NZD: '🇳🇿', CHF: '🇨🇭',
 };
 
+const currencyOptions = ['USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'NZD', 'CHF'];
+
 function localDateTime(value: unknown, fallbackDate?: string, fallbackTime?: string) {
   if (typeof value === 'string' && value) {
     const parsed = new Date(value);
@@ -71,6 +73,19 @@ function normalizeEvent(raw: ApiEvent, index: number): EconomicEvent {
     previous: raw.prior ?? raw.previous ?? undefined,
     url: raw.url || undefined,
   };
+}
+
+function eventSummary(event: EconomicEvent) {
+  const name = event.event.toLowerCase();
+  if (name.includes('nonfarm') || name.includes('payroll')) return 'Mesure les créations d’emplois américaines et peut fortement déplacer le dollar.';
+  if (name.includes('fomc') || name.includes('interest rate') || name.includes('rate decision')) return 'Donne le signal de politique monétaire et peut fortement influencer les taux et le dollar.';
+  if (name.includes('cpi') || name.includes('consumer price')) return 'Mesure l’inflation et influence les anticipations de taux de la banque centrale.';
+  if (name.includes('gdp') || name.includes('gross domestic')) return 'Mesure la croissance économique et donne une lecture de la vigueur de l’économie.';
+  if (name.includes('jobless') || name.includes('unemployment') || name.includes('labour force')) return 'Donne une lecture du marché du travail et de la solidité de l’économie.';
+  if (name.includes('retail sales')) return 'Mesure la consommation des ménages, un moteur important de l’activité économique.';
+  if (name.includes('pmi') || name.includes('ism')) return 'Indique le rythme de l’activité économique et les perspectives de croissance.';
+  if (name.includes('pce') || name.includes('ppi')) return 'Apporte une information clé sur les pressions inflationnistes.';
+  return 'Indicateur économique à surveiller pour évaluer les perspectives de la devise.';
 }
 
 function localIsoDate(date = new Date()) {
@@ -126,7 +141,7 @@ export function EconomicCalendarView() {
 
   useEffect(() => { void loadEvents(date); }, [date]);
 
-  const currencies = useMemo(() => Array.from(new Set(events.map(e => e.currency).filter(Boolean))).sort(), [events]);
+  const currencies = useMemo(() => Array.from(new Set([...currencyOptions, ...events.map(e => e.currency).filter(Boolean)])).sort(), [events]);
   const visibleEvents = useMemo(() => events
     .filter(e => e.date === date)
     .filter(e => impact === 'all' || e.impact === impact)
@@ -181,7 +196,7 @@ export function EconomicCalendarView() {
         </select>
         <select value={currency} onChange={e => setCurrency(e.target.value)} className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 outline-none focus:border-[#00a982]">
           <option value="all">Toutes les devises</option>
-          {currencies.map(value => <option key={value} value={value}>{value}</option>)}
+          {currencies.map(value => <option key={value} value={value}>{currencyFlags[value] || '🌐'} {value}</option>)}
         </select>
         <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-500">
           <TrendingUp className="h-4 w-4 text-[#00a982]" />
@@ -228,15 +243,16 @@ export function EconomicCalendarView() {
                       <span className="text-sm font-black text-[#0b1f35]">{event.event}</span>
                       <span className={`rounded-full border px-2 py-0.5 text-[8px] font-black uppercase ${cfg.badge}`}>{cfg.label}</span>
                     </div>
+                    <div className="mt-1 text-[10px] leading-4 text-slate-500">{eventSummary(event)}</div>
                     <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-slate-400">
                       <span className="capitalize">{event.category || 'Indicateur économique'}</span>
                       {event.url && <a href={event.url} target="_blank" rel="noreferrer" className="font-semibold text-[#00a982] hover:underline">Détails</a>}
                     </div>
                   </div>
                   <div className="grid grid-cols-3 gap-3 rounded-xl bg-slate-50 px-3 py-2.5">
-                    <div><div className="text-[8px] font-bold uppercase tracking-wider text-slate-400">Réel</div><div className="mt-1 text-xs font-black text-[#0b1f35]">{event.actual || '—'}</div></div>
-                    <div><div className="text-[8px] font-bold uppercase tracking-wider text-slate-400">Prévision</div><div className="mt-1 text-xs font-black text-[#0b1f35]">{event.forecast || '—'}</div></div>
-                    <div><div className="text-[8px] font-bold uppercase tracking-wider text-slate-400">Précédent</div><div className="mt-1 text-xs font-black text-[#0b1f35]">{event.previous || '—'}</div></div>
+                    <div><div className="text-[8px] font-bold uppercase tracking-wider text-slate-400">Actuel</div><div className="mt-1 text-xs font-black text-[#0b1f35]">{event.actual || (event.date > today ? 'À venir' : 'Non publié')}</div></div>
+                    <div><div className="text-[8px] font-bold uppercase tracking-wider text-slate-400">Prévision</div><div className="mt-1 text-xs font-black text-[#0b1f35]">{event.forecast || 'Non communiqué'}</div></div>
+                    <div><div className="text-[8px] font-bold uppercase tracking-wider text-slate-400">Précédent</div><div className="mt-1 text-xs font-black text-[#0b1f35]">{event.previous || 'Non communiqué'}</div></div>
                   </div>
                 </div>
               );
@@ -249,6 +265,16 @@ export function EconomicCalendarView() {
             <button type="button" onClick={() => { setImpact('all'); setCurrency('all'); }} className="mt-3 text-xs font-bold text-[#00a982] hover:underline">Réinitialiser les filtres</button>
           </div>
         )}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-2 px-1">
+        <span className="mr-1 text-[9px] font-bold uppercase tracking-wider text-slate-400">Devises</span>
+        <button type="button" onClick={() => setCurrency('all')} className={`rounded-lg px-2.5 py-1.5 text-[9px] font-black transition ${currency === 'all' ? 'bg-[#0b1f35] text-white' : 'bg-white text-slate-500 hover:bg-slate-100'}`}>Toutes</button>
+        {currencyOptions.map(value => (
+          <button key={value} type="button" onClick={() => setCurrency(value)} className={`rounded-lg px-2.5 py-1.5 text-[9px] font-black transition ${currency === value ? 'bg-[#0b1f35] text-white' : 'bg-white text-slate-500 hover:bg-slate-100'}`}>
+            {currencyFlags[value]} {value}
+          </button>
+        ))}
       </div>
 
       <div className="flex items-center justify-between px-1 text-[9px] text-slate-400">
