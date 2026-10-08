@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, ChevronDown, LogOut, Menu } from 'lucide-react';
+import { Plus, ChevronDown, LogOut, Menu, Bot } from 'lucide-react';
 import { TradingAccount, UserProfile } from '../../types';
 
 interface NavbarProps {
@@ -11,10 +11,11 @@ interface NavbarProps {
   onOpenNewAccount: () => void;
   onLogout: () => void;
   onToggleSidebar: () => void;
+  onOpenVyra: () => void;
   currentPageTitle: string;
 }
 
-export function Navbar({ userProfile, accounts, selectedAccountId, onSelectAccount, onOpenNewTrade, onLogout, onToggleSidebar, currentPageTitle }: NavbarProps) {
+export function Navbar({ userProfile, accounts, selectedAccountId, onSelectAccount, onOpenNewTrade, onLogout, onToggleSidebar, onOpenVyra, currentPageTitle }: NavbarProps) {
   return (
     <header className="h-16 border-b border-[#e7eeeb] bg-white px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30 select-none">
       <div className="flex items-center gap-3 min-w-0">
@@ -51,6 +52,15 @@ export function Navbar({ userProfile, accounts, selectedAccountId, onSelectAccou
             <ChevronDown className="w-3 h-3 text-[#8da0b1] absolute right-0 top-1/2 -translate-y-1/2 pointer-events-none" />
           </div>
         </div>
+
+        <button
+          onClick={onOpenVyra}
+          className="w-8 h-8 rounded-lg border border-slate-200 bg-white text-[#71839a] hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50/50 flex items-center justify-center transition-colors cursor-pointer"
+          title="Ouvrir VYRA"
+          aria-label="Ouvrir VYRA"
+        >
+          <Bot className="w-4 h-4" />
+        </button>
 
         <button
           onClick={onOpenNewTrade}
