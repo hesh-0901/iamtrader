@@ -65,9 +65,26 @@ function normalizeEvent(raw: ForexFactoryEvent, index: number) {
   };
 }
 
+function normalizeEventTitle(title: string) {
+  const normalized = title.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+
+  const aliases: Array<[RegExp, string]> = [
+    [/^unemployment claims$/, 'initial jobless claims'],
+    [/^final wholesale inventories m m$/, 'wholesale inventories'],
+    [/^natural gas storage$/, 'natural gas storage'],
+    [/^30 y bond auction$/, '30 y bond auction'],
+  ];
+
+  for (const [pattern, replacement] of aliases) {
+    if (pattern.test(normalized)) return replacement;
+  }
+
+  return normalized;
+}
+
 function eventKey(title: string, country: string, date: string, time: string) {
   return [
-    title.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(),
+    normalizeEventTitle(title),
     country.toUpperCase(),
     date,
     time,
