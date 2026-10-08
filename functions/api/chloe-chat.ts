@@ -152,7 +152,7 @@ export async function onRequest(context: { request: Request; env: Env }) {
 
     if (!response.ok) {
       console.error('Chloe Gemini API error:', { status: response.status, model, response: raw.slice(0, 3000) });
-      return json({ error: 'Chloé ne peut pas répondre pour le moment.', details: { status: response.status, model } }, 502);
+      return json({ error: 'Chloé ne peut pas répondre pour le moment.', details: { status: response.status, model, provider: raw.slice(0, 4000) } }, 502);
     }
 
     const output = data?.candidates?.[0]?.content?.parts
@@ -175,6 +175,6 @@ export async function onRequest(context: { request: Request; env: Env }) {
     });
   } catch (error) {
     console.error('Chloe fetch failed:', error);
-    return json({ error: 'Le service IA n’a pas pu répondre pour le moment.' }, 502);
+    return json({ error: 'Le service IA n’a pas pu répondre pour le moment.', details: { reason: error instanceof Error ? error.message : String(error), model } }, 502);
   }
 }
