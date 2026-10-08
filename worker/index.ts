@@ -7,6 +7,7 @@ import { handleSubscriptionStatus } from './subscriptionStatus';
 import { handlePaymentHistory } from './paymentHistory';
 import { handleAdminMutation } from './admin';
 import { handleInboundEmail } from './inboundEmail';
+import { handleEconomicCalendar } from './economicCalendar';
 
 interface Env {
   ASSETS: Fetcher;
@@ -34,6 +35,10 @@ export default {
 
   async fetch(request: Request, env: EnvWithPayments): Promise<Response> {
     const url = new URL(request.url);
+
+    if (url.pathname === '/api/economic-calendar') {
+      return handleEconomicCalendar(request);
+    }
 
     if (url.pathname === '/api/ai-chat') {
       return handleAiChat({ request, env });
