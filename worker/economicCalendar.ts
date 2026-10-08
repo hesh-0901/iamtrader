@@ -28,11 +28,16 @@ function normalizeImpact(value: unknown) {
 }
 
 function normalizeEvent(raw: ForexFactoryEvent, index: number) {
+  const rawDate = String(raw.date || '').trim();
+  const dateMatch = rawDate.match(/^(\\d{4}-\\d{2}-\\d{2})/);
+  const timeMatch = rawDate.match(/T(\\d{2}:\\d{2})/);
+
   return {
-    id: `${raw.date || 'unknown'}-${raw.country || 'unknown'}-${raw.title || 'event'}-${index}`,
+    id: `${rawDate || 'unknown'}-${raw.country || 'unknown'}-${raw.title || 'event'}-${index}`,
     title: String(raw.title || 'Economic Event').trim(),
     country: String(raw.country || '').trim().toUpperCase(),
-    date: raw.date || '',
+    date: dateMatch?.[1] || rawDate.slice(0, 10),
+    time: timeMatch?.[1] || '',
     impact: normalizeImpact(raw.impact),
     actual: raw.actual ?? '',
     forecast: raw.forecast ?? '',
