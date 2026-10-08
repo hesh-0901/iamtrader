@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { FileText, Image as ImageIcon, Mic, Paperclip, Send, Square, X, Check, Sparkles, Loader2 } from 'lucide-react';
+import { FileText, Mic, Paperclip, Send, Square, X, Check, Sparkles, Loader2 } from 'lucide-react';
 import { addTrade } from '../../services/firestore';
 import { TradingAccount, Trade, UserProfile } from '../../types';
 import { useToast } from '../common/Toast';
@@ -151,6 +151,8 @@ export function ChloeChat({ isOpen, onClose, userId, userProfile, accounts, trad
     if (!pendingAction?.trade || pendingAction.type !== 'create_trade') return;
     const t = pendingAction.trade;
     const account = accounts.find(a => a.id === t.accountId) || accounts[0];
+    const currentMonthTradeCount = trades.filter((trade) => { const d = new Date(trade.entryDate); const n = new Date(); return d.getFullYear() === n.getFullYear() && d.getMonth() === n.getMonth(); }).length;
+    if (userProfile?.plan === 'free' && currentMonthTradeCount >= 5) { showToast('La limite Starter de 5 trades ce mois-ci est atteinte.', 'error'); return; }
     const instruments = (userProfile as any)?.settings?.instruments || [];
     const instrument = instruments.find((x: any) => String(x.symbol).toUpperCase() === String(t.symbol || '').toUpperCase());
 
