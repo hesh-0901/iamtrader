@@ -1,7 +1,6 @@
 interface Env {
   GEMINI_API_KEY: string;
   GEMINI_MODEL?: string;
-  GEMINI_CHLOE_MODEL?: string;
 }
 
 type Message = { role: 'user' | 'assistant'; content: string };
@@ -129,7 +128,8 @@ export async function onRequest(context: { request: Request; env: Env }) {
     parts.push({ inlineData: { mimeType: file.mimeType, data: cleanData } });
   }
 
-  const model = (context.env.GEMINI_CHLOE_MODEL || context.env.GEMINI_MODEL || 'gemini-3.5-flash-lite').trim();
+  // Chloé utilise exactement la même sélection de modèle que VYRA.
+  const model = (context.env.GEMINI_MODEL || 'gemini-3.5-flash-lite').trim();
 
   try {
     const response = await fetch(
@@ -140,7 +140,6 @@ export async function onRequest(context: { request: Request; env: Env }) {
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTIONS }] },
           contents: [{ role: 'user', parts }],
-          tools: [{ google_search: {} }],
           generationConfig: { responseMimeType: 'application/json' },
         }),
       }
