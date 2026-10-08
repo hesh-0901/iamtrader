@@ -140,6 +140,7 @@ export async function onRequest(context: { request: Request; env: Env }) {
         body: JSON.stringify({
           systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTIONS }] },
           contents: [{ role: 'user', parts }],
+          tools: [{ google_search: {} }],
           generationConfig: { responseMimeType: 'application/json', temperature: 0.2 },
         }),
       }
