@@ -1,4 +1,6 @@
 const SOURCE_URL = 'https://nfs.faireconomy.media/ff_calendar_thisweek.json';
+const ENRICH_URL = 'https://api.tradingeconomics.com/calendar/country/united%20states';
+
 type ForexFactoryEvent = {
   title?: string;
   country?: string;
@@ -7,6 +9,15 @@ type ForexFactoryEvent = {
   actual?: string;
   forecast?: string;
   previous?: string;
+};
+
+type EnrichmentEvent = {
+  Date?: string;
+  Country?: string;
+  Event?: string;
+  Actual?: string;
+  Forecast?: string;
+  Previous?: string;
 };
 
 function json(data: unknown, status = 200, headers: HeadersInit = {}) {
@@ -27,23 +38,94 @@ function normalizeImpact(value: unknown) {
   return 'low';
 }
 
+function normalizeDate(value: string) {
+  const match = value.match(/^(\d{4}-\d{2}-\d{2})/);
+  return match?.[1] || '';
+}
+
+function normalizeTime(value: string) {
+  const match = value.match(/T(\d{2}:\d{2})/);
+  return match?.[1] || '';
+}
+
 function normalizeEvent(raw: ForexFactoryEvent, index: number) {
   const rawDate = String(raw.date || '').trim();
-  const dateMatch = rawDate.match(/^(\\d{4}-\\d{2}-\\d{2})/);
-  const timeMatch = rawDate.match(/T(\\d{2}:\\d{2})/);
 
   return {
     id: `${rawDate || 'unknown'}-${raw.country || 'unknown'}-${raw.title || 'event'}-${index}`,
     title: String(raw.title || 'Economic Event').trim(),
     country: String(raw.country || '').trim().toUpperCase(),
-    date: dateMatch?.[1] || '',
-    time: timeMatch?.[1] || '',
+    date: normalizeDate(rawDate),
+    time: normalizeTime(rawDate),
     datetime: rawDate,
     impact: normalizeImpact(raw.impact),
-    actual: raw.actual ?? '',
-    forecast: raw.forecast ?? '',
-    previous: raw.previous ?? '',
+    actual: String(raw.actual ?? '').trim(),
+    forecast: String(raw.forecast ?? '').trim(),
+    previous: String(raw.previous ?? '').trim(),
   };
+}
+
+function eventKey(title: string, country: string, date: string, time: string) {
+  return [
+    title.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim(),
+    country.toUpperCase(),
+    date,
+    time,
+  ].join('|');
+}
+
+async function enrichActuals(events: ReturnType<typeof normalizeEvent>[], from: string, to: string) {
+  const countries = ['united states'];
+  const enriched = new Map<string, EnrichmentEvent>();
+
+  for (const country of countries) {
+    try {
+      const url = new URL(ENRICH_URL);
+      url.searchParams.set('d1', from);
+      url.searchParams.set('d2', to);
+      url.searchParams.set('c', 'guest:guest');
+      url.searchParams.set('f', 'json');
+
+      const response = await fetch(url.toString(), {
+        headers: {
+          Accept: 'application/json',
+          'User-Agent': 'IAMTRADER Economic Calendar/1.0',
+        },
+      });
+
+      if (!response.ok) continue;
+
+      const payload = await response.json() as unknown;
+      if (!Array.isArray(payload)) continue;
+
+      for (const item of payload as EnrichmentEvent[]) {
+        const datetime = String(item.Date || '');
+        const date = normalizeDate(datetime);
+        const time = normalizeTime(datetime);
+        const title = String(item.Event || '').trim();
+
+        if (!date || !title) continue;
+
+        enriched.set(eventKey(title, 'USD', date, time), item);
+      }
+    } catch {
+      // The enrichment source is optional. Forex Factory remains authoritative for the schedule.
+    }
+  }
+
+  return events.map((event) => {
+    if (event.country !== 'USD') return event;
+
+    const match = enriched.get(eventKey(event.title, event.country, event.date, event.time));
+    if (!match) return event;
+
+    return {
+      ...event,
+      actual: event.actual || String(match.Actual ?? '').trim(),
+      forecast: event.forecast || String(match.Forecast ?? '').trim(),
+      previous: event.previous || String(match.Previous ?? '').trim(),
+    };
+  });
 }
 
 export async function handleEconomicCalendar(request: Request): Promise<Response> {
@@ -63,12 +145,21 @@ export async function handleEconomicCalendar(request: Request): Promise<Response
     return json({ error: 'Méthode non autorisée.' }, 405);
   }
 
-  const cacheKey = new Request(new URL('/api/economic-calendar?source=forex-factory-week-v2', request.url).toString(), {
-    method: 'GET',
-  });
+  const requestUrl = new URL(request.url);
+  const from = requestUrl.searchParams.get('from') || '';
+  const to = requestUrl.searchParams.get('to') || '';
+
+  const cacheKey = new Request(
+    new URL(
+      `/api/economic-calendar?source=forex-factory-week-v3&from=${from}&to=${to}`,
+      request.url,
+    ).toString(),
+    { method: 'GET' },
+  );
 
   const cache = caches.default;
   const cached = await cache.match(cacheKey);
+
   if (cached) {
     const response = new Response(cached.body, cached);
     response.headers.set('X-IAMTRADER-Calendar-Cache', 'HIT');
@@ -90,13 +181,18 @@ export async function handleEconomicCalendar(request: Request): Promise<Response
     const payload = await upstream.json() as unknown;
     const rawEvents = Array.isArray(payload) ? payload as ForexFactoryEvent[] : [];
 
-    const events = rawEvents
+    const scheduledEvents = rawEvents
       .map(normalizeEvent)
       .filter(event => event.title && event.date);
+
+    const events = from && to
+      ? await enrichActuals(scheduledEvents, from, to)
+      : scheduledEvents;
 
     const response = json({
       events,
       source: 'forex-factory',
+      enrichment: 'trading-economics',
       fetchedAt: new Date().toISOString(),
     });
 
