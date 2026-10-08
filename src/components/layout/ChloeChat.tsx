@@ -144,7 +144,10 @@ export function ChloeChat({ isOpen, onClose, userId, userProfile, accounts, trad
         body: JSON.stringify({ messages: [...messages, { role: 'user', content: visibleText }], userContext: context, attachments }),
       });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error || 'Chloé est indisponible.');
+      if (!response.ok) {
+        const diagnostic = data?.details?.provider || data?.details?.reason || '';
+        throw new Error(diagnostic ? `${data.error || 'Chloé est indisponible.'} [${diagnostic}]` : (data.error || 'Chloé est indisponible.'));
+      }
       setMessages(prev => [...prev, { role: 'assistant', content: data.reply || 'Je n’ai pas de réponse exploitable.' }]);
       setPendingAction(data.action || null);
       setAttachments([]);
