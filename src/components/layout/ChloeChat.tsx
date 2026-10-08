@@ -162,6 +162,14 @@ export function ChloeChat({ isOpen, onClose, userId, userProfile, accounts, trad
     showToast('Image du presse-papiers ajoutée à Chloé.', 'success');
   };
 
+  const handleDrop = async (event: React.DragEvent<HTMLElement>) => {
+    event.preventDefault();
+    const files = Array.from(event.dataTransfer.files);
+    if (!files.length) return;
+    await handleFileArray(files);
+    showToast('Fichier ajouté à Chloé.', 'success');
+  };
+
   const send = async (event?: React.FormEvent) => {
     event?.preventDefault();
     if ((!input.trim() && !attachments.length) || loading) return;
@@ -307,7 +315,7 @@ export function ChloeChat({ isOpen, onClose, userId, userProfile, accounts, trad
   return (
     <div className="fixed inset-0 z-[80] pointer-events-none">
       <div className="absolute inset-0 bg-[#06111f]/25 backdrop-blur-[2px] pointer-events-auto" onClick={onClose} />
-      <section onPaste={handleClipboardPaste} className="pointer-events-auto absolute right-3 top-[72px] sm:right-6 w-[calc(100vw-1.5rem)] sm:w-[calc(100vw-3rem)] max-w-5xl h-[min(82vh,760px)] overflow-hidden rounded-[30px] border border-[#dce9e5] bg-white shadow-[0_30px_80px_rgba(6,17,31,0.22)] flex flex-col" role="dialog" aria-modal="true" aria-label="Chat avec Chloé">
+      <section onPaste={handleClipboardPaste} onDragOver={e => e.preventDefault()} onDrop={handleDrop} className="pointer-events-auto absolute right-3 top-[72px] sm:right-6 w-[calc(100vw-1.5rem)] sm:w-[calc(100vw-3rem)] max-w-5xl h-[min(82vh,760px)] overflow-hidden rounded-[30px] border border-[#dce9e5] bg-white shadow-[0_30px_80px_rgba(6,17,31,0.22)] flex flex-col" role="dialog" aria-modal="true" aria-label="Chat avec Chloé">
         <header className="shrink-0 flex items-center justify-between border-b border-[#e7efec] bg-white px-5 py-4">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-[#00c796] to-[#00a982] text-white shadow-[0_8px_22px_rgba(0,169,130,0.2)]">
