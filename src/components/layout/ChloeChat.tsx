@@ -341,17 +341,28 @@ export function ChloeChat({ isOpen, onClose, userId, userProfile, accounts, trad
                       <span className="rounded-full bg-[#eef4f2] px-3 py-1 text-[9px] font-semibold text-[#82939f] shadow-sm">{formatMessageDate(message.timestamp)}</span>
                     </div>
                   )}
-                  <div className={`group flex items-end gap-2 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  <div className={`group flex items-end gap-2 px-1 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                     {message.role === 'assistant' && (
                       <div className="mb-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#00c796] to-[#00a982] text-white shadow-[0_5px_14px_rgba(0,169,130,0.18)]">
                         <Sparkles className="h-3.5 w-3.5" />
                       </div>
                     )}
-                    <div className={`max-w-[82%] sm:max-w-[76%] rounded-[20px] px-4 py-3 text-[11px] leading-relaxed shadow-[0_2px_10px_rgba(8,24,39,0.05)] ${message.role === 'user' ? 'rounded-br-[6px] bg-[#081827] text-white' : 'rounded-bl-[6px] border border-[#e0ebe7] bg-white text-[#43586b]'}`}>
+                    <div className={`
+                      relative max-w-[82%] sm:max-w-[72%] overflow-hidden px-4 py-3
+                      text-[12px] leading-[1.65] tracking-[-0.01em]
+                      shadow-[0_3px_14px_rgba(8,24,39,0.06)]
+                      transition-all duration-200
+                      ${message.role === 'user'
+                        ? 'rounded-[22px] rounded-br-[7px] bg-gradient-to-br from-[#0d2438] to-[#081827] text-white shadow-[0_5px_18px_rgba(8,24,39,0.12)]'
+                        : 'rounded-[22px] rounded-bl-[7px] border border-[#e2ebe8] bg-white text-[#31495d] shadow-[0_3px_14px_rgba(8,24,39,0.055)]'}
+                    `}>
+                      {message.role === 'assistant' && (
+                        <div className="mb-2 text-[9px] font-bold uppercase tracking-[0.08em] text-[#00a982]">Chloé</div>
+                      )}
                       {renderText(message.content)}
-                      <div className={`mt-1.5 flex items-center gap-1 text-[8px] ${message.role === 'user' ? 'justify-end text-white/55' : 'text-[#9aa9b5]'}`}>
+                      <div className={`mt-2 flex items-center gap-1 text-[8px] ${message.role === 'user' ? 'justify-end text-white/50' : 'text-[#9aa9b5]'}`}>
                         {formatMessageTime(message.timestamp)}
-                        {message.role === 'user' && message.timestamp && <span className="text-[#73d8c0]">✓✓</span>}
+                        {message.role === 'user' && message.timestamp && <span className="ml-0.5 text-[#6ed7c0]">✓✓</span>}
                       </div>
                     </div>
                   </div>
