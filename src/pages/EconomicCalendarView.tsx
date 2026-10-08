@@ -31,14 +31,14 @@ type ApiEvent = Record<string, any>;
 const API_BASE = '/api/economic-calendar';
 
 const currencyFlags: Record<string, string> = {
-  USD: 'US',
-  EUR: 'EU',
-  GBP: 'GB',
-  JPY: 'JP',
-  CAD: 'CA',
-  AUD: 'AU',
-  NZD: 'NZ',
-  CHF: 'CH',
+  USD: '🇺🇸',
+  EUR: '🇪🇺',
+  GBP: '🇬🇧',
+  JPY: '🇯🇵',
+  CAD: '🇨🇦',
+  AUD: '🇦🇺',
+  NZD: '🇳🇿',
+  CHF: '🇨🇭',
 };
 
 const currencyOptions = Object.keys(currencyFlags);
@@ -445,7 +445,7 @@ export function EconomicCalendarView() {
           <option value="all">Toutes les devises</option>
           {currencies.map((item) => (
             <option key={item} value={item}>
-              {currencyFlags[item]} · {item}
+              {currencyFlags[item]} {item}
             </option>
           ))}
         </select>
@@ -530,7 +530,7 @@ export function EconomicCalendarView() {
                           <span className="text-xs text-gray-400">-</span>
                         ) : (
                           <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300">
-                            <span className="inline-flex h-4 min-w-[20px] items-center justify-center rounded-sm bg-slate-100 px-1 text-[8px] font-black uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-300" aria-hidden="true">
+                            <span className="inline-flex h-4 w-5 items-center justify-center text-[14px] leading-none" aria-hidden="true">
                               {currencyFlags[event.currency]}
                             </span>
                             {event.currency}
