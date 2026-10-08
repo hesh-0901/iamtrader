@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Loader2, Send, X, Sparkles } from 'lucide-react';
+import { Send, X, Sparkles } from 'lucide-react';
 
 type ChatMessage = {
   role: 'user' | 'assistant';
@@ -106,13 +106,13 @@ export function VyraChat({ isOpen, onClose }: VyraChatProps) {
         role="dialog"
         aria-modal="true"
         aria-label="Chat avec VYRA"
-        className="pointer-events-auto absolute right-3 top-[72px] sm:right-6 w-[calc(100vw-1.5rem)] sm:w-[400px] h-[min(650px,calc(100vh-5.5rem))] overflow-hidden rounded-[24px] border border-[#dce9e5] bg-white shadow-[0_30px_80px_rgba(6,17,31,0.22)] flex flex-col"
+        className="pointer-events-auto absolute right-3 top-[72px] sm:right-6 w-[calc(100vw-1.5rem)] sm:w-[calc(100vw-3rem)] max-w-5xl h-[min(82vh,760px)] overflow-hidden rounded-[30px] border border-[#dce9e5] bg-white shadow-[0_30px_80px_rgba(6,17,31,0.22)] flex flex-col"
       >
         <header className="shrink-0 flex items-center justify-between border-b border-[#e7efec] bg-white px-4 py-3">
           <div className="flex items-center gap-2.5">
-            <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full border-2 border-white bg-[#eafbf6] shadow-[0_6px_18px_rgba(0,169,130,0.18)] ring-1 ring-[#bfe8dc]">
-              <img src="/vyra-avatar.png" alt="VYRA" className="h-full w-full object-cover object-[50%_42%]" />
-              <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white bg-[#00c796] shadow-[0_0_0_2px_rgba(0,199,150,0.14)]" />
+            <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#00c796] to-[#00a982] text-white shadow-[0_8px_20px_rgba(0,169,130,0.24)]">
+              <Sparkles className="h-5 w-5 animate-[spin_4s_linear_infinite]" />
+              <span className="absolute inset-0 rounded-full ring-2 ring-[#00c796]/20 animate-ping" />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
@@ -132,8 +132,8 @@ export function VyraChat({ isOpen, onClose }: VyraChatProps) {
             {messages.map((message, index) => (
               <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 {message.role === 'assistant' && (
-                  <div className="mr-2 mt-0.5 h-7 w-7 shrink-0 overflow-hidden rounded-full border border-[#bfe8dc] bg-[#eafbf6]">
-                    <img src="/vyra-avatar.png" alt="" className="h-full w-full object-cover object-[50%_42%]" />
+                  <div className="mr-2 mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#00c796] to-[#00a982] text-white shadow-[0_5px_14px_rgba(0,169,130,0.2)]">
+                    <Sparkles className="h-3.5 w-3.5" />
                   </div>
                 )}
                 <div className={`max-w-[84%] rounded-2xl px-3.5 py-2.5 text-[11px] leading-relaxed shadow-sm ${
@@ -148,8 +148,8 @@ export function VyraChat({ isOpen, onClose }: VyraChatProps) {
 
             {isLoading && (
               <div className="flex items-center gap-2">
-                <div className="h-7 w-7 overflow-hidden rounded-full border border-[#bfe8dc] bg-[#eafbf6]">
-                  <img src="/vyra-avatar.png" alt="" className="h-full w-full object-cover object-[50%_42%]" />
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-[#00c796] to-[#00a982] text-white shadow-[0_5px_14px_rgba(0,169,130,0.2)]">
+                  <Sparkles className="h-3.5 w-3.5 animate-pulse" />
                 </div>
                 <div className="flex items-center gap-1.5 rounded-2xl rounded-bl-md border border-[#e2ece8] bg-white px-3.5 py-2.5">
                   <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#00a982]" />
