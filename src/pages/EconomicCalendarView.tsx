@@ -122,23 +122,29 @@ function getWeekDates(value: string) {
 
 function localDateTime(value: unknown, fallbackDate?: string, fallbackTime?: string) {
   if (typeof value === 'string' && value) {
-    const date = new Date(value);
+    const sourceDate = value.match(/^(\\d{4}-\\d{2}-\\d{2})/)?.[1] || '';
 
-    if (!Number.isNaN(date.getTime())) {
-      const parts = new Intl.DateTimeFormat('en-CA', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
+    const parsed = new Date(value);
+    if (!Number.isNaN(parsed.getTime())) {
+      const parts = new Intl.DateTimeFormat('en-GB', {
         hour: '2-digit',
         minute: '2-digit',
         hour12: false,
-      }).formatToParts(date);
+      }).formatToParts(parsed);
 
       const map = Object.fromEntries(parts.map((part) => [part.type, part.value]));
 
       return {
-        date: `${map.year}-${map.month}-${map.day}`,
+        date: sourceDate || fallbackDate || '',
         time: `${map.hour}:${map.minute}`,
+      };
+    }
+
+    if (sourceDate) {
+      const timeMatch = value.match(/T(\\d{2}:\\d{2})/);
+      return {
+        date: sourceDate,
+        time: timeMatch?.[1] || fallbackTime || '—',
       };
     }
   }
@@ -154,11 +160,16 @@ function inferCurrency(raw: ApiEvent, title: string, series: string) {
     raw.country || raw.country_name || raw.country_code || raw.countryCode || '',
   )
     .trim()
-    .toLowerCase();
+    .toUpperCase();
+
+  if (currencyOptions.includes(country)) {
+    return country;
+  }
 
   if (country) {
+    const countrySearch = country.toLowerCase();
     for (const [currency, values] of countryCurrency) {
-      if (values.some((value) => country === value || country.includes(value))) {
+      if (values.some((value) => countrySearch === value || countrySearch.includes(value))) {
         return currency;
       }
     }
