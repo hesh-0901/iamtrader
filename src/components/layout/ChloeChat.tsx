@@ -26,14 +26,32 @@ interface ChloeChatProps {
 const STORAGE_KEY = 'iamtrader_chloe_chat_v1';
 const RETENTION_MS = 48 * 60 * 60 * 1000;
 
+function renderInline(text: string) {
+  const tokens = text.split(/(\*\*[^*]+\*\*|__[^_]+__|\*[^*]+\*|_[^_]+_|\`[^\`]+\`)/g);
+  return tokens.map((part, i) => {
+    if ((part.startsWith('**') && part.endsWith('**')) || (part.startsWith('__') && part.endsWith('__'))) {
+      return <strong key={i} className="font-bold text-[#102d43]">{part.slice(2, -2)}</strong>;
+    }
+    if ((part.startsWith('*') && part.endsWith('*')) || (part.startsWith('_') && part.endsWith('_'))) {
+      return <em key={i} className="italic text-[#587080]">{part.slice(1, -1)}</em>;
+    }
+    if (part.startsWith('`') && part.endsWith('`')) {
+      return <code key={i} className="rounded-md bg-[#eef5f2] px-1.5 py-0.5 font-mono text-[10px] text-[#00896f]">{part.slice(1, -1)}</code>;
+    }
+    return part;
+  });
+}
+
 function renderText(text: string) {
-  return text.split(/\n+/).map((line, index) => (
-    <p key={index} className="m-0 leading-5">
-      {line.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
-        part.startsWith('**') ? <strong key={i}>{part.slice(2, -2)}</strong> : part
-      )}
-    </p>
-  ));
+  return text.split(/\n+/).map((line, index) => {
+    const trimmed = line.trim();
+    if (!trimmed) return <div key={index} className="h-1.5" />;
+    const bullet = trimmed.match(/^[-•]\s+(.*)$/);
+    if (bullet) {
+      return <div key={index} className="flex gap-2 leading-6"><span className="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-[#00a982]" /> <span>{renderInline(bullet[1])}</span></div>;
+    }
+    return <p key={index} className="m-0 leading-6">{renderInline(line)}</p>;
+  });
 }
 
 function fileToBase64(file: File): Promise<string> {
@@ -317,13 +335,14 @@ export function ChloeChat({ isOpen, onClose, userId, userProfile, accounts, trad
       <div className="absolute inset-0 bg-[#06111f]/25 backdrop-blur-[2px] pointer-events-auto" onClick={onClose} />
       <section onPaste={handleClipboardPaste} onDragOver={e => e.preventDefault()} onDrop={handleDrop} className="pointer-events-auto absolute right-3 top-[72px] sm:right-6 w-[calc(100vw-1.5rem)] sm:w-[calc(100vw-3rem)] max-w-5xl h-[min(82vh,760px)] overflow-hidden rounded-[30px] border border-[#dce9e5] bg-white shadow-[0_30px_80px_rgba(6,17,31,0.22)] flex flex-col" role="dialog" aria-modal="true" aria-label="Chat avec Chloé">
         <header className="shrink-0 flex items-center justify-between border-b border-[#e7efec] bg-white px-5 py-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-[#00c796] to-[#00a982] text-white shadow-[0_8px_22px_rgba(0,169,130,0.2)]">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#00c796] via-[#00b88c] to-[#008f72] text-white shadow-[0_8px_24px_rgba(0,169,130,0.24)]">
               <Sparkles className="h-5 w-5" />
+              <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white bg-[#25c56f]" />
             </div>
-            <div>
-              <div className="flex items-center gap-2"><h2 className="text-sm font-black text-[#081827]">Chloé</h2><span className="rounded-full bg-[#eafbf6] px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-[#168c73]">IA APP</span></div>
-              <p className="mt-0.5 text-[9px] font-medium text-[#7a8b9b]">Intelligence opérationnelle IAMTRADER</p>
+            <div className="min-w-0">
+              <div className="flex items-center gap-2"><h2 className="text-sm font-black tracking-[-0.02em] text-[#081827]">Chloé</h2><span className="rounded-full bg-[#eafbf6] px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-[#168c73]">IA TRADING</span></div>
+              <p className="mt-0.5 truncate text-[9px] font-medium text-[#7a8b9b]">Votre copilote pour analyser, comprendre et structurer vos trades</p>
             </div>
           </div>
           <button onClick={onClose} className="flex h-8 w-8 items-center justify-center rounded-xl border border-[#dce9e5] text-[#5d7183] hover:bg-[#f0faf6]" aria-label="Fermer Chloé"><X className="h-3.5 w-3.5" /></button>
@@ -331,6 +350,35 @@ export function ChloeChat({ isOpen, onClose, userId, userProfile, accounts, trad
 
         <div className="min-h-0 flex-1 overflow-y-auto bg-[#fbfdfc] px-4 py-5 sm:px-6">
           <div className="mx-auto max-w-4xl space-y-3">
+            {messages.length <= 1 && (
+              <div className="mb-5 rounded-[24px] border border-[#dcece6] bg-gradient-to-br from-white via-[#f7fcfa] to-[#eefaf5] p-5 shadow-[0_8px_28px_rgba(8,24,39,0.045)]">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#e3f8f1] text-[#00a982]"><Sparkles className="h-5 w-5" /></div>
+                  <div>
+                    <h3 className="text-sm font-black tracking-[-0.02em] text-[#102d43]">Que puis-je faire pour vous ?</h3>
+                    <p className="mt-1 text-[11px] leading-5 text-[#718393]">Je peux travailler directement avec votre espace IAMTRADER pour vous faire gagner du temps.</p>
+                  </div>
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {[
+                    ['📊', 'Analyser vos trades'],
+                    ['📸', 'Lire une capture MT5'],
+                    ['🧠', 'Analyser votre discipline'],
+                    ['📝', 'Préparer votre journal'],
+                  ].map(([icon, label]) => (
+                    <div key={label} className="rounded-2xl border border-[#e0ece7] bg-white/85 px-3 py-2.5">
+                      <div className="text-sm">{icon}</div>
+                      <div className="mt-1 text-[10px] font-bold text-[#41586a]">{label}</div>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {['« Analyse mon dernier trade »', '« Quels sont mes points faibles ? »', '« 📸 Analyse cette capture »'].map(prompt => (
+                    <span key={prompt} className="rounded-full border border-[#dcebe6] bg-white px-3 py-1.5 text-[9px] font-medium text-[#6b7f8d]">{prompt}</span>
+                  ))}
+                </div>
+              </div>
+            )}
             {messages.map((message, index) => {
               const previous = messages[index - 1];
               const showDate = !!message.timestamp && (!previous?.timestamp || !isSameDay(message.timestamp, previous.timestamp));
@@ -428,7 +476,7 @@ export function ChloeChat({ isOpen, onClose, userId, userProfile, accounts, trad
             <input value={input} onChange={e => setInput(e.target.value)} placeholder="Écrivez à Chloé ou collez une capture (Ctrl+V)…" className="min-w-0 flex-1 bg-transparent px-2 py-2.5 text-sm text-[#081827] outline-none placeholder:text-[#9aa9b5]" disabled={loading} />
             <button type="submit" disabled={loading || (!input.trim() && !attachments.length)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#00a982] text-white disabled:cursor-not-allowed disabled:opacity-40"><Send className="h-4 w-4" /></button>
           </form>
-          <p className="mt-1.5 text-center text-[9px] text-[#9aa9b5]">Images : glisser-déposer, joindre ou <strong>Ctrl+V</strong> • Chloé peut analyser votre contexte et préparer des actions.</p>
+          <p className="mt-1.5 text-center text-[9px] leading-4 text-[#9aa9b5]">📸 Collez une capture avec <strong>Ctrl+V</strong> · 🎙️ envoyez un vocal · 📎 joignez un fichier</p>
         </div>
       </section>
     </div>
