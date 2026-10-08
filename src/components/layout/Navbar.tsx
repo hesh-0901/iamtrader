@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, ChevronDown, LogOut, Menu, Bot } from 'lucide-react';
+import { Plus, ChevronDown, LogOut, Menu, Sparkles } from 'lucide-react';
 import { TradingAccount, UserProfile } from '../../types';
 
 interface NavbarProps {
@@ -55,11 +55,18 @@ export function Navbar({ userProfile, accounts, selectedAccountId, onSelectAccou
 
         <button
           onClick={onOpenVyra}
-          className="w-8 h-8 rounded-lg border border-slate-200 bg-white text-[#71839a] hover:text-blue-600 hover:border-blue-200 hover:bg-blue-50/50 flex items-center justify-center transition-colors cursor-pointer"
+          className="group relative flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-[#eafbf6] text-[#168c73] shadow-[0_4px_12px_rgba(0,169,130,0.14)] ring-1 ring-[#bfe8dc] transition-all hover:scale-105 hover:shadow-[0_7px_18px_rgba(0,169,130,0.2)] cursor-pointer overflow-visible"
           title="Ouvrir VYRA"
           aria-label="Ouvrir VYRA"
         >
-          <Bot className="w-4 h-4" />
+          <img
+            src="/vyra-avatar.png"
+            alt="VYRA"
+            className="h-full w-full rounded-full object-cover object-[50%_42%]"
+          />
+          <span className="absolute -right-1 -bottom-1 flex h-3.5 w-3.5 items-center justify-center rounded-full border-2 border-white bg-[#00a982] text-white shadow-sm">
+            <Sparkles className="h-1.5 w-1.5" />
+          </span>
         </button>
 
         <button
