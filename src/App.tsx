@@ -22,7 +22,6 @@ import { AccountsView } from './pages/AccountsView';
 import { SettingsView } from './pages/SettingsView';
 import { AdminConsole } from './pages/AdminConsole';
 import { CommunityView } from './pages/CommunityView';
-import { EconomicCalendarView } from './pages/EconomicCalendarView';
 import { TradeModal } from './components/journal/TradeModal';
 import { TradeDetailModal } from './components/journal/TradeDetailModal';
 import { AccountModal } from './components/accounts/AccountModal';
@@ -252,7 +251,6 @@ function MainAppContent() {
     'dashboard': 'Dashboard Principal',
     'journal': 'Journal de Trading',
     'calendar': 'Calendrier de Rentabilité',
-    'economic-calendar': 'Calendrier économique',
     'performance': 'Analytique & Performance',
     'psychology': 'Matrice Psychologique',
     'trader-score': 'Trader Score™',
@@ -354,10 +352,6 @@ function MainAppContent() {
               accounts={accounts}
               onSelectTrade={(t) => setInspectingTrade(t)}
             />
-          )}
-
-          {currentPage === 'economic-calendar' && (
-            <EconomicCalendarView />
           )}
 
           {currentPage === 'performance' && (
