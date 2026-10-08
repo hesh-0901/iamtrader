@@ -4,7 +4,7 @@ import { addTrade } from '../../services/firestore';
 import { TradingAccount, Trade, UserProfile } from '../../types';
 import { useToast } from '../common/Toast';
 
-type Message = { role: 'user' | 'assistant'; content: string };
+type Message = { role: 'user' | 'assistant'; content: string; timestamp?: number };
 type Attachment = { name: string; mimeType: string; data: string };
 type ChloeAction = {
   type: 'create_trade';
@@ -45,6 +45,27 @@ function fileToBase64(file: File): Promise<string> {
   });
 }
 
+function formatMessageTime(timestamp?: number) {
+  if (!timestamp) return '';
+  return new Intl.DateTimeFormat('fr-FR', { hour: '2-digit', minute: '2-digit' }).format(new Date(timestamp));
+}
+
+function formatMessageDate(timestamp?: number) {
+  if (!timestamp) return '';
+  const date = new Date(timestamp);
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+  if (date.toDateString() === today.toDateString()) return "Aujourd'hui";
+  if (date.toDateString() === yesterday.toDateString()) return 'Hier';
+  return new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long' }).format(date);
+}
+
+function isSameDay(a?: number, b?: number) {
+  if (!a || !b) return true;
+  return new Date(a).toDateString() === new Date(b).toDateString();
+}
+
 function getSession(date: string) {
   const hour = new Date(date).getUTCHours();
   if (hour < 8) return 'Asia';
@@ -61,7 +82,7 @@ export function ChloeChat({ isOpen, onClose, userId, userProfile, accounts, trad
       const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
       if (stored?.savedAt && Date.now() - stored.savedAt < RETENTION_MS && Array.isArray(stored.messages)) return stored.messages;
     } catch {}
-    return [{ role: 'assistant', content: 'Bonjour. Je suis Chloé, votre intelligence opérationnelle IAMTRADER. Je peux analyser vos données, vos captures, vos documents et vous aider directement dans votre journal.' }];
+    return [{ role: 'assistant', timestamp: Date.now(), content: 'Bonjour. Je suis Chloé, votre intelligence opérationnelle IAMTRADER. Je peux analyser vos données, vos captures, vos documents et vous aider directement dans votre journal.' }];
   });
   const [input, setInput] = useState('');
   const [attachments, setAttachments] = useState<Attachment[]>([]);
@@ -101,22 +122,44 @@ export function ChloeChat({ isOpen, onClose, userId, userProfile, accounts, trad
     },
   };
 
-  const handleFiles = async (files: FileList | null) => {
-    if (!files) return;
-    const selected = Array.from(files).slice(0, 5 - attachments.length);
+  const handleFileArray = async (files: File[]) => {
+    const selected = files.slice(0, Math.max(0, 5 - attachments.length));
     const next: Attachment[] = [];
     for (const file of selected) {
       if (file.size > 12 * 1024 * 1024) {
-        showToast(`${file.name} dépasse 12 Mo.`, 'error');
+        showToast(`${file.name || 'Fichier'} dépasse 12 Mo.`, 'error');
         continue;
       }
       try {
-        next.push({ name: file.name, mimeType: file.type || 'application/octet-stream', data: await fileToBase64(file) });
+        next.push({
+          name: file.name || `image-${Date.now()}.png`,
+          mimeType: file.type || 'application/octet-stream',
+          data: await fileToBase64(file),
+        });
       } catch {
-        showToast(`Impossible de lire ${file.name}.`, 'error');
+        showToast(`Impossible de lire ${file.name || 'ce fichier'}.`, 'error');
       }
     }
-    setAttachments(prev => [...prev, ...next]);
+    if (next.length) setAttachments(prev => [...prev, ...next]);
+  };
+
+  const handleFiles = async (files: FileList | null) => {
+    if (!files) return;
+    await handleFileArray(Array.from(files));
+  };
+
+  const handleClipboardPaste = async (event: React.ClipboardEvent<HTMLElement>) => {
+    const clipboardFiles: File[] = [];
+    for (const item of Array.from(event.clipboardData.items)) {
+      if (item.kind === 'file') {
+        const file = item.getAsFile();
+        if (file) clipboardFiles.push(file);
+      }
+    }
+    if (!clipboardFiles.length) return;
+    event.preventDefault();
+    await handleFileArray(clipboardFiles);
+    showToast('Image du presse-papiers ajoutée à Chloé.', 'success');
   };
 
   const send = async (event?: React.FormEvent) => {
@@ -125,10 +168,12 @@ export function ChloeChat({ isOpen, onClose, userId, userProfile, accounts, trad
 
     const visibleText = input.trim() || 'Analyse le fichier que je viens de joindre.';
     const attachmentNames = attachments.map(a => a.name).join(', ');
+    const messageTimestamp = Date.now();
     setMessages(prev => [
       ...prev,
       {
         role: 'user',
+        timestamp: messageTimestamp,
         content: attachmentNames
           ? `${visibleText}\n\nFichiers : ${attachmentNames}`
           : visibleText,
@@ -141,14 +186,14 @@ export function ChloeChat({ isOpen, onClose, userId, userProfile, accounts, trad
       const response = await fetch('/api/chloe-chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: [...messages, { role: 'user', content: visibleText }], userContext: context, attachments }),
+        body: JSON.stringify({ messages: [...messages, { role: 'user', content: visibleText, timestamp: messageTimestamp }], userContext: context, attachments }),
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
         const diagnostic = data?.details?.provider || data?.details?.reason || '';
         throw new Error(diagnostic ? `${data.error || 'Chloé est indisponible.'} [${diagnostic}]` : (data.error || 'Chloé est indisponible.'));
       }
-      setMessages(prev => [...prev, { role: 'assistant', content: data.reply || 'Je n’ai pas de réponse exploitable.' }]);
+      setMessages(prev => [...prev, { role: 'assistant', timestamp: Date.now(), content: data.reply || 'Je n’ai pas de réponse exploitable.' }]);
       setPendingAction(data.action ? {
         ...data.action,
         trade: {
@@ -160,7 +205,7 @@ export function ChloeChat({ isOpen, onClose, userId, userProfile, accounts, trad
       } : null);
       setAttachments([]);
     } catch (error: any) {
-      setMessages(prev => [...prev, { role: 'assistant', content: error?.message || 'Une erreur est survenue.' }]);
+      setMessages(prev => [...prev, { role: 'assistant', timestamp: Date.now(), content: error?.message || 'Une erreur est survenue.' }]);
     } finally {
       setLoading(false);
     }
@@ -219,7 +264,7 @@ export function ChloeChat({ isOpen, onClose, userId, userProfile, accounts, trad
       } as any);
 
       setPendingAction(null);
-      setMessages(prev => [...prev, { role: 'assistant', content: 'Le trade a été enregistré dans votre journal IAMTRADER.' }]);
+      setMessages(prev => [...prev, { role: 'assistant', timestamp: Date.now(), content: 'Le trade a été enregistré dans votre journal IAMTRADER.' }]);
       showToast('Trade enregistré par Chloé.', 'success');
     } catch (error) {
       console.error('Chloé trade save failed:', error);
@@ -262,7 +307,7 @@ export function ChloeChat({ isOpen, onClose, userId, userProfile, accounts, trad
   return (
     <div className="fixed inset-0 z-[80] pointer-events-none">
       <div className="absolute inset-0 bg-[#06111f]/25 backdrop-blur-[2px] pointer-events-auto" onClick={onClose} />
-      <section className="pointer-events-auto absolute right-3 top-[72px] sm:right-6 w-[calc(100vw-1.5rem)] sm:w-[calc(100vw-3rem)] max-w-5xl h-[min(82vh,760px)] overflow-hidden rounded-[30px] border border-[#dce9e5] bg-white shadow-[0_30px_80px_rgba(6,17,31,0.22)] flex flex-col" role="dialog" aria-modal="true" aria-label="Chat avec Chloé">
+      <section onPaste={handleClipboardPaste} className="pointer-events-auto absolute right-3 top-[72px] sm:right-6 w-[calc(100vw-1.5rem)] sm:w-[calc(100vw-3rem)] max-w-5xl h-[min(82vh,760px)] overflow-hidden rounded-[30px] border border-[#dce9e5] bg-white shadow-[0_30px_80px_rgba(6,17,31,0.22)] flex flex-col" role="dialog" aria-modal="true" aria-label="Chat avec Chloé">
         <header className="shrink-0 flex items-center justify-between border-b border-[#e7efec] bg-white px-5 py-4">
           <div className="flex items-center gap-3">
             <div className="flex h-11 w-11 items-center justify-center rounded-full bg-gradient-to-br from-[#00c796] to-[#00a982] text-white shadow-[0_8px_22px_rgba(0,169,130,0.2)]">
@@ -278,14 +323,33 @@ export function ChloeChat({ isOpen, onClose, userId, userProfile, accounts, trad
 
         <div className="min-h-0 flex-1 overflow-y-auto bg-[#fbfdfc] px-4 py-5 sm:px-6">
           <div className="mx-auto max-w-4xl space-y-3">
-            {messages.map((message, index) => (
-              <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                {message.role === 'assistant' && <div className="mr-2 mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#00c796] to-[#00a982] text-white"><Sparkles className="h-3.5 w-3.5" /></div>}
-                <div className={`max-w-[86%] rounded-2xl px-4 py-3 text-[11px] leading-relaxed shadow-sm ${message.role === 'user' ? 'rounded-br-md bg-[#081827] text-white' : 'rounded-bl-md border border-[#dcebe5] bg-white text-[#43586b]'}`}>
-                  {renderText(message.content)}
-                </div>
-              </div>
-            ))}
+            {messages.map((message, index) => {
+              const previous = messages[index - 1];
+              const showDate = !!message.timestamp && (!previous?.timestamp || !isSameDay(message.timestamp, previous.timestamp));
+              return (
+                <React.Fragment key={index}>
+                  {showDate && (
+                    <div className="flex justify-center py-2">
+                      <span className="rounded-full bg-[#eef4f2] px-3 py-1 text-[9px] font-semibold text-[#82939f] shadow-sm">{formatMessageDate(message.timestamp)}</span>
+                    </div>
+                  )}
+                  <div className={`group flex items-end gap-2 ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                    {message.role === 'assistant' && (
+                      <div className="mb-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#00c796] to-[#00a982] text-white shadow-[0_5px_14px_rgba(0,169,130,0.18)]">
+                        <Sparkles className="h-3.5 w-3.5" />
+                      </div>
+                    )}
+                    <div className={`max-w-[82%] sm:max-w-[76%] rounded-[20px] px-4 py-3 text-[11px] leading-relaxed shadow-[0_2px_10px_rgba(8,24,39,0.05)] ${message.role === 'user' ? 'rounded-br-[6px] bg-[#081827] text-white' : 'rounded-bl-[6px] border border-[#e0ebe7] bg-white text-[#43586b]'}`}>
+                      {renderText(message.content)}
+                      <div className={`mt-1.5 flex items-center gap-1 text-[8px] ${message.role === 'user' ? 'justify-end text-white/55' : 'text-[#9aa9b5]'}`}>
+                        {formatMessageTime(message.timestamp)}
+                        {message.role === 'user' && message.timestamp && <span className="text-[#73d8c0]">✓✓</span>}
+                      </div>
+                    </div>
+                  </div>
+                </React.Fragment>
+              );
+            })}
             {loading && <div className="flex items-center gap-2 text-xs text-[#71839a]"><Loader2 className="h-4 w-4 animate-spin text-[#00a982]" /> Chloé analyse votre demande…</div>}
             {pendingAction && (
               <div className="rounded-2xl border border-[#bfe8dc] bg-[#eafbf6] p-4">
@@ -327,19 +391,25 @@ export function ChloeChat({ isOpen, onClose, userId, userProfile, accounts, trad
         <div className="shrink-0 border-t border-[#e7efec] bg-white px-4 py-3 sm:px-6">
           {attachments.length > 0 && (
             <div className="mb-2 flex gap-2 overflow-x-auto">
-              {attachments.map((file, i) => <div key={i} className="flex shrink-0 items-center gap-1.5 rounded-lg border border-[#dce9e5] bg-[#f7fbf9] px-2.5 py-1.5 text-[10px] text-[#43586b]"><FileText className="h-3 w-3 text-[#00a982]" />{file.name}<button type="button" onClick={() => setAttachments(prev => prev.filter((_,idx) => idx !== i))}><X className="h-3 w-3" /></button></div>)}
+              {attachments.map((file, i) => (
+                <div key={i} className="relative flex shrink-0 items-center gap-2 rounded-xl border border-[#dce9e5] bg-[#f7fbf9] px-2 py-2 text-[10px] text-[#43586b]">
+                  {file.mimeType.startsWith('image/') ? <img src={file.data} alt={file.name} className="h-10 w-10 rounded-lg object-cover" /> : <FileText className="h-4 w-4 text-[#00a982]" />}
+                  <span className="max-w-[150px] truncate">{file.name}</span>
+                  <button type="button" onClick={() => setAttachments(prev => prev.filter((_,idx) => idx !== i))} className="flex h-5 w-5 items-center justify-center rounded-full hover:bg-white"><X className="h-3 w-3" /></button>
+                </div>
+              ))}
             </div>
           )}
           <form onSubmit={send} className="flex items-center gap-2 rounded-2xl border border-[#d9e6e1] bg-white p-1.5 shadow-[0_8px_25px_rgba(8,24,39,0.05)]">
             <input type="file" multiple accept="image/*,application/pdf,.doc,.docx,.xls,.xlsx,.txt,.csv" className="hidden" id="chloe-file-input" onChange={e => handleFiles(e.target.files)} />
-            <label htmlFor="chloe-file-input" className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-xl text-[#71839a] hover:bg-[#f0faf6] hover:text-[#00a982]" title="Joindre un fichier"><Paperclip className="h-4 w-4" /></label>
+            <label htmlFor="chloe-file-input" className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-xl text-[#71839a] hover:bg-[#f0faf6] hover:text-[#00a982]" title="Joindre un fichier — vous pouvez aussi coller une image (Ctrl+V)"><Paperclip className="h-4 w-4" /></label>
             <button type="button" onClick={recording ? stopRecording : startRecording} className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${recording ? 'bg-rose-50 text-rose-500' : 'text-[#71839a] hover:bg-[#f0faf6] hover:text-[#00a982]'}`} title={recording ? 'Arrêter' : 'Message vocal'}>
               {recording ? <Square className="h-3.5 w-3.5" /> : <Mic className="h-4 w-4" />}
             </button>
-            <input value={input} onChange={e => setInput(e.target.value)} placeholder="Demandez à Chloé d'analyser ou d'agir…" className="min-w-0 flex-1 bg-transparent px-2 py-2.5 text-sm text-[#081827] outline-none placeholder:text-[#9aa9b5]" disabled={loading} />
+            <input value={input} onChange={e => setInput(e.target.value)} placeholder="Écrivez à Chloé ou collez une capture (Ctrl+V)…" className="min-w-0 flex-1 bg-transparent px-2 py-2.5 text-sm text-[#081827] outline-none placeholder:text-[#9aa9b5]" disabled={loading} />
             <button type="submit" disabled={loading || (!input.trim() && !attachments.length)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#00a982] text-white disabled:cursor-not-allowed disabled:opacity-40"><Send className="h-4 w-4" /></button>
           </form>
-          <p className="mt-1.5 text-center text-[9px] text-[#9aa9b5]">Chloé peut lire le contexte IAMTRADER fourni à la session, analyser des fichiers et préparer des actions.</p>
+          <p className="mt-1.5 text-center text-[9px] text-[#9aa9b5]">Images : glisser-déposer, joindre ou <strong>Ctrl+V</strong> • Chloé peut analyser votre contexte et préparer des actions.</p>
         </div>
       </section>
     </div>
