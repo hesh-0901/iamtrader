@@ -23,6 +23,7 @@ type EconomicEvent = {
   forecast?: string;
   previous?: string;
   url?: string;
+  timezone?: string;
 };
 
 type ApiEvent = Record<string, any>;
@@ -122,19 +123,14 @@ function getWeekDates(value: string) {
 
 function localDateTime(value: unknown, fallbackDate?: string, fallbackTime?: string) {
   if (typeof value === 'string' && value) {
-    const sourceDate = value.match(/^(\d{4}-\d{2}-\d{2})/)?.[1] || '';
-
-    if (sourceDate) {
-      const timeMatch = value.match(/T(\d{2}:\d{2})/);
-      return {
-        date: sourceDate,
-        time: timeMatch?.[1] || fallbackTime || '—',
-      };
-    }
-
     const parsed = new Date(value);
+
     if (!Number.isNaN(parsed.getTime())) {
       const parts = new Intl.DateTimeFormat('en-GB', {
+        timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
         hour: '2-digit',
         minute: '2-digit',
         hour12: false,
@@ -142,7 +138,7 @@ function localDateTime(value: unknown, fallbackDate?: string, fallbackTime?: str
 
       const map = Object.fromEntries(parts.map((part) => [part.type, part.value]));
       return {
-        date: fallbackDate || '',
+        date: `${map.year}-${map.month}-${map.day}`,
         time: `${map.hour}:${map.minute}`,
       };
     }
@@ -150,7 +146,7 @@ function localDateTime(value: unknown, fallbackDate?: string, fallbackTime?: str
 
   return {
     date: fallbackDate || '',
-    time: fallbackTime || '—',
+    time: fallbackTime || fallbackTime || '—',
   };
 }
 
@@ -215,7 +211,7 @@ function inferCurrency(raw: ApiEvent, title: string, series: string) {
 
 function normalizeEvent(raw: ApiEvent, index: number): EconomicEvent {
   const dateTime = localDateTime(
-    raw.date || raw.time_utc || raw.datetime_utc || raw.timestamp || raw.date_time || raw.datetime,
+    raw.datetime || raw.date || raw.time_utc || raw.datetime_utc || raw.timestamp || raw.date_time,
     raw.date,
     raw.time || raw.time_et,
   );
@@ -231,8 +227,8 @@ function normalizeEvent(raw: ApiEvent, index: number): EconomicEvent {
 
   return {
     id: String(raw.id || raw.slug || raw.url || `${dateTime.date}-${index}`),
-    date: String(raw.date || dateTime.date || '').slice(0, 10),
-    time: raw.all_day ? '—' : String(raw.time || dateTime.time || '—'),
+    date: raw.all_day ? dateTime.date : dateTime.date,
+    time: raw.all_day ? '—' : dateTime.time,
     currency: inferCurrency(raw, title, series),
     event: title,
     category: String(raw.category || '').replace(/-/g, ' '),
@@ -349,11 +345,13 @@ export function EconomicCalendarView() {
   const today = localIsoDate();
   const highImpactCount = visibleEvents.filter((event) => event.impact === 'high').length;
 
+  const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
   const formattedDate = new Intl.DateTimeFormat('fr-FR', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
     year: 'numeric',
+    timeZone: userTimeZone,
   }).format(new Date(`${date}T12:00:00`));
 
   return (
@@ -499,7 +497,7 @@ export function EconomicCalendarView() {
                 {formattedDate}
               </div>
               <div className="mt-0.5 text-[9px] text-slate-400">
-                {visibleEvents.length} événement{visibleEvents.length > 1 ? 's' : ''} · fuseau local
+                {visibleEvents.length} événement{visibleEvents.length > 1 ? 's' : ''} · {userTimeZone}
               </div>
             </div>
 
@@ -614,7 +612,7 @@ export function EconomicCalendarView() {
       </div>
 
       <div className="flex items-center justify-between px-0.5 text-[9px] text-slate-400">
-        <span>Calendrier économique · données mises à jour automatiquement</span>
+        <span>Calendrier économique · heures adaptées à votre fuseau ({userTimeZone})</span>
         <a
           href="https://www.forexfactory.com/calendar"
           target="_blank"
