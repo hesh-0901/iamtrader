@@ -380,7 +380,7 @@ export function EconomicCalendarView() {
           <button
             type="button"
             onClick={() => setDate(today)}
-            className="h-8 rounded-lg border border-slate-200 bg-white px-3 text-[11px] font-bold text-[#0b1f35] hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800"
+            className="h-8 rounded-lg border border-slate-200 bg-white px-3 text-[11px] font-bold !text-slate-700 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:!text-slate-200 dark:hover:bg-slate-800"
           >
             Aujourd'hui
           </button>
@@ -416,10 +416,10 @@ export function EconomicCalendarView() {
                   : 'text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800'
               }`}
             >
-              <div className="text-[9px] font-bold uppercase tracking-wider opacity-70">
+              <div className="text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                 {label}
               </div>
-              <div className="text-xs font-black">{number}</div>
+              <div className="text-xs font-black text-slate-700 dark:text-slate-200">{number}</div>
             </button>
           );
         })}
@@ -462,7 +462,7 @@ export function EconomicCalendarView() {
           type="button"
           onClick={() => void loadEvents(date)}
           disabled={loading}
-          className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-[10px] font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+          className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-[10px] font-bold !text-slate-600 hover:bg-slate-50 disabled:!text-slate-500 disabled:opacity-60 dark:border-slate-800 dark:bg-slate-900 dark:!text-slate-300 dark:hover:bg-slate-800"
         >
           <RefreshCw className={`h-3 w-3 ${loading ? 'animate-spin' : ''}`} />
           Actualiser
