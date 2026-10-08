@@ -1,35 +1,617 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, ChevronLeft, ChevronRight, AlertTriangle, Loader2, RefreshCw, TrendingUp } from 'lucide-react';
+import {
+  AlertTriangle,
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  RefreshCw,
+  TrendingUp,
+} from 'lucide-react';
 
 type Impact = 'high' | 'medium' | 'low';
-type EconomicEvent = { id:string; date:string; time:string; currency:string; event:string; category?:string; impact:Impact; actual?:string; forecast?:string; previous?:string; url?:string };
-type ApiEvent = Record<string, any>;
-const API_BASE='/api/economic-calendar';
-const currencyFlags:Record<string,string>={USD:'🇺🇸',EUR:'🇪🇺',GBP:'🇬🇧',JPY:'🇯🇵',CAD:'🇨🇦',AUD:'🇦🇺',NZD:'🇳🇿',CHF:'🇨🇭'};
-const currencyOptions=Object.keys(currencyFlags);
-const currencyBySeries:Record<string,string>={fomc:'USD',fed:'USD',adp:'USD',cpi:'USD',jobs:'USD',nfp:'USD',payroll:'USD',gdp:'USD',pce:'USD',ppi:'USD','retail-sales':'USD','jobless-claims':'USD',ism:'USD',jolts:'USD',eia:'USD','consumer-credit':'USD',ecb:'EUR',eurozone:'EUR','euro-area':'EUR',boe:'GBP',uk:'GBP','bank-of-england':'GBP',boj:'JPY',japan:'JPY','bank-of-japan':'JPY',boc:'CAD',canada:'CAD','bank-of-canada':'CAD',rba:'AUD',australia:'AUD',rbnz:'NZD','new-zealand':'NZD',snb:'CHF',switzerland:'CHF'};
-function localIsoDate(date=new Date()){const p=new Intl.DateTimeFormat('en-CA',{year:'numeric',month:'2-digit',day:'2-digit'}).formatToParts(date),m=Object.fromEntries(p.map(x=>[x.type,x.value]));return `${m.year}-${m.month}-${m.day}`}
-function addDays(v:string,n:number){const d=new Date(`${v}T12:00:00`);d.setDate(d.getDate()+n);return localIsoDate(d)}
-function getWeekDates(v:string){const d=new Date(`${v}T12:00:00`),day=d.getDay(),m=new Date(d);m.setDate(d.getDate()-(day===0?6:day-1));return Array.from({length:5},(_,i)=>{const x=new Date(m);x.setDate(m.getDate()+i);return localIsoDate(x)})}
-function localDateTime(v:unknown,fd?:string,ft?:string){if(typeof v==='string'&&v){const d=new Date(v);if(!Number.isNaN(d.getTime())){const p=new Intl.DateTimeFormat('en-CA',{year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).formatToParts(d),m=Object.fromEntries(p.map(x=>[x.type,x.value]));return{date:`${m.year}-${m.month}-${m.day}`,time:`${m.hour}:${m.minute}`}}}return{date:fd||'',time:ft||'—'}}
-const countryCurrency:Array<[string,string[]]>=[['USD',['us','usa','united states','united states of america','america','american']],['EUR',['eurozone','euro area','european union','eu','germany','france','italy','spain','netherlands','belgium','austria','ireland','portugal','greece']],['GBP',['uk','gb','united kingdom','great britain','england']],['JPY',['jp','japan','japanese']],['CAD',['ca','canada','canadian']],['AUD',['au','australia','australian']],['NZD',['nz','new zealand']],['CHF',['ch','switzerland','swiss']]];
-function inferCurrency(raw:ApiEvent,title:string,series:string){const country=String(raw.country||raw.country_name||raw.country_code||raw.countryCode||'').trim().toLowerCase();if(country){for(const[c,values]of countryCurrency)if(values.some(v=>country===v||country.includes(v)))return c}const explicit=String(raw.currency||raw.currency_code||raw.currencyCode||'').trim().toUpperCase();if(currencyOptions.includes(explicit))return explicit;const key=series.replace(/_/g,'-').replace(/\s+/g,'-');if(currencyBySeries[key])return currencyBySeries[key];const text=[title,series,raw.region,raw.source,raw.category].filter(Boolean).join(' ').toLowerCase();const rules:Array<[string,string[]]>=[['USD',['fomc','fed ','federal reserve','adp','nonfarm','non-farm','payroll','jobless claims','initial jobless claims','united states','u.s.','us ','american','eia','crude oil inventories','consumer credit']],['EUR',['ecb','eurozone','euro area','germany','german','france','french','italy','italian','spain','spanish']],['GBP',['boe','bank of england','united kingdom','uk ','britain','british']],['JPY',['boj','bank of japan','japan','japanese']],['CAD',['boc','bank of canada','canada','canadian']],['AUD',['rba','reserve bank of australia','australia','australian']],['NZD',['rbnz','reserve bank of new zealand','new zealand']],['CHF',['snb','switzerland','swiss']]];for(const[c,w]of rules)if(w.some(x=>text.includes(x)))return c;return'—'}
-function normalizeEvent(raw:ApiEvent,index:number):EconomicEvent{const l=localDateTime(raw.time_utc||raw.datetime_utc||raw.timestamp||raw.date_time||raw.datetime,raw.date,raw.time||raw.time_et),iv=String(raw.impact||'low').toLowerCase(),impact:Impact=iv==='high'||iv==='medium'?iv:'low',series=String(raw.series||'').toLowerCase(),title=String(raw.name||raw.title||raw.event||raw.event_name||'Événement économique');return{id:String(raw.id||raw.slug||raw.url||`${l.date}-${index}`),date:l.date,time:raw.all_day?'—':l.time,currency:inferCurrency(raw,title,series),event:title,category:String(raw.category||'').replace(/-/g,' '),impact,actual:raw.actual??raw.result??undefined,forecast:raw.consensus??raw.forecast??undefined,previous:raw.prior??raw.previous??undefined,url:raw.url||undefined}}
-const impactLabel=(i:Impact)=>i==='high'?'Impact élevé':i==='medium'?'Impact moyen':'Impact faible';
-const impactActiveCount=(i:Impact)=>i==='high'?3:i==='medium'?2:1;
-const impactActiveClass=(i:Impact)=>i==='high'?'text-rose-500':i==='medium'?'text-amber-500':'text-amber-500';
-const value=(v?:string)=>String(v??'').trim()||'—';
 
-export function EconomicCalendarView(){const[date,setDate]=useState(localIsoDate),[impact,setImpact]=useState<'all'|Impact>('all'),[currency,setCurrency]=useState('all'),[events,setEvents]=useState<EconomicEvent[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState<string|null>(null);
-const loadEvents=async(selectedDate=date)=>{setLoading(true);setError(null);try{const r=await fetch(`${API_BASE}?from=${addDays(selectedDate,-1)}&to=${addDays(selectedDate,1)}&limit=500`,{headers:{Accept:'application/json'}});if(!r.ok)throw new Error(`HTTP ${r.status}`);const p=await r.json(),raw:ApiEvent[]=Array.isArray(p)?p:Array.isArray(p?.events)?p.events:Array.isArray(p?.data)?p.data:[];setEvents(raw.map(normalizeEvent))}catch(e:any){setEvents([]);setError(e?.message||'Impossible de charger le calendrier.')}finally{setLoading(false)}};
-useEffect(()=>{void loadEvents(date)},[date]);
-const currencies=useMemo(()=>currencyOptions.filter(c=>events.some(e=>e.currency===c)),[events]);
-const visibleEvents=useMemo(()=>events.filter(e=>e.date===date).filter(e=>impact==='all'||e.impact===impact).filter(e=>currency==='all'||e.currency===currency).sort((a,b)=>a.time.localeCompare(b.time)),[events,date,impact,currency]);
-const weekDates=getWeekDates(date),today=localIsoDate(),highImpactCount=visibleEvents.filter(e=>e.impact==='high').length,formattedDate=new Intl.DateTimeFormat('fr-FR',{weekday:'long',day:'numeric',month:'long',year:'numeric'}).format(new Date(`${date}T12:00:00`));
-return <div className="space-y-4">
-<div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"><div><div className="flex items-center gap-2"><CalendarDays className="h-5 w-5 text-[#00a982]"/><h1 className="text-xl font-black tracking-tight text-[#0b1f35]">Calendrier économique</h1><span className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-2 py-1 text-[8px] font-black uppercase tracking-wider text-emerald-600"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse"/>Live</span></div><p className="mt-1 text-sm text-slate-500">Les événements qui peuvent faire bouger les marchés.</p></div><div className="flex items-center gap-2"><button type="button" onClick={()=>setDate(addDays(date,-1))} className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-slate-50"><ChevronLeft className="h-4 w-4"/></button><button type="button" onClick={()=>setDate(today)} className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-[#0b1f35] hover:bg-slate-50">Aujourd'hui</button><button type="button" onClick={()=>setDate(addDays(date,1))} className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 hover:bg-slate-50"><ChevronRight className="h-4 w-4"/></button></div></div>
-<div className="flex gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-1">{weekDates.map(day=>{const active=day===date,label=new Intl.DateTimeFormat('fr-FR',{weekday:'short'}).format(new Date(`${day}T12:00:00`)),number=new Intl.DateTimeFormat('fr-FR',{day:'numeric'}).format(new Date(`${day}T12:00:00`));return <button key={day} onClick={()=>setDate(day)} className={`min-w-[110px] flex-1 rounded-lg px-3 py-2 text-left transition-all ${active?'bg-[#0b1f35] text-white shadow-sm':'text-slate-500 hover:bg-slate-50'}`}><div className="text-[9px] font-bold uppercase tracking-wider opacity-70">{label}</div><div className="mt-0.5 text-sm font-black">{number}</div></button>})}</div>
-<div className="grid gap-2 md:grid-cols-[1fr_1fr_minmax(220px,0.7fr)_auto]"><select value={impact} onChange={e=>setImpact(e.target.value as 'all'|Impact)} className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 outline-none focus:border-[#00a982]"><option value="all">Tous les impacts</option><option value="high">★★★ Impact élevé</option><option value="medium">★★ Impact moyen</option><option value="low">★ Impact faible</option></select><select value={currency} onChange={e=>setCurrency(e.target.value)} className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 outline-none focus:border-[#00a982]"><option value="all">Toutes les devises</option>{currencies.map(c=><option key={c} value={c}>{currencyFlags[c]} {c}</option>)}</select><div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs text-slate-500"><TrendingUp className="h-4 w-4 text-[#00a982]"/><span><strong className="text-[#0b1f35]">{highImpactCount}</strong> événement{highImpactCount>1?'s':''} à fort impact</span></div><button type="button" onClick={()=>void loadEvents(date)} disabled={loading} className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50"><RefreshCw className={`h-3.5 w-3.5 ${loading?'animate-spin':''}`}/>Actualiser</button></div>
-<div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"><div className="border-b border-slate-100 bg-slate-50/70 px-5 py-3"><div className="text-sm font-black capitalize text-[#0b1f35]">{formattedDate}</div><div className="mt-1 text-[10px] text-slate-400">{visibleEvents.length} événement{visibleEvents.length>1?'s':''} · fuseau local</div></div>
-{loading?<div className="flex min-h-[280px] items-center justify-center gap-2 text-sm text-slate-400"><Loader2 className="h-5 w-5 animate-spin"/>Chargement du calendrier…</div>:error?<div className="px-5 py-14 text-center"><AlertTriangle className="mx-auto h-6 w-6 text-rose-400"/><p className="mt-3 text-sm font-bold text-slate-600">Impossible de charger les données.</p><p className="mt-1 text-xs text-slate-400">{error}</p><button type="button" onClick={()=>void loadEvents(date)} className="mt-4 rounded-xl bg-[#0b1f35] px-4 py-2 text-xs font-bold text-white">Réessayer</button></div>:visibleEvents.length?<div><div className="hidden border-b border-slate-100 bg-slate-50/70 px-5 py-2.5 text-[9px] font-black uppercase tracking-wider text-slate-400 md:grid md:grid-cols-[78px_82px_minmax(320px,650px)_100px_100px_100px_100px] md:items-center md:gap-3"><span>Heure</span><span>Devise</span><span>Événement</span><span className="text-center">Impact</span><span className="text-center">Actuel</span><span className="text-center">Prévision</span><span className="text-center">Précédent</span></div><div className="divide-y divide-slate-100">{visibleEvents.map(e=><div key={e.id} className="group px-5 py-3 transition-colors hover:bg-slate-50/80"><div className="grid gap-3 md:grid-cols-[78px_82px_minmax(320px,650px)_100px_100px_100px_100px] md:items-center md:gap-3"><div className="text-xs font-semibold text-slate-500">{e.time}</div><div className="text-xs font-bold text-slate-600">{e.currency==='—'?'—':<span className="inline-flex items-center gap-1.5">{currencyFlags[e.currency]}{e.currency}</span>}</div><div className="min-w-0"><div className="truncate text-xs font-black text-[#0b1f35]" title={e.event}>{e.event}</div><div className="mt-0.5 flex items-center gap-2 text-[9px] text-slate-400"><span className="capitalize">{e.category||'Indicateur économique'}</span>{e.url&&<a href={e.url} target="_blank" rel="noreferrer" className="font-semibold text-[#00a982] hover:underline">Détails</a>}</div></div><div className="flex items-center justify-center gap-0.5" title={impactLabel(e.impact)} aria-label={impactLabel(e.impact)}>{Array.from({length:3},(_,index)=><span key={index} className={`text-[15px] leading-none ${index<impactActiveCount(e.impact)?impactActiveClass(e.impact):'text-slate-300'}`}>★</span>)}</div><div className="text-center text-xs font-black text-[#0b1f35]">{value(e.actual)}</div><div className="text-center text-xs font-semibold text-slate-500">{value(e.forecast)}</div><div className="text-center text-xs font-semibold text-slate-500">{value(e.previous)}</div><div className="col-span-full grid grid-cols-3 gap-2 border-t border-slate-100 pt-2 md:hidden"><div><div className="text-[8px] font-bold uppercase tracking-wider text-slate-400">Actuel</div><div className="mt-0.5 text-xs font-black text-[#0b1f35]">{value(e.actual)}</div></div><div><div className="text-[8px] font-bold uppercase tracking-wider text-slate-400">Prévision</div><div className="mt-0.5 text-xs font-semibold text-slate-500">{value(e.forecast)}</div></div><div><div className="text-[8px] font-bold uppercase tracking-wider text-slate-400">Précédent</div><div className="mt-0.5 text-xs font-semibold text-slate-500">{value(e.previous)}</div></div></div></div></div>)}</div></div>:<div className="px-5 py-12 text-center"><CalendarDays className="mx-auto h-8 w-8 text-slate-200"/><p className="mt-3 text-sm font-bold text-slate-500">Aucun événement avec ces filtres.</p><button type="button" onClick={()=>{setImpact('all');setCurrency('all')}} className="mt-3 text-xs font-bold text-[#00a982] hover:underline">Réinitialiser les filtres</button></div>}</div>
-<div className="flex items-center justify-between px-1 text-[9px] text-slate-400"><span>Calendrier économique · données mises à jour automatiquement</span><a href="https://www.forexfactory.com/calendar" target="_blank" rel="noreferrer" className="font-semibold text-slate-400 hover:text-[#00a982]">Source Forex Factory</a></div></div>}
+type EconomicEvent = {
+  id: string;
+  date: string;
+  time: string;
+  currency: string;
+  event: string;
+  category?: string;
+  impact: Impact;
+  actual?: string;
+  forecast?: string;
+  previous?: string;
+  url?: string;
+};
+
+type ApiEvent = Record<string, any>;
+
+const API_BASE = '/api/economic-calendar';
+
+const currencyFlags: Record<string, string> = {
+  USD: '🇺🇸',
+  EUR: '🇪🇺',
+  GBP: '🇬🇧',
+  JPY: '🇯🇵',
+  CAD: '🇨🇦',
+  AUD: '🇦🇺',
+  NZD: '🇳🇿',
+  CHF: '🇨🇭',
+};
+
+const currencyOptions = Object.keys(currencyFlags);
+
+const currencyBySeries: Record<string, string> = {
+  fomc: 'USD',
+  fed: 'USD',
+  adp: 'USD',
+  cpi: 'USD',
+  jobs: 'USD',
+  nfp: 'USD',
+  payroll: 'USD',
+  gdp: 'USD',
+  pce: 'USD',
+  ppi: 'USD',
+  'retail-sales': 'USD',
+  'jobless-claims': 'USD',
+  ism: 'USD',
+  jolts: 'USD',
+  eia: 'USD',
+  'consumer-credit': 'USD',
+  ecb: 'EUR',
+  eurozone: 'EUR',
+  'euro-area': 'EUR',
+  boe: 'GBP',
+  uk: 'GBP',
+  'bank-of-england': 'GBP',
+  boj: 'JPY',
+  japan: 'JPY',
+  'bank-of-japan': 'JPY',
+  boc: 'CAD',
+  canada: 'CAD',
+  'bank-of-canada': 'CAD',
+  rba: 'AUD',
+  australia: 'AUD',
+  rbnz: 'NZD',
+  'new-zealand': 'NZD',
+  snb: 'CHF',
+  switzerland: 'CHF',
+};
+
+const countryCurrency: Array<[string, string[]]> = [
+  ['USD', ['us', 'usa', 'united states', 'united states of america', 'america', 'american']],
+  ['EUR', ['eurozone', 'euro area', 'european union', 'eu', 'germany', 'france', 'italy', 'spain', 'netherlands', 'belgium', 'austria', 'ireland', 'portugal', 'greece']],
+  ['GBP', ['uk', 'gb', 'united kingdom', 'great britain', 'england']],
+  ['JPY', ['jp', 'japan', 'japanese']],
+  ['CAD', ['ca', 'canada', 'canadian']],
+  ['AUD', ['au', 'australia', 'australian']],
+  ['NZD', ['nz', 'new zealand']],
+  ['CHF', ['ch', 'switzerland', 'swiss']],
+];
+
+function localIsoDate(date = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+
+  const map = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return `${map.year}-${map.month}-${map.day}`;
+}
+
+function addDays(value: string, amount: number) {
+  const date = new Date(`${value}T12:00:00`);
+  date.setDate(date.getDate() + amount);
+  return localIsoDate(date);
+}
+
+function getWeekDates(value: string) {
+  const date = new Date(`${value}T12:00:00`);
+  const day = date.getDay();
+  const monday = new Date(date);
+  monday.setDate(date.getDate() - (day === 0 ? 6 : day - 1));
+
+  return Array.from({ length: 5 }, (_, index) => {
+    const current = new Date(monday);
+    current.setDate(monday.getDate() + index);
+    return localIsoDate(current);
+  });
+}
+
+function localDateTime(value: unknown, fallbackDate?: string, fallbackTime?: string) {
+  if (typeof value === 'string' && value) {
+    const date = new Date(value);
+
+    if (!Number.isNaN(date.getTime())) {
+      const parts = new Intl.DateTimeFormat('en-CA', {
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      }).formatToParts(date);
+
+      const map = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+
+      return {
+        date: `${map.year}-${map.month}-${map.day}`,
+        time: `${map.hour}:${map.minute}`,
+      };
+    }
+  }
+
+  return {
+    date: fallbackDate || '',
+    time: fallbackTime || '—',
+  };
+}
+
+function inferCurrency(raw: ApiEvent, title: string, series: string) {
+  const country = String(
+    raw.country || raw.country_name || raw.country_code || raw.countryCode || '',
+  )
+    .trim()
+    .toLowerCase();
+
+  if (country) {
+    for (const [currency, values] of countryCurrency) {
+      if (values.some((value) => country === value || country.includes(value))) {
+        return currency;
+      }
+    }
+  }
+
+  const explicit = String(raw.currency || raw.currency_code || raw.currencyCode || '')
+    .trim()
+    .toUpperCase();
+
+  if (currencyOptions.includes(explicit)) {
+    return explicit;
+  }
+
+  const seriesKey = series.replace(/_/g, '-').replace(/\s+/g, '-');
+
+  if (currencyBySeries[seriesKey]) {
+    return currencyBySeries[seriesKey];
+  }
+
+  const searchableText = [title, series, raw.region, raw.source, raw.category]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+  const rules: Array<[string, string[]]> = [
+    ['USD', ['fomc', 'fed ', 'federal reserve', 'adp', 'nonfarm', 'non-farm', 'payroll', 'jobless claims', 'initial jobless claims', 'united states', 'u.s.', 'us ', 'american', 'eia', 'crude oil inventories', 'consumer credit']],
+    ['EUR', ['ecb', 'eurozone', 'euro area', 'germany', 'german', 'france', 'french', 'italy', 'italian', 'spain', 'spanish']],
+    ['GBP', ['boe', 'bank of england', 'united kingdom', 'uk ', 'britain', 'british']],
+    ['JPY', ['boj', 'bank of japan', 'japan', 'japanese']],
+    ['CAD', ['boc', 'bank of canada', 'canada', 'canadian']],
+    ['AUD', ['rba', 'reserve bank of australia', 'australia', 'australian']],
+    ['NZD', ['rbnz', 'reserve bank of new zealand', 'new zealand']],
+    ['CHF', ['snb', 'switzerland', 'swiss']],
+  ];
+
+  for (const [currency, words] of rules) {
+    if (words.some((word) => searchableText.includes(word))) {
+      return currency;
+    }
+  }
+
+  return '—';
+}
+
+function normalizeEvent(raw: ApiEvent, index: number): EconomicEvent {
+  const dateTime = localDateTime(
+    raw.time_utc || raw.datetime_utc || raw.timestamp || raw.date_time || raw.datetime,
+    raw.date,
+    raw.time || raw.time_et,
+  );
+
+  const rawImpact = String(raw.impact || 'low').toLowerCase();
+  const impact: Impact =
+    rawImpact === 'high' || rawImpact === 'medium' ? rawImpact : 'low';
+
+  const series = String(raw.series || '').toLowerCase();
+  const title = String(
+    raw.name || raw.title || raw.event || raw.event_name || 'Événement économique',
+  );
+
+  return {
+    id: String(raw.id || raw.slug || raw.url || `${dateTime.date}-${index}`),
+    date: dateTime.date,
+    time: raw.all_day ? '—' : dateTime.time,
+    currency: inferCurrency(raw, title, series),
+    event: title,
+    category: String(raw.category || '').replace(/-/g, ' '),
+    impact,
+    actual: raw.actual ?? raw.result ?? undefined,
+    forecast: raw.consensus ?? raw.forecast ?? undefined,
+    previous: raw.prior ?? raw.previous ?? undefined,
+    url: raw.url || undefined,
+  };
+}
+
+const impactLabel = (impact: Impact) =>
+  impact === 'high'
+    ? 'Impact élevé'
+    : impact === 'medium'
+      ? 'Impact moyen'
+      : 'Impact faible';
+
+const impactStars = (impact: Impact) => {
+  if (impact === 'high') {
+    return (
+      <span className="font-bold tracking-[-2px] text-red-500" aria-hidden="true">
+        ★★★
+      </span>
+    );
+  }
+
+  if (impact === 'medium') {
+    return (
+      <span className="font-bold tracking-[-2px] text-amber-500" aria-hidden="true">
+        ★★<span className="text-slate-300 dark:text-slate-700">★</span>
+      </span>
+    );
+  }
+
+  return (
+    <span className="font-bold tracking-[-2px] text-amber-400" aria-hidden="true">
+      ★<span className="text-slate-300 dark:text-slate-700">★</span>
+      <span className="text-slate-300 dark:text-slate-700">★</span>
+    </span>
+  );
+};
+
+const value = (raw?: string) => String(raw ?? '').trim() || '-';
+
+function formatActualClass(actual?: string) {
+  if (!actual?.trim()) {
+    return 'text-slate-400';
+  }
+
+  return /(^|\s)-/.test(actual.trim()) ? 'text-red-500' : 'font-bold text-emerald-600 dark:text-emerald-400';
+}
+
+export function EconomicCalendarView() {
+  const [date, setDate] = useState(localIsoDate);
+  const [impact, setImpact] = useState<'all' | Impact>('all');
+  const [currency, setCurrency] = useState('all');
+  const [events, setEvents] = useState<EconomicEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadEvents = async (selectedDate = date) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(
+        `${API_BASE}?from=${addDays(selectedDate, -1)}&to=${addDays(selectedDate, 1)}&limit=500`,
+        { headers: { Accept: 'application/json' } },
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+
+      const payload = await response.json();
+      const rawEvents: ApiEvent[] = Array.isArray(payload)
+        ? payload
+        : Array.isArray(payload?.events)
+          ? payload.events
+          : Array.isArray(payload?.data)
+            ? payload.data
+            : [];
+
+      setEvents(rawEvents.map(normalizeEvent));
+    } catch (loadError: any) {
+      setEvents([]);
+      setError(loadError?.message || 'Impossible de charger le calendrier.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    void loadEvents(date);
+  }, [date]);
+
+  const currencies = useMemo(
+    () => currencyOptions.filter((item) => events.some((event) => event.currency === item)),
+    [events],
+  );
+
+  const visibleEvents = useMemo(
+    () =>
+      events
+        .filter((event) => event.date === date)
+        .filter((event) => impact === 'all' || event.impact === impact)
+        .filter((event) => currency === 'all' || event.currency === currency)
+        .sort((a, b) => a.time.localeCompare(b.time)),
+    [events, date, impact, currency],
+  );
+
+  const weekDates = getWeekDates(date);
+  const today = localIsoDate();
+  const highImpactCount = visibleEvents.filter((event) => event.impact === 'high').length;
+
+  const formattedDate = new Intl.DateTimeFormat('fr-FR', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(new Date(`${date}T12:00:00`));
+
+  return (
+    <div className="space-y-3 text-slate-900 dark:text-white">
+      <div className="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex min-w-0 items-center gap-2">
+          <CalendarDays className="h-4 w-4 shrink-0 text-[#00a982]" />
+          <h1 className="text-lg font-black tracking-tight text-[#0b1f35] dark:text-white">
+            Calendrier économique
+          </h1>
+          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400">
+            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+            Live
+          </span>
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setDate(addDays(date, -1))}
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800"
+            aria-label="Jour précédent"
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setDate(today)}
+            className="h-8 rounded-lg border border-slate-200 bg-white px-3 text-[11px] font-bold text-[#0b1f35] hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-white dark:hover:bg-slate-800"
+          >
+            Aujourd'hui
+          </button>
+          <button
+            type="button"
+            onClick={() => setDate(addDays(date, 1))}
+            className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:hover:bg-slate-800"
+            aria-label="Jour suivant"
+          >
+            <ChevronRight className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+
+      <div className="flex gap-0.5 overflow-x-auto rounded-lg border border-slate-200 bg-white p-0.5 dark:border-slate-800 dark:bg-slate-900">
+        {weekDates.map((day) => {
+          const active = day === date;
+          const label = new Intl.DateTimeFormat('fr-FR', { weekday: 'short' }).format(
+            new Date(`${day}T12:00:00`),
+          );
+          const number = new Intl.DateTimeFormat('fr-FR', { day: 'numeric' }).format(
+            new Date(`${day}T12:00:00`),
+          );
+
+          return (
+            <button
+              key={day}
+              type="button"
+              onClick={() => setDate(day)}
+              className={`min-w-[90px] flex-1 rounded-md px-2.5 py-1.5 text-left transition-colors ${
+                active
+                  ? 'bg-[#0b1f35] text-white'
+                  : 'text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800'
+              }`}
+            >
+              <div className="text-[9px] font-bold uppercase tracking-wider opacity-70">
+                {label}
+              </div>
+              <div className="text-xs font-black">{number}</div>
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="grid gap-1.5 md:grid-cols-[minmax(150px,1fr)_minmax(150px,1fr)_auto_auto]">
+        <select
+          value={impact}
+          onChange={(event) => setImpact(event.target.value as 'all' | Impact)}
+          className="h-9 rounded-lg border border-slate-200 bg-white px-2.5 text-[11px] font-semibold text-slate-700 outline-none focus:border-[#00a982] dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
+        >
+          <option value="all">Tous les impacts</option>
+          <option value="high">★★★ Impact élevé</option>
+          <option value="medium">★★☆ Impact moyen</option>
+          <option value="low">★☆☆ Impact faible</option>
+        </select>
+
+        <select
+          value={currency}
+          onChange={(event) => setCurrency(event.target.value)}
+          className="h-9 rounded-lg border border-slate-200 bg-white px-2.5 text-[11px] font-semibold text-slate-700 outline-none focus:border-[#00a982] dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
+        >
+          <option value="all">Toutes les devises</option>
+          {currencies.map((item) => (
+            <option key={item} value={item}>
+              {currencyFlags[item]} {item}
+            </option>
+          ))}
+        </select>
+
+        <div className="flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-[10px] text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
+          <TrendingUp className="h-3.5 w-3.5 text-[#00a982]" />
+          <span>
+            <strong className="text-[#0b1f35] dark:text-white">{highImpactCount}</strong> fort
+            {highImpactCount > 1 ? 's' : ''}
+          </span>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => void loadEvents(date)}
+          disabled={loading}
+          className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-[10px] font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800"
+        >
+          <RefreshCw className={`h-3 w-3 ${loading ? 'animate-spin' : ''}`} />
+          Actualiser
+        </button>
+      </div>
+
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
+        {loading ? (
+          <div className="flex min-h-[180px] items-center justify-center gap-2 text-xs text-slate-400">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Chargement du calendrier…
+          </div>
+        ) : error ? (
+          <div className="px-4 py-10 text-center">
+            <AlertTriangle className="mx-auto h-5 w-5 text-rose-400" />
+            <p className="mt-2 text-xs font-bold text-slate-600 dark:text-slate-300">
+              Impossible de charger les données.
+            </p>
+            <p className="mt-1 text-[10px] text-slate-400">{error}</p>
+            <button
+              type="button"
+              onClick={() => void loadEvents(date)}
+              className="mt-3 rounded-lg bg-[#0b1f35] px-3 py-1.5 text-[10px] font-bold text-white"
+            >
+              Réessayer
+            </button>
+          </div>
+        ) : visibleEvents.length ? (
+          <div className="max-h-[calc(100vh-330px)] overflow-auto">
+            <div className="sticky top-0 z-20 border-b border-slate-200 bg-slate-100 px-4 py-2 dark:border-slate-800 dark:bg-slate-800/90">
+              <div className="text-[11px] font-semibold uppercase text-slate-600 dark:text-slate-300">
+                {formattedDate}
+              </div>
+              <div className="mt-0.5 text-[9px] text-slate-400">
+                {visibleEvents.length} événement{visibleEvents.length > 1 ? 's' : ''} · fuseau local
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[860px] border-collapse">
+                <thead className="sticky top-[49px] z-10 border-b border-slate-100 bg-white dark:border-slate-800 dark:bg-slate-950">
+                  <tr className="h-8">
+                    <th className="w-[76px] px-3 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-400">Heure</th>
+                    <th className="w-[82px] px-2 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-400">Devise</th>
+                    <th className="px-3 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-400">Événement</th>
+                    <th className="w-[88px] px-2 text-center text-[10px] font-semibold uppercase tracking-wide text-gray-400">Impact</th>
+                    <th className="w-[92px] px-2 text-center text-[10px] font-semibold uppercase tracking-wide text-gray-400">Actuel</th>
+                    <th className="w-[92px] px-2 text-center text-[10px] font-semibold uppercase tracking-wide text-gray-400">Prévision</th>
+                    <th className="w-[92px] px-3 text-center text-[10px] font-semibold uppercase tracking-wide text-gray-400">Précédent</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {visibleEvents.map((event) => (
+                    <tr
+                      key={event.id}
+                      className="h-[43px] border-b border-gray-100 transition-colors last:border-b-0 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/50"
+                    >
+                      <td className="whitespace-nowrap px-3 text-left font-mono text-xs text-gray-500 dark:text-slate-400">
+                        {event.time}
+                      </td>
+
+                      <td className="px-2 text-left">
+                        {event.currency === '—' ? (
+                          <span className="text-xs text-gray-400">-</span>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                            <span aria-hidden="true">{currencyFlags[event.currency]}</span>
+                            {event.currency}
+                          </span>
+                        )}
+                      </td>
+
+                      <td className="max-w-0 px-3">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <div className="min-w-0 flex-1">
+                            <div
+                              className="truncate text-xs font-medium text-slate-900 dark:text-white"
+                              title={event.event}
+                            >
+                              {event.event}
+                            </div>
+                            <div className="truncate text-[11px] text-gray-400 dark:text-slate-500">
+                              {event.category || 'Indicateur économique'}
+                            </div>
+                          </div>
+                          {event.url && (
+                            <a
+                              href={event.url}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="shrink-0 text-[9px] font-semibold text-[#00a982] hover:underline"
+                            >
+                              Détails
+                            </a>
+                          )}
+                        </div>
+                      </td>
+
+                      <td
+                        className="px-2 text-center text-sm"
+                        title={impactLabel(event.impact)}
+                        aria-label={impactLabel(event.impact)}
+                      >
+                        {impactStars(event.impact)}
+                      </td>
+
+                      <td
+                        className={`px-2 text-center text-xs ${formatActualClass(event.actual)}`}
+                      >
+                        {value(event.actual)}
+                      </td>
+
+                      <td className="px-2 text-center text-xs text-slate-500 dark:text-slate-400">
+                        {value(event.forecast)}
+                      </td>
+
+                      <td className="px-3 text-center text-xs text-slate-500 dark:text-slate-400">
+                        {value(event.previous)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : (
+          <div className="px-4 py-10 text-center">
+            <CalendarDays className="mx-auto h-6 w-6 text-slate-200 dark:text-slate-700" />
+            <p className="mt-2 text-xs font-bold text-slate-500">
+              Aucun événement avec ces filtres.
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setImpact('all');
+                setCurrency('all');
+              }}
+              className="mt-2 text-[10px] font-bold text-[#00a982] hover:underline"
+            >
+              Réinitialiser les filtres
+            </button>
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-center justify-between px-0.5 text-[9px] text-slate-400">
+        <span>Calendrier économique · données mises à jour automatiquement</span>
+        <a
+          href="https://www.forexfactory.com/calendar"
+          target="_blank"
+          rel="noreferrer"
+          className="font-semibold hover:text-[#00a982]"
+        >
+          Source Forex Factory
+        </a>
+      </div>
+    </div>
+  );
+}
