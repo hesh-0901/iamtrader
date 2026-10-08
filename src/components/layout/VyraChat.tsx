@@ -1,6 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Send, X, Sparkles } from 'lucide-react';
 
+const VYRA_CHAT_STORAGE_KEY = 'iamtrader_vyra_chat_v2';
+const VYRA_CHAT_RETENTION_MS = 48 * 60 * 60 * 1000;
+
+type StoredVyraChat = { savedAt: number; messages: ChatMessage[] };
+
 type ChatMessage = {
   role: 'user' | 'assistant';
   content: string;
@@ -45,12 +50,29 @@ function renderVyraText(text: string): React.ReactNode {
 }
 
 export function VyraChat({ isOpen, onClose }: VyraChatProps) {
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: 'assistant', content: 'Bonjour. Je suis VYRA, l’assistante IA d’IAMTRADER. Je peux vous aider à comprendre la plateforme et ses fonctionnalités.' },
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>(() => {
+    try {
+      const raw = localStorage.getItem(VYRA_CHAT_STORAGE_KEY);
+      if (!raw) throw new Error('no chat');
+      const stored = JSON.parse(raw) as StoredVyraChat;
+      if (!stored.savedAt || Date.now() - stored.savedAt >= VYRA_CHAT_RETENTION_MS || !Array.isArray(stored.messages)) {
+        localStorage.removeItem(VYRA_CHAT_STORAGE_KEY);
+        throw new Error('expired chat');
+      }
+      return stored.messages;
+    } catch {
+      return [{ role: 'assistant', content: 'Bonjour. Je suis VYRA, l’assistante IA d’IAMTRADER. Je peux vous aider à comprendre la plateforme et ses fonctionnalités.' }];
+    }
+  });
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(VYRA_CHAT_STORAGE_KEY, JSON.stringify({ savedAt: Date.now(), messages }));
+    } catch {}
+  }, [messages]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -110,9 +132,9 @@ export function VyraChat({ isOpen, onClose }: VyraChatProps) {
       >
         <header className="shrink-0 flex items-center justify-between border-b border-[#e7efec] bg-white px-4 py-3">
           <div className="flex items-center gap-2.5">
-            <div className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#00c796] to-[#00a982] text-white shadow-[0_8px_20px_rgba(0,169,130,0.24)]">
-              <Sparkles className="h-5 w-5 animate-[spin_4s_linear_infinite]" />
-              <span className="absolute inset-0 rounded-full ring-2 ring-[#00c796]/20 animate-ping" />
+            <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-full border-2 border-white bg-[#eafbf6] shadow-[0_6px_18px_rgba(0,169,130,0.18)] ring-1 ring-[#bfe8dc]">
+              <img src="/vyra-avatar.png" alt="VYRA" className="h-full w-full object-cover object-[50%_42%]" />
+              <span className="absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white bg-[#00c796] shadow-[0_0_0_2px_rgba(0,199,150,0.14)]" />
             </div>
             <div>
               <div className="flex items-center gap-1.5">
@@ -132,8 +154,8 @@ export function VyraChat({ isOpen, onClose }: VyraChatProps) {
             {messages.map((message, index) => (
               <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
                 {message.role === 'assistant' && (
-                  <div className="mr-2 mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#00c796] to-[#00a982] text-white shadow-[0_5px_14px_rgba(0,169,130,0.2)]">
-                    <Sparkles className="h-3.5 w-3.5" />
+                  <div className="mr-2 mt-0.5 h-8 w-8 shrink-0 overflow-hidden rounded-full border border-[#bfe8dc] bg-[#eafbf6]">
+                    <img src="/vyra-avatar.png" alt="" className="h-full w-full object-cover object-[50%_42%]" />
                   </div>
                 )}
                 <div className={`max-w-[84%] rounded-2xl px-3.5 py-2.5 text-[11px] leading-relaxed shadow-sm ${
@@ -148,8 +170,8 @@ export function VyraChat({ isOpen, onClose }: VyraChatProps) {
 
             {isLoading && (
               <div className="flex items-center gap-2">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-gradient-to-br from-[#00c796] to-[#00a982] text-white shadow-[0_5px_14px_rgba(0,169,130,0.2)]">
-                  <Sparkles className="h-3.5 w-3.5 animate-pulse" />
+                <div className="h-8 w-8 overflow-hidden rounded-full border border-[#bfe8dc] bg-[#eafbf6]">
+                  <img src="/vyra-avatar.png" alt="" className="h-full w-full object-cover object-[50%_42%]" />
                 </div>
                 <div className="flex items-center gap-1.5 rounded-2xl rounded-bl-md border border-[#e2ece8] bg-white px-3.5 py-2.5">
                   <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#00a982]" />
