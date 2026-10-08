@@ -30,14 +30,14 @@ type ApiEvent = Record<string, any>;
 const API_BASE = '/api/economic-calendar';
 
 const currencyFlags: Record<string, string> = {
-  USD: '🇺🇸',
-  EUR: '🇪🇺',
-  GBP: '🇬🇧',
-  JPY: '🇯🇵',
-  CAD: '🇨🇦',
-  AUD: '🇦🇺',
-  NZD: '🇳🇿',
-  CHF: '🇨🇭',
+  USD: 'US',
+  EUR: 'EU',
+  GBP: 'GB',
+  JPY: 'JP',
+  CAD: 'CA',
+  AUD: 'AU',
+  NZD: 'NZ',
+  CHF: 'CH',
 };
 
 const currencyOptions = Object.keys(currencyFlags);
@@ -447,7 +447,7 @@ export function EconomicCalendarView() {
           <option value="all">Toutes les devises</option>
           {currencies.map((item) => (
             <option key={item} value={item}>
-              {currencyFlags[item]} {item}
+              {currencyFlags[item]} · {item}
             </option>
           ))}
         </select>
@@ -494,7 +494,7 @@ export function EconomicCalendarView() {
           </div>
         ) : visibleEvents.length ? (
           <div className="max-h-[calc(100vh-330px)] overflow-auto">
-            <div className="sticky top-0 z-20 border-b border-slate-200 bg-slate-100 px-4 py-2 dark:border-slate-800 dark:bg-slate-800/90">
+            <div className="sticky top-0 z-20 border-b border-slate-200 bg-slate-100 px-4 py-2 dark:border-slate-800 dark:bg-slate-800/95">
               <div className="text-[11px] font-semibold uppercase text-slate-600 dark:text-slate-300">
                 {formattedDate}
               </div>
@@ -505,7 +505,7 @@ export function EconomicCalendarView() {
 
             <div className="overflow-x-auto">
               <table className="w-full min-w-[860px] border-collapse">
-                <thead className="sticky top-[49px] z-10 border-b border-slate-100 bg-white dark:border-slate-800 dark:bg-slate-950">
+                <thead className="border-b border-slate-100 bg-white dark:border-slate-800 dark:bg-slate-950">
                   <tr className="h-8">
                     <th className="w-[76px] px-3 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-400">Heure</th>
                     <th className="w-[82px] px-2 text-left text-[10px] font-semibold uppercase tracking-wide text-gray-400">Devise</th>
@@ -531,8 +531,10 @@ export function EconomicCalendarView() {
                         {event.currency === '—' ? (
                           <span className="text-xs text-gray-400">-</span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 text-xs font-semibold text-slate-600 dark:text-slate-300">
-                            <span aria-hidden="true">{currencyFlags[event.currency]}</span>
+                          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300">
+                            <span className="inline-flex h-4 min-w-[20px] items-center justify-center rounded-sm bg-slate-100 px-1 text-[8px] font-black uppercase tracking-wide text-slate-500 dark:bg-slate-800 dark:text-slate-300" aria-hidden="true">
+                              {currencyFlags[event.currency]}
+                            </span>
                             {event.currency}
                           </span>
                         )}
