@@ -1,6 +1,4 @@
 const SOURCE_URL = 'https://nfs.faireconomy.media/ff_calendar_thisweek.json';
-const CACHE_TTL = 600;
-
 type ForexFactoryEvent = {
   title?: string;
   country?: string;
