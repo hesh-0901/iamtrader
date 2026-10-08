@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { CalendarDays, ChevronLeft, ChevronRight, Filter, Clock3, AlertTriangle, Loader2, RefreshCw, TrendingUp, Bell, X } from 'lucide-react';
+import { CalendarDays, ChevronLeft, ChevronRight, Clock3, AlertTriangle, Loader2, RefreshCw, TrendingUp, Bell } from 'lucide-react';
 
 type Impact = 'high' | 'medium' | 'low';
 type EconomicEvent = {
@@ -154,8 +154,8 @@ export function EconomicCalendarView() {
   const formattedDate = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(`${date}T12:00:00`));
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <div className="space-y-4">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <div className="flex items-center gap-2">
             <CalendarDays className="h-5 w-5 text-[#00a982]" />
@@ -173,13 +173,13 @@ export function EconomicCalendarView() {
         </div>
       </div>
 
-      <div className="flex gap-1 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-1.5">
+      <div className="flex gap-1 overflow-x-auto rounded-xl border border-slate-200 bg-white p-1">
         {weekDates.map(day => {
           const active = day === date;
           const dayLabel = new Intl.DateTimeFormat('fr-FR', { weekday: 'short' }).format(new Date(`${day}T12:00:00`));
           const dayNumber = new Intl.DateTimeFormat('fr-FR', { day: 'numeric' }).format(new Date(`${day}T12:00:00`));
           return (
-            <button key={day} onClick={() => setDate(day)} className={`min-w-[110px] flex-1 rounded-xl px-3 py-2.5 text-left transition-all ${active ? 'bg-[#0b1f35] text-white shadow-sm' : 'text-slate-500 hover:bg-slate-50'}`}>
+            <button key={day} onClick={() => setDate(day)} className={`min-w-[110px] flex-1 rounded-lg px-3 py-2 text-left transition-all ${active ? 'bg-[#0b1f35] text-white shadow-sm' : 'text-slate-500 hover:bg-slate-50'}`}>
               <div className="text-[9px] font-bold uppercase tracking-wider opacity-70">{dayLabel}</div>
               <div className="mt-0.5 text-sm font-black">{dayNumber}</div>
             </button>
@@ -187,7 +187,7 @@ export function EconomicCalendarView() {
         })}
       </div>
 
-      <div className="grid gap-3 md:grid-cols-[1fr_1fr_1fr_auto]">
+      <div className="grid gap-2 md:grid-cols-[1fr_1fr_minmax(220px,0.7fr)_auto]">
         <select value={impact} onChange={e => setImpact(e.target.value as 'all' | Impact)} className="h-11 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold text-slate-700 outline-none focus:border-[#00a982]">
           <option value="all">Tous les impacts</option>
           <option value="high">🔴 Impact élevé</option>
@@ -208,7 +208,7 @@ export function EconomicCalendarView() {
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-        <div className="flex flex-col gap-2 border-b border-slate-100 bg-slate-50/70 px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-2 border-b border-slate-100 bg-slate-50/70 px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <div className="text-sm font-black capitalize text-[#0b1f35]">{formattedDate}</div>
             <div className="mt-1 text-[10px] text-slate-400">{visibleEvents.length} événement{visibleEvents.length > 1 ? 's' : ''} · fuseau local</div>
@@ -230,7 +230,7 @@ export function EconomicCalendarView() {
             {visibleEvents.map(event => {
               const cfg = impactConfig[event.impact];
               return (
-                <div key={event.id} className="group grid gap-4 px-5 py-4 transition-colors hover:bg-slate-50/80 md:grid-cols-[90px_100px_minmax(0,1fr)_minmax(250px,360px)] md:items-center">
+                <div key={event.id} className="group grid gap-3 px-5 py-3.5 transition-colors hover:bg-slate-50/80 md:grid-cols-[80px_78px_minmax(0,1fr)_minmax(280px,390px)] md:items-center">
                   <div className="flex items-center gap-2 text-sm font-black text-[#0b1f35]"><Clock3 className="h-4 w-4 text-slate-300" />{event.time}</div>
                   <div>
                     <span className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2 py-1 text-[10px] font-black text-slate-600">
@@ -243,13 +243,13 @@ export function EconomicCalendarView() {
                       <span className="text-sm font-black text-[#0b1f35]">{event.event}</span>
                       <span className={`rounded-full border px-2 py-0.5 text-[8px] font-black uppercase ${cfg.badge}`}>{cfg.label}</span>
                     </div>
-                    <div className="mt-1 text-[10px] leading-4 text-slate-500">{eventSummary(event)}</div>
+                    <div className="mt-1 max-w-2xl text-[10px] leading-4 text-slate-500">{eventSummary(event)}</div>
                     <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[10px] text-slate-400">
                       <span className="capitalize">{event.category || 'Indicateur économique'}</span>
                       {event.url && <a href={event.url} target="_blank" rel="noreferrer" className="font-semibold text-[#00a982] hover:underline">Détails</a>}
                     </div>
                   </div>
-                  <div className="grid grid-cols-3 gap-3 rounded-xl bg-slate-50 px-3 py-2.5">
+                  <div className="grid grid-cols-3 gap-2 rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-2">
                     <div><div className="text-[8px] font-bold uppercase tracking-wider text-slate-400">Actuel</div><div className="mt-1 text-xs font-black text-[#0b1f35]">{event.actual || (event.date > today ? 'À venir' : 'Non publié')}</div></div>
                     <div><div className="text-[8px] font-bold uppercase tracking-wider text-slate-400">Prévision</div><div className="mt-1 text-xs font-black text-[#0b1f35]">{event.forecast || 'Non communiqué'}</div></div>
                     <div><div className="text-[8px] font-bold uppercase tracking-wider text-slate-400">Précédent</div><div className="mt-1 text-xs font-black text-[#0b1f35]">{event.previous || 'Non communiqué'}</div></div>
@@ -259,22 +259,12 @@ export function EconomicCalendarView() {
             })}
           </div>
         ) : (
-          <div className="px-5 py-16 text-center">
+          <div className="px-5 py-12 text-center">
             <CalendarDays className="mx-auto h-8 w-8 text-slate-200" />
             <p className="mt-3 text-sm font-bold text-slate-500">Aucun événement avec ces filtres.</p>
             <button type="button" onClick={() => { setImpact('all'); setCurrency('all'); }} className="mt-3 text-xs font-bold text-[#00a982] hover:underline">Réinitialiser les filtres</button>
           </div>
         )}
-      </div>
-
-      <div className="flex flex-wrap items-center gap-2 px-1">
-        <span className="mr-1 text-[9px] font-bold uppercase tracking-wider text-slate-400">Devises</span>
-        <button type="button" onClick={() => setCurrency('all')} className={`rounded-lg px-2.5 py-1.5 text-[9px] font-black transition ${currency === 'all' ? 'bg-[#0b1f35] text-white' : 'bg-white text-slate-500 hover:bg-slate-100'}`}>Toutes</button>
-        {currencyOptions.map(value => (
-          <button key={value} type="button" onClick={() => setCurrency(value)} className={`rounded-lg px-2.5 py-1.5 text-[9px] font-black transition ${currency === value ? 'bg-[#0b1f35] text-white' : 'bg-white text-slate-500 hover:bg-slate-100'}`}>
-            {currencyFlags[value]} {value}
-          </button>
-        ))}
       </div>
 
       <div className="flex items-center justify-between px-1 text-[9px] text-slate-400">
