@@ -125,7 +125,7 @@ export function ChloeChat({ isOpen, onClose, userId, userProfile, accounts, trad
 
     const visibleText = input.trim() || 'Analyse le fichier que je viens de joindre.';
     const attachmentNames = attachments.map(a => a.name).join(', ');
-    setMessages(prev => [...prev, { role: 'user', content: attachmentNames ? `${visibleText}\n\nFichiers : ${attachmentNames}` : visibleText]);
+    setMessages(prev => [...prev, { role: 'user', content: attachmentNames ? `${visibleText}\n\nFichiers : ${attachmentNames}` : visibleText }]);
     setInput('');
     setLoading(true);
 
