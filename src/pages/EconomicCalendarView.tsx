@@ -124,6 +124,14 @@ function localDateTime(value: unknown, fallbackDate?: string, fallbackTime?: str
   if (typeof value === 'string' && value) {
     const sourceDate = value.match(/^(\d{4}-\d{2}-\d{2})/)?.[1] || '';
 
+    if (sourceDate) {
+      const timeMatch = value.match(/T(\d{2}:\d{2})/);
+      return {
+        date: sourceDate,
+        time: timeMatch?.[1] || fallbackTime || '—',
+      };
+    }
+
     const parsed = new Date(value);
     if (!Number.isNaN(parsed.getTime())) {
       const parts = new Intl.DateTimeFormat('en-GB', {
@@ -133,18 +141,9 @@ function localDateTime(value: unknown, fallbackDate?: string, fallbackTime?: str
       }).formatToParts(parsed);
 
       const map = Object.fromEntries(parts.map((part) => [part.type, part.value]));
-
       return {
-        date: sourceDate || fallbackDate || '',
+        date: fallbackDate || '',
         time: `${map.hour}:${map.minute}`,
-      };
-    }
-
-    if (sourceDate) {
-      const timeMatch = value.match(/T(\d{2}:\d{2})/);
-      return {
-        date: sourceDate,
-        time: timeMatch?.[1] || fallbackTime || '—',
       };
     }
   }
@@ -216,7 +215,7 @@ function inferCurrency(raw: ApiEvent, title: string, series: string) {
 
 function normalizeEvent(raw: ApiEvent, index: number): EconomicEvent {
   const dateTime = localDateTime(
-    raw.time_utc || raw.datetime_utc || raw.timestamp || raw.date_time || raw.datetime,
+    raw.date || raw.time_utc || raw.datetime_utc || raw.timestamp || raw.date_time || raw.datetime,
     raw.date,
     raw.time || raw.time_et,
   );
@@ -232,8 +231,8 @@ function normalizeEvent(raw: ApiEvent, index: number): EconomicEvent {
 
   return {
     id: String(raw.id || raw.slug || raw.url || `${dateTime.date}-${index}`),
-    date: dateTime.date,
-    time: raw.all_day ? '—' : dateTime.time,
+    date: String(raw.date || dateTime.date || '').slice(0, 10),
+    time: raw.all_day ? '—' : String(raw.time || dateTime.time || '—'),
     currency: inferCurrency(raw, title, series),
     event: title,
     category: String(raw.category || '').replace(/-/g, ' '),
