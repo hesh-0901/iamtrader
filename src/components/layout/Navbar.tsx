@@ -11,11 +11,11 @@ interface NavbarProps {
   onOpenNewAccount: () => void;
   onLogout: () => void;
   onToggleSidebar: () => void;
-  onOpenVyra: () => void;
+  onOpenChloe: () => void;
   currentPageTitle: string;
 }
 
-export function Navbar({ userProfile, accounts, selectedAccountId, onSelectAccount, onOpenNewTrade, onLogout, onToggleSidebar, onOpenVyra, currentPageTitle }: NavbarProps) {
+export function Navbar({ userProfile, accounts, selectedAccountId, onSelectAccount, onOpenNewTrade, onLogout, onToggleSidebar, onOpenChloe, currentPageTitle }: NavbarProps) {
   return (
     <header className="h-16 border-b border-[#e7eeeb] bg-white px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30 select-none">
       <div className="flex items-center gap-3 min-w-0">
@@ -54,10 +54,10 @@ export function Navbar({ userProfile, accounts, selectedAccountId, onSelectAccou
         </div>
 
         <button
-          onClick={onOpenVyra}
+          onClick={onOpenChloe}
           className="group relative flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-[#eafbf6] text-[#168c73] shadow-[0_4px_12px_rgba(0,169,130,0.14)] ring-1 ring-[#bfe8dc] transition-all hover:scale-105 hover:shadow-[0_7px_18px_rgba(0,169,130,0.2)] cursor-pointer overflow-visible"
-          title="Ouvrir VYRA"
-          aria-label="Ouvrir VYRA"
+          title="Ouvrir Chloé"
+          aria-label="Ouvrir Chloé"
         >
           <span className="relative flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-[#00c796] to-[#00a982] text-white shadow-[0_4px_12px_rgba(0,169,130,0.28)] animate-pulse">
             <Sparkles className="h-3.5 w-3.5 animate-[spin_3s_linear_infinite]" />
