@@ -43,15 +43,69 @@ function renderInline(text: string) {
 }
 
 function renderText(text: string) {
-  return text.split(/\n+/).map((line, index) => {
+  const lines = text.split(/\r?\n/);
+  const blocks: React.ReactNode[] = [];
+  let listItems: string[] = [];
+
+  const flushList = () => {
+    if (!listItems.length) return;
+    blocks.push(
+      <ul key={`list-${blocks.length}`} className="my-2 space-y-1.5 pl-1">
+        {listItems.map((item, i) => (
+          <li key={i} className="flex gap-2.5 leading-6">
+            <span className="mt-[10px] h-1.5 w-1.5 shrink-0 rounded-full bg-[#00a982]" />
+            <span className="min-w-0">{renderInline(item)}</span>
+          </li>
+        ))}
+      </ul>
+    );
+    listItems = [];
+  };
+
+  lines.forEach((line, index) => {
     const trimmed = line.trim();
-    if (!trimmed) return <div key={index} className="h-1.5" />;
-    const bullet = trimmed.match(/^[-•]\s+(.*)$/);
-    if (bullet) {
-      return <div key={index} className="flex gap-2 leading-6"><span className="mt-[9px] h-1.5 w-1.5 shrink-0 rounded-full bg-[#00a982]" /> <span>{renderInline(bullet[1])}</span></div>;
+    if (!trimmed) {
+      flushList();
+      if (blocks.length) blocks.push(<div key={`space-${index}`} className="h-2" />);
+      return;
     }
-    return <p key={index} className="m-0 leading-6">{renderInline(line)}</p>;
+
+    const heading = trimmed.match(/^(#{1,3})\s+(.+)$/);
+    if (heading) {
+      flushList();
+      const level = heading[1].length;
+      blocks.push(
+        <div key={`heading-${index}`} className={level === 1 ? 'mt-1 mb-2 text-[15px] font-black tracking-[-0.02em] text-[#102d43]' : 'mt-3 mb-1.5 text-[12px] font-extrabold tracking-[-0.01em] text-[#08795f]'}>
+          {renderInline(heading[2])}
+        </div>
+      );
+      return;
+    }
+
+    const numbered = trimmed.match(/^(\\d+)\.\s+(.+)$/);
+    if (numbered) {
+      flushList();
+      blocks.push(
+        <div key={`number-${index}`} className="flex gap-2.5 leading-6">
+          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#e7f8f3] text-[9px] font-black text-[#08795f]">{numbered[1]}</span>
+          <span className="min-w-0">{renderInline(numbered[2])}</span>
+        </div>
+      );
+      return;
+    }
+
+    const bullet = trimmed.match(/^[-•*]\s+(.+)$/);
+    if (bullet) {
+      listItems.push(bullet[1]);
+      return;
+    }
+
+    flushList();
+    blocks.push(<p key={`p-${index}`} className="m-0 leading-6">{renderInline(line)}</p>);
   });
+
+  flushList();
+  return blocks;
 }
 
 function fileToBase64(file: File): Promise<string> {
@@ -477,6 +531,7 @@ export function ChloeChat({ isOpen, onClose, userId, userProfile, accounts, trad
             <button type="submit" disabled={loading || (!input.trim() && !attachments.length)} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#00a982] text-white disabled:cursor-not-allowed disabled:opacity-40"><Send className="h-4 w-4" /></button>
           </form>
           <p className="mt-1.5 text-center text-[9px] leading-4 text-[#9aa9b5]">📸 Collez une capture avec <strong>Ctrl+V</strong> · 🎙️ envoyez un vocal · 📎 joignez un fichier</p>
+          <p className="mt-1 text-center text-[8px] leading-4 text-[#a4afb8]">Chloé peut faire des erreurs. Vérifiez les informations importantes avant de prendre une décision de trading.</p>
         </div>
       </section>
     </div>
