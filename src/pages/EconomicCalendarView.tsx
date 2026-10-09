@@ -252,7 +252,7 @@ const CowHead = ({ color }: { color: string }) => (
   <svg
     aria-hidden="true"
     viewBox="0 0 16 16"
-    className="h-[14px] w-[14px] shrink-0"
+    className="h-[20px] w-[20px] shrink-0"
     fill="none"
   >
     <path d="M4.2 4.5 1.7 2.8 2.2 6.3 4.4 7.1M11.8 4.5l2.5-1.7-.5 3.5-2.2.8" fill={color} />
@@ -273,7 +273,7 @@ const impactCows = (impact: Impact) => {
         : ['#f59e0b', '#cbd5e1', '#cbd5e1'];
 
   return (
-    <span className="inline-flex items-center justify-center gap-px" aria-label={impactLabel(impact)}>
+    <span className="inline-flex items-center justify-center gap-0.5" aria-label={impactLabel(impact)}>
       {colors.map((color, index) => (
         <CowHead key={index} color={color} />
       ))}
