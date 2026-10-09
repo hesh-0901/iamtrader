@@ -42,13 +42,13 @@ const options: { key: keyof AvatarConfig; label: string; icon: React.ElementType
     { label: 'Boucles courtes', value: 'shortCurly' }, { label: 'Dégradé net', value: 'shortFlat' },
     { label: 'Coupe César', value: 'theCaesar' }, { label: 'César avec raie', value: 'caesarAndSidePart' },
     { label: 'Carré / bob', value: 'bob' }, { label: 'Cheveux longs', value: 'longButNotTooLong' },
-    { label: 'Lisses longs I', value: 'straight01' }, { label: 'Lisses longs II', value: 'straight02' },
-    { label: 'Lisses avec mèche', value: 'straightAndStrand' }, { label: 'Ondulés courts', value: 'shortWaved' },
+    { label: 'Coupe shaggy', value: 'shaggy' }, { label: 'Coupe très courte', value: 'shorn' },
+    { label: 'Carré graphique', value: 'miaWallace' }, { label: 'Ondulés courts', value: 'shortWaved' },
     { label: 'Boucles volumineuses', value: 'bigHair' }, { label: 'Afro', value: 'fro' },
     { label: 'Afro avec bandeau', value: 'froBand' }, { label: 'Tresses / locks I', value: 'dreads' },
     { label: 'Tresses / locks II', value: 'dreads01' }, { label: 'Locks longues', value: 'dreads02' },
     { label: 'Côtés rasés', value: 'shavedSides' }, { label: 'Coupe courte arrondie', value: 'shortRound' },
-    { label: 'Coupe courte classique', value: 'short' }, { label: 'Coupe texturée', value: 'theCaesarAndSidePart' },
+    { label: 'Coupe César moderne', value: 'caesar' }, { label: 'Coupe texturée', value: 'theCaesarAndSidePart' },
     { label: 'Chignon', value: 'bun' }, { label: 'Cheveux épais', value: 'thick' },
     { label: 'Frisés', value: 'frizzle' }, { label: 'Raie sur le côté', value: 'sides' },
     { label: 'Avec turban', value: 'turban' }, { label: 'Avec hijab', value: 'hijab' }
@@ -79,7 +79,7 @@ const options: { key: keyof AvatarConfig; label: string; icon: React.ElementType
     { label: 'Surpris', value: 'surprised' }, { label: 'Clignement', value: 'close' },
     { label: 'Cœur / séduit', value: 'hearts' }, { label: 'Lunatique', value: 'squint' },
     { label: 'Yeux levés', value: 'eyeRoll' }, { label: 'Fatigué', value: 'cry' },
-    { label: 'Détaillé', value: 'winkWacky' }
+    { label: 'Regard décalé', value: 'winkWacky' }
   ]},
   { key: 'eyebrows', label: 'Sourcils', icon: Smile, items: [
     { label: 'Naturels', value: 'default' }, { label: 'Expressifs', value: 'raisedExcited' },
@@ -91,11 +91,10 @@ const options: { key: keyof AvatarConfig; label: string; icon: React.ElementType
   { key: 'mouth', label: 'Sourire et bouche', icon: Smile, items: [
     { label: 'Sourire discret', value: 'smile' }, { label: 'Grand sourire lumineux', value: 'twinkle' },
     { label: 'Sourire naturel', value: 'default' }, { label: 'Bouche ouverte', value: 'screamOpen' },
-    { label: 'Sourire avec langue', value: 'tongue' }, { label: 'Rire / bouche ouverte', value: 'eating' },
+    { label: 'Sourire avec langue', value: 'tongue' }, { label: 'Bouche en train de manger', value: 'eating' },
     { label: 'Sourire crispé', value: 'grimace' }, { label: 'Sérieux', value: 'serious' },
     { label: 'Préoccupé', value: 'concerned' }, { label: 'Triste', value: 'sad' },
-    { label: 'Incrédule', value: 'disbelief' }, { label: 'Expression étonnée', value: 'screamOpen' },
-    { label: 'Bouche neutre', value: 'default' }, { label: 'Langue tirée', value: 'tongue' }
+    { label: 'Incrédule', value: 'disbelief' }, { label: 'Bouche dégoûtée', value: 'vomit' }
   ]},
   { key: 'backgroundColor', label: 'Arrière-plan', icon: Sparkles, items: [
     { label: 'Bleu glacier', value: 'dbeafe', color: '#dbeafe' }, { label: 'Lavande', value: 'ede9fe', color: '#ede9fe' },
