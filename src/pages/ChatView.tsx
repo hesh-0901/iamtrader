@@ -110,35 +110,10 @@ export function ChatView({ userProfile }: { userProfile: UserProfile | null }) {
   const activeName = active?.title || active?.memberNames?.[otherUid] || (otherUid ? `Trader ${otherUid.slice(0, 7)}` : 'Choisir une discussion');
   const currentDisplayName = userProfile?.displayName?.trim() || auth.currentUser?.displayName?.trim() || auth.currentUser?.email?.split('@')[0] || 'Trader';
   const currentAvatar = userProfile?.photoURL || userProfile?.avatarURL || auth.currentUser?.photoURL || '';
-  const profileBackfillRef = useRef(new Set<string>());
-
-  // An administrator repairs legacy Community Hub messages that were saved
-  // before senderName/senderAvatarURL were included in message documents.
-  useEffect(() => {
-    if (activeId !== 'community-hub' || userProfile?.role !== 'admin' || !messages.length) return;
-    messages.forEach(message => {
-      if ((message.senderName?.trim() && message.senderAvatarURL !== undefined)
-        || profileBackfillRef.current.has(message.id)) return;
-      profileBackfillRef.current.add(message.id);
-      void getDoc(doc(db, 'users', message.senderId)).then(profileSnapshot => {
-        if (!profileSnapshot.exists()) return;
-        const profile = profileSnapshot.data();
-        const displayName = typeof profile.displayName === 'string' && profile.displayName.trim()
-          ? profile.displayName.trim()
-          : (auth.currentUser?.uid === message.senderId ? currentDisplayName : '');
-        const photoURL = typeof profile.photoURL === 'string' ? profile.photoURL
-          : typeof profile.avatarURL === 'string' ? profile.avatarURL : '';
-        if (!displayName && !photoURL) return;
-        return updateDoc(doc(db, 'conversations', 'community-hub', 'messages', message.id), {
-          ...(displayName ? { senderName: displayName } : {}),
-          senderAvatarURL: photoURL
-        });
-      }).catch(err => {
-        console.warn('Community Hub profile backfill failed:', err);
-        profileBackfillRef.current.delete(message.id);
-      });
-    });
-  }, [activeId, messages, userProfile?.role, currentDisplayName]);
+  // Keep message rendering read-only: do not rewrite legacy messages from a
+  // snapshot effect, which can cause visible sender-name/avatar changes while
+  // the live Firestore listener is refreshing. New messages already store the
+  // sender's display name and avatar at send time.
 
   const filtered = useMemo(() => conversations.filter(item => {
     const other = item.members.find(member => member !== uid) || '';
