@@ -184,37 +184,71 @@ export async function handleEconomicCalendar(request: Request): Promise<Response
   }
 
   try {
-    const upstream = await fetch(SOURCE_URL, {
-      headers: {
-        Accept: 'application/json',
-        'User-Agent': 'IAMTRADER Economic Calendar/1.0',
-      },
-    });
+    let scheduledEvents: ReturnType<typeof normalizeEvent>[] = [];
+    let source = 'forex-factory';
 
-    if (!upstream.ok) {
-      throw new Error(`Source calendar HTTP ${upstream.status}`);
+    try {
+      const upstream = await fetch(SOURCE_URL, {
+        headers: {
+          Accept: 'application/json',
+          'User-Agent': 'IAMTRADER Economic Calendar/1.0',
+        },
+        signal: AbortSignal.timeout(8000),
+      });
+
+      if (!upstream.ok) throw new Error(`Forex Factory HTTP ${upstream.status}`);
+      const payload = await upstream.json() as unknown;
+      const rawEvents = Array.isArray(payload) ? payload as ForexFactoryEvent[] : [];
+      scheduledEvents = rawEvents.map(normalizeEvent).filter(event => event.title && event.date);
+      if (!scheduledEvents.length) throw new Error('Forex Factory returned no events');
+    } catch (primaryError) {
+      console.warn('Forex Factory calendar unavailable; trying Trading Economics:', primaryError);
+      const fallbackUrl = new URL('https://api.tradingeconomics.com/calendar');
+      fallbackUrl.searchParams.set('c', 'guest:guest');
+      fallbackUrl.searchParams.set('f', 'json');
+      if (from) fallbackUrl.searchParams.set('d1', from);
+      if (to) fallbackUrl.searchParams.set('d2', to);
+
+      const fallback = await fetch(fallbackUrl.toString(), {
+        headers: { Accept: 'application/json', 'User-Agent': 'IAMTRADER Economic Calendar/1.0' },
+        signal: AbortSignal.timeout(8000),
+      });
+      if (!fallback.ok) throw new Error(`Calendar sources unavailable (Forex Factory failed; Trading Economics HTTP ${fallback.status})`);
+      const fallbackPayload = await fallback.json() as unknown;
+      if (!Array.isArray(fallbackPayload)) throw new Error('Trading Economics returned an invalid calendar');
+      scheduledEvents = (fallbackPayload as Array<Record<string, unknown>>).map((item, index) => {
+        const datetime = String(item.Date || item.date || '');
+        const rawCountry = String(item.Currency || item.Country || item.country || '');
+        const impactValue = String(item.Importance || item.impact || '').toLowerCase();
+        return {
+          id: `te-${datetime}-${rawCountry}-${String(item.Event || item.event || index)}`,
+          title: String(item.Event || item.event || 'Economic Event').trim(),
+          country: rawCountry.toUpperCase() === 'UNITED STATES' ? 'USD' : rawCountry.toUpperCase(),
+          date: normalizeDate(datetime),
+          time: normalizeTime(datetime),
+          datetime,
+          impact: normalizeImpact(impactValue === '3' || impactValue === 'high' ? 'high' : impactValue === '2' || impactValue === 'medium' ? 'medium' : 'low'),
+          actual: String(item.Actual ?? item.actual ?? '').trim(),
+          forecast: String(item.Forecast ?? item.forecast ?? '').trim(),
+          previous: String(item.Previous ?? item.previous ?? '').trim(),
+        };
+      }).filter(event => event.title && event.date);
+      source = 'trading-economics-fallback';
     }
 
-    const payload = await upstream.json() as unknown;
-    const rawEvents = Array.isArray(payload) ? payload as ForexFactoryEvent[] : [];
-
-    const scheduledEvents = rawEvents
-      .map(normalizeEvent)
-      .filter(event => event.title && event.date);
-
-    const events = from && to
+    const events = from && to && source === 'forex-factory'
       ? await enrichActuals(scheduledEvents, from, to)
       : scheduledEvents;
 
     const response = json({
       events,
-      source: 'forex-factory',
-      enrichment: 'trading-economics',
+      source,
+      enrichment: source === 'forex-factory' ? 'trading-economics' : null,
       fetchedAt: new Date().toISOString(),
     });
 
     response.headers.set('X-IAMTRADER-Calendar-Cache', 'MISS');
-    response.headers.set('X-IAMTRADER-Calendar-Source', 'forex-factory');
+    response.headers.set('X-IAMTRADER-Calendar-Source', source);
 
     await cache.put(cacheKey, response.clone());
     return response;
