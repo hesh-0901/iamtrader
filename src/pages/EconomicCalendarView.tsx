@@ -730,27 +730,27 @@ export function EconomicCalendarView() {
             </div>
           </div>
         ) : (
-          <div className="relative overflow-hidden px-5 py-12 text-center sm:py-16">
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-emerald-50/70 via-white to-white dark:from-emerald-950/20 dark:via-slate-950 dark:to-slate-950" />
-            <div className="relative mx-auto flex max-w-md flex-col items-center">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-emerald-100 bg-white text-[#00a982] shadow-sm dark:border-emerald-900 dark:bg-slate-900">
-                {loading ? <Loader2 className="h-6 w-6 animate-spin" /> : <CalendarDays className="h-6 w-6" />}
+          <div className="relative overflow-hidden bg-white px-5 py-10 sm:px-8 sm:py-12 dark:bg-slate-950">
+            <div className="pointer-events-none absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-[#00a982] via-emerald-300 to-transparent" />
+            <div className="relative mx-auto flex max-w-xl flex-col items-center">
+              <div className={`flex h-12 w-12 items-center justify-center rounded-xl border ${loading ? 'border-emerald-100 bg-emerald-50 text-[#00a982] dark:border-emerald-900 dark:bg-emerald-950/40' : 'border-slate-200 bg-slate-50 text-slate-400 dark:border-slate-800 dark:bg-slate-900'}`}>
+                {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <CalendarDays className="h-5 w-5" />}
               </div>
               <p className="mt-4 text-sm font-semibold text-slate-800 dark:text-white">
-                {loading ? 'Chargement du calendrier…' : eventsForDate.length > 0 && hasActiveFilters ? 'Aucun événement ne correspond aux filtres' : 'Aucune publication affichée pour cette date'}
+                {loading ? 'Chargement du calendrier…' : eventsForDate.length > 0 && hasActiveFilters ? 'Aucun résultat avec cette sélection' : 'Aucune publication prévue pour cette date'}
               </p>
-              <p className="mt-2 max-w-sm text-xs leading-relaxed text-slate-500 dark:text-slate-400">
+              <p className="mt-2 max-w-lg text-center text-xs leading-5 text-slate-500 dark:text-slate-400">
                 {loading
-                  ? 'Récupération des publications économiques.'
+                  ? 'Nous récupérons les dernières publications économiques.'
                   : eventsForDate.length > 0 && hasActiveFilters
-                    ? `${eventsForDate.length} événement(s) existent pour cette date, mais aucun ne correspond à la sélection actuelle.`
+                    ? `${eventsForDate.length} publications sont disponibles à cette date, mais aucune ne correspond à vos filtres.`
                     : events.length > 0
-                      ? `Le flux contient ${events.length} événement(s), mais aucun n’est associé à la date sélectionnée (${date}). Vérifiez les dates ou actualisez les données.`
-                      : 'Le calendrier a répondu, mais aucune donnée exploitable n’a été reçue. Essayez de recharger le flux.'}
+                      ? `Le flux a renvoyé ${events.length} publications, mais aucune ne correspond à la date sélectionnée (${date}). Les horaires peuvent être convertis selon votre fuseau local.`
+                      : 'Aucune donnée exploitable n’a été renvoyée par la source. Actualisez le calendrier ou réessayez un peu plus tard.'}
               </p>
               <div className="mt-5 flex flex-wrap justify-center gap-2">
-                {hasActiveFilters && <button type="button" onClick={() => { setImpact([]); setCurrency([]); setDraftImpact([]); setDraftCurrency([]); }} className="rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-600 hover:border-emerald-300 hover:text-[#008b6c] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">Effacer les filtres</button>}
-                <button type="button" onClick={() => void loadEvents(date)} disabled={loading} className="inline-flex items-center gap-2 rounded-lg bg-[#00a982] px-3.5 py-2 text-xs font-semibold text-white hover:bg-[#008f6e] disabled:opacity-50"><RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} /> Actualiser les données</button>
+                {hasActiveFilters && <button type="button" onClick={() => { setImpact([]); setCurrency([]); setDraftImpact([]); setDraftCurrency([]); }} className="rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-600 transition hover:border-emerald-300 hover:text-[#008b6c] dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300">Effacer les filtres</button>}
+                <button type="button" onClick={() => void loadEvents(date)} disabled={loading} className="inline-flex items-center gap-2 rounded-lg bg-[#00a982] px-3.5 py-2 text-xs font-semibold text-white transition hover:bg-[#008f6e] disabled:opacity-50"><RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} /> Actualiser</button>
               </div>
             </div>
           </div>
