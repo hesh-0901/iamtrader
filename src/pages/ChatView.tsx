@@ -3,7 +3,7 @@ import { UserProfile } from '../types';
 import { auth, db, app } from '../firebase/config';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import {
-  addDoc, collection, deleteDoc, doc, onSnapshot, orderBy, query,
+  addDoc, collection, deleteDoc, doc, getDoc, onSnapshot, orderBy, query,
   serverTimestamp, setDoc, updateDoc, where, Timestamp
 } from 'firebase/firestore';
 import {
@@ -51,14 +51,43 @@ export function ChatView({ userProfile }: { userProfile: UserProfile | null }) {
   const [recording, setRecording] = useState(false);
   const [uploadingMedia, setUploadingMedia] = useState(false);
 
+  // Community Hub is a system group available to every authenticated user.
   useEffect(() => {
     if (!uid) { setLoadingChats(false); return; }
     const q = query(collection(db, 'conversations'), where('members', 'array-contains', uid), orderBy('updatedAt', 'desc'));
     return onSnapshot(q, snapshot => {
-      setConversations(snapshot.docs.map(item => ({ id: item.id, ...item.data() } as ChatConversation)));
+      const personal = snapshot.docs.map(item => ({ id: item.id, ...item.data() } as ChatConversation));
+      setConversations(previous => {
+        const hub = previous.find(item => item.id === 'community-hub');
+        return [...personal.filter(item => item.id !== 'community-hub'), ...(hub ? [hub] : [])];
+      });
       setLoadingChats(false);
     }, err => { setError(err.message); setLoadingChats(false); });
   }, [uid]);
+
+  useEffect(() => {
+    if (!uid) return;
+    return onSnapshot(doc(db, 'conversations', 'community-hub'), snapshot => {
+      if (!snapshot.exists()) return;
+      const hub = { id: snapshot.id, ...snapshot.data() } as ChatConversation;
+      setConversations(previous => [hub, ...previous.filter(item => item.id !== hub.id)]);
+    }, err => { setError(err.message); });
+  }, [uid]);
+
+  // The first administrator to open PipTalk initializes the default group once.
+  useEffect(() => {
+    if (!uid || userProfile?.role !== 'admin') return;
+    const hubRef = doc(db, 'conversations', 'community-hub');
+    void getDoc(hubRef).then(snapshot => {
+      if (snapshot.exists()) return;
+      return setDoc(hubRef, {
+        members: [uid], group: true, title: 'Community Hub',
+        memberNames: { [uid]: userProfile.displayName || auth.currentUser?.displayName || 'Admin' },
+        lastMessage: 'Bienvenue dans Community Hub.', createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(), createdBy: uid, systemGroup: true
+      });
+    }).catch(err => setError(err?.message || 'Impossible d’initialiser Community Hub.'));
+  }, [uid, userProfile?.role, userProfile?.displayName]);
 
   useEffect(() => {
     if (!uid || !activeId) { setMessages([]); return; }
