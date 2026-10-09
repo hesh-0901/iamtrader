@@ -114,7 +114,7 @@ ${JSON.stringify(sources)}
 En 2 à 4 courts paragraphes maximum, résume uniquement les faits utiles et vérifiables, leur lien éventuel avec l'événement et les facteurs à surveiller. Si les sources ne parlent pas clairement de cet événement, dis-le et donne un contexte général limité. N'invente ni chiffres, ni prévisions, ni actualités, ni direction certaine du marché. Explique que l'effet dépend des attentes déjà intégrées dans les prix. Ne crée pas de titres ni de listes. Ne donne aucun signal d'achat/vente.`;
 
   try {
-    const model = (env.GEMINI_MODEL || 'gemini-2.5-flash').trim();
+    const model = (env.GEMINI_MODEL || 'gemini-3.5-flash-lite').trim();
     const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
       method: 'POST',
       headers: { 'x-goog-api-key': apiKey, 'Content-Type': 'application/json' },
