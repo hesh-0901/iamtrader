@@ -241,6 +241,40 @@ function normalizeEvent(raw: ApiEvent, index: number): EconomicEvent {
   };
 }
 
+type EventEducation = { description: string; importance: string; interpretation: string };
+
+function getEventEducation(title: string, currency: string): EventEducation {
+  const name = title.toLowerCase();
+  const descriptions: Array<[RegExp, EventEducation]> = [
+    [/non.?farm|payrolls|employment change|employment report/, { description: "Mesure l’évolution de l’emploi, généralement hors secteur agricole, et aide à évaluer la vigueur du marché du travail.", importance: "L’emploi influence les anticipations de croissance et de politique monétaire, notamment aux États-Unis.", interpretation: "Une création d’emplois supérieure aux attentes peut soutenir le dollar, mais les salaires, le chômage et les révisions comptent aussi." }],
+    [/consumer price|cpi|inflation rate|harmonised index|harmonized index/, { description: "Mesure l’évolution des prix payés par les consommateurs et sert à suivre l’inflation.", importance: "L’inflation influence les décisions de taux des banques centrales et donc les devises, les obligations et l’or.", interpretation: "Une inflation plus élevée que prévu peut renforcer les anticipations de taux élevés ; la réaction dépend du contexte et des autres composantes." }],
+    [/producer price|ppi/, { description: "Suit l’évolution des prix reçus par les producteurs et peut signaler des pressions de coûts.", importance: "Il aide les marchés à anticiper la trajectoire de l’inflation.", interpretation: "Comparez la valeur publiée aux prévisions et vérifiez les composantes ainsi que les révisions." }],
+    [/gross domestic product|\\bgdp\\b|\\bpib\\b/, { description: "Le produit intérieur brut mesure la valeur de la production de biens et services d’une économie.", importance: "Il renseigne sur la croissance et peut modifier les attentes concernant les taux d’intérêt.", interpretation: "Une croissance supérieure aux attentes peut soutenir la devise concernée, mais l’inflation et les perspectives de taux restent déterminantes." }],
+    [/federal funds|interest rate decision|rate decision|policy rate|cash rate|bank rate|refinancing rate/, { description: "Annonce la décision de taux directeur de la banque centrale concernée.", importance: "Les taux influencent le coût du crédit, les rendements et l’attrait relatif d’une devise.", interpretation: "La décision compte, mais l’écart avec les attentes et le ton du communiqué sont souvent tout aussi importants." }],
+    [/fomc|monetary policy statement|fed chair|press conference/, { description: "Publication ou communication liée à la politique monétaire de la Réserve fédérale américaine.", importance: "Les indications sur les futurs taux américains peuvent provoquer des mouvements du dollar, des rendements et de l’or.", interpretation: "Lisez le communiqué et les propos dans leur ensemble ; le marché réagit surtout aux éléments qui diffèrent des attentes." }],
+    [/initial jobless|unemployment claims|jobless claims/, { description: "Compte les nouvelles demandes d’allocations chômage, un indicateur fréquent de l’évolution du marché du travail.", importance: "Une hausse persistante peut signaler un ralentissement de l’emploi et modifier les attentes de politique monétaire.", interpretation: "Une valeur plus basse qu’attendu indique généralement moins de demandes, mais il faut tenir compte de la tendance et des révisions." }],
+    [/retail sales/, { description: "Mesure l’évolution des ventes des détaillants et donne une indication sur les dépenses des ménages.", importance: "La consommation est un moteur important de l’activité économique.", interpretation: "Des ventes plus fortes qu’attendu peuvent signaler une demande robuste ; vérifiez aussi les ventes hors automobiles et les révisions." }],
+    [/personal consumption expenditures|\\bpce\\b/, { description: "L’indice des prix PCE mesure l’évolution des prix des dépenses de consommation personnelle aux États-Unis.", importance: "La Réserve fédérale le suit de près pour évaluer l’inflation.", interpretation: "La composante de base et l’écart aux attentes sont importants pour les anticipations de taux." }],
+    [/ism manufacturing|manufacturing pmi|pmi manufacturing/, { description: "Enquête auprès des entreprises manufacturières sur les nouvelles commandes, la production, l’emploi et les délais de livraison.", importance: "Il fournit rapidement une indication sur la santé du secteur industriel.", interpretation: "Un indice au-dessus de 50 indique généralement une expansion du secteur ; comparez toujours au consensus." }],
+    [/ism services|services pmi|non-manufacturing/, { description: "Enquête sur l’activité du secteur des services, notamment les nouvelles commandes et l’emploi.", importance: "Les services occupent une place majeure dans l’économie américaine.", interpretation: "Un chiffre supérieur aux attentes peut signaler une activité plus solide, mais les sous-indices apportent du contexte." }],
+    [/jolts|job openings/, { description: "Estime le nombre de postes vacants et renseigne sur la demande de main-d’œuvre.", importance: "Il aide à évaluer l’équilibre entre offres d’emploi et travailleurs disponibles.", interpretation: "Une baisse des postes vacants peut indiquer un refroidissement du marché du travail, sans suffire à elle seule pour conclure." }],
+    [/consumer confidence|consumer sentiment/, { description: "Sondage mesurant la perception des ménages concernant leur situation financière et l’économie.", importance: "Le moral des consommateurs peut influencer les perspectives de dépenses.", interpretation: "Comparez le résultat aux attentes et observez les composantes relatives aux conditions actuelles et aux anticipations." }],
+    [/crude oil inventories|eia petroleum|oil inventories/, { description: "Rapport sur les stocks de pétrole brut, qui donne une indication sur l’équilibre entre offre et demande.", importance: "Il peut influencer les prix du pétrole et les actifs liés à l’énergie.", interpretation: "Une hausse des stocks peut peser sur le pétrole, toutes choses égales par ailleurs ; la production et les importations comptent également." }],
+    [/unemployment rate/, { description: "Indique la part de la population active au chômage qui recherche un emploi.", importance: "C’est un indicateur clé de la santé du marché du travail et des décisions de politique monétaire.", interpretation: "Une baisse peut signaler une amélioration de l’emploi, mais le taux de participation et les créations d’emplois apportent un contexte essentiel." }],
+    [/average hourly earnings|wage growth|employment cost index/, { description: "Mesure l’évolution des rémunérations ou du coût du travail.", importance: "La croissance des salaires peut influencer les dépenses des ménages et les pressions inflationnistes.", interpretation: "Une progression plus forte qu’attendu peut alimenter les anticipations d’inflation, selon la productivité et les autres données." }],
+    [/industrial production/, { description: "Mesure l’évolution de la production des secteurs industriels concernés.", importance: "Il aide à évaluer la dynamique de l’activité réelle.", interpretation: "Comparez la variation publiée aux attentes et aux mois précédents." }],
+    [/housing starts|building permits|existing home sales|new home sales/, { description: "Indicateur de l’activité immobilière à travers les constructions, permis ou ventes de logements.", importance: "Le logement est sensible aux taux d’intérêt et renseigne sur la demande intérieure.", interpretation: "Les taux hypothécaires, les stocks de logements et les révisions peuvent influencer la lecture du chiffre." }],
+  ];
+  const match = descriptions.find(([pattern]) => pattern.test(name))?.[1];
+  if (match) return match;
+  const currencyLabel = currency === '—' ? "l’économie concernée" : "l’économie associée à " + currency;
+  return {
+    description: "Cet événement publie une donnée économique intitulée « " + title + " ». Sa définition précise dépend de l’indicateur et de l’organisme qui le publie.",
+    importance: "Les marchés peuvent utiliser cette publication pour réévaluer leurs perspectives sur " + currencyLabel + ", la croissance et la politique monétaire.",
+    interpretation: "Comparez la valeur publiée au consensus, vérifiez la période mesurée et les éventuelles révisions. L’effet sur les prix n’est pas automatique."
+  };
+}
+
 const impactLabel = (impact: Impact) =>
   impact === 'high'
     ? 'Impact élevé'
@@ -311,6 +345,7 @@ export function EconomicCalendarView() {
   });
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
   const [events, setEvents] = useState<EconomicEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -560,6 +595,7 @@ export function EconomicCalendarView() {
 
                 <tbody>
                   {visibleEvents.map((event) => (
+                    <React.Fragment key={event.id}>
                     <tr
                       key={event.id}
                       className="h-[44px] border-b border-gray-100 align-middle transition-colors last:border-b-0 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/50"
@@ -589,12 +625,15 @@ export function EconomicCalendarView() {
                       <td className="max-w-0 px-3">
                         <div className="flex min-w-0 items-center gap-2">
                           <div className="min-w-0 flex-1">
-                            <div
-                              className="truncate text-xs font-medium text-slate-900 dark:text-white"
-                              title={event.event}
+                            <button
+                              type="button"
+                              onClick={() => setExpandedEventId((current) => current === event.id ? null : event.id)}
+                              aria-expanded={expandedEventId === event.id}
+                              className="block w-full truncate text-left text-xs font-medium text-slate-900 hover:text-[#00a982] dark:text-white"
+                              title="Afficher la description en français"
                             >
                               {event.event}
-                            </div>
+                            </button>
                             <div className="truncate text-[11px] text-gray-400 dark:text-slate-500">
                               {event.category || 'Indicateur économique'}
                             </div>
@@ -634,6 +673,22 @@ export function EconomicCalendarView() {
                         {value(event.previous)}
                       </td>
                     </tr>
+                    {expandedEventId === event.id && (
+                      <tr className="border-b border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/70">
+                        <td colSpan={7} className="px-4 py-3">
+                          <div className="mx-auto max-w-4xl space-y-2 text-left">
+                            <div className="text-xs font-bold text-slate-900 dark:text-white">Comprendre cet indicateur</div>
+                            <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300">{getEventEducation(event.event, event.currency).description}</p>
+                            <div className="text-[11px] font-bold text-slate-700 dark:text-slate-200">Pourquoi c’est important</div>
+                            <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300">{getEventEducation(event.event, event.currency).importance}</p>
+                            <div className="text-[11px] font-bold text-slate-700 dark:text-slate-200">Comment lire le résultat</div>
+                            <p className="text-xs leading-relaxed text-slate-600 dark:text-slate-300">{getEventEducation(event.event, event.currency).interpretation}</p>
+                            <p className="text-[10px] text-slate-400">Explication pédagogique. La réaction du marché dépend des attentes et du contexte.</p>
+                          </div>
+                        </td>
+                      </tr>
+                    )}
+                    </React.Fragment>
                   ))}
                 </tbody>
               </table>
