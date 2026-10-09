@@ -170,7 +170,7 @@ export async function handleEconomicCalendar(request: Request, env: CalendarEnv 
 
   const cacheKey = new Request(
     new URL(
-      `/api/economic-calendar?source=date-range-v9&from=${from}&to=${to}`,
+      `/api/economic-calendar?source=date-range-v10&from=${from}&to=${to}`,
       request.url,
     ).toString(),
     { method: 'GET' },
@@ -423,8 +423,24 @@ export async function handleEconomicCalendar(request: Request, env: CalendarEnv 
         }
       }
 
-      scheduledEvents = dateRangeEvents;
-      source = dateRangeSource || (env.FINNHUB_API_KEY ? 'calendar-providers-empty' : 'calendar-api-key-required');
+      // Keep Forex Factory as the authoritative schedule. Date-range providers
+      // supplement missing events; they must never replace a non-empty FF feed.
+      if (scheduledEvents.length && dateRangeEvents.length) {
+        const merged = new Map<string, ReturnType<typeof normalizeEvent>>();
+        const keyFor = (event: ReturnType<typeof normalizeEvent>) =>
+          `${event.date}|${event.time}|${event.country.toUpperCase()}|${normalizeEventTitle(event.title)}`;
+
+        // Insert supplemental events first, then Forex Factory so FF wins duplicates.
+        for (const event of dateRangeEvents) merged.set(keyFor(event), event);
+        for (const event of scheduledEvents) merged.set(keyFor(event), event);
+        scheduledEvents = Array.from(merged.values())
+          .filter((event) => (!from || event.date >= from) && (!to || event.date <= to))
+          .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+        source = 'forex-factory+supplemental';
+      } else {
+        scheduledEvents = dateRangeEvents.length ? dateRangeEvents : scheduledEvents;
+        source = dateRangeSource || (scheduledEvents.length ? 'forex-factory' : (env.FINNHUB_API_KEY ? 'calendar-providers-empty' : 'calendar-api-key-required'));
+      }
     }
 
     const events = from && to && source === 'forex-factory'
