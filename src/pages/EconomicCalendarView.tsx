@@ -364,8 +364,8 @@ export function EconomicCalendarView() {
 
     try {
       const response = await fetch(
-        `${API_BASE}?from=${addDays(selectedDate, -1)}&to=${addDays(selectedDate, 1)}&limit=500`,
-        { headers: { Accept: 'application/json' } },
+        `${API_BASE}?from=${addDays(selectedDate, -1)}&to=${addDays(selectedDate, 1)}&limit=500&calendarVersion=20261009b`,
+        { headers: { Accept: 'application/json' }, cache: 'no-store' },
       );
 
       if (!response.ok) {
