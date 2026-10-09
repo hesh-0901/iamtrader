@@ -1,4 +1,5 @@
 import React, { useRef, useState } from 'react';
+import { UserProfile } from '../types';
 import {
   Search, MoreVertical, Phone, Video, Paperclip, Image as ImageIcon,
   Mic, Send, Smile, Pin, Pencil, Trash2, X, CheckCheck,
@@ -41,7 +42,7 @@ const initialMessages: Record<string, ChatMessage[]> = {
   sarah: [{ id: 's1', text: 'Merci pour le partage, l’explication du FVG était claire.', time: 'Mar. 11:40', mine: false }],
 };
 
-export function ChatView() {
+export function ChatView({ userProfile }: { userProfile: UserProfile | null }) {
   const [activeId, setActiveId] = useState('market');
   const [messages, setMessages] = useState(initialMessages);
   const [draft, setDraft] = useState('');
@@ -128,8 +129,10 @@ export function ChatView() {
             ))}
           </div>
           <div className="flex items-center gap-2 border-t border-slate-100 bg-slate-50/70 px-4 py-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[#0b1f35] text-[10px] font-black text-white">IT</div>
-            <div className="min-w-0 flex-1"><p className="truncate text-[11px] font-bold text-slate-800">Mon espace trader</p><p className="text-[9px] text-slate-400">Messagerie communautaire</p></div>
+            <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#0b1f35] text-[10px] font-black text-white">
+              {(userProfile?.avatarURL || userProfile?.photoURL) ? <img src={userProfile.avatarURL || userProfile.photoURL} alt="Mon avatar" className="h-full w-full object-cover" /> : (userProfile?.displayName || 'IT').slice(0, 2).toUpperCase()}
+            </div>
+            <div className="min-w-0 flex-1"><p className="truncate text-[11px] font-bold text-slate-800">{userProfile?.displayName || 'Mon espace trader'}</p><p className="text-[9px] text-slate-400">Messagerie communautaire</p></div>
             <MoreVertical className="h-4 w-4 text-slate-400" />
           </div>
         </aside>
