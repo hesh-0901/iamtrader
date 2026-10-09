@@ -110,6 +110,40 @@ export function ChatView({ userProfile }: { userProfile: UserProfile | null }) {
   const activeName = active?.title || active?.memberNames?.[otherUid] || (otherUid ? `Trader ${otherUid.slice(0, 7)}` : 'Choisir une discussion');
   const currentDisplayName = userProfile?.displayName?.trim() || auth.currentUser?.displayName?.trim() || auth.currentUser?.email?.split('@')[0] || 'Trader';
   const currentAvatar = userProfile?.photoURL || userProfile?.avatarURL || auth.currentUser?.photoURL || '';
+  // One-time, admin-only repair for legacy Community Hub messages that lack a
+  // real display name. Process each message once and only update missing/generic
+  // names, so normal snapshot refreshes cannot make names flicker.
+  const profileBackfillRef = useRef(new Set<string>());
+  useEffect(() => {
+    if (userProfile?.role !== 'admin' || activeId !== 'community-hub' || !messages.length) return;
+    let cancelled = false;
+    const repairLegacyNames = async () => {
+      for (const message of messages) {
+        const name = message.senderName?.trim() || '';
+        const genericName = !name || /^Trader\\s+[a-z0-9]{1,12}$/i.test(name);
+        if (!genericName || !message.senderId || profileBackfillRef.current.has(message.id)) continue;
+        try {
+          const profileSnap = await getDoc(doc(db, 'users', message.senderId));
+          const profile = profileSnap.exists() ? profileSnap.data() : null;
+          const displayName = typeof profile?.displayName === 'string' ? profile.displayName.trim() : '';
+          if (cancelled) return;
+          if (!displayName) continue;
+          profileBackfillRef.current.add(message.id);
+          await updateDoc(doc(db, 'conversations', 'community-hub', 'messages', message.id), {
+            senderName: displayName,
+            ...(typeof profile?.photoURL === 'string' && profile.photoURL.trim()
+              ? { senderAvatarURL: profile.photoURL.trim() }
+              : {})
+          });
+        } catch (err) {
+          // Non-admin users and inaccessible legacy profiles must not break chat.
+          console.warn('PipTalk display-name repair skipped:', err);
+        }
+      }
+    };
+    void repairLegacyNames();
+    return () => { cancelled = true; };
+  }, [uid, activeId, messages, userProfile?.role]);
   // Keep message rendering read-only: do not rewrite legacy messages from a
   // snapshot effect, which can cause visible sender-name/avatar changes while
   // the live Firestore listener is refreshing. New messages already store the
