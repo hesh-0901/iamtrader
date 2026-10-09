@@ -6,6 +6,7 @@ import {
   ChevronRight,
   Loader2,
   RefreshCw,
+  SlidersHorizontal,
   TrendingUp,
 } from 'lucide-react';
 
@@ -284,8 +285,23 @@ function formatActualClass(actual?: string) {
 
 export function EconomicCalendarView() {
   const [date, setDate] = useState(localIsoDate);
-  const [impact, setImpact] = useState<'all' | Impact>('all');
-  const [currency, setCurrency] = useState('all');
+  const [impact, setImpact] = useState<'all' | Impact>(() => {
+    try {
+      const saved = localStorage.getItem('iamtrader-calendar-impact');
+      return saved === 'high' || saved === 'medium' || saved === 'low' ? saved : 'all';
+    } catch {
+      return 'all';
+    }
+  });
+  const [currency, setCurrency] = useState(() => {
+    try {
+      return localStorage.getItem('iamtrader-calendar-currency') || 'all';
+    } catch {
+      return 'all';
+    }
+  });
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [events, setEvents] = useState<EconomicEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -341,9 +357,17 @@ export function EconomicCalendarView() {
     [events, date, impact, currency],
   );
 
-  const weekDates = getWeekDates(date);
   const today = localIsoDate();
   const highImpactCount = visibleEvents.filter((event) => event.impact === 'high').length;
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('iamtrader-calendar-impact', impact);
+      localStorage.setItem('iamtrader-calendar-currency', currency);
+    } catch {
+      // Keep filters usable when browser storage is unavailable.
+    }
+  }, [impact, currency]);
 
   const userTimeZone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
   const formattedDate = new Intl.DateTimeFormat('fr-FR', {
@@ -395,37 +419,48 @@ export function EconomicCalendarView() {
         </div>
       </div>
 
-      <div className="flex gap-0.5 overflow-x-auto rounded-lg border border-slate-200 bg-white p-0.5 dark:border-slate-800 dark:bg-slate-900">
-        {weekDates.map((day) => {
-          const active = day === date;
-          const label = new Intl.DateTimeFormat('fr-FR', { weekday: 'short' }).format(
-            new Date(`${day}T12:00:00`),
-          );
-          const number = new Intl.DateTimeFormat('fr-FR', { day: 'numeric' }).format(
-            new Date(`${day}T12:00:00`),
-          );
-
-          return (
-            <button
-              key={day}
-              type="button"
-              onClick={() => setDate(day)}
-              className={`min-w-[90px] flex-1 rounded-md px-2.5 py-1.5 text-left transition-colors ${
-                active
-                  ? 'bg-[#0b1f35] text-white'
-                  : 'text-slate-500 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800'
-              }`}
-            >
-              <div className="text-[9px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                {label}
-              </div>
-              <div className="text-xs font-black text-slate-700 dark:text-slate-200">{number}</div>
-            </button>
-          );
-        })}
+      <div className="flex items-center justify-end gap-1.5">
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setDatePickerOpen((open) => !open)}
+            className={`flex h-8 w-8 items-center justify-center rounded-lg border bg-white transition-colors dark:bg-slate-900 ${datePickerOpen ? 'border-[#00a982] text-[#00a982]' : 'border-slate-200 text-slate-500 hover:border-slate-300 dark:border-slate-800 dark:hover:border-slate-700'}`}
+            aria-label="Ouvrir le calendrier de dates"
+            title="Choisir une date"
+          >
+            <CalendarDays className="h-3.5 w-3.5" />
+          </button>
+          {datePickerOpen && (
+            <div className="absolute right-0 top-10 z-30 rounded-lg border border-slate-200 bg-white p-2 shadow-xl dark:border-slate-700 dark:bg-slate-900">
+              <label className="mb-1 block text-[10px] font-semibold text-slate-500" htmlFor="economic-calendar-date">Choisir une date</label>
+              <input
+                id="economic-calendar-date"
+                type="date"
+                value={date}
+                onChange={(event) => {
+                  if (event.target.value) setDate(event.target.value);
+                  setDatePickerOpen(false);
+                }}
+                className="h-8 rounded-md border border-slate-200 bg-white px-2 text-xs text-slate-700 outline-none focus:border-[#00a982] dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200"
+              />
+            </div>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={() => setFiltersOpen((open) => !open)}
+          aria-expanded={filtersOpen}
+          aria-controls="economic-calendar-filters"
+          className={`inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-[10px] font-bold transition-colors ${filtersOpen ? 'border-[#00a982] bg-emerald-50 text-[#008b6c] dark:bg-emerald-950/30 dark:text-emerald-400' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800'}`}
+        >
+          <SlidersHorizontal className="h-3.5 w-3.5" />
+          Filtres
+          {(impact !== 'all' || currency !== 'all') && <span className="h-1.5 w-1.5 rounded-full bg-[#00a982]" />}
+        </button>
       </div>
 
-      <div className="grid gap-1.5 md:grid-cols-[minmax(150px,1fr)_minmax(150px,1fr)_auto_auto]">
+      {filtersOpen && (
+      <div id="economic-calendar-filters" className="grid gap-1.5 rounded-xl border border-slate-200 bg-slate-50 p-2 md:grid-cols-[minmax(150px,1fr)_minmax(150px,1fr)_auto_auto] dark:border-slate-800 dark:bg-slate-900/60">
         <select
           value={impact}
           onChange={(event) => setImpact(event.target.value as 'all' | Impact)}
@@ -452,11 +487,22 @@ export function EconomicCalendarView() {
 
         <div className="flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-[10px] text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
           <TrendingUp className="h-3.5 w-3.5 text-[#00a982]" />
-          <span>
-            <strong className="text-[#0b1f35] dark:text-white">{highImpactCount}</strong> fort
-            {highImpactCount > 1 ? 's' : ''}
-          </span>
+          <span><strong className="text-[#0b1f35] dark:text-white">{highImpactCount}</strong> fort{highImpactCount > 1 ? 's' : ''}</span>
         </div>
+
+        <button
+          type="button"
+          onClick={() => void loadEvents(date)}
+          disabled={loading}
+          className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-[10px] font-bold !text-slate-600 hover:bg-slate-50 disabled:!text-slate-500 disabled:opacity-60 dark:border-slate-800 dark:bg-slate-900 dark:!text-slate-300 dark:hover:bg-slate-800"
+        >
+          <RefreshCw className={`h-3 w-3 ${loading ? 'animate-spin' : ''}`} />
+          Actualiser
+        </button>
+      </div>
+      )}
+
+
 
         <button
           type="button"
