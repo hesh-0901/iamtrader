@@ -381,11 +381,11 @@ export async function handleEconomicCalendar(request: Request, env: CalendarEnv 
     const message = error instanceof Error ? error.message : String(error);
     // Never expose provider URLs or API tokens in a public response.
     const safeMessage = message
-      .replace(/([?&]token=)[^&\\s]+/gi, '$1[REDACTED]')
-      .replace(/(FINNHUB_API_KEY=)[^&\\s]+/gi, '$1[REDACTED]')
+      .replace(/([?&]token=)[^&\s]+/gi, '$1[REDACTED]')
+      .replace(/(FINNHUB_API_KEY=)[^&\s]+/gi, '$1[REDACTED]')
       .slice(0, 300);
     console.error('Economic calendar upstream failed:', safeMessage);
-    const statusMatch = message.match(/HTTP (\\d{3})/i);
+    const statusMatch = message.match(/HTTP (\d{3})/i);
     return json({
       error: 'Le calendrier économique est temporairement indisponible.',
       source: 'calendar-providers',
