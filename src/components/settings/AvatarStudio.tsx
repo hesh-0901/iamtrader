@@ -21,7 +21,7 @@ type AvatarConfig = {
 const defaults: AvatarConfig = {
   seed: 'IAMTRADER',
   skinColor: 'ae5d29',
-  top: 'shortHairShortCurly',
+  top: 'shortCurly',
   hairColor: '2c1b18',
   accessories: 'prescription02',
   clothing: 'hoodie',
@@ -39,10 +39,10 @@ const options: { key: keyof AvatarConfig; label: string; icon: React.ElementType
     { label: 'Brune', value: '614335', color: '#614335' }, { label: 'Ébène', value: '4a312c', color: '#4a312c' }
   ]},
   { key: 'top', label: 'Coiffure', icon: Scissors, items: [
-    { label: 'Bouclée', value: 'shortHairShortCurly' }, { label: 'Dégradé', value: 'shortHairShortFlat' },
-    { label: 'Classique', value: 'shortHairTheCaesar' }, { label: 'Longue', value: 'longHairBob' },
-    { label: 'Ondulée', value: 'longHairCurly' }, { label: 'Tresses', value: 'longHairDreads' },
-    { label: 'Chauve', value: 'noHair' }, { label: 'Mohawk', value: 'shortHairDreads01' }
+    { label: 'Bouclée', value: 'shortCurly' }, { label: 'Dégradé', value: 'shortFlat' },
+    { label: 'Classique', value: 'theCaesar' }, { label: 'Longue', value: 'bob' },
+    { label: 'Ondulée', value: 'curly' }, { label: 'Tresses', value: 'dreads' },
+    { label: 'Rasée sur les côtés', value: 'shavedSides' }, { label: 'Dreads courtes', value: 'dreads01' }
   ]},
   { key: 'hairColor', label: 'Couleur des cheveux', icon: Palette, items: [
     { label: 'Noir', value: '2c1b18', color: '#2c1b18' }, { label: 'Brun', value: '4a312c', color: '#4a312c' },
@@ -84,17 +84,17 @@ function createAvatarUrl(config: AvatarConfig) {
   const params = new URLSearchParams({
     seed: config.seed,
     skinColor: config.skinColor,
-    top: config.top,
+    topVariant: config.top,
     hairColor: config.hairColor,
-    accessories: config.accessories,
-    clothing: config.clothing,
+    accessoriesVariant: config.accessories,
+    clothesVariant: config.clothing,
     clothesColor: config.clothesColor,
-    eyes: config.eyes,
-    eyebrows: 'default',
-    mouth: config.mouth,
+    eyesVariant: config.eyes,
+    eyebrowsVariant: 'default',
+    mouthVariant: config.mouth,
     backgroundColor: config.backgroundColor
   });
-  return `https://api.dicebear.com/9.x/avataaars/svg?${params.toString()}`;
+  return `https://api.dicebear.com/10.x/avataaars/svg?${params.toString()}`;
 }
 
 interface AvatarStudioProps { userProfile: UserProfile | null; }
