@@ -42,7 +42,7 @@ const currencyFlagPaths: Record<string, string> = {
   CHF: '/flags/ch.svg',
 };
 
-const currencyOptions = Object.keys(currencyFlags);
+const currencyOptions = Object.keys(currencyFlagPaths);
 
 const currencyBySeries: Record<string, string> = {
   fomc: 'USD',
