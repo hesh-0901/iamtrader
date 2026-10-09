@@ -253,10 +253,13 @@ export async function handleEconomicCalendar(request: Request): Promise<Response
     await cache.put(cacheKey, response.clone());
     return response;
   } catch (error) {
-    console.error('Economic calendar upstream failed:', error);
+    const message = error instanceof Error ? error.message : String(error);
+    console.error('Economic calendar upstream failed:', message);
+    const statusMatch = message.match(/HTTP (\\d{3})/i);
     return json({
       error: 'Le calendrier économique est temporairement indisponible.',
-      source: 'forex-factory',
+      source: 'calendar-providers',
+      providerStatus: statusMatch ? Number(statusMatch[1]) : null,
     }, 502);
   }
 }
