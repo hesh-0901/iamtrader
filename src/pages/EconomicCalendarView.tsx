@@ -503,18 +503,6 @@ export function EconomicCalendarView() {
       )}
 
 
-
-        <button
-          type="button"
-          onClick={() => void loadEvents(date)}
-          disabled={loading}
-          className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-[10px] font-bold !text-slate-600 hover:bg-slate-50 disabled:!text-slate-500 disabled:opacity-60 dark:border-slate-800 dark:bg-slate-900 dark:!text-slate-300 dark:hover:bg-slate-800"
-        >
-          <RefreshCw className={`h-3 w-3 ${loading ? 'animate-spin' : ''}`} />
-          Actualiser
-        </button>
-      </div>
-
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
         {loading ? (
           <div className="flex min-h-[180px] items-center justify-center gap-2 text-xs text-slate-400">
