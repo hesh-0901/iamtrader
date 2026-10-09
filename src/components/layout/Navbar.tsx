@@ -76,10 +76,17 @@ export function Navbar({ userProfile, accounts, selectedAccountId, onSelectAccou
 
         <div className="h-6 w-px bg-[#e5ece9] hidden sm:block" />
 
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-[#e7faf3] text-[#00a86b] flex items-center justify-center text-xs font-bold">
-            {userProfile?.displayName ? userProfile.displayName.charAt(0).toUpperCase() : 'H'}
+        <div className="flex min-w-0 items-center gap-2">
+          <div className="h-8 w-8 shrink-0 overflow-hidden rounded-full border border-[#dce9e5] bg-[#e7faf3] text-[#00a86b] flex items-center justify-center text-xs font-bold">
+            {(userProfile?.avatarURL || userProfile?.photoURL) ? (
+              <img src={userProfile.avatarURL || userProfile.photoURL} alt="" className="h-full w-full object-cover" />
+            ) : (
+              userProfile?.displayName ? userProfile.displayName.charAt(0).toUpperCase() : 'H'
+            )}
           </div>
+          <span className="hidden max-w-[120px] truncate text-xs font-semibold text-[#314861] sm:block" title={userProfile?.displayName || 'Trader'}>
+            {userProfile?.displayName || 'Trader'}
+          </span>
           <button
             onClick={onLogout}
             className="hidden sm:block p-1.5 text-[#8494a5] hover:text-[#f04f63] hover:bg-[#fff1f3] rounded-lg transition-colors cursor-pointer"
