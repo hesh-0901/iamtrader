@@ -61,11 +61,17 @@ export async function handleEconomicEventAnalysis(request: Request, env: Analysi
       'Access-Control-Allow-Headers': 'Content-Type',
     }});
   }
-  if (request.method !== 'POST') return json({ error: 'Méthode non autorisée.' }, 405);
+  if (request.method !== 'POST' && request.method !== 'GET') return json({ error: 'Méthode non autorisée.' }, 405);
 
   let body: Record<string, unknown>;
-  try { body = await request.json() as Record<string, unknown>; }
-  catch { return json({ error: 'Requête invalide.' }, 400); }
+  if (request.method === 'GET') {
+    const params = new URL(request.url).searchParams;
+    body = Object.fromEntries(['event', 'currency', 'date', 'time', 'impact', 'actual', 'forecast', 'previous']
+      .map((key) => [key, params.get(key) || '']));
+  } else {
+    try { body = await request.json() as Record<string, unknown>; }
+    catch { return json({ error: 'Requête invalide.' }, 400); }
+  }
 
   const event = typeof body.event === 'string' ? body.event.trim().slice(0, 180) : '';
   const currency = typeof body.currency === 'string' ? body.currency.trim().slice(0, 8) : '—';
