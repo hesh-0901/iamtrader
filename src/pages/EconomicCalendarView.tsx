@@ -251,19 +251,16 @@ const impactLabel = (impact: Impact) =>
 const CowHead = ({ color }: { color: string }) => (
   <svg
     aria-hidden="true"
-    viewBox="0 0 24 24"
-    className="h-[19px] w-[19px] shrink-0"
+    viewBox="0 0 16 16"
+    className="h-[14px] w-[14px] shrink-0"
     fill="none"
-    stroke={color}
-    strokeWidth="1.7"
-    strokeLinecap="round"
-    strokeLinejoin="round"
   >
-    <path d="M7.2 7.1 4.1 5.2 3.5 9.1 6.8 10.5M16.8 7.1l3.1-1.9.6 3.9-3.3 1.4" />
-    <path d="M8.2 6.4 9.1 3.8 11 5.5M15.8 6.4l-.9-2.6L13 5.5" />
-    <path d="M6.7 8.2c1.1-1.4 3-2.1 5.3-2.1s4.2.7 5.3 2.1l-.5 6.2c-.2 3.3-2.2 5.7-4.8 5.7s-4.6-2.4-4.8-5.7z" />
-    <path d="M9.2 11.6h.1M14.7 11.6h.1" strokeWidth="2.4" />
-    <path d="M9.1 15.1c.7-.6 1.6-.9 2.9-.9s2.2.3 2.9.9c-.2 1.3-1.3 2.1-2.9 2.1s-2.7-.8-2.9-2.1z" />
+    <path d="M4.2 4.5 1.7 2.8 2.2 6.3 4.4 7.1M11.8 4.5l2.5-1.7-.5 3.5-2.2.8" fill={color} />
+    <path d="M5.1 4.1 4.8 1.8 7 3.2M10.9 4.1l.3-2.3L9 3.2" fill={color} />
+    <path d="M4 5.2C4.5 3.9 6 3.3 8 3.3s3.5.6 4 1.9l-.5 5.1c-.2 2.1-1.5 3.8-3.5 3.8s-3.3-1.7-3.5-3.8z" fill={color} />
+    <ellipse cx="5.9" cy="8" rx=".65" ry=".9" fill="#fff" />
+    <ellipse cx="10.1" cy="8" rx=".65" ry=".9" fill="#fff" />
+    <path d="M6 10.1c.5-.4 1.1-.6 2-.6s1.5.2 2 .6c-.2 1-1 1.6-2 1.6s-1.8-.6-2-1.6" fill="#fff" />
   </svg>
 );
 
@@ -276,7 +273,7 @@ const impactCows = (impact: Impact) => {
         : ['#f59e0b', '#cbd5e1', '#cbd5e1'];
 
   return (
-    <span className="inline-flex items-center justify-center gap-0.5" aria-label={impactLabel(impact)}>
+    <span className="inline-flex items-center justify-center gap-px" aria-label={impactLabel(impact)}>
       {colors.map((color, index) => (
         <CowHead key={index} color={color} />
       ))}
