@@ -2,10 +2,11 @@ import React, { useState } from 'react';
 import { MessageCircle, CalendarDays, BookOpen, BarChart3, Activity } from 'lucide-react';
 import { EconomicCalendarView } from './EconomicCalendarView';
 import { ChatView } from './ChatView';
+import { UserProfile } from '../types';
 
 type CommunityTab = 'chat' | 'calendar' | 'courses' | 'analysis' | 'sentiment';
 
-export function CommunityView() {
+export function CommunityView({ userProfile }: { userProfile: UserProfile | null }) {
   const [activeTab, setActiveTab] = useState<CommunityTab>('chat');
 
   const tabs = [
@@ -38,7 +39,7 @@ export function CommunityView() {
 
       {activeTab === 'calendar' && <EconomicCalendarView />}
 
-      {activeTab === 'chat' && <ChatView />}
+      {activeTab === 'chat' && <ChatView userProfile={userProfile} />}
       {activeTab === 'courses' && (
         <Placeholder title="Cours" icon={BookOpen} text="Les cours et ressources pédagogiques seront regroupés ici." />
       )}
