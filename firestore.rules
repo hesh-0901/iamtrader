@@ -29,7 +29,7 @@ service cloud.firestore {
       // Plan, role, status and subscription fields remain admin-controlled.
       allow update: if isOwner(userId)
         && request.resource.data.diff(resource.data).affectedKeys()
-          .hasOnly(['displayName', 'photoURL', 'email', 'settings', 'pendingPlan', 'planChangeRequestedAt', 'updatedAt']);
+          .hasOnly(['displayName', 'photoURL', 'avatarURL', 'avatarConfig', 'email', 'settings', 'pendingPlan', 'planChangeRequestedAt', 'updatedAt']);
 
       // Full user administration requires the Firestore admin role.
       allow read, write: if isAdmin();
