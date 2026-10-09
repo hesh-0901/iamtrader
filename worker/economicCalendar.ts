@@ -170,7 +170,7 @@ export async function handleEconomicCalendar(request: Request, env: CalendarEnv 
 
   const cacheKey = new Request(
     new URL(
-      `/api/economic-calendar?source=date-range-v7&from=${from}&to=${to}`,
+      `/api/economic-calendar?source=date-range-v8&from=${from}&to=${to}`,
       request.url,
     ).toString(),
     { method: 'GET' },
@@ -374,6 +374,12 @@ export async function handleEconomicCalendar(request: Request, env: CalendarEnv 
 
     response.headers.set('X-IAMTRADER-Calendar-Cache', 'MISS');
     response.headers.set('X-IAMTRADER-Calendar-Source', source);
+
+    if (events.length === 0) {
+      // Do not persist empty provider results; allow the next request to retry upstream.
+      response.headers.set('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0, s-maxage=0');
+      return response;
+    }
 
     await cache.put(cacheKey, response.clone());
     return response;
