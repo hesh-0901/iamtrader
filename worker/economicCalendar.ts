@@ -205,39 +205,52 @@ export async function handleEconomicCalendar(request: Request, env: CalendarEnv 
       if (!scheduledEvents.length) throw new Error('Forex Factory returned no events');
     } catch (primaryError) {
       console.warn('Forex Factory calendar unavailable; trying Trading Economics:', primaryError);
-      const fallbackUrl = new URL('https://api.tradingeconomics.com/calendar');
-      fallbackUrl.searchParams.set('c', 'guest:guest');
-      fallbackUrl.searchParams.set('f', 'json');
-      if (from) fallbackUrl.searchParams.set('d1', from);
-      if (to) fallbackUrl.searchParams.set('d2', to);
+      // Trading Economics guest access may return HTTP 410. That must not abort
+      // the handler: leave the schedule empty so the date-range Finnhub fallback runs.
+      scheduledEvents = [];
+      source = 'forex-factory';
+      try {
+        const fallbackUrl = new URL('https://api.tradingeconomics.com/calendar');
+        fallbackUrl.searchParams.set('c', 'guest:guest');
+        fallbackUrl.searchParams.set('f', 'json');
+        if (from) fallbackUrl.searchParams.set('d1', from);
+        if (to) fallbackUrl.searchParams.set('d2', to);
 
-      const fallback = await fetch(fallbackUrl.toString(), {
-        headers: { Accept: 'application/json', 'User-Agent': 'IAMTRADER Economic Calendar/1.0' },
-        signal: AbortSignal.timeout(8000),
-      });
-      if (!fallback.ok) throw new Error(`Calendar sources unavailable (Forex Factory failed; Trading Economics HTTP ${fallback.status})`);
-      const fallbackPayload = await fallback.json() as unknown;
-      if (!Array.isArray(fallbackPayload)) throw new Error('Trading Economics returned an invalid calendar');
-      scheduledEvents = (fallbackPayload as Array<Record<string, unknown>>).map((item, index) => {
-        const datetime = String(item.Date || item.date || '');
-        const rawCountry = String(item.Currency || item.Country || item.country || '');
-        const impactValue = String(item.Importance || item.impact || '').toLowerCase();
-        return {
-          id: `te-${datetime}-${rawCountry}-${String(item.Event || item.event || index)}`,
-          title: String(item.Event || item.event || 'Economic Event').trim(),
-          country: rawCountry.toUpperCase() === 'UNITED STATES' ? 'USD' : rawCountry.toUpperCase(),
-          date: normalizeDate(datetime),
-          time: normalizeTime(datetime),
-          datetime,
-          impact: normalizeImpact(impactValue === '3' || impactValue === 'high' ? 'high' : impactValue === '2' || impactValue === 'medium' ? 'medium' : 'low'),
-          actual: String(item.Actual ?? item.actual ?? '').trim(),
-          forecast: String(item.Forecast ?? item.forecast ?? '').trim(),
-          previous: String(item.Previous ?? item.previous ?? '').trim(),
-        };
-      }).filter(event => event.title && event.date);
-      source = 'trading-economics-fallback';
+        const fallback = await fetch(fallbackUrl.toString(), {
+          headers: { Accept: 'application/json', 'User-Agent': 'IAMTRADER Economic Calendar/1.0' },
+          signal: AbortSignal.timeout(8000),
+        });
+        if (!fallback.ok) {
+          console.warn('[EconomicCalendar] Trading Economics fallback HTTP', fallback.status);
+        } else {
+          const fallbackPayload = await fallback.json() as unknown;
+          if (Array.isArray(fallbackPayload)) {
+            scheduledEvents = (fallbackPayload as Array<Record<string, unknown>>).map((item, index) => {
+              const datetime = String(item.Date || item.date || '');
+              const rawCountry = String(item.Currency || item.Country || item.country || '');
+              const impactValue = String(item.Importance || item.impact || '').toLowerCase();
+              return {
+                id: `te-${datetime}-${rawCountry}-${String(item.Event || item.event || index)}`,
+                title: String(item.Event || item.event || 'Economic Event').trim(),
+                country: rawCountry.toUpperCase() === 'UNITED STATES' ? 'USD' : rawCountry.toUpperCase(),
+                date: normalizeDate(datetime),
+                time: normalizeTime(datetime),
+                datetime,
+                impact: normalizeImpact(impactValue === '3' || impactValue === 'high' ? 'high' : impactValue === '2' || impactValue === 'medium' ? 'medium' : 'low'),
+                actual: String(item.Actual ?? item.actual ?? '').trim(),
+                forecast: String(item.Forecast ?? item.forecast ?? '').trim(),
+                previous: String(item.Previous ?? item.previous ?? '').trim(),
+              };
+            }).filter(event => event.title && event.date);
+            if (scheduledEvents.length) source = 'trading-economics-fallback';
+          } else {
+            console.warn('[EconomicCalendar] Trading Economics fallback returned non-array JSON');
+          }
+        }
+      } catch (fallbackError) {
+        console.warn('[EconomicCalendar] Trading Economics fallback failed:', fallbackError instanceof Error ? fallbackError.message : String(fallbackError));
+      }
     }
-
     // Forex Factory's "thisweek" feed ignores requested dates. If it does not
     // cover the requested range, ask the date-aware provider instead of returning
     // a successful response full of events from the wrong week.
