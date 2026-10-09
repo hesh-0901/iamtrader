@@ -17,6 +17,7 @@
     "CINETPAY_PLUS_AMOUNT_CDF": "23335",
     "CINETPAY_COMMUNITY_AMOUNT_CDF": "210196"
   },
+  "triggers": { "crons": ["0 * * * *"] },
   "observability": {
     "enabled": true
   }
