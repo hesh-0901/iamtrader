@@ -170,7 +170,7 @@ export async function handleEconomicCalendar(request: Request, env: CalendarEnv 
 
   const cacheKey = new Request(
     new URL(
-      `/api/economic-calendar?source=date-range-v6&from=${from}&to=${to}`,
+      `/api/economic-calendar?source=date-range-v7&from=${from}&to=${to}`,
       request.url,
     ).toString(),
     { method: 'GET' },
@@ -254,6 +254,7 @@ export async function handleEconomicCalendar(request: Request, env: CalendarEnv 
     if (source === 'forex-factory' && from && to && (!requestedRangeHasEvents || requestedRangeOutsideWeeklyFeed)) {
       let dateRangeEvents: ReturnType<typeof normalizeEvent>[] = [];
       let dateRangeSource = '';
+      const providerDiagnostics: string[] = [];
 
       // Trading Economics guest access is not reliable in production; treat it as
       // an optional provider and continue to Finnhub when it is unavailable.
@@ -267,6 +268,7 @@ export async function handleEconomicCalendar(request: Request, env: CalendarEnv 
           headers: { Accept: 'application/json', 'User-Agent': 'IAMTRADER Economic Calendar/1.0' },
           signal: AbortSignal.timeout(6000),
         });
+        providerDiagnostics.push(`Trading Economics HTTP ${rangeResponse.status}`);
         if (rangeResponse.ok) {
           const rangePayload = await rangeResponse.json() as unknown;
           if (Array.isArray(rangePayload)) {
@@ -288,6 +290,7 @@ export async function handleEconomicCalendar(request: Request, env: CalendarEnv 
                 previous: String(item.Previous ?? item.previous ?? '').trim(),
               };
             }).filter((event) => event.title && event.date && event.date >= from && event.date <= to);
+            providerDiagnostics.push(`Trading Economics events: ${dateRangeEvents.length}`);
             if (dateRangeEvents.length) dateRangeSource = 'trading-economics-date-range';
           } else {
             console.warn('[EconomicCalendar] Trading Economics returned non-array JSON');
@@ -309,15 +312,21 @@ export async function handleEconomicCalendar(request: Request, env: CalendarEnv 
             headers: { Accept: 'application/json', 'User-Agent': 'IAMTRADER Economic Calendar/1.0' },
             signal: AbortSignal.timeout(8000),
           });
+          providerDiagnostics.push(`Finnhub HTTP ${finnhubResponse.status}`);
           if (!finnhubResponse.ok) {
+            const errorBody = (await finnhubResponse.text()).slice(0, 180).replace(/[\r\n]+/g, ' ');
+            if (errorBody) providerDiagnostics.push(`Finnhub error: ${errorBody}`);
             console.warn('[EconomicCalendar] Finnhub HTTP', finnhubResponse.status);
           } else {
-            const payload = await finnhubResponse.json() as { economicCalendar?: unknown; economicCalendarData?: unknown };
+            const payload = await finnhubResponse.json() as { economicCalendar?: unknown; economicCalendarData?: unknown; [key: string]: unknown };
             const raw = Array.isArray(payload.economicCalendar)
               ? payload.economicCalendar as Array<Record<string, unknown>>
               : Array.isArray(payload.economicCalendarData)
                 ? payload.economicCalendarData as Array<Record<string, unknown>>
-                : [];
+                : Array.isArray(payload as unknown)
+                  ? payload as unknown as Array<Record<string, unknown>>
+                  : [];
+            if (!raw.length) providerDiagnostics.push(`Finnhub response keys: ${Object.keys(payload).join(', ') || 'none'}`);
             dateRangeEvents = raw.map((item, index) => {
               const datetime = String(item.time || item.date || '');
               const rawCountry = String(item.currency || item.country || '');
@@ -338,6 +347,7 @@ export async function handleEconomicCalendar(request: Request, env: CalendarEnv 
                 previous: item.prev == null ? '' : String(item.prev),
               };
             }).filter((event) => event.title && event.date && event.date >= from && event.date <= to);
+            providerDiagnostics.push(`Finnhub events in requested range: ${dateRangeEvents.length}`);
             if (dateRangeEvents.length) dateRangeSource = 'finnhub';
           }
         } catch (providerError) {
@@ -356,6 +366,7 @@ export async function handleEconomicCalendar(request: Request, env: CalendarEnv 
     const response = json({
       events,
       source,
+      diagnostics: source === 'calendar-providers-empty' ? providerDiagnostics : undefined,
       configuration: source === 'calendar-api-key-required' ? 'Configurez FINNHUB_API_KEY dans les secrets Cloudflare pour activer la source historique.' : undefined,
       enrichment: source === 'forex-factory' ? 'trading-economics' : null,
       fetchedAt: new Date().toISOString(),
