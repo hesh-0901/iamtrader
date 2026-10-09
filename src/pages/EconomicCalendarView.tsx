@@ -639,7 +639,9 @@ export function EconomicCalendarView() {
                     <React.Fragment key={event.id}>
                     <tr
                       key={event.id}
-                      className="h-[44px] border-b border-gray-100 align-middle transition-colors last:border-b-0 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/50"
+                      onClick={() => { setSelectedEvent(event); setOnlineAnalysis(null); setAnalysisError(null); }}
+                      className="h-[52px] cursor-pointer border-b border-gray-100 align-middle transition-colors last:border-b-0 hover:bg-emerald-50/60 focus-within:bg-emerald-50/60 dark:border-slate-800 dark:hover:bg-slate-800/70"
+                      title="Ouvrir l’analyse économique"
                     >
                       <td className="whitespace-nowrap px-2 text-center font-mono text-xs text-gray-500 dark:text-slate-400">
                         {event.time}
@@ -668,8 +670,8 @@ export function EconomicCalendarView() {
                           <div className="min-w-0 flex-1">
                             <button
                               type="button"
-                              onClick={() => { setSelectedEvent(event); setOnlineAnalysis(null); setAnalysisError(null); }}
-                              className="block w-full truncate text-left text-xs font-medium text-slate-900 hover:text-[#00a982] dark:text-white"
+                              onClick={(clickEvent) => { clickEvent.stopPropagation(); setSelectedEvent(event); setOnlineAnalysis(null); setAnalysisError(null); }}
+                              className="block w-full truncate text-left text-xs font-semibold text-slate-900 hover:text-[#00a982] dark:text-white"
                               title="Afficher le commentaire et le contexte économique"
                             >
                               {event.event}
@@ -683,6 +685,7 @@ export function EconomicCalendarView() {
                               href={event.url}
                               target="_blank"
                               rel="noreferrer"
+                              onClick={(clickEvent) => clickEvent.stopPropagation()}
                               className="shrink-0 text-[9px] font-semibold text-[#00a982] hover:underline"
                             >
                               Détails
@@ -751,42 +754,61 @@ export function EconomicCalendarView() {
             role="dialog"
             aria-modal="true"
             aria-labelledby="economic-event-modal-title"
-            className="max-h-[88vh] w-full max-w-2xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-950"
+            className="max-h-[92vh] w-full max-w-4xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_28px_100px_rgba(2,6,23,0.35)] dark:border-slate-700 dark:bg-slate-950"
           >
-            <header className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4 dark:border-slate-800">
+            <header className="relative flex items-start justify-between gap-4 border-b border-slate-200 bg-slate-950 px-6 py-6 text-white sm:px-8 dark:border-slate-800">
               <div className="min-w-0">
-                <div className="mb-1 flex items-center gap-2 text-[10px] font-bold uppercase tracking-wide text-[#00a982]">
+                <div className="mb-3 flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-300">
                   {selectedEvent.currency} <span className="text-slate-300">·</span> {impactLabel(selectedEvent.impact)}
                 </div>
-                <h2 id="economic-event-modal-title" className="text-base font-bold leading-snug text-slate-900 dark:text-white">{selectedEvent.event}</h2>
-                <p className="mt-1 text-[11px] text-slate-500 dark:text-slate-400">{selectedEvent.date} · {selectedEvent.time}</p>
+                <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">IAMTRADER · Briefing économique</div>
+                <h2 id="economic-event-modal-title" className="max-w-3xl text-xl font-semibold leading-tight tracking-tight text-white sm:text-2xl">{selectedEvent.event}</h2>
+                <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-300"><span>{selectedEvent.date}</span><span className="text-slate-600">/</span><span>{selectedEvent.time} · heure locale</span><span className="text-slate-600">/</span><span>Calendrier macroéconomique</span></p>
               </div>
-              <button type="button" onClick={() => setSelectedEvent(null)} aria-label="Fermer" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-white">×</button>
+              <button type="button" onClick={() => setSelectedEvent(null)} aria-label="Fermer" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/15 bg-white/5 text-xl text-slate-300 transition hover:bg-white/15 hover:text-white">×</button>
             </header>
-            <div className="max-h-[calc(88vh-76px)] space-y-4 overflow-y-auto px-5 py-5">
-              <div className="space-y-2">
+            <div className="max-h-[calc(92vh-150px)] space-y-6 overflow-y-auto bg-white px-6 py-6 sm:px-8 sm:py-8 dark:bg-slate-950">
+              <div className="grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(240px,0.8fr)]"> 
+                <div className="space-y-4"> 
+                  <div className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400"><span className="h-px w-6 bg-emerald-500"></span>Décryptage de l’indicateur</div>
                 <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-300">{getEventEducation(selectedEvent.event, selectedEvent.currency).description}</p>
                 <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400">{getEventEducation(selectedEvent.event, selectedEvent.currency).importance}</p>
-                <p className="text-sm leading-relaxed text-slate-600 dark:text-slate-400">{getEventEducation(selectedEvent.event, selectedEvent.currency).interpretation}</p>
+                <p className="text-sm leading-7 text-slate-600 dark:text-slate-400">{getEventEducation(selectedEvent.event, selectedEvent.currency).interpretation}</p>
+                </div>
+                <aside className="rounded-xl border border-slate-200 bg-slate-50 p-4 sm:p-5 dark:border-slate-800 dark:bg-slate-900/60">
+                  <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">Lecture du marché</div>
+                  <div className="mt-3 space-y-3">
+                    {[['Publié', selectedEvent.actual], ['Consensus', selectedEvent.forecast], ['Précédent', selectedEvent.previous]].map(([label, number]) => (
+                      <div key={label} className="flex items-center justify-between gap-3 border-b border-slate-200 pb-2 last:border-0 last:pb-0 dark:border-slate-700">
+                        <span className="text-xs text-slate-500">{label}</span>
+                        <span className="text-sm font-semibold tabular-nums text-slate-900 dark:text-white">{value(number)}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="mt-4 text-[11px] leading-relaxed text-slate-500">La surprise par rapport au consensus compte souvent davantage que le chiffre isolé.</p>
+                </aside>
               </div>
-              <div className="rounded-xl border border-slate-200 bg-slate-50/80 p-4 dark:border-slate-800 dark:bg-slate-900/60">
-                <div className="flex items-center justify-between gap-3">
-                  <span className="text-xs font-bold text-slate-800 dark:text-slate-100">Contexte récent</span>
-                  <span className="text-[10px] text-slate-400">Sources publiques</span>
+              <section className="overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-slate-50 px-5 py-4 dark:border-slate-800 dark:bg-slate-900">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"><TrendingUp className="h-4 w-4" /></div>
+                    <div><div className="text-sm font-semibold text-slate-900 dark:text-white">Chloé</div><div className="mt-0.5 text-[11px] text-slate-500">Analyse économique · IAMTRADER</div></div>
+                  </div>
+                  <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400">Sources publiques</span>
                 </div>
                 {analysisLoading ? (
-                  <div className="flex items-center gap-2 py-5 text-xs text-slate-500"><Loader2 className="h-4 w-4 animate-spin text-[#00a982]" /> Recherche et synthèse des informations récentes…</div>
+                  <div className="flex items-center gap-3 px-5 py-7 text-sm text-slate-500"><Loader2 className="h-5 w-5 animate-spin text-emerald-600" /><div><div className="font-semibold text-slate-700 dark:text-slate-200">Chloé prépare son briefing</div><div className="mt-1 text-xs">Vérification du contexte public et synthèse des éléments disponibles…</div></div></div>
                 ) : onlineAnalysis ? (
                   <>
-                    <p className="mt-3 whitespace-pre-line text-sm leading-relaxed text-slate-700 dark:text-slate-300">{onlineAnalysis.summary}</p>
-                    {onlineAnalysis.sources.length > 0 && <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 border-t border-slate-200 pt-3 dark:border-slate-700">
-                      {onlineAnalysis.sources.map((source, index) => <a key={source.url + index} href={source.url} target="_blank" rel="noreferrer" className="text-[10px] font-semibold text-[#00a982] hover:underline">{source.title}{source.date ? ` · ${source.date}` : ''}</a>)}
+                    <div className="whitespace-pre-line px-5 py-5 text-sm leading-7 text-slate-700 dark:text-slate-300">{onlineAnalysis.summary}</div>
+                    {onlineAnalysis.sources.length > 0 && <div className="flex flex-col gap-2 border-t border-slate-200 bg-slate-50 px-5 py-4 dark:border-slate-700 dark:bg-slate-900/50">
+                      {onlineAnalysis.sources.map((source, index) => <a key={source.url + index} href={source.url} target="_blank" rel="noreferrer" className="text-xs font-medium leading-relaxed text-emerald-700 hover:underline dark:text-emerald-300">{source.title}{source.date ? ` · ${source.date}` : ''}</a>)}
                     </div>}
-                    <p className="mt-2 text-[10px] text-slate-400">Mis à jour le {new Date(onlineAnalysis.fetchedAt).toLocaleString('fr-FR')} · Synthèse informative, pas un signal de trading.</p>
+                    <p className="border-t border-slate-200 px-5 py-3 text-[10px] text-slate-400 dark:border-slate-700">Mis à jour le {new Date(onlineAnalysis.fetchedAt).toLocaleString('fr-FR')} · Synthèse informative, pas un signal de trading.</p>
                   </>
                 ) : (
-                  <div className="mt-3">
-                    <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">{analysisError || "Le contexte récent n’est pas disponible pour le moment."}</p>
+                  <div className="px-5 py-5">
+                    <p className="text-sm leading-relaxed text-slate-500 dark:text-slate-400">{analysisError || "Le contexte récent n’est pas disponible pour le moment."}</p>
                     <button type="button" onClick={() => {
                       const event = selectedEvent;
                       setAnalysisLoading(true);
@@ -809,11 +831,11 @@ export function EconomicCalendarView() {
                         if (!response.ok) throw new Error(data?.error || 'Analyse indisponible pour le moment.');
                         setOnlineAnalysis(data);
                       }).catch((error) => setAnalysisError(error?.message || 'Analyse indisponible pour le moment.')).finally(() => setAnalysisLoading(false));
-                    }} disabled={analysisLoading} className="mt-2 rounded-lg border border-slate-200 px-3 py-2 text-[11px] font-bold text-slate-600 hover:bg-white dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">Réessayer</button>
+                    }} disabled={analysisLoading} className="mt-4 rounded-lg border border-slate-200 px-4 py-2.5 text-xs font-semibold text-slate-700 transition hover:border-emerald-300 hover:bg-emerald-50 dark:border-slate-700 dark:text-slate-200 dark:hover:bg-slate-800">Réessayer</button>
                   </div>
                 )}
-              </div>
-              <p className="text-[10px] leading-relaxed text-slate-400">Les publications peuvent influencer les marchés différemment selon les attentes déjà intégrées dans les prix. Vérifiez les sources avant toute décision.</p>
+              </section>
+              <p className="text-[11px] leading-relaxed text-slate-400">Les publications peuvent influencer les marchés différemment selon les attentes déjà intégrées dans les prix. Vérifiez les sources avant toute décision. Cette analyse est informative et ne constitue pas un signal de trading.</p>
             </div>
           </section>
         </div>
