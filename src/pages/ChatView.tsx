@@ -1,9 +1,9 @@
 import React, { useRef, useState } from 'react';
 import {
   Search, MoreVertical, Phone, Video, Paperclip, Image as ImageIcon,
-  Mic, Send, Smile, Pin, Pencil, Trash2, X, Check, CheckCheck,
-  MessageCircle, Plus, FileText, Play, Pause, Headphones, ArrowLeft,
-  CircleDot, Users, Bell, ChevronDown
+  Mic, Send, Smile, Pin, Pencil, Trash2, X, CheckCheck,
+  MessageCircle, Plus, FileText, Play, Headphones, ArrowLeft,
+  Users, ChevronDown
 } from 'lucide-react';
 
 type ChatMessage = {
