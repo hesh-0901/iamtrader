@@ -69,7 +69,8 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
   const [selectedAvatar, setSelectedAvatar] = useState(userProfile?.avatarURL || userProfile?.photoURL || '');
   const [isAvatarSaving, setIsAvatarSaving] = useState(false);
   const avatarSeeds = ['Milo', 'Zuri', 'Kito', 'Nia', 'Tala', 'Amari', 'Lulu', 'Noah', 'Ayo', 'Mina', 'Kaya', 'Zola', 'Sami', 'Lina', 'Tomi', 'Kiki', 'Neo', 'Amani', 'Maya', 'Jabari', 'Tino', 'Imani', 'Leya', 'Kofi'];
-  const avatarUrl = (seed: string) => `https://api.dicebear.com/9.x/adventurer/svg?seed=${encodeURIComponent(seed)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,d1f4d8,ffdfbf`;
+  // Use a friendlier, consistently smiling cartoon style instead of the awkward Adventurer expressions.
+  const avatarUrl = (seed: string) => `https://api.dicebear.com/9.x/big-smile/svg?seed=${encodeURIComponent(seed)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,d1f4d8,ffdfbf`;
   const saveAvatar = async () => {
     if (!userProfile?.uid || !selectedAvatar) return;
     setIsAvatarSaving(true);
