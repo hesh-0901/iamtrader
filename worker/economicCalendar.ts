@@ -168,7 +168,7 @@ export async function handleEconomicCalendar(request: Request): Promise<Response
 
   const cacheKey = new Request(
     new URL(
-      `/api/economic-calendar?source=forex-factory-week-v3&from=${from}&to=${to}`,
+      `/api/economic-calendar?source=date-range-v4&from=${from}&to=${to}`,
       request.url,
     ).toString(),
     { method: 'GET' },
@@ -234,6 +234,49 @@ export async function handleEconomicCalendar(request: Request): Promise<Response
         };
       }).filter(event => event.title && event.date);
       source = 'trading-economics-fallback';
+    }
+
+    // Forex Factory's "thisweek" feed ignores requested dates. If it does not
+    // cover the requested range, ask the date-aware provider instead of returning
+    // a successful response full of events from the wrong week.
+    const requestedRangeHasEvents = (!from || !to) || scheduledEvents.some((event) => event.date >= from && event.date <= to);
+    if (source === 'forex-factory' && from && to && !requestedRangeHasEvents) {
+      const rangeUrl = new URL('https://api.tradingeconomics.com/calendar');
+      rangeUrl.searchParams.set('c', 'guest:guest');
+      rangeUrl.searchParams.set('f', 'json');
+      rangeUrl.searchParams.set('d1', from);
+      rangeUrl.searchParams.set('d2', to);
+      const rangeResponse = await fetch(rangeUrl.toString(), {
+        headers: { Accept: 'application/json', 'User-Agent': 'IAMTRADER Economic Calendar/1.0' },
+        signal: AbortSignal.timeout(8000),
+      });
+      if (rangeResponse.ok) {
+        const rangePayload = await rangeResponse.json() as unknown;
+        if (Array.isArray(rangePayload)) {
+          const rangeEvents = (rangePayload as Array<Record<string, unknown>>).map((item, index) => {
+            const datetime = String(item.Date || item.date || item.datetime || '');
+            const rawCountry = String(item.Currency || item.Country || item.country || '');
+            const impactValue = String(item.Importance || item.impact || '').toLowerCase();
+            const country = rawCountry.toUpperCase() === 'UNITED STATES' ? 'USD' : rawCountry.toUpperCase();
+            return {
+              id: `te-range-${datetime}-${country}-${String(item.Event || item.event || index)}`,
+              title: String(item.Event || item.event || 'Economic Event').trim(),
+              country,
+              date: normalizeDate(datetime),
+              time: normalizeTime(datetime),
+              datetime,
+              impact: normalizeImpact(impactValue === '3' || impactValue === 'high' ? 'high' : impactValue === '2' || impactValue === 'medium' ? 'medium' : 'low'),
+              actual: String(item.Actual ?? item.actual ?? '').trim(),
+              forecast: String(item.Forecast ?? item.forecast ?? '').trim(),
+              previous: String(item.Previous ?? item.previous ?? '').trim(),
+            };
+          }).filter((event) => event.title && event.date && event.date >= from && event.date <= to);
+          if (rangeEvents.length > 0) {
+            scheduledEvents = rangeEvents;
+            source = 'trading-economics-date-range';
+          }
+        }
+      }
     }
 
     const events = from && to && source === 'forex-factory'
