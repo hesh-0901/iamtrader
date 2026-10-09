@@ -90,12 +90,24 @@ service cloud.firestore {
           && request.resource.data.text is string
           && request.resource.data.text.size() > 0
           && request.resource.data.text.size() <= 10000;
-        allow update: if isMember()
+        // The author may edit message content; admins may only backfill
+        // display name/avatar metadata on legacy messages.
+        allow update: if (
+          isMember()
           && resource.data.senderId == request.auth.uid
           && request.resource.data.senderId == resource.data.senderId
           && request.resource.data.diff(resource.data).affectedKeys()
             .hasOnly(['text', 'edited', 'editedAt', 'pinned'])
-          && (!('text' in request.resource.data) || request.resource.data.text is string);
+          && (!('text' in request.resource.data) || request.resource.data.text is string)
+        ) || (
+          conversationId == 'community-hub'
+          && isAdmin()
+          && request.resource.data.senderId == resource.data.senderId
+          && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['senderName', 'senderAvatarURL'])
+          && (!('senderName' in request.resource.data) || request.resource.data.senderName is string)
+          && (!('senderAvatarURL' in request.resource.data) || request.resource.data.senderAvatarURL is string)
+        );
         allow delete: if isMember() && resource.data.senderId == request.auth.uid;
       }
     }
