@@ -248,27 +248,39 @@ const impactLabel = (impact: Impact) =>
       ? 'Impact moyen'
       : 'Impact faible';
 
-const impactStars = (impact: Impact) => {
-  if (impact === 'high') {
-    return (
-      <span className="font-bold tracking-[-2px] text-red-500" aria-hidden="true">
-        ★★★
-      </span>
-    );
-  }
+const CowHead = ({ color }: { color: string }) => (
+  <svg
+    aria-hidden="true"
+    viewBox="0 0 24 24"
+    className="h-[17px] w-[17px] shrink-0"
+    fill="none"
+    stroke={color}
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M7.2 6.8 4.1 3.9 3.3 9l3.1 2.1M16.8 6.8l3.1-2.9.8 5.1-3.1 2.1" />
+    <path d="M8 5.9 7 3.5 10 5M16 5.9l1-2.4L14 5" />
+    <path d="M6.1 9.2c0-2.1 2.6-3.6 5.9-3.6s5.9 1.5 5.9 3.6v5.1c0 3.3-2.5 5.7-5.9 5.7s-5.9-2.4-5.9-5.7z" />
+    <path d="M8.5 12h.1M15.4 12h.1" />
+    <path d="M9 15.2c.8-.7 1.8-1 3-1s2.2.3 3 1c-.2 1.5-1.4 2.5-3 2.5s-2.8-1-3-2.5z" />
+    <path d="M10.4 15.5h.1M13.5 15.5h.1" />
+  </svg>
+);
 
-  if (impact === 'medium') {
-    return (
-      <span className="font-bold tracking-[-2px] text-amber-500" aria-hidden="true">
-        ★★<span className="text-slate-300 dark:text-slate-700">★</span>
-      </span>
-    );
-  }
+const impactCows = (impact: Impact) => {
+  const colors =
+    impact === 'high'
+      ? ['#ef4444', '#ef4444', '#ef4444']
+      : impact === 'medium'
+        ? ['#f59e0b', '#f59e0b', '#94a3b8']
+        : ['#f59e0b', '#cbd5e1', '#cbd5e1'];
 
   return (
-    <span className="font-bold tracking-[-2px] text-amber-400" aria-hidden="true">
-      ★<span className="text-slate-300 dark:text-slate-700">★</span>
-      <span className="text-slate-300 dark:text-slate-700">★</span>
+    <span className="inline-flex items-center justify-center gap-0.5" aria-label={impactLabel(impact)}>
+      {colors.map((color, index) => (
+        <CowHead key={index} color={color} />
+      ))}
     </span>
   );
 };
@@ -503,7 +515,7 @@ export function EconomicCalendarView() {
       )}
 
 
-      <div className="mx-auto w-full max-w-[1120px] overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
+      <div className="mx-auto w-full max-w-[1000px] overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
         {loading ? (
           <div className="flex min-h-[180px] items-center justify-center gap-2 text-xs text-slate-400">
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -536,13 +548,13 @@ export function EconomicCalendarView() {
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[820px] table-fixed border-collapse">
+              <table className="w-full min-w-[800px] table-fixed border-collapse">
                 <thead className="border-b border-slate-100 bg-white dark:border-slate-800 dark:bg-slate-950">
                   <tr className="h-7">
                     <th className="w-[72px] px-2 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Heure</th>
                     <th className="w-[76px] px-2 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Devise</th>
-                    <th className="px-3 text-left text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Événement</th>
-                    <th className="w-[76px] px-2 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Impact</th>
+                    <th className="w-[300px] px-3 text-left text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Événement</th>
+                    <th className="w-[68px] px-1 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Impact</th>
                     <th className="w-[88px] px-2 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Actuel</th>
                     <th className="w-[88px] px-2 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Prévision</th>
                     <th className="w-[88px] px-2 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Précédent</th>
@@ -553,7 +565,7 @@ export function EconomicCalendarView() {
                   {visibleEvents.map((event) => (
                     <tr
                       key={event.id}
-                      className="h-[40px] border-b border-gray-100 align-middle transition-colors last:border-b-0 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/50"
+                      className="h-[44px] border-b border-gray-100 align-middle transition-colors last:border-b-0 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/50"
                     >
                       <td className="whitespace-nowrap px-2 text-center font-mono text-xs text-gray-500 dark:text-slate-400">
                         {event.time}
@@ -608,7 +620,7 @@ export function EconomicCalendarView() {
                         title={impactLabel(event.impact)}
                         aria-label={impactLabel(event.impact)}
                       >
-                        {impactStars(event.impact)}
+                        {impactCows(event.impact)}
                       </td>
 
                       <td
