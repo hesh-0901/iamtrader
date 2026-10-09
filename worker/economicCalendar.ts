@@ -239,8 +239,17 @@ export async function handleEconomicCalendar(request: Request): Promise<Response
     // Forex Factory's "thisweek" feed ignores requested dates. If it does not
     // cover the requested range, ask the date-aware provider instead of returning
     // a successful response full of events from the wrong week.
+    const utcToday = new Date().toISOString().slice(0, 10);
+    const utcDay = new Date(`${utcToday}T00:00:00Z`);
+    const weekStart = new Date(utcDay);
+    weekStart.setUTCDate(utcDay.getUTCDate() - ((utcDay.getUTCDay() + 6) % 7));
+    const weekEnd = new Date(weekStart);
+    weekEnd.setUTCDate(weekStart.getUTCDate() + 6);
+    const currentWeekStart = weekStart.toISOString().slice(0, 10);
+    const currentWeekEnd = weekEnd.toISOString().slice(0, 10);
     const requestedRangeHasEvents = (!from || !to) || scheduledEvents.some((event) => event.date >= from && event.date <= to);
-    if (source === 'forex-factory' && from && to && !requestedRangeHasEvents) {
+    const requestedRangeOutsideWeeklyFeed = Boolean(from && to && (from < currentWeekStart || to > currentWeekEnd));
+    if (source === 'forex-factory' && from && to && (!requestedRangeHasEvents || requestedRangeOutsideWeeklyFeed)) {
       const rangeUrl = new URL('https://api.tradingeconomics.com/calendar');
       rangeUrl.searchParams.set('c', 'guest:guest');
       rangeUrl.searchParams.set('f', 'json');
