@@ -503,7 +503,7 @@ export function EconomicCalendarView() {
       )}
 
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
+      <div className="mx-auto w-full max-w-[1280px] overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
         {loading ? (
           <div className="flex min-h-[180px] items-center justify-center gap-2 text-xs text-slate-400">
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -539,13 +539,13 @@ export function EconomicCalendarView() {
               <table className="w-full min-w-[860px] table-fixed border-collapse">
                 <thead className="border-b border-slate-100 bg-white dark:border-slate-800 dark:bg-slate-950">
                   <tr className="h-7">
-                    <th className="w-[76px] px-3 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Heure</th>
-                    <th className="w-[82px] px-2 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Devise</th>
-                    <th className="w-[38%] px-3 text-left text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Événement</th>
-                    <th className="w-[88px] px-2 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Impact</th>
-                    <th className="w-[92px] px-2 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Actuel</th>
-                    <th className="w-[92px] px-2 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Prévision</th>
-                    <th className="w-[92px] px-3 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Précédent</th>
+                    <th className="w-[72px] px-2 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Heure</th>
+                    <th className="w-[76px] px-2 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Devise</th>
+                    <th className="px-3 text-left text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Événement</th>
+                    <th className="w-[76px] px-2 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Impact</th>
+                    <th className="w-[88px] px-2 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Actuel</th>
+                    <th className="w-[88px] px-2 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Prévision</th>
+                    <th className="w-[88px] px-2 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Précédent</th>
                   </tr>
                 </thead>
 
@@ -650,7 +650,7 @@ export function EconomicCalendarView() {
         )}
       </div>
 
-      <div className="flex items-center justify-between px-0.5 text-[9px] text-slate-400">
+      <div className="mx-auto flex w-full max-w-[1280px] items-center justify-between px-0.5 text-[9px] text-slate-400">
         <span>Calendrier économique · heures adaptées à votre fuseau ({userTimeZone})</span>
         <a
           href="https://www.forexfactory.com/calendar"
