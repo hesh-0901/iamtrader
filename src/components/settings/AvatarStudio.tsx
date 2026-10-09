@@ -97,9 +97,9 @@ function createAvatarUrl(config: AvatarConfig) {
   return `https://api.dicebear.com/10.x/avataaars/svg?${params.toString()}`;
 }
 
-interface AvatarStudioProps { userProfile: UserProfile | null; }
+interface AvatarStudioProps { userProfile: UserProfile | null; onSaved?: () => void; }
 
-export function AvatarStudio({ userProfile }: AvatarStudioProps) {
+export function AvatarStudio({ userProfile, onSaved }: AvatarStudioProps) {
   const { showToast } = useToast();
   const [config, setConfig] = useState<AvatarConfig>(() => ({
     ...defaults,
@@ -132,7 +132,8 @@ export function AvatarStudio({ userProfile }: AvatarStudioProps) {
     setSaving(true);
     try {
       await updateUserAvatar(userProfile.uid, avatarUrl, config);
-      showToast('Votre avatar personnalisé est enregistré. Actualisation du profil…', 'success');
+      showToast('Votre avatar personnalisé est enregistré.', 'success');
+      onSaved?.();
       window.setTimeout(() => window.location.reload(), 900);
     } catch (error: any) {
       showToast(error?.message || 'Impossible d’enregistrer votre avatar.', 'error');
