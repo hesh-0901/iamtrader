@@ -7,7 +7,7 @@ import {
 } from 'firebase/firestore';
 import {
   Search, MoreVertical, Send, Pin, Pencil, Trash2, X, CheckCheck,
-  MessageCircle, Plus, ArrowLeft, Users, Loader2, Image as ImageIcon, Mic, Square, Settings, Save
+  MessageCircle, Plus, ArrowLeft, Users, Loader2, Image as ImageIcon, Mic, Square, Settings, Save, Reply, FileAudio
 } from 'lucide-react';
 
 type ChatConversation = {
@@ -17,7 +17,7 @@ type ChatConversation = {
 };
 type ChatMessage = {
   id: string; senderId: string; text: string; createdAt?: Timestamp | null;
-  edited?: boolean; pinned?: boolean; type?: 'text' | 'image' | 'voice'; mediaUrl?: string; mediaName?: string; mediaPublicId?: string; mediaResourceType?: string; expiresAt?: Timestamp | null; duration?: number; senderName?: string; senderAvatarURL?: string;
+  edited?: boolean; pinned?: boolean; type?: 'text' | 'image' | 'voice'; mediaUrl?: string; mediaName?: string; mediaPublicId?: string; mediaResourceType?: string; expiresAt?: Timestamp | null; duration?: number; senderName?: string; senderAvatarURL?: string; replyToId?: string; replyToSenderName?: string; replyToText?: string; replyToType?: 'text' | 'image' | 'voice';
 };
 
 const formatTime = (value?: Timestamp | null) => value?.toDate
@@ -55,6 +55,7 @@ export function ChatView({ userProfile }: { userProfile: UserProfile | null }) {
   const [groupAvatarDraft, setGroupAvatarDraft] = useState('');
   const [savingGroupSettings, setSavingGroupSettings] = useState(false);
   const [viewerImage, setViewerImage] = useState<ChatMessage | null>(null);
+  const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
 
   // Community Hub is a system group available to every authenticated user.
   useEffect(() => {
@@ -186,6 +187,13 @@ export function ChatView({ userProfile }: { userProfile: UserProfile | null }) {
     } catch (err: any) { setError(err?.message || 'Impossible de créer la conversation.'); }
   };
 
+  const replyPayload = (message: ChatMessage | null) => message ? {
+    replyToId: message.id,
+    replyToSenderName: message.senderName?.trim() || (message.senderId === uid ? currentDisplayName : active?.memberNames?.[message.senderId] || `Trader ${message.senderId.slice(0, 7)}`),
+    replyToText: message.type === 'image' ? '📷 Image' : message.type === 'voice' ? '🎤 Message vocal' : message.text.slice(0, 240),
+    replyToType: message.type || 'text'
+  } : {};
+
   const sendMedia = async (file: File, type: 'image' | 'voice', duration?: number) => {
     if (!uid || !activeId || uploadingMedia) return;
     if (file.size > 12 * 1024 * 1024) { setError('Le fichier dépasse la limite de 12 Mo.'); return; }
@@ -213,8 +221,10 @@ export function ChatView({ userProfile }: { userProfile: UserProfile | null }) {
         type, mediaUrl: uploaded.secure_url, mediaPublicId: uploaded.public_id,
         mediaResourceType: uploaded.resource_type || (type === 'voice' ? 'video' : 'image'),
         mediaName: safeName, duration: duration || 0, expiresAt,
+        ...replyPayload(replyTo),
         pinned: false, edited: false, createdAt: serverTimestamp()
       });
+      setReplyTo(null);
       await updateDoc(doc(db, 'conversations', activeId), {
         lastMessage: type === 'image' ? '📷 Image' : '🎤 Message vocal',
         [`memberNames.${uid}`]: currentDisplayName,
@@ -273,11 +283,12 @@ export function ChatView({ userProfile }: { userProfile: UserProfile | null }) {
           senderId: uid,
           senderName: currentDisplayName,
           senderAvatarURL: currentAvatar,
-          text, pinned: false, edited: false, createdAt: serverTimestamp()
+          text, ...replyPayload(replyTo), pinned: false, edited: false, createdAt: serverTimestamp()
         });
         await updateDoc(doc(db, 'conversations', activeId), { lastMessage: text.slice(0, 500), [`memberNames.${uid}`]: currentDisplayName, updatedAt: serverTimestamp() });
       }
       setDraft('');
+      setReplyTo(null);
     } catch (err: any) { setError(err?.message || 'Échec de l’envoi du message.'); }
     finally { setSending(false); }
   };
@@ -319,7 +330,8 @@ export function ChatView({ userProfile }: { userProfile: UserProfile | null }) {
     try { await deleteDoc(doc(db, 'conversations', activeId, 'messages', message.id)); setMenuMessage(null); }
     catch (err: any) { setError(err?.message || 'Impossible de supprimer ce message.'); }
   };
-  const beginEdit = (message: ChatMessage) => { setEditingId(message.id); setDraft(message.text); setMenuMessage(null); };
+  const beginEdit = (message: ChatMessage) => { setEditingId(message.id); setDraft(message.text); setReplyTo(null); setMenuMessage(null); };
+  const beginReply = (message: ChatMessage) => { setReplyTo(message); setEditingId(null); setDraft(''); setMenuMessage(null); };
 
   if (!uid) return <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center"><MessageCircle className="mx-auto h-8 w-8 text-emerald-600" /><h3 className="mt-3 font-bold text-slate-900">Connectez-vous à PipTalk</h3><p className="mt-1 text-sm text-slate-500">Votre session IAMTRADER est nécessaire pour envoyer et recevoir des messages.</p></div>;
 
@@ -358,23 +370,24 @@ export function ChatView({ userProfile }: { userProfile: UserProfile | null }) {
                 <div className={`relative min-w-0 max-w-[min(78%,560px)] rounded-2xl px-4 py-3 shadow-[0_2px_8px_rgba(15,23,42,0.05)] transition-shadow hover:shadow-md sm:max-w-[72%] ${mine ? 'rounded-br-md border border-emerald-100 bg-gradient-to-br from-[#e5fbf2] to-[#d5f6e8] text-slate-800' : 'rounded-bl-md border border-slate-200/80 bg-white text-slate-700'}`}>
                   {active?.group && <div className={`mb-1.5 flex items-center gap-2 text-[11px] font-extrabold tracking-[-0.01em] ${mine ? 'text-emerald-800' : 'text-slate-800'}`}><span className="truncate">{senderName}</span>{mine && <span className="rounded-full bg-emerald-100/80 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-emerald-700">Vous</span>}</div>}
                   {message.pinned && <div className="mb-2 flex items-center gap-1 text-[9px] font-bold text-emerald-700"><Pin className="h-3 w-3" />Message épinglé</div>}
+                  {message.replyToId && <div className={`mb-2 flex max-w-full gap-2 rounded-lg border-l-[3px] px-2.5 py-2 text-left ${mine ? 'border-emerald-600 bg-emerald-100/70' : 'border-slate-400 bg-slate-50'}`}><Reply className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-700" /><div className="min-w-0"><p className="truncate text-[10px] font-bold text-slate-700">{message.replyToSenderName || 'Message cité'}</p><p className="truncate text-[11px] text-slate-500">{message.replyToText || 'Message'}</p></div></div>}
                   {message.expiresAt?.toDate && message.expiresAt.toDate().getTime() <= Date.now()
                     ? <p className="text-xs italic text-slate-400">Média expiré après 72 heures</p>
                     : message.type === 'image' && message.mediaUrl
                       ? <button type="button" onClick={() => setViewerImage(message)} aria-label="Ouvrir l’image dans PipTalk" className="mb-1 block max-w-full cursor-zoom-in overflow-hidden rounded-xl text-left focus:outline-none focus:ring-2 focus:ring-emerald-400"><img src={message.mediaUrl} alt={message.mediaName || "Image envoyée"} loading="lazy" className="max-h-72 max-w-full rounded-xl object-contain" /></button>
                       : message.type === 'voice' && message.mediaUrl
-                        ? <audio controls preload="metadata" src={message.mediaUrl} className="my-1 max-w-full" />
+                        ? <div className="my-1 flex min-w-[220px] max-w-full items-center gap-2 rounded-xl bg-slate-50 p-2.5"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700"><FileAudio className="h-4 w-4" /></div><div className="min-w-0 flex-1"><p className="mb-1 text-[10px] font-semibold text-slate-600">Message vocal</p><audio controls preload="metadata" src={message.mediaUrl} className="h-8 w-full max-w-[260px] accent-emerald-600" /></div></div>
                         : <p className="whitespace-pre-wrap break-words text-[13px] leading-6">{message.text}</p>}
                   <div className="mt-2 flex items-center justify-end gap-1.5"><span className="text-[9px] text-slate-400">{message.edited ? 'modifié · ' : ''}{formatTime(message.createdAt)}</span>{mine && <CheckCheck className="h-3.5 w-3.5 text-emerald-600" />}</div>
-                  <button onClick={() => setMenuMessage(menuMessage === message.id ? null : message.id)} className="absolute -right-2 -top-2 hidden rounded-full border border-slate-200 bg-white p-1.5 text-slate-500 shadow-md group-hover:block" title="Actions"><MoreVertical className="h-3 w-3" /></button>
-                  {menuMessage === message.id && <div className="absolute right-0 top-6 z-20 w-40 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-xl"><button onClick={() => togglePin(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Pin className="h-3.5 w-3.5" />{message.pinned ? 'Désépingler' : 'Épingler'}</button>{mine && <button onClick={() => beginEdit(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Pencil className="h-3.5 w-3.5" />Modifier</button>}{mine && <button onClick={() => removeMessage(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-rose-600 hover:bg-rose-50"><Trash2 className="h-3.5 w-3.5" />Supprimer</button>}</div>}
+                  <button onClick={() => setMenuMessage(menuMessage === message.id ? null : message.id)} className="absolute -right-2 -top-2 rounded-full border border-slate-200 bg-white p-1.5 text-slate-500 opacity-100 shadow-md sm:opacity-0 sm:group-hover:opacity-100" title="Actions" aria-label="Actions du message"><MoreVertical className="h-3 w-3" /></button>
+                  {menuMessage === message.id && <div className="absolute right-0 top-6 z-20 w-44 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-xl"><button onClick={() => beginReply(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Reply className="h-3.5 w-3.5" />Répondre</button><button onClick={() => togglePin(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Pin className="h-3.5 w-3.5" />{message.pinned ? 'Désépingler' : 'Épingler'}</button>{mine && <button onClick={() => beginEdit(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Pencil className="h-3.5 w-3.5" />Modifier</button>}{mine && <button onClick={() => removeMessage(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-rose-600 hover:bg-rose-50"><Trash2 className="h-3.5 w-3.5" />Supprimer</button>}</div>}
                 </div>
                 {mine && active?.group && <div className="mb-1 h-9 w-9 shrink-0 overflow-hidden rounded-full ring-2 ring-white shadow-sm">{message.senderAvatarURL || currentAvatar ? <img src={message.senderAvatarURL || currentAvatar} alt={senderName} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-emerald-100 to-teal-100 text-[10px] font-extrabold text-emerald-800">{senderName.slice(0, 2).toUpperCase()}</div>}</div>}
               </div>
             </React.Fragment>; })}
           <div ref={bottomRef} />
         </div>
-        <footer className="border-t border-slate-200 bg-white px-3 py-3 sm:px-4">{editingId && <div className="mb-2 flex items-center justify-between rounded-lg bg-amber-50 px-3 py-2 text-[10px] text-amber-800"><span className="flex items-center gap-1.5"><Pencil className="h-3 w-3" />Modification du message</span><button onClick={() => { setEditingId(null); setDraft(''); }}><X className="h-3.5 w-3.5" /></button></div>}<div className="flex items-end gap-2"><input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={e => void handleFile(e.target.files?.[0])} /><button type="button" disabled={!active || uploadingMedia} onClick={() => fileInputRef.current?.click()} title="Envoyer une image" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-40"><ImageIcon className="h-4 w-4" /></button><button type="button" disabled={!active || uploadingMedia} onClick={() => recording ? stopRecording() : void startRecording()} title={recording ? "Arrêter l’enregistrement" : "Enregistrer un vocal"} className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${recording ? 'border-rose-300 bg-rose-50 text-rose-600' : 'border-slate-200 text-slate-500 hover:bg-slate-50'} disabled:opacity-40`}>{recording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}</button><textarea value={draft} onChange={e => setDraft(e.target.value)} onPaste={handlePaste} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void sendMessage(); } }} disabled={!active || sending} placeholder={active ? 'Écrire un message…' : 'Sélectionnez une discussion…'} rows={1} className="max-h-28 min-h-10 flex-1 resize-y rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs leading-5 text-slate-700 outline-none focus:border-emerald-300 focus:bg-white disabled:opacity-50" /><button onClick={() => void sendMessage()} disabled={!active || !draft.trim() || sending || uploadingMedia} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#00a982] text-white shadow-sm hover:bg-[#008f72] disabled:opacity-40" title="Envoyer">{sending || uploadingMedia ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}</button></div><p className="mt-2 pl-2 text-[9px] text-slate-400">Entrée pour envoyer · Maj + Entrée pour un saut de ligne · Coller une image avec Ctrl+V</p></footer>
+        <footer className="border-t border-slate-200 bg-white px-3 py-3 sm:px-4">{replyTo && <div className="mb-2 flex items-center gap-2 rounded-xl border-l-4 border-emerald-500 bg-emerald-50 px-3 py-2"><Reply className="h-4 w-4 shrink-0 text-emerald-700" /><div className="min-w-0 flex-1"><p className="text-[10px] font-bold text-emerald-800">Réponse à {replyTo.senderName || (replyTo.senderId === uid ? 'vous' : 'ce message')}</p><p className="truncate text-[11px] text-slate-600">{replyTo.type === 'image' ? '📷 Image' : replyTo.type === 'voice' ? '🎤 Message vocal' : replyTo.text}</p></div><button onClick={() => setReplyTo(null)} aria-label="Annuler la réponse" className="rounded-lg p-1 text-slate-500 hover:bg-white"><X className="h-4 w-4" /></button></div>}{editingId && <div className="mb-2 flex items-center justify-between rounded-lg bg-amber-50 px-3 py-2 text-[10px] text-amber-800"><span className="flex items-center gap-1.5"><Pencil className="h-3 w-3" />Modification du message</span><button onClick={() => { setEditingId(null); setDraft(''); }}><X className="h-3.5 w-3.5" /></button></div>}<div className="flex items-end gap-2"><input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={e => void handleFile(e.target.files?.[0])} /><button type="button" disabled={!active || uploadingMedia} onClick={() => fileInputRef.current?.click()} title="Envoyer une image" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-40"><ImageIcon className="h-4 w-4" /></button><button type="button" disabled={!active || uploadingMedia} onClick={() => recording ? stopRecording() : void startRecording()} title={recording ? "Arrêter l’enregistrement" : "Enregistrer un vocal"} className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${recording ? 'border-rose-300 bg-rose-50 text-rose-600' : 'border-slate-200 text-slate-500 hover:bg-slate-50'} disabled:opacity-40`}>{recording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}</button><textarea value={draft} onChange={e => setDraft(e.target.value)} onPaste={handlePaste} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void sendMessage(); } }} disabled={!active || sending} placeholder={active ? 'Écrire un message…' : 'Sélectionnez une discussion…'} rows={1} className="max-h-28 min-h-10 flex-1 resize-y rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs leading-5 text-slate-700 outline-none focus:border-emerald-300 focus:bg-white disabled:opacity-50" /><button onClick={() => void sendMessage()} disabled={!active || !draft.trim() || sending || uploadingMedia} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#00a982] text-white shadow-sm hover:bg-[#008f72] disabled:opacity-40" title="Envoyer">{sending || uploadingMedia ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}</button></div><p className="mt-2 pl-2 text-[9px] text-slate-400">Entrée pour envoyer · Maj + Entrée pour un saut de ligne · Coller une image avec Ctrl+V</p></footer>
       </section>
     </div>
     {viewerImage?.mediaUrl && <div role="dialog" aria-modal="true" aria-label="Visionneuse d’image" onClick={() => setViewerImage(null)} className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/90 p-3 backdrop-blur-sm sm:p-8">
