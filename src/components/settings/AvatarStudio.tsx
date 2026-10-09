@@ -39,10 +39,19 @@ const options: { key: keyof AvatarConfig; label: string; icon: React.ElementType
     { label: 'Brune', value: '614335', color: '#614335' }, { label: 'Ébène', value: '4a312c', color: '#4a312c' }
   ]},
   { key: 'top', label: 'Coiffure', icon: Scissors, items: [
-    { label: 'Bouclée', value: 'shortCurly' }, { label: 'Dégradé', value: 'shortFlat' },
-    { label: 'Classique', value: 'theCaesar' }, { label: 'Longue', value: 'bob' },
-    { label: 'Ondulée', value: 'curly' }, { label: 'Tresses', value: 'dreads' },
-    { label: 'Rasée sur les côtés', value: 'shavedSides' }, { label: 'Dreads courtes', value: 'dreads01' }
+    { label: 'Boucles courtes', value: 'shortCurly' }, { label: 'Dégradé net', value: 'shortFlat' },
+    { label: 'Coupe César', value: 'theCaesar' }, { label: 'César avec raie', value: 'caesarAndSidePart' },
+    { label: 'Carré / bob', value: 'bob' }, { label: 'Cheveux longs', value: 'longButNotTooLong' },
+    { label: 'Lisses longs I', value: 'straight01' }, { label: 'Lisses longs II', value: 'straight02' },
+    { label: 'Lisses avec mèche', value: 'straightAndStrand' }, { label: 'Ondulés courts', value: 'shortWaved' },
+    { label: 'Boucles volumineuses', value: 'bigHair' }, { label: 'Afro', value: 'fro' },
+    { label: 'Afro avec bandeau', value: 'froBand' }, { label: 'Tresses / locks I', value: 'dreads' },
+    { label: 'Tresses / locks II', value: 'dreads01' }, { label: 'Locks longues', value: 'dreads02' },
+    { label: 'Côtés rasés', value: 'shavedSides' }, { label: 'Coupe courte arrondie', value: 'shortRound' },
+    { label: 'Coupe courte classique', value: 'short' }, { label: 'Coupe texturée', value: 'theCaesarAndSidePart' },
+    { label: 'Chignon', value: 'bun' }, { label: 'Cheveux épais', value: 'thick' },
+    { label: 'Frisés', value: 'frizzle' }, { label: 'Raie sur le côté', value: 'sides' },
+    { label: 'Avec turban', value: 'turban' }, { label: 'Avec hijab', value: 'hijab' }
   ]},
   { key: 'hairColor', label: 'Couleur des cheveux', icon: Palette, items: [
     { label: 'Noir', value: '2c1b18', color: '#2c1b18' }, { label: 'Brun', value: '4a312c', color: '#4a312c' },
@@ -66,12 +75,27 @@ const options: { key: keyof AvatarConfig; label: string; icon: React.ElementType
   ]},
   { key: 'eyes', label: 'Expression des yeux', icon: Smile, items: [
     { label: 'Naturel', value: 'default' }, { label: 'Joyeux', value: 'happy' },
-    { label: 'Clin d’œil', value: 'wink' }, { label: 'Calme', value: 'side' },
-    { label: 'Surpris', value: 'surprised' }
+    { label: 'Clin d’œil', value: 'wink' }, { label: 'Regard de côté', value: 'side' },
+    { label: 'Surpris', value: 'surprised' }, { label: 'Clignement', value: 'close' },
+    { label: 'Cœur / séduit', value: 'hearts' }, { label: 'Lunatique', value: 'squint' },
+    { label: 'Yeux levés', value: 'eyeRoll' }, { label: 'Fatigué', value: 'cry' },
+    { label: 'Détaillé', value: 'winkWacky' }
   ]},
-  { key: 'mouth', label: 'Sourire', icon: Smile, items: [
-    { label: 'Sourire', value: 'smile' }, { label: 'Grand sourire', value: 'twinkle' },
-    { label: 'Serein', value: 'default' }, { label: 'Ouvert', value: 'screamOpen' }
+  { key: 'eyebrows', label: 'Sourcils', icon: Smile, items: [
+    { label: 'Naturels', value: 'default' }, { label: 'Expressifs', value: 'raisedExcited' },
+    { label: 'Très expressifs', value: 'raisedExcitedNatural' }, { label: 'Fins', value: 'upDown' },
+    { label: 'Froncés', value: 'angry' }, { label: 'Froncés naturels', value: 'angryNatural' },
+    { label: 'Tristes', value: 'sadConcerned' }, { label: 'Tristes naturels', value: 'sadConcernedNatural' },
+    { label: 'Un sourcil levé', value: 'upDownNatural' }, { label: 'Plat', value: 'flatNatural' }
+  ]},
+  { key: 'mouth', label: 'Sourire et bouche', icon: Smile, items: [
+    { label: 'Sourire discret', value: 'smile' }, { label: 'Grand sourire lumineux', value: 'twinkle' },
+    { label: 'Sourire naturel', value: 'default' }, { label: 'Bouche ouverte', value: 'screamOpen' },
+    { label: 'Sourire avec langue', value: 'tongue' }, { label: 'Rire / bouche ouverte', value: 'eating' },
+    { label: 'Sourire crispé', value: 'grimace' }, { label: 'Sérieux', value: 'serious' },
+    { label: 'Préoccupé', value: 'concerned' }, { label: 'Triste', value: 'sad' },
+    { label: 'Incrédule', value: 'disbelief' }, { label: 'Expression étonnée', value: 'screamOpen' },
+    { label: 'Bouche neutre', value: 'default' }, { label: 'Langue tirée', value: 'tongue' }
   ]},
   { key: 'backgroundColor', label: 'Arrière-plan', icon: Sparkles, items: [
     { label: 'Bleu glacier', value: 'dbeafe', color: '#dbeafe' }, { label: 'Lavande', value: 'ede9fe', color: '#ede9fe' },
@@ -90,7 +114,7 @@ function createAvatarUrl(config: AvatarConfig) {
     clothesVariant: config.clothing,
     clothesColor: config.clothesColor,
     eyesVariant: config.eyes,
-    eyebrowsVariant: 'default',
+    eyebrowsVariant: config.eyebrows,
     mouthVariant: config.mouth,
     backgroundColor: config.backgroundColor
   });
@@ -167,7 +191,7 @@ export function AvatarStudio({ userProfile, onSaved }: AvatarStudioProps) {
             </div>
             <div className="mt-4 grid grid-cols-3 gap-2">
               <div className="rounded-xl border border-slate-200 bg-white p-2 text-center"><div className="text-[10px] font-bold text-slate-800">Unique</div><div className="mt-0.5 text-[9px] text-slate-400">Combinaison</div></div>
-              <div className="rounded-xl border border-slate-200 bg-white p-2 text-center"><div className="text-[10px] font-bold text-slate-800">9 options</div><div className="mt-0.5 text-[9px] text-slate-400">Catégories</div></div>
+              <div className="rounded-xl border border-slate-200 bg-white p-2 text-center"><div className="text-[10px] font-bold text-slate-800">10 options</div><div className="mt-0.5 text-[9px] text-slate-400">Catégories</div></div>
               <div className="rounded-xl border border-slate-200 bg-white p-2 text-center"><div className="text-[10px] font-bold text-slate-800">PipTalk</div><div className="mt-0.5 text-[9px] text-slate-400">Compatible</div></div>
             </div>
           </div>
