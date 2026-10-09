@@ -145,7 +145,9 @@ async function enrichActuals(events: ReturnType<typeof normalizeEvent>[], from: 
   });
 }
 
-export async function handleEconomicCalendar(request: Request): Promise<Response> {
+type CalendarEnv = { FINNHUB_API_KEY?: string };
+
+export async function handleEconomicCalendar(request: Request, env: CalendarEnv = {}): Promise<Response> {
   if (request.method === 'OPTIONS') {
     return new Response(null, {
       status: 204,
@@ -168,7 +170,7 @@ export async function handleEconomicCalendar(request: Request): Promise<Response
 
   const cacheKey = new Request(
     new URL(
-      `/api/economic-calendar?source=date-range-v5&from=${from}&to=${to}`,
+      `/api/economic-calendar?source=date-range-v6&from=${from}&to=${to}`,
       request.url,
     ).toString(),
     { method: 'GET' },
@@ -250,52 +252,101 @@ export async function handleEconomicCalendar(request: Request): Promise<Response
     const requestedRangeHasEvents = (!from || !to) || scheduledEvents.some((event) => event.date >= from && event.date <= to);
     const requestedRangeOutsideWeeklyFeed = Boolean(from && to && (from < currentWeekStart || to > currentWeekEnd));
     if (source === 'forex-factory' && from && to && (!requestedRangeHasEvents || requestedRangeOutsideWeeklyFeed)) {
-      const rangeUrl = new URL('https://api.tradingeconomics.com/calendar');
-      rangeUrl.searchParams.set('c', 'guest:guest');
-      rangeUrl.searchParams.set('f', 'json');
-      rangeUrl.searchParams.set('d1', from);
-      rangeUrl.searchParams.set('d2', to);
-      const rangeResponse = await fetch(rangeUrl.toString(), {
-        headers: { Accept: 'application/json', 'User-Agent': 'IAMTRADER Economic Calendar/1.0' },
-        signal: AbortSignal.timeout(8000),
-      });
-      if (rangeResponse.ok) {
-        const rangePayload = await rangeResponse.json() as unknown;
-        if (Array.isArray(rangePayload)) {
-          const rangeEvents = (rangePayload as Array<Record<string, unknown>>).map((item, index) => {
-            const datetime = String(item.Date || item.date || item.datetime || '');
-            const rawCountry = String(item.Currency || item.Country || item.country || '');
-            const impactValue = String(item.Importance || item.impact || '').toLowerCase();
-            const country = rawCountry.toUpperCase() === 'UNITED STATES' ? 'USD' : rawCountry.toUpperCase();
-            return {
-              id: `te-range-${datetime}-${country}-${String(item.Event || item.event || index)}`,
-              title: String(item.Event || item.event || 'Economic Event').trim(),
-              country,
-              date: normalizeDate(datetime),
-              time: normalizeTime(datetime),
-              datetime,
-              impact: normalizeImpact(impactValue === '3' || impactValue === 'high' ? 'high' : impactValue === '2' || impactValue === 'medium' ? 'medium' : 'low'),
-              actual: String(item.Actual ?? item.actual ?? '').trim(),
-              forecast: String(item.Forecast ?? item.forecast ?? '').trim(),
-              previous: String(item.Previous ?? item.previous ?? '').trim(),
-            };
-          }).filter((event) => event.title && event.date && event.date >= from && event.date <= to);
-          if (rangeEvents.length > 0) {
-            scheduledEvents = rangeEvents;
-            source = 'trading-economics-date-range';
+      let dateRangeEvents: ReturnType<typeof normalizeEvent>[] = [];
+      let dateRangeSource = '';
+
+      // Trading Economics guest access is not reliable in production; treat it as
+      // an optional provider and continue to Finnhub when it is unavailable.
+      try {
+        const rangeUrl = new URL('https://api.tradingeconomics.com/calendar');
+        rangeUrl.searchParams.set('c', 'guest:guest');
+        rangeUrl.searchParams.set('f', 'json');
+        rangeUrl.searchParams.set('d1', from);
+        rangeUrl.searchParams.set('d2', to);
+        const rangeResponse = await fetch(rangeUrl.toString(), {
+          headers: { Accept: 'application/json', 'User-Agent': 'IAMTRADER Economic Calendar/1.0' },
+          signal: AbortSignal.timeout(6000),
+        });
+        if (rangeResponse.ok) {
+          const rangePayload = await rangeResponse.json() as unknown;
+          if (Array.isArray(rangePayload)) {
+            dateRangeEvents = (rangePayload as Array<Record<string, unknown>>).map((item, index) => {
+              const datetime = String(item.Date || item.date || item.datetime || '');
+              const rawCountry = String(item.Currency || item.Country || item.country || '');
+              const impactValue = String(item.Importance || item.impact || '').toLowerCase();
+              const country = rawCountry.toUpperCase() === 'UNITED STATES' ? 'USD' : rawCountry.toUpperCase();
+              return {
+                id: `te-range-${datetime}-${country}-${String(item.Event || item.event || index)}`,
+                title: String(item.Event || item.event || 'Economic Event').trim(),
+                country,
+                date: normalizeDate(datetime),
+                time: normalizeTime(datetime),
+                datetime,
+                impact: normalizeImpact(impactValue === '3' || impactValue === 'high' ? 'high' : impactValue === '2' || impactValue === 'medium' ? 'medium' : 'low'),
+                actual: String(item.Actual ?? item.actual ?? '').trim(),
+                forecast: String(item.Forecast ?? item.forecast ?? '').trim(),
+                previous: String(item.Previous ?? item.previous ?? '').trim(),
+              };
+            }).filter((event) => event.title && event.date && event.date >= from && event.date <= to);
+            if (dateRangeEvents.length) dateRangeSource = 'trading-economics-date-range';
           } else {
-            // Never return this week's events as if they belonged to a historical
-            // or future range. An empty date-aware response is more accurate than
-            // showing unrelated dates and confusing the client.
-            scheduledEvents = [];
-            source = 'trading-economics-date-range-empty';
+            console.warn('[EconomicCalendar] Trading Economics returned non-array JSON');
           }
         } else {
-          throw new Error(`Trading Economics date-range HTTP ${rangeResponse.status}`);
+          console.warn('[EconomicCalendar] Trading Economics HTTP', rangeResponse.status);
         }
-      } else {
-        throw new Error('Trading Economics returned an invalid date-range response');
+      } catch (providerError) {
+        console.warn('[EconomicCalendar] Trading Economics request failed:', providerError instanceof Error ? providerError.message : String(providerError));
       }
+
+      if (!dateRangeEvents.length && env.FINNHUB_API_KEY) {
+        try {
+          const finnhubUrl = new URL('https://finnhub.io/api/v1/calendar/economic');
+          finnhubUrl.searchParams.set('from', from);
+          finnhubUrl.searchParams.set('to', to);
+          finnhubUrl.searchParams.set('token', env.FINNHUB_API_KEY);
+          const finnhubResponse = await fetch(finnhubUrl.toString(), {
+            headers: { Accept: 'application/json', 'User-Agent': 'IAMTRADER Economic Calendar/1.0' },
+            signal: AbortSignal.timeout(8000),
+          });
+          if (!finnhubResponse.ok) {
+            console.warn('[EconomicCalendar] Finnhub HTTP', finnhubResponse.status);
+          } else {
+            const payload = await finnhubResponse.json() as { economicCalendar?: unknown; economicCalendarData?: unknown };
+            const raw = Array.isArray(payload.economicCalendar)
+              ? payload.economicCalendar as Array<Record<string, unknown>>
+              : Array.isArray(payload.economicCalendarData)
+                ? payload.economicCalendarData as Array<Record<string, unknown>>
+                : [];
+            dateRangeEvents = raw.map((item, index) => {
+              const datetime = String(item.time || item.date || '');
+              const rawCountry = String(item.currency || item.country || '');
+              const countryAliases: Record<string, string> = { 'UNITED STATES': 'USD', 'UNITED KINGDOM': 'GBP', 'EURO ZONE': 'EUR', 'EUROZONE': 'EUR', 'JAPAN': 'JPY', 'CANADA': 'CAD', 'AUSTRALIA': 'AUD', 'NEW ZEALAND': 'NZD', 'SWITZERLAND': 'CHF' };
+              const currency = countryAliases[rawCountry.toUpperCase()] || rawCountry.toUpperCase();
+              const impactValue = String(item.impact || '').toLowerCase();
+              const date = normalizeDate(datetime);
+              return {
+                id: `fh-${date}-${currency}-${String(item.event || index)}`,
+                title: String(item.event || 'Economic Event').trim(),
+                country: currency,
+                date,
+                time: normalizeTime(datetime),
+                datetime,
+                impact: normalizeImpact(impactValue),
+                actual: item.actual == null ? '' : String(item.actual),
+                forecast: item.estimate == null ? '' : String(item.estimate),
+                previous: item.prev == null ? '' : String(item.prev),
+              };
+            }).filter((event) => event.title && event.date && event.date >= from && event.date <= to);
+            if (dateRangeEvents.length) dateRangeSource = 'finnhub';
+          }
+        } catch (providerError) {
+          console.error('[EconomicCalendar] Finnhub request failed:', providerError instanceof Error ? providerError.message : String(providerError));
+        }
+      }
+
+      scheduledEvents = dateRangeEvents;
+      source = dateRangeSource || (env.FINNHUB_API_KEY ? 'calendar-providers-empty' : 'calendar-api-key-required');
     }
 
     const events = from && to && source === 'forex-factory'
@@ -305,6 +356,7 @@ export async function handleEconomicCalendar(request: Request): Promise<Response
     const response = json({
       events,
       source,
+      configuration: source === 'calendar-api-key-required' ? 'Configurez FINNHUB_API_KEY dans les secrets Cloudflare pour activer la source historique.' : undefined,
       enrichment: source === 'forex-factory' ? 'trading-economics' : null,
       fetchedAt: new Date().toISOString(),
     });
