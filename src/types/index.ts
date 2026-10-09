@@ -144,6 +144,7 @@ export interface UserProfile {
   email: string;
   displayName: string;
   photoURL?: string;
+  avatarURL?: string;
   traderProfile?: {
     firstName?: string;
     lastName?: string;
