@@ -390,6 +390,43 @@ export function EconomicCalendarView() {
     void loadEvents(date);
   }, [date]);
 
+  useEffect(() => {
+    if (!selectedEvent) return;
+    let cancelled = false;
+    const event = selectedEvent;
+    setAnalysisLoading(true);
+    setAnalysisError(null);
+    setOnlineAnalysis(null);
+
+    fetch('/api/economic-calendar/analysis', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({
+        event: event.event,
+        currency: event.currency,
+        date: event.date,
+        time: event.time,
+        impact: event.impact,
+        actual: event.actual,
+        forecast: event.forecast,
+        previous: event.previous,
+      }),
+    })
+      .then(async (response) => {
+        const data = await response.json();
+        if (!response.ok) throw new Error(data?.error || 'Analyse indisponible pour le moment.');
+        if (!cancelled) setOnlineAnalysis(data);
+      })
+      .catch((error) => {
+        if (!cancelled) setAnalysisError(error?.message || 'Analyse indisponible pour le moment.');
+      })
+      .finally(() => {
+        if (!cancelled) setAnalysisLoading(false);
+      });
+
+    return () => { cancelled = true; };
+  }, [selectedEvent?.id]);
+
   const currencies = useMemo(
     () => currencyOptions.filter((item) => events.some((event) => event.currency === item)),
     [events],
@@ -749,7 +786,7 @@ export function EconomicCalendarView() {
                   </>
                 ) : (
                   <div className="mt-3">
-                    <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">{analysisError || "Les informations récentes n’ont pas encore été chargées."}</p>
+                    <p className="text-xs leading-relaxed text-slate-500 dark:text-slate-400">{analysisError || "Le contexte récent n’est pas disponible pour le moment."}</p>
                     <button type="button" onClick={() => {
                       const event = selectedEvent;
                       setAnalysisLoading(true);
@@ -763,7 +800,7 @@ export function EconomicCalendarView() {
                         if (!response.ok) throw new Error(data?.error || 'Analyse indisponible pour le moment.');
                         setOnlineAnalysis(data);
                       }).catch((error) => setAnalysisError(error?.message || 'Analyse indisponible pour le moment.')).finally(() => setAnalysisLoading(false));
-                    }} disabled={analysisLoading} className="mt-2 rounded-lg bg-[#00a982] px-3 py-2 text-[11px] font-bold text-white hover:bg-[#008f6e] disabled:opacity-60">Charger le contexte récent</button>
+                    }} disabled={analysisLoading} className="mt-2 rounded-lg border border-slate-200 px-3 py-2 text-[11px] font-bold text-slate-600 hover:bg-white dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800">Réessayer</button>
                   </div>
                 )}
               </div>
