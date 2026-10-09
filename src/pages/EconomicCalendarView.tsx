@@ -510,29 +510,6 @@ export function EconomicCalendarView() {
         </div>
       </div>
 
-      <section className="overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-950">
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-200 px-3 py-2 dark:border-slate-800">
-          <div>
-            <h2 className="text-xs font-bold text-slate-800 dark:text-white">Calendrier Investing.com — test</h2>
-            <p className="text-[10px] text-slate-500 dark:text-slate-400">Source externe intégrée pour comparer les publications économiques.</p>
-          </div>
-          <a href="https://www.investing.com/" target="_blank" rel="nofollow noreferrer" className="text-[10px] font-semibold text-[#06529D] hover:underline">Investing.com</a>
-        </div>
-        <div className="w-full overflow-x-auto">
-          <iframe
-            title="Calendrier économique Investing.com"
-            src="https://sslecal2.investing.com?columns=exc_flags,exc_currency,exc_importance,exc_actual,exc_forecast,exc_previous&features=datepicker,timezone&countries=25,32,6,37,72,22,17,39,14,10,35,43,56,36,110,11,26,12,4,5&calType=week&timeZone=8&lang=1"
-            className="block w-full border-0"
-            style={{ minWidth: '320px', height: '467px' }}
-            loading="lazy"
-            allowTransparency
-          />
-        </div>
-        <div className="border-t border-slate-100 px-3 py-2 text-[10px] text-slate-500 dark:border-slate-800 dark:text-slate-400">
-          Real Time Economic Calendar provided by <a href="https://www.investing.com/" rel="nofollow noreferrer" target="_blank" className="font-bold text-[#06529D] underline">Investing.com</a>.
-        </div>
-      </section>
-
       <div className="flex items-center justify-end gap-1.5">
         <div className="relative">
           <button
