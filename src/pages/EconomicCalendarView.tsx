@@ -252,19 +252,18 @@ const CowHead = ({ color }: { color: string }) => (
   <svg
     aria-hidden="true"
     viewBox="0 0 24 24"
-    className="h-[17px] w-[17px] shrink-0"
+    className="h-[19px] w-[19px] shrink-0"
     fill="none"
     stroke={color}
-    strokeWidth="1.8"
+    strokeWidth="1.7"
     strokeLinecap="round"
     strokeLinejoin="round"
   >
-    <path d="M7.2 6.8 4.1 3.9 3.3 9l3.1 2.1M16.8 6.8l3.1-2.9.8 5.1-3.1 2.1" />
-    <path d="M8 5.9 7 3.5 10 5M16 5.9l1-2.4L14 5" />
-    <path d="M6.1 9.2c0-2.1 2.6-3.6 5.9-3.6s5.9 1.5 5.9 3.6v5.1c0 3.3-2.5 5.7-5.9 5.7s-5.9-2.4-5.9-5.7z" />
-    <path d="M8.5 12h.1M15.4 12h.1" />
-    <path d="M9 15.2c.8-.7 1.8-1 3-1s2.2.3 3 1c-.2 1.5-1.4 2.5-3 2.5s-2.8-1-3-2.5z" />
-    <path d="M10.4 15.5h.1M13.5 15.5h.1" />
+    <path d="M7.2 7.1 4.1 5.2 3.5 9.1 6.8 10.5M16.8 7.1l3.1-1.9.6 3.9-3.3 1.4" />
+    <path d="M8.2 6.4 9.1 3.8 11 5.5M15.8 6.4l-.9-2.6L13 5.5" />
+    <path d="M6.7 8.2c1.1-1.4 3-2.1 5.3-2.1s4.2.7 5.3 2.1l-.5 6.2c-.2 3.3-2.2 5.7-4.8 5.7s-4.6-2.4-4.8-5.7z" />
+    <path d="M9.2 11.6h.1M14.7 11.6h.1" strokeWidth="2.4" />
+    <path d="M9.1 15.1c.7-.6 1.6-.9 2.9-.9s2.2.3 2.9.9c-.2 1.3-1.3 2.1-2.9 2.1s-2.7-.8-2.9-2.1z" />
   </svg>
 );
 
