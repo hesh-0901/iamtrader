@@ -1,13 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { UserProfile } from '../types';
-import { auth, db } from '../firebase/config';
+import { auth, db, app } from '../firebase/config';
+import { getStorage, ref as storageRef, uploadBytes, getDownloadURL } from 'firebase/storage';
 import {
   addDoc, collection, deleteDoc, doc, onSnapshot, orderBy, query,
   serverTimestamp, setDoc, updateDoc, where, Timestamp
 } from 'firebase/firestore';
 import {
   Search, MoreVertical, Send, Pin, Pencil, Trash2, X, CheckCheck,
-  MessageCircle, Plus, ArrowLeft, Users, Loader2
+  MessageCircle, Plus, ArrowLeft, Users, Loader2, Image as ImageIcon, Mic, Square, Paperclip
 } from 'lucide-react';
 
 type ChatConversation = {
@@ -17,12 +18,15 @@ type ChatConversation = {
 };
 type ChatMessage = {
   id: string; senderId: string; text: string; createdAt?: Timestamp | null;
-  edited?: boolean; pinned?: boolean;
+  edited?: boolean; pinned?: boolean; type?: 'text' | 'image' | 'voice'; mediaUrl?: string; mediaName?: string; duration?: number;
 };
 
 const formatTime = (value?: Timestamp | null) => value?.toDate
   ? value.toDate().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
   : '…';
+const formatDay = (value?: Timestamp | null) => value?.toDate
+  ? value.toDate().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+  : '';
 
 export function ChatView({ userProfile }: { userProfile: UserProfile | null }) {
   const uid = auth.currentUser?.uid || userProfile?.uid;
@@ -41,6 +45,11 @@ export function ChatView({ userProfile }: { userProfile: UserProfile | null }) {
   const [error, setError] = useState('');
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const recorderRef = useRef<MediaRecorder | null>(null);
+  const recordingChunksRef = useRef<Blob[]>([]);
+  const [recording, setRecording] = useState(false);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
 
   useEffect(() => {
     if (!uid) { setLoadingChats(false); return; }
@@ -91,6 +100,66 @@ export function ChatView({ userProfile }: { userProfile: UserProfile | null }) {
       });
       setActiveId(ref.id); setMobileChatOpen(true); setShowNewChat(false); setTargetUid('');
     } catch (err: any) { setError(err?.message || 'Impossible de créer la conversation.'); }
+  };
+
+  const sendMedia = async (file: File, type: 'image' | 'voice', duration?: number) => {
+    if (!uid || !activeId || uploadingMedia) return;
+    if (file.size > 12 * 1024 * 1024) { setError('Le fichier dépasse la limite de 12 Mo.'); return; }
+    setUploadingMedia(true); setError('');
+    try {
+      const storage = getStorage(app);
+      const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_') || `media-${Date.now()}`;
+      const path = `piptalk/${activeId}/${uid}/${Date.now()}-${safeName}`;
+      const destination = storageRef(storage, path);
+      await uploadBytes(destination, file, { contentType: file.type || (type === 'voice' ? 'audio/webm' : 'application/octet-stream') });
+      const mediaUrl = await getDownloadURL(destination);
+      await addDoc(collection(db, 'conversations', activeId, 'messages'), {
+        senderId: uid, text: type === 'image' ? 'Image' : 'Message vocal',
+        type, mediaUrl, mediaName: safeName, duration: duration || 0,
+        pinned: false, edited: false, createdAt: serverTimestamp()
+      });
+      await updateDoc(doc(db, 'conversations', activeId), {
+        lastMessage: type === 'image' ? '📷 Image' : '🎤 Message vocal',
+        updatedAt: serverTimestamp()
+      });
+    } catch (err: any) {
+      setError(err?.message || 'Impossible d’envoyer ce média. Vérifiez les règles Firebase Storage.');
+    } finally { setUploadingMedia(false); }
+  };
+
+  const handleFile = async (file?: File) => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) { setError('Sélectionnez un fichier image.'); return; }
+    await sendMedia(file, 'image');
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handlePaste = (event: React.ClipboardEvent<HTMLTextAreaElement>) => {
+    const imageItem = Array.from(event.clipboardData.items).find(item => item.type.startsWith('image/'));
+    const file = imageItem?.getAsFile();
+    if (file) { event.preventDefault(); void handleFile(file); }
+  };
+
+  const startRecording = async () => {
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+      setError('L’enregistrement vocal n’est pas pris en charge par ce navigateur.'); return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      recorderRef.current = recorder; recordingChunksRef.current = [];
+      recorder.ondataavailable = event => { if (event.data.size) recordingChunksRef.current.push(event.data); };
+      recorder.onstop = () => {
+        const blob = new Blob(recordingChunksRef.current, { type: recorder.mimeType || 'audio/webm' });
+        stream.getTracks().forEach(track => track.stop());
+        if (blob.size) void sendMedia(new File([blob], `vocal-${Date.now()}.webm`, { type: blob.type }), 'voice');
+      };
+      recorder.start(); setRecording(true);
+    } catch (err: any) { setError(err?.message || 'Autorisez l’accès au microphone pour enregistrer un vocal.'); }
+  };
+
+  const stopRecording = () => {
+    if (recorderRef.current?.state === 'recording') { recorderRef.current.stop(); setRecording(false); }
   };
 
   const sendMessage = async () => {
@@ -149,10 +218,15 @@ export function ChatView({ userProfile }: { userProfile: UserProfile | null }) {
         <div className="flex-1 space-y-4 overflow-y-auto px-3 py-5 sm:px-6">
           {!active && <div className="flex h-full flex-col items-center justify-center text-center"><MessageCircle className="h-10 w-10 text-emerald-300" /><p className="mt-3 text-sm font-bold text-slate-700">Vos messages, en direct</p><p className="mt-1 max-w-xs text-xs leading-5 text-slate-400">Choisissez une discussion ou créez-en une nouvelle pour commencer.</p></div>}
           {active && loadingMessages && <p className="text-center text-xs text-slate-400">Chargement des messages…</p>}
-          {messages.map(message => { const mine = message.senderId === uid; return <div key={message.id} className={`group relative flex ${mine ? 'justify-end' : 'justify-start'}`}><div className={`relative max-w-[88%] rounded-2xl px-3.5 py-2.5 shadow-sm sm:max-w-[75%] ${mine ? 'rounded-br-md bg-[#dff8ed] text-slate-800' : 'rounded-bl-md border border-slate-100 bg-white text-slate-700'}`}>{message.pinned && <div className="mb-1 flex items-center gap-1 text-[9px] font-bold text-emerald-700"><Pin className="h-3 w-3" />Épinglé</div>}<p className="whitespace-pre-wrap break-words text-[12px] leading-5">{message.text}</p><div className="mt-1.5 flex items-center justify-end gap-1.5"><span className="text-[9px] text-slate-400">{message.edited ? 'modifié · ' : ''}{formatTime(message.createdAt)}</span>{mine && <CheckCheck className="h-3.5 w-3.5 text-emerald-600" />}</div><button onClick={() => setMenuMessage(menuMessage === message.id ? null : message.id)} className="absolute -right-2 -top-2 hidden rounded-full border border-slate-200 bg-white p-1.5 text-slate-500 shadow-sm group-hover:block" title="Actions"><MoreVertical className="h-3 w-3" /></button>{menuMessage === message.id && <div className="absolute right-0 top-6 z-20 w-40 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-xl"><button onClick={() => togglePin(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Pin className="h-3.5 w-3.5" />{message.pinned ? 'Désépingler' : 'Épingler'}</button>{mine && <button onClick={() => beginEdit(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Pencil className="h-3.5 w-3.5" />Modifier</button>}{mine && <button onClick={() => removeMessage(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-rose-600 hover:bg-rose-50"><Trash2 className="h-3.5 w-3.5" />Supprimer</button>}</div>}</div></div>; })}
+          {messages.map((message, index) => {
+            const mine = message.senderId === uid;
+            const currentDate = message.createdAt?.toDate ? message.createdAt.toDate().toDateString() : '';
+            const previousDate = index > 0 && messages[index - 1].createdAt?.toDate ? messages[index - 1].createdAt!.toDate().toDateString() : '';
+            const showDay = !!currentDate && currentDate !== previousDate;
+            return <React.Fragment key={message.id}>{showDay && <div className="flex justify-center py-2"><span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[10px] font-semibold capitalize text-slate-500 shadow-sm">{formatDay(message.createdAt)}</span></div>}<div className={`group relative flex ${mine ? 'justify-end' : 'justify-start'}`}><div className={`relative max-w-[88%] rounded-2xl px-3.5 py-2.5 shadow-sm sm:max-w-[75%] ${mine ? 'rounded-br-md bg-[#dff8ed] text-slate-800' : 'rounded-bl-md border border-slate-100 bg-white text-slate-700'}`}>{message.pinned && <div className="mb-1 flex items-center gap-1 text-[9px] font-bold text-emerald-700"><Pin className="h-3 w-3" />Épinglé</div>}{message.type === 'image' && message.mediaUrl ? <a href={message.mediaUrl} target="_blank" rel="noreferrer"><img src={message.mediaUrl} alt="Image envoyée" className="mb-2 max-h-72 max-w-full rounded-lg object-contain" /></a> : message.type === 'voice' && message.mediaUrl ? <audio controls preload="metadata" src={message.mediaUrl} className="my-1 max-w-full" /> : <p className="whitespace-pre-wrap break-words text-[12px] leading-5">{message.text}</p>}<div className="mt-1.5 flex items-center justify-end gap-1.5"><span className="text-[9px] text-slate-400">{message.edited ? 'modifié · ' : ''}{formatTime(message.createdAt)}</span>{mine && <CheckCheck className="h-3.5 w-3.5 text-emerald-600" />}</div><button onClick={() => setMenuMessage(menuMessage === message.id ? null : message.id)} className="absolute -right-2 -top-2 hidden rounded-full border border-slate-200 bg-white p-1.5 text-slate-500 shadow-sm group-hover:block" title="Actions"><MoreVertical className="h-3 w-3" /></button>{menuMessage === message.id && <div className="absolute right-0 top-6 z-20 w-40 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-xl"><button onClick={() => togglePin(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Pin className="h-3.5 w-3.5" />{message.pinned ? 'Désépingler' : 'Épingler'}</button>{mine && <button onClick={() => beginEdit(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Pencil className="h-3.5 w-3.5" />Modifier</button>}{mine && <button onClick={() => removeMessage(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-rose-600 hover:bg-rose-50"><Trash2 className="h-3.5 w-3.5" />Supprimer</button>}</div>}</div></div></React.Fragment>; })}
           <div ref={bottomRef} />
         </div>
-        <footer className="border-t border-slate-200 bg-white px-3 py-3 sm:px-4">{editingId && <div className="mb-2 flex items-center justify-between rounded-lg bg-amber-50 px-3 py-2 text-[10px] text-amber-800"><span className="flex items-center gap-1.5"><Pencil className="h-3 w-3" />Modification du message</span><button onClick={() => { setEditingId(null); setDraft(''); }}><X className="h-3.5 w-3.5" /></button></div>}<div className="flex items-end gap-2"><textarea value={draft} onChange={e => setDraft(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void sendMessage(); } }} disabled={!active || sending} placeholder={active ? 'Écrire un message…' : 'Sélectionnez une discussion…'} rows={1} className="max-h-28 min-h-10 flex-1 resize-y rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs leading-5 text-slate-700 outline-none focus:border-emerald-300 focus:bg-white disabled:opacity-50" /><button onClick={() => void sendMessage()} disabled={!active || !draft.trim() || sending} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#00a982] text-white shadow-sm hover:bg-[#008f72] disabled:opacity-40" title="Envoyer">{sending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}</button></div><p className="mt-2 pl-2 text-[9px] text-slate-400">Entrée pour envoyer · Maj + Entrée pour un saut de ligne</p></footer>
+        <footer className="border-t border-slate-200 bg-white px-3 py-3 sm:px-4">{editingId && <div className="mb-2 flex items-center justify-between rounded-lg bg-amber-50 px-3 py-2 text-[10px] text-amber-800"><span className="flex items-center gap-1.5"><Pencil className="h-3 w-3" />Modification du message</span><button onClick={() => { setEditingId(null); setDraft(''); }}><X className="h-3.5 w-3.5" /></button></div>}<div className="flex items-end gap-2"><input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={e => void handleFile(e.target.files?.[0])} /><button type="button" disabled={!active || uploadingMedia} onClick={() => fileInputRef.current?.click()} title="Envoyer une image" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-40"><ImageIcon className="h-4 w-4" /></button><button type="button" disabled={!active || uploadingMedia} onClick={() => recording ? stopRecording() : void startRecording()} title={recording ? "Arrêter l’enregistrement" : "Enregistrer un vocal"} className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${recording ? 'border-rose-300 bg-rose-50 text-rose-600' : 'border-slate-200 text-slate-500 hover:bg-slate-50'} disabled:opacity-40`}>{recording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}</button><textarea value={draft} onChange={e => setDraft(e.target.value)} onPaste={handlePaste} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void sendMessage(); } }} disabled={!active || sending} placeholder={active ? 'Écrire un message…' : 'Sélectionnez une discussion…'} rows={1} className="max-h-28 min-h-10 flex-1 resize-y rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs leading-5 text-slate-700 outline-none focus:border-emerald-300 focus:bg-white disabled:opacity-50" /><button onClick={() => void sendMessage()} disabled={!active || !draft.trim() || sending || uploadingMedia} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#00a982] text-white shadow-sm hover:bg-[#008f72] disabled:opacity-40" title="Envoyer">{sending || uploadingMedia ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}</button></div><p className="mt-2 pl-2 text-[9px] text-slate-400">Entrée pour envoyer · Maj + Entrée pour un saut de ligne · Coller une image avec Ctrl+V</p></footer>
       </section>
     </div>
   </div>;
