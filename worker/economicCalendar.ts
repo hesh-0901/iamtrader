@@ -379,15 +379,18 @@ export async function handleEconomicCalendar(request: Request, env: CalendarEnv 
     return response;
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error('Economic calendar upstream failed:', message);
+    // Never expose provider URLs or API tokens in a public response.
+    const safeMessage = message
+      .replace(/([?&]token=)[^&\\s]+/gi, '$1[REDACTED]')
+      .replace(/(FINNHUB_API_KEY=)[^&\\s]+/gi, '$1[REDACTED]')
+      .slice(0, 300);
+    console.error('Economic calendar upstream failed:', safeMessage);
     const statusMatch = message.match(/HTTP (\\d{3})/i);
     return json({
       error: 'Le calendrier économique est temporairement indisponible.',
       source: 'calendar-providers',
       providerStatus: statusMatch ? Number(statusMatch[1]) : null,
-      diagnostic: message.includes('Trading Economics date-range HTTP')
-        ? 'La source historique Trading Economics a refusé la requête ou est indisponible. Vérifiez les accès API du fournisseur.'
-        : 'Les sources de calendrier n’ont pas fourni de réponse exploitable.',
+      diagnostic: safeMessage || 'Erreur inconnue du calendrier économique.',
     }, 502);
   }
 }
