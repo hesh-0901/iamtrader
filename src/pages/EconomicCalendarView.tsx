@@ -251,16 +251,17 @@ const impactLabel = (impact: Impact) =>
 const CowHead = ({ color }: { color: string }) => (
   <svg
     aria-hidden="true"
-    viewBox="0 0 16 16"
-    className="h-[20px] w-[20px] shrink-0"
-    fill="none"
+    viewBox="0 0 512 512"
+    className="h-[26px] w-[26px] shrink-0"
+    fill={color}
+    fillRule="evenodd"
+    clipRule="evenodd"
   >
-    <path d="M4.2 4.5 1.7 2.8 2.2 6.3 4.4 7.1M11.8 4.5l2.5-1.7-.5 3.5-2.2.8" fill={color} />
-    <path d="M5.1 4.1 4.8 1.8 7 3.2M10.9 4.1l.3-2.3L9 3.2" fill={color} />
-    <path d="M4 5.2C4.5 3.9 6 3.3 8 3.3s3.5.6 4 1.9l-.5 5.1c-.2 2.1-1.5 3.8-3.5 3.8s-3.3-1.7-3.5-3.8z" fill={color} />
-    <ellipse cx="5.9" cy="8" rx=".65" ry=".9" fill="#fff" />
-    <ellipse cx="10.1" cy="8" rx=".65" ry=".9" fill="#fff" />
-    <path d="M6 10.1c.5-.4 1.1-.6 2-.6s1.5.2 2 .6c-.2 1-1 1.6-2 1.6s-1.8-.6-2-1.6" fill="#fff" />
+    <path d="M 98,13 L 76,32 L 65,47 L 57,64 L 53,83 L 54,110 L 59,130 L 72,159 L 83,176 L 60,178 L 34,185 L 20,193 L 14,199 L 13,204 L 15,210 L 24,219 L 34,226 L 51,233 L 66,236 L 92,236 L 104,233 L 108,234 L 111,258 L 121,289 L 136,320 L 157,353 L 149,357 L 144,363 L 140,371 L 135,390 L 133,409 L 133,432 L 136,445 L 141,455 L 156,471 L 179,484 L 208,493 L 232,497 L 269,498 L 293,495 L 327,486 L 346,477 L 355,471 L 367,459 L 374,447 L 377,438 L 378,409 L 373,377 L 364,359 L 354,353 L 376,318 L 392,284 L 400,258 L 403,234 L 407,233 L 419,236 L 445,236 L 460,233 L 477,226 L 487,219 L 496,210 L 498,204 L 496,198 L 491,193 L 477,185 L 451,178 L 428,176 L 446,145 L 452,130 L 457,110 L 457,76 L 454,64 L 446,47 L 427,24 L 413,13 L 409,13 L 408,19 L 412,34 L 412,57 L 406,78 L 393,99 L 377,115 L 355,130 L 157,130 L 134,115 L 118,99 L 109,86 L 103,73 L 99,57 L 99,34 L 103,14 Z" />
+    <path d="M 299,400 L 311,400 L 320,404 L 327,412 L 330,421 L 329,432 L 325,440 L 317,447 L 309,450 L 300,450 L 291,446 L 283,438 L 280,431 L 280,418 L 283,411 L 291,403 Z" />
+    <path d="M 200,400 L 211,400 L 219,403 L 226,409 L 231,419 L 231,431 L 228,438 L 220,446 L 210,450 L 202,450 L 191,445 L 184,437 L 181,428 L 182,417 L 186,409 L 191,404 Z" />
+    <path d="M 351,204 L 354,207 L 354,212 L 351,222 L 344,234 L 329,247 L 317,252 L 309,253 L 305,249 L 305,242 L 308,232 L 314,222 L 324,212 L 335,206 L 347,203 Z" />
+    <path d="M 160,204 L 164,203 L 176,206 L 187,212 L 198,223 L 206,241 L 206,249 L 204,252 L 198,253 L 187,250 L 175,243 L 167,235 L 160,223 L 157,213 L 157,207 Z" />
   </svg>
 );
 
@@ -550,7 +551,7 @@ export function EconomicCalendarView() {
                     <th className="w-[72px] px-2 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Heure</th>
                     <th className="w-[76px] px-2 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Devise</th>
                     <th className="w-[300px] px-3 text-left text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Événement</th>
-                    <th className="w-[68px] px-1 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Impact</th>
+                    <th className="w-[92px] px-1 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Impact</th>
                     <th className="w-[88px] px-2 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Actuel</th>
                     <th className="w-[88px] px-2 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Prévision</th>
                     <th className="w-[88px] px-2 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Précédent</th>
@@ -612,7 +613,7 @@ export function EconomicCalendarView() {
                       </td>
 
                       <td
-                        className="px-2 text-center text-sm"
+                        className="px-1 text-center text-sm"
                         title={impactLabel(event.impact)}
                         aria-label={impactLabel(event.impact)}
                       >
