@@ -170,7 +170,7 @@ export async function handleEconomicCalendar(request: Request, env: CalendarEnv 
 
   const cacheKey = new Request(
     new URL(
-      `/api/economic-calendar?source=date-range-v8&from=${from}&to=${to}`,
+      `/api/economic-calendar?source=date-range-v9&from=${from}&to=${to}`,
       request.url,
     ).toString(),
     { method: 'GET' },
@@ -365,6 +365,61 @@ export async function handleEconomicCalendar(request: Request, env: CalendarEnv 
           }
         } catch (providerError) {
           console.error('[EconomicCalendar] Finnhub request failed:', providerError instanceof Error ? providerError.message : String(providerError));
+        }
+      }
+
+      // Finnhub may reject the account's plan (HTTP 403). Use Finance Calendar's
+      // public date-range API as the final fallback; it requires visible attribution.
+      if (!dateRangeEvents.length) {
+        try {
+          const financeUrl = new URL('https://www.financecalendar.com/wp-json/fc/v1/calendar');
+          financeUrl.searchParams.set('from', from);
+          financeUrl.searchParams.set('to', to);
+          financeUrl.searchParams.set('limit', '500');
+          const financeResponse = await fetch(financeUrl.toString(), {
+            headers: { Accept: 'application/json', 'User-Agent': 'IAMTRADER Economic Calendar/1.0' },
+            signal: AbortSignal.timeout(8000),
+          });
+          providerDiagnostics.push(`Finance Calendar HTTP ${financeResponse.status}`);
+          if (!financeResponse.ok) {
+            console.warn('[EconomicCalendar] Finance Calendar HTTP', financeResponse.status);
+          } else {
+            const financePayload = await financeResponse.json() as unknown;
+            const financeRaw = Array.isArray(financePayload)
+              ? financePayload as Array<Record<string, unknown>>
+              : financePayload && typeof financePayload === 'object' && Array.isArray((financePayload as Record<string, unknown>).events)
+                ? (financePayload as { events: Array<Record<string, unknown>> }).events
+                : [];
+            dateRangeEvents = financeRaw.map((item, index) => {
+              const datetime = String(item.time_utc || item.datetime || item.date || '');
+              const title = String(item.name || item.title || item.event || 'Economic Event').trim();
+              const rawCountry = String(item.currency || item.country_code || item.country || item.currency_code || '');
+              const aliases: Record<string, string> = {
+                'UNITED STATES': 'USD', 'UNITED KINGDOM': 'GBP', 'EURO ZONE': 'EUR',
+                'EUROZONE': 'EUR', 'EURO AREA': 'EUR', 'JAPAN': 'JPY', 'CANADA': 'CAD',
+                'AUSTRALIA': 'AUD', 'NEW ZEALAND': 'NZD', 'SWITZERLAND': 'CHF',
+              };
+              const country = aliases[rawCountry.toUpperCase()] || rawCountry.toUpperCase();
+              const impact = String(item.impact || 'low').toLowerCase();
+              return {
+                id: `fc-${normalizeDate(datetime)}-${country}-${String(item.slug || title || index)}`,
+                title,
+                country,
+                date: normalizeDate(datetime),
+                time: normalizeTime(datetime) || String(item.time_et || item.time || ''),
+                datetime,
+                impact: normalizeImpact(impact),
+                actual: item.actual == null ? '' : String(item.actual),
+                forecast: item.consensus == null ? (item.forecast == null ? '' : String(item.forecast)) : String(item.consensus),
+                previous: item.prior == null ? (item.previous == null ? '' : String(item.previous)) : String(item.prior),
+                url: String(item.url || ''),
+              };
+            }).filter(event => event.title && event.date && event.date >= from && event.date <= to);
+            providerDiagnostics.push(`Finance Calendar events in requested range: ${dateRangeEvents.length}`);
+            if (dateRangeEvents.length) dateRangeSource = 'financecalendar';
+          }
+        } catch (financeError) {
+          console.warn('[EconomicCalendar] Finance Calendar request failed:', financeError instanceof Error ? financeError.message : String(financeError));
         }
       }
 
