@@ -7,17 +7,17 @@ import {
 } from 'firebase/firestore';
 import {
   Search, MoreVertical, Send, Pin, Pencil, Trash2, X, CheckCheck,
-  MessageCircle, Plus, ArrowLeft, Users, Loader2, Image as ImageIcon, Mic, Square, Paperclip
+  MessageCircle, Plus, ArrowLeft, Users, Loader2, Image as ImageIcon, Mic, Square, Settings, Save
 } from 'lucide-react';
 
 type ChatConversation = {
   id: string; members: string[]; memberNames?: Record<string, string>;
-  group?: boolean; title?: string; lastMessage?: string;
+  group?: boolean; title?: string; description?: string; avatarURL?: string; systemGroup?: boolean; lastMessage?: string;
   updatedAt?: Timestamp | null; createdAt?: Timestamp | null;
 };
 type ChatMessage = {
   id: string; senderId: string; text: string; createdAt?: Timestamp | null;
-  edited?: boolean; pinned?: boolean; type?: 'text' | 'image' | 'voice'; mediaUrl?: string; mediaName?: string; mediaPublicId?: string; mediaResourceType?: string; expiresAt?: Timestamp | null; duration?: number;
+  edited?: boolean; pinned?: boolean; type?: 'text' | 'image' | 'voice'; mediaUrl?: string; mediaName?: string; mediaPublicId?: string; mediaResourceType?: string; expiresAt?: Timestamp | null; duration?: number; senderName?: string; senderAvatarURL?: string;
 };
 
 const formatTime = (value?: Timestamp | null) => value?.toDate
@@ -49,6 +49,11 @@ export function ChatView({ userProfile }: { userProfile: UserProfile | null }) {
   const recordingChunksRef = useRef<Blob[]>([]);
   const [recording, setRecording] = useState(false);
   const [uploadingMedia, setUploadingMedia] = useState(false);
+  const [showGroupSettings, setShowGroupSettings] = useState(false);
+  const [groupTitleDraft, setGroupTitleDraft] = useState('Community Hub');
+  const [groupDescriptionDraft, setGroupDescriptionDraft] = useState('');
+  const [groupAvatarDraft, setGroupAvatarDraft] = useState('');
+  const [savingGroupSettings, setSavingGroupSettings] = useState(false);
 
   // Community Hub is a system group available to every authenticated user.
   useEffect(() => {
@@ -150,7 +155,10 @@ export function ChatView({ userProfile }: { userProfile: UserProfile | null }) {
       }
       const expiresAt = Timestamp.fromDate(new Date(Date.now() + 72 * 60 * 60 * 1000));
       await addDoc(collection(db, 'conversations', activeId, 'messages'), {
-        senderId: uid, text: type === 'image' ? 'Image' : 'Message vocal',
+        senderId: uid,
+        senderName: userProfile?.displayName || auth.currentUser?.displayName || auth.currentUser?.email?.split('@')[0] || 'Trader',
+        senderAvatarURL: userProfile?.avatarURL || userProfile?.photoURL || auth.currentUser?.photoURL || '',
+        text: type === 'image' ? 'Image' : 'Message vocal',
         type, mediaUrl: uploaded.secure_url, mediaPublicId: uploaded.public_id,
         mediaResourceType: uploaded.resource_type || (type === 'voice' ? 'video' : 'image'),
         mediaName: safeName, duration: duration || 0, expiresAt,
@@ -210,13 +218,41 @@ export function ChatView({ userProfile }: { userProfile: UserProfile | null }) {
         setEditingId(null);
       } else {
         await addDoc(collection(db, 'conversations', activeId, 'messages'), {
-          senderId: uid, text, pinned: false, edited: false, createdAt: serverTimestamp()
+          senderId: uid,
+          senderName: userProfile?.displayName || auth.currentUser?.displayName || auth.currentUser?.email?.split('@')[0] || 'Trader',
+          senderAvatarURL: userProfile?.avatarURL || userProfile?.photoURL || auth.currentUser?.photoURL || '',
+          text, pinned: false, edited: false, createdAt: serverTimestamp()
         });
         await updateDoc(doc(db, 'conversations', activeId), { lastMessage: text.slice(0, 500), updatedAt: serverTimestamp() });
       }
       setDraft('');
     } catch (err: any) { setError(err?.message || 'Échec de l’envoi du message.'); }
     finally { setSending(false); }
+  };
+
+  const openGroupSettings = () => {
+    if (!active || active.id !== 'community-hub' || userProfile?.role !== 'admin') return;
+    setGroupTitleDraft(active.title || 'Community Hub');
+    setGroupDescriptionDraft(active.description || '');
+    setGroupAvatarDraft(active.avatarURL || '');
+    setShowGroupSettings(true);
+    setError('');
+  };
+
+  const saveGroupSettings = async () => {
+    if (!active || active.id !== 'community-hub' || userProfile?.role !== 'admin') return;
+    const title = groupTitleDraft.trim();
+    if (!title) { setError('Le nom du groupe est obligatoire.'); return; }
+    setSavingGroupSettings(true);
+    setError('');
+    try {
+      await updateDoc(doc(db, 'conversations', 'community-hub'), {
+        title, description: groupDescriptionDraft.trim().slice(0, 300),
+        avatarURL: groupAvatarDraft.trim(), updatedAt: serverTimestamp()
+      });
+      setShowGroupSettings(false);
+    } catch (err: any) { setError('Paramètres du groupe : ' + (err?.message || 'permission refusée')); }
+    finally { setSavingGroupSettings(false); }
   };
 
   const togglePin = async (message: ChatMessage) => {
