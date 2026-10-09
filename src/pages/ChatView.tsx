@@ -54,6 +54,7 @@ export function ChatView({ userProfile }: { userProfile: UserProfile | null }) {
   const [groupDescriptionDraft, setGroupDescriptionDraft] = useState('');
   const [groupAvatarDraft, setGroupAvatarDraft] = useState('');
   const [savingGroupSettings, setSavingGroupSettings] = useState(false);
+  const [viewerImage, setViewerImage] = useState<ChatMessage | null>(null);
 
   // Community Hub is a system group available to every authenticated user.
   useEffect(() => {
@@ -104,6 +105,15 @@ export function ChatView({ userProfile }: { userProfile: UserProfile | null }) {
   }, [uid, activeId]);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+
+  useEffect(() => {
+    if (!viewerImage) return;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setViewerImage(null);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [viewerImage]);
 
   const active = conversations.find(item => item.id === activeId);
   const otherUid = active?.members.find(member => member !== uid) || '';
@@ -351,7 +361,7 @@ export function ChatView({ userProfile }: { userProfile: UserProfile | null }) {
                   {message.expiresAt?.toDate && message.expiresAt.toDate().getTime() <= Date.now()
                     ? <p className="text-xs italic text-slate-400">Média expiré après 72 heures</p>
                     : message.type === 'image' && message.mediaUrl
-                      ? <a href={message.mediaUrl} target="_blank" rel="noreferrer"><img src={message.mediaUrl} alt="Image envoyée" className="mb-1 max-h-72 rounded-xl object-contain" /></a>
+                      ? <button type="button" onClick={() => setViewerImage(message)} aria-label="Ouvrir l’image dans PipTalk" className="mb-1 block max-w-full cursor-zoom-in overflow-hidden rounded-xl text-left focus:outline-none focus:ring-2 focus:ring-emerald-400"><img src={message.mediaUrl} alt={message.mediaName || "Image envoyée"} loading="lazy" className="max-h-72 max-w-full rounded-xl object-contain" /></button>
                       : message.type === 'voice' && message.mediaUrl
                         ? <audio controls preload="metadata" src={message.mediaUrl} className="my-1 max-w-full" />
                         : <p className="whitespace-pre-wrap break-words text-[13px] leading-6">{message.text}</p>}
@@ -367,5 +377,12 @@ export function ChatView({ userProfile }: { userProfile: UserProfile | null }) {
         <footer className="border-t border-slate-200 bg-white px-3 py-3 sm:px-4">{editingId && <div className="mb-2 flex items-center justify-between rounded-lg bg-amber-50 px-3 py-2 text-[10px] text-amber-800"><span className="flex items-center gap-1.5"><Pencil className="h-3 w-3" />Modification du message</span><button onClick={() => { setEditingId(null); setDraft(''); }}><X className="h-3.5 w-3.5" /></button></div>}<div className="flex items-end gap-2"><input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={e => void handleFile(e.target.files?.[0])} /><button type="button" disabled={!active || uploadingMedia} onClick={() => fileInputRef.current?.click()} title="Envoyer une image" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-40"><ImageIcon className="h-4 w-4" /></button><button type="button" disabled={!active || uploadingMedia} onClick={() => recording ? stopRecording() : void startRecording()} title={recording ? "Arrêter l’enregistrement" : "Enregistrer un vocal"} className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${recording ? 'border-rose-300 bg-rose-50 text-rose-600' : 'border-slate-200 text-slate-500 hover:bg-slate-50'} disabled:opacity-40`}>{recording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}</button><textarea value={draft} onChange={e => setDraft(e.target.value)} onPaste={handlePaste} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void sendMessage(); } }} disabled={!active || sending} placeholder={active ? 'Écrire un message…' : 'Sélectionnez une discussion…'} rows={1} className="max-h-28 min-h-10 flex-1 resize-y rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs leading-5 text-slate-700 outline-none focus:border-emerald-300 focus:bg-white disabled:opacity-50" /><button onClick={() => void sendMessage()} disabled={!active || !draft.trim() || sending || uploadingMedia} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#00a982] text-white shadow-sm hover:bg-[#008f72] disabled:opacity-40" title="Envoyer">{sending || uploadingMedia ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}</button></div><p className="mt-2 pl-2 text-[9px] text-slate-400">Entrée pour envoyer · Maj + Entrée pour un saut de ligne · Coller une image avec Ctrl+V</p></footer>
       </section>
     </div>
+    {viewerImage?.mediaUrl && <div role="dialog" aria-modal="true" aria-label="Visionneuse d’image" onClick={() => setViewerImage(null)} className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/90 p-3 backdrop-blur-sm sm:p-8">
+      <button type="button" onClick={() => setViewerImage(null)} aria-label="Fermer l’image" className="absolute right-4 top-4 z-10 flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/40 text-white transition hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white"><X className="h-5 w-5" /></button>
+      <div className="flex h-full w-full items-center justify-center" onClick={event => event.stopPropagation()}>
+        <img src={viewerImage.mediaUrl} alt={viewerImage.mediaName || "Image envoyée"} className="max-h-full max-w-full select-none object-contain" />
+      </div>
+      <p className="pointer-events-none absolute bottom-4 left-1/2 max-w-[90vw] -translate-x-1/2 truncate rounded-full bg-black/40 px-4 py-2 text-xs text-white/80">{viewerImage.mediaName || "Image envoyée"} · Échap pour fermer</p>
+    </div>}
   </div>;
 }
