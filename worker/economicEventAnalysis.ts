@@ -127,7 +127,11 @@ En 2 à 4 courts paragraphes maximum, résume uniquement les faits utiles et vé
     const data = await response.json() as {
       candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
     };
-    if (!response.ok) return json({ error: 'La synthèse économique n’a pas pu être générée.' }, 502);
+    if (!response.ok) {
+      const providerError = JSON.stringify(data).slice(0, 1200);
+      console.error('Gemini API error:', response.status, providerError);
+      return json({ error: 'La synthèse économique n’a pas pu être générée.', providerStatus: response.status }, 502);
+    }
     const summary = data.candidates?.[0]?.content?.parts?.map((part) => part.text || '').join('\n').trim();
     if (!summary) return json({ error: 'Aucune synthèse n’a été retournée.' }, 502);
     return json({
