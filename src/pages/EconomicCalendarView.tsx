@@ -329,21 +329,25 @@ function formatActualClass(actual?: string) {
 
 export function EconomicCalendarView() {
   const [date, setDate] = useState(localIsoDate);
-  const [impact, setImpact] = useState<'all' | Impact>(() => {
+  const [impact, setImpact] = useState<Impact[]>(() => {
     try {
       const saved = localStorage.getItem('iamtrader-calendar-impact');
-      return saved === 'high' || saved === 'medium' || saved === 'low' ? saved : 'all';
+      return saved === 'high' || saved === 'medium' || saved === 'low' ? [saved] : saved ? JSON.parse(saved).filter((item: string) => ['high', 'medium', 'low'].includes(item)) : [];
     } catch {
-      return 'all';
+      return [];
     }
   });
-  const [currency, setCurrency] = useState(() => {
+  const [currency, setCurrency] = useState<string[]>(() => {
     try {
-      return localStorage.getItem('iamtrader-calendar-currency') || 'all';
+      const saved = localStorage.getItem('iamtrader-calendar-currency');
+      if (!saved || saved === 'all') return [];
+      try { const parsed = JSON.parse(saved); return Array.isArray(parsed) ? parsed : [saved]; } catch { return [saved]; }
     } catch {
-      return 'all';
+      return [];
     }
   });
+  const [draftImpact, setDraftImpact] = useState<Impact[]>(impact);
+  const [draftCurrency, setDraftCurrency] = useState<string[]>(currency);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<EconomicEvent | null>(null);
@@ -436,8 +440,8 @@ export function EconomicCalendarView() {
     () =>
       events
         .filter((event) => event.date === date)
-        .filter((event) => impact === 'all' || event.impact === impact)
-        .filter((event) => currency === 'all' || event.currency === currency)
+        .filter((event) => impact.length === 0 || impact.includes(event.impact))
+        .filter((event) => currency.length === 0 || currency.includes(event.currency))
         .sort((a, b) => a.time.localeCompare(b.time)),
     [events, date, impact, currency],
   );
@@ -447,8 +451,8 @@ export function EconomicCalendarView() {
 
   useEffect(() => {
     try {
-      localStorage.setItem('iamtrader-calendar-impact', impact);
-      localStorage.setItem('iamtrader-calendar-currency', currency);
+      localStorage.setItem('iamtrader-calendar-impact', JSON.stringify(impact));
+      localStorage.setItem('iamtrader-calendar-currency', JSON.stringify(currency));
     } catch {
       // Keep filters usable when browser storage is unavailable.
     }
@@ -533,58 +537,58 @@ export function EconomicCalendarView() {
         </div>
         <button
           type="button"
-          onClick={() => setFiltersOpen((open) => !open)}
+          onClick={() => { setDraftImpact(impact); setDraftCurrency(currency); setFiltersOpen((open) => !open); }}
           aria-expanded={filtersOpen}
           aria-controls="economic-calendar-filters"
           className={`inline-flex h-8 items-center gap-1.5 rounded-lg border px-2.5 text-[10px] font-bold transition-colors ${filtersOpen ? 'border-[#00a982] bg-emerald-50 text-[#008b6c] dark:bg-emerald-950/30 dark:text-emerald-400' : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800'}`}
         >
           <SlidersHorizontal className="h-3.5 w-3.5" />
           Filtres
-          {(impact !== 'all' || currency !== 'all') && <span className="h-1.5 w-1.5 rounded-full bg-[#00a982]" />}
+          {(impact.length > 0 || currency.length > 0) && <span className="h-1.5 w-1.5 rounded-full bg-[#00a982]" />}
         </button>
       </div>
 
       {filtersOpen && (
-      <div id="economic-calendar-filters" className="grid gap-1.5 rounded-xl border border-slate-200 bg-slate-50 p-2 md:grid-cols-[minmax(150px,1fr)_minmax(150px,1fr)_auto_auto] dark:border-slate-800 dark:bg-slate-900/60">
-        <select
-          value={impact}
-          onChange={(event) => setImpact(event.target.value as 'all' | Impact)}
-          className="h-9 rounded-lg border border-slate-200 bg-white px-2.5 text-[11px] font-semibold text-slate-700 outline-none focus:border-[#00a982] dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
-        >
-          <option value="all">Tous les impacts</option>
-          <option value="high">★★★ Impact élevé</option>
-          <option value="medium">★★☆ Impact moyen</option>
-          <option value="low">★☆☆ Impact faible</option>
-        </select>
-
-        <select
-          value={currency}
-          onChange={(event) => setCurrency(event.target.value)}
-          className="h-9 rounded-lg border border-slate-200 bg-white px-2.5 text-[11px] font-semibold text-slate-700 outline-none focus:border-[#00a982] dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
-        >
-          <option value="all">Toutes les devises</option>
-          {currencies.map((item) => (
-            <option key={item} value={item}>
-              {item}
-            </option>
-          ))}
-        </select>
-
-        <div className="flex h-9 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 text-[10px] text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
-          <TrendingUp className="h-3.5 w-3.5 text-[#00a982]" />
-          <span><strong className="text-[#0b1f35] dark:text-white">{highImpactCount}</strong> fort{highImpactCount > 1 ? 's' : ''}</span>
+        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/50 p-3 backdrop-blur-sm" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) setFiltersOpen(false); }}>
+          <section id="economic-calendar-filters" role="dialog" aria-modal="true" aria-labelledby="economic-filter-title" className="max-h-[90vh] w-full max-w-xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl dark:border-slate-700 dark:bg-slate-950">
+            <header className="flex items-start justify-between border-b border-slate-200 px-5 py-4 dark:border-slate-800">
+              <div><h2 id="economic-filter-title" className="text-base font-bold text-slate-900 dark:text-white">Filtres du calendrier</h2><p className="mt-1 text-xs text-slate-500">Sélectionnez plusieurs impacts et devises si nécessaire.</p></div>
+              <button type="button" onClick={() => setFiltersOpen(false)} aria-label="Fermer les filtres" className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 text-lg text-slate-500 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">×</button>
+            </header>
+            <div className="max-h-[calc(90vh-150px)] space-y-6 overflow-y-auto px-5 py-5">
+              <div>
+                <div className="mb-3 flex items-center justify-between"><h3 className="text-xs font-bold uppercase tracking-wide text-slate-500">Niveau d’impact</h3><button type="button" onClick={() => setDraftImpact([])} className="text-[11px] font-semibold text-[#00a982] hover:underline">Tous les impacts</button></div>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                  {([{value:'high',label:'Élevé',stars:'★★★',dot:'bg-red-500'},{value:'medium',label:'Moyen',stars:'★★☆',dot:'bg-amber-500'},{value:'low',label:'Faible',stars:'★☆☆',dot:'bg-slate-400'}] as const).map((item) => (
+                    <label key={item.value} className={`flex cursor-pointer items-center gap-2.5 rounded-xl border px-3 py-3 text-sm transition ${draftImpact.includes(item.value) ? 'border-[#00a982] bg-emerald-50 text-slate-900 dark:bg-emerald-950/30 dark:text-white' : 'border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-900'}`}>
+                      <input type="checkbox" checked={draftImpact.includes(item.value)} onChange={(event) => setDraftImpact((current) => event.target.checked ? [...current, item.value] : current.filter((value) => value !== item.value))} className="accent-[#00a982]" />
+                      <span className={`h-2 w-2 rounded-full ${item.dot}`} /><span className="font-semibold">{item.label}</span><span className="ml-auto text-[10px] text-slate-400">{item.stars}</span>
+                    </label>
+                  ))}
+                </div>
+                <p className="mt-2 text-[11px] text-slate-400">Aucune sélection signifie afficher tous les niveaux.</p>
+              </div>
+              <div>
+                <div className="mb-3 flex items-center justify-between"><h3 className="text-xs font-bold uppercase tracking-wide text-slate-500">Devises</h3><button type="button" onClick={() => setDraftCurrency([])} className="text-[11px] font-semibold text-[#00a982] hover:underline">Toutes les devises</button></div>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  {currencyOptions.filter((item) => currencies.includes(item)).map((item) => (
+                    <label key={item} className={`flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-3 text-sm font-semibold transition ${draftCurrency.includes(item) ? 'border-[#00a982] bg-emerald-50 text-slate-900 dark:bg-emerald-950/30 dark:text-white' : 'border-slate-200 text-slate-600 hover:bg-slate-50 dark:border-slate-800 dark:text-slate-300 dark:hover:bg-slate-900'}`}>
+                      <input type="checkbox" checked={draftCurrency.includes(item)} onChange={(event) => setDraftCurrency((current) => event.target.checked ? [...current, item] : current.filter((value) => value !== item))} className="accent-[#00a982]" />
+                      {currencyFlagPaths[item] && <img src={currencyFlagPaths[item]} alt="" aria-hidden="true" className="h-3.5 w-5 rounded-[2px] border border-slate-200 object-cover" />}
+                      {item}
+                    </label>
+                  ))}
+                </div>
+                <p className="mt-2 text-[11px] text-slate-400">Sélectionnez une ou plusieurs devises. Aucune sélection affiche toutes les devises.</p>
+              </div>
+              <div className="flex items-center gap-2 rounded-xl bg-slate-50 px-4 py-3 text-xs text-slate-600 dark:bg-slate-900 dark:text-slate-300"><TrendingUp className="h-4 w-4 text-[#00a982]" /><span><strong className="text-slate-900 dark:text-white">{highImpactCount}</strong> événement(s) à impact élevé correspondent actuellement aux filtres actifs.</span></div>
+            </div>
+            <footer className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-200 bg-slate-50 px-5 py-4 dark:border-slate-800 dark:bg-slate-900/50">
+              <button type="button" onClick={() => { setDraftImpact([]); setDraftCurrency([]); }} className="text-xs font-semibold text-slate-500 hover:text-slate-900 dark:hover:text-white">Réinitialiser</button>
+              <div className="flex gap-2"><button type="button" onClick={() => setFiltersOpen(false)} className="rounded-lg border border-slate-200 bg-white px-4 py-2.5 text-xs font-semibold text-slate-600 hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300">Annuler</button><button type="button" onClick={() => { setImpact(draftImpact); setCurrency(draftCurrency); setFiltersOpen(false); }} className="rounded-lg bg-[#00a982] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#008f6e]">Appliquer les filtres</button></div>
+            </footer>
+          </section>
         </div>
-
-        <button
-          type="button"
-          onClick={() => void loadEvents(date)}
-          disabled={loading}
-          className="inline-flex h-9 items-center justify-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-[10px] font-bold !text-slate-600 hover:bg-slate-50 disabled:!text-slate-500 disabled:opacity-60 dark:border-slate-800 dark:bg-slate-900 dark:!text-slate-300 dark:hover:bg-slate-800"
-        >
-          <RefreshCw className={`h-3 w-3 ${loading ? 'animate-spin' : ''}`} />
-          Actualiser
-        </button>
-      </div>
       )}
 
 
@@ -732,8 +736,10 @@ export function EconomicCalendarView() {
             <button
               type="button"
               onClick={() => {
-                setImpact('all');
-                setCurrency('all');
+                setImpact([]);
+                setCurrency([]);
+                setDraftImpact([]);
+                setDraftCurrency([]);
               }}
               className="mt-2 text-[10px] font-bold text-[#00a982] hover:underline"
             >
