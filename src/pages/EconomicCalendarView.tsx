@@ -808,16 +808,12 @@ export function EconomicCalendarView() {
                     <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300"><TrendingUp className="h-4 w-4" /></div>
                     <div><div className="text-sm font-semibold text-slate-900 dark:text-white">Chloé</div><div className="mt-0.5 text-[11px] text-slate-500">Analyse économique · IAMTRADER</div></div>
                   </div>
-                  <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400">Sources publiques</span>
                 </div>
                 {analysisLoading ? (
                   <div className="flex items-center gap-3 px-5 py-7 text-sm text-slate-500"><Loader2 className="h-5 w-5 animate-spin text-emerald-600" /><div><div className="font-semibold text-slate-700 dark:text-slate-200">Chloé prépare son briefing</div><div className="mt-1 text-xs">Vérification du contexte public et synthèse des éléments disponibles…</div></div></div>
                 ) : onlineAnalysis ? (
                   <>
                     <div className="whitespace-pre-line px-5 py-5 text-sm leading-7 text-slate-700 dark:text-slate-300">{onlineAnalysis.summary}</div>
-                    {onlineAnalysis.sources.length > 0 && <div className="flex flex-col gap-2 border-t border-slate-200 bg-slate-50 px-5 py-4 dark:border-slate-700 dark:bg-slate-900/50">
-                      {onlineAnalysis.sources.map((source, index) => <a key={source.url + index} href={source.url} target="_blank" rel="noreferrer" className="text-xs font-medium leading-relaxed text-emerald-700 hover:underline dark:text-emerald-300">{source.title}{source.date ? ` · ${source.date}` : ''}</a>)}
-                    </div>}
                     <p className="border-t border-slate-200 px-5 py-3 text-[10px] text-slate-400 dark:border-slate-700">Mis à jour le {new Date(onlineAnalysis.fetchedAt).toLocaleString('fr-FR')} · Synthèse informative, pas un signal de trading.</p>
                   </>
                 ) : (
