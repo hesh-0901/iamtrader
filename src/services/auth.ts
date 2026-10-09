@@ -90,3 +90,11 @@ export async function checkIsAdmin(user: User): Promise<boolean> {
     return false;
   }
 }
+
+
+export async function updateUserAvatar(uid: string, avatarURL: string): Promise<void> {
+  await setDoc(doc(db, 'users', uid), { avatarURL, photoURL: avatarURL }, { merge: true });
+  if (auth.currentUser?.uid === uid) {
+    try { await updateProfile(auth.currentUser, { photoURL: avatarURL }); } catch { /* Firestore remains the source of truth. */ }
+  }
+}
