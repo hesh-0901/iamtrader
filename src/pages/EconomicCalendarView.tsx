@@ -756,16 +756,16 @@ export function EconomicCalendarView() {
             aria-labelledby="economic-event-modal-title"
             className="max-h-[92vh] w-full max-w-4xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_28px_100px_rgba(2,6,23,0.35)] dark:border-slate-700 dark:bg-slate-950"
           >
-            <header className="relative flex items-start justify-between gap-4 border-b border-slate-200 bg-slate-950 px-6 py-6 text-white sm:px-8 dark:border-slate-800">
+            <header className="relative flex items-start justify-between gap-4 border-b border-slate-200 bg-white px-6 py-6 text-slate-900 sm:px-8 dark:border-slate-800 dark:bg-slate-950 dark:text-white">
               <div className="min-w-0">
-                <div className="mb-3 flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-300">
+                <div className="mb-3 flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-[0.16em] text-[#00a982]">
                   {selectedEvent.currency} <span className="text-slate-300">·</span> {impactLabel(selectedEvent.impact)}
                 </div>
-                <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-400">IAMTRADER · Briefing économique</div>
-                <h2 id="economic-event-modal-title" className="max-w-3xl text-xl font-semibold leading-tight tracking-tight text-white sm:text-2xl">{selectedEvent.event}</h2>
-                <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-300"><span>{selectedEvent.date}</span><span className="text-slate-600">/</span><span>{selectedEvent.time} · heure locale</span><span className="text-slate-600">/</span><span>Calendrier macroéconomique</span></p>
+                <div className="mb-2 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">IAMTRADER · Briefing économique</div>
+                <h2 id="economic-event-modal-title" className="max-w-3xl text-xl font-semibold leading-tight tracking-tight text-slate-900 sm:text-2xl dark:text-white">{selectedEvent.event}</h2>
+                <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 dark:text-slate-400"><span>{selectedEvent.date}</span><span className="text-slate-300">/</span><span>{selectedEvent.time} · heure locale</span><span className="text-slate-300">/</span><span>Calendrier macroéconomique</span></p>
               </div>
-              <button type="button" onClick={() => setSelectedEvent(null)} aria-label="Fermer" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-white/15 bg-white/5 text-xl text-slate-300 transition hover:bg-white/15 hover:text-white">×</button>
+              <button type="button" onClick={() => setSelectedEvent(null)} aria-label="Fermer" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-slate-50 text-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white">×</button>
             </header>
             <div className="max-h-[calc(92vh-150px)] space-y-6 overflow-y-auto bg-white px-6 py-6 sm:px-8 sm:py-8 dark:bg-slate-950">
               <div className="grid gap-5 lg:grid-cols-[minmax(0,1.5fr)_minmax(240px,0.8fr)]"> 
