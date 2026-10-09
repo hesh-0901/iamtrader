@@ -14,6 +14,7 @@ interface Env {
   ASSETS: Fetcher;
   GEMINI_API_KEY?: string;
   GEMINI_MODEL?: string;
+  FINNHUB_API_KEY?: string;
   RESEND_API_KEY?: string;
   RESEND_FROM_EMAIL?: string;
   RESEND_REPLY_TO?: string;
@@ -42,7 +43,7 @@ export default {
     }
 
     if (url.pathname === '/api/economic-calendar') {
-      return handleEconomicCalendar(request);
+      return handleEconomicCalendar(request, env);
     }
 
     if (url.pathname === '/api/ai-chat') {
