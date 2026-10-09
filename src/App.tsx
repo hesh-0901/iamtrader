@@ -384,7 +384,7 @@ function MainAppContent() {
           )}
 
           {currentPage === 'community' && (
-            <CommunityView />
+            <CommunityView userProfile={userProfile} />
           )}
 
           {currentPage === 'settings' && (
