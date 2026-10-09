@@ -525,7 +525,7 @@ export function EconomicCalendarView() {
             </button>
           </div>
         ) : visibleEvents.length ? (
-          <div className="max-h-[calc(100vh-300px)] overflow-auto">
+          <div className="max-h-[calc(100vh-285px)] overflow-auto">
             <div className="sticky top-0 z-20 border-b border-slate-200 bg-slate-100 px-4 py-1.5 dark:border-slate-800 dark:bg-slate-800/95">
               <div className="text-[11px] font-semibold uppercase text-slate-700 dark:text-slate-300">
                 {formattedDate}
@@ -536,12 +536,12 @@ export function EconomicCalendarView() {
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[860px] border-collapse">
+              <table className="w-full min-w-[860px] table-fixed border-collapse">
                 <thead className="border-b border-slate-100 bg-white dark:border-slate-800 dark:bg-slate-950">
                   <tr className="h-7">
-                    <th className="w-[76px] px-3 text-left text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Heure</th>
-                    <th className="w-[82px] px-2 text-left text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Devise</th>
-                    <th className="px-3 text-left text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Événement</th>
+                    <th className="w-[76px] px-3 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Heure</th>
+                    <th className="w-[82px] px-2 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Devise</th>
+                    <th className="w-[38%] px-3 text-left text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Événement</th>
                     <th className="w-[88px] px-2 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Impact</th>
                     <th className="w-[92px] px-2 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Actuel</th>
                     <th className="w-[92px] px-2 text-center text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Prévision</th>
@@ -553,9 +553,9 @@ export function EconomicCalendarView() {
                   {visibleEvents.map((event) => (
                     <tr
                       key={event.id}
-                      className="h-[38px] border-b border-gray-100 align-middle transition-colors last:border-b-0 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/50"
+                      className="h-[34px] border-b border-gray-100 align-middle transition-colors last:border-b-0 hover:bg-slate-50 dark:border-slate-800 dark:hover:bg-slate-800/50"
                     >
-                      <td className="whitespace-nowrap px-3 text-left font-mono text-xs text-gray-500 dark:text-slate-400">
+                      <td className="whitespace-nowrap px-3 text-center font-mono text-xs text-gray-500 dark:text-slate-400">
                         {event.time}
                       </td>
 
