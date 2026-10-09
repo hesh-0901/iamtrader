@@ -67,6 +67,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
   const [socialNetwork, setSocialNetwork] = useState('Instagram');
   const [socialUsername, setSocialUsername] = useState('');
   const [isProfileSaving, setIsProfileSaving] = useState(false);
+  const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(!userProfile?.traderProfile);
   const [defaultCurrency, setDefaultCurrency] = useState(userProfile?.settings?.defaultCurrency || 'USD');
   const [theme, setTheme] = useState<'light'>('light');
@@ -484,7 +485,28 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
               </div>
               </section>
 
-              <AvatarStudio userProfile={userProfile} />
+              <section className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600"><Sparkles className="h-5 w-5" /></div>
+                  <div>
+                    <h3 className="text-sm font-black text-slate-900">Avatar personnalisé</h3>
+                    <p className="mt-1 text-xs text-slate-500">Créez et personnalisez votre identité visuelle sur IAMTRADER et PipTalk.</p>
+                  </div>
+                </div>
+                <button type="button" onClick={() => setIsAvatarModalOpen(true)} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-xs font-bold text-white shadow-sm transition hover:bg-blue-700">
+                  <Sparkles className="h-4 w-4" /> {userProfile?.avatarURL || userProfile?.photoURL ? 'Modifier mon avatar' : 'Créer mon avatar'}
+                </button>
+              </section>
+              {isAvatarModalOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-3 backdrop-blur-sm sm:p-6" onMouseDown={event => { if (event.target === event.currentTarget) setIsAvatarModalOpen(false); }}>
+                  <div role="dialog" aria-modal="true" aria-label="Studio de création d’avatar" className="relative max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-[26px] bg-white shadow-2xl">
+                    <button type="button" aria-label="Fermer le studio d’avatar" onClick={() => setIsAvatarModalOpen(false)} className="sticky top-3 z-10 ml-auto mr-3 mt-3 flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:bg-slate-50 hover:text-slate-900"><X className="h-4 w-4" /></button>
+                    <div className="px-3 pb-3 sm:px-5 sm:pb-5">
+                      <AvatarStudio userProfile={userProfile} onSaved={() => setIsAvatarModalOpen(false)} />
+                    </div>
+                  </div>
+                </div>
+              )}
 
               <section className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-[0_14px_40px_rgba(15,23,42,0.05)]">
                 <div className="mb-5 flex items-center gap-3"><span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#e5faf5] text-[#00896e]"><User className="h-4 w-4" /></span><div><div className="text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">Informations personnelles</div><div className="mt-0.5 text-sm font-bold text-slate-900">Identité & coordonnées</div></div></div>
