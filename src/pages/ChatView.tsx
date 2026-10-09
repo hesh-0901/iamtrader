@@ -108,6 +108,8 @@ export function ChatView({ userProfile }: { userProfile: UserProfile | null }) {
   const active = conversations.find(item => item.id === activeId);
   const otherUid = active?.members.find(member => member !== uid) || '';
   const activeName = active?.title || active?.memberNames?.[otherUid] || (otherUid ? `Trader ${otherUid.slice(0, 7)}` : 'Choisir une discussion');
+  const currentDisplayName = userProfile?.displayName?.trim() || auth.currentUser?.displayName?.trim() || auth.currentUser?.email?.split('@')[0] || 'Trader';
+  const currentAvatar = userProfile?.photoURL || userProfile?.avatarURL || auth.currentUser?.photoURL || '';
   const filtered = useMemo(() => conversations.filter(item => {
     const other = item.members.find(member => member !== uid) || '';
     const name = item.title || item.memberNames?.[other] || other;
@@ -156,8 +158,8 @@ export function ChatView({ userProfile }: { userProfile: UserProfile | null }) {
       const expiresAt = Timestamp.fromDate(new Date(Date.now() + 72 * 60 * 60 * 1000));
       await addDoc(collection(db, 'conversations', activeId, 'messages'), {
         senderId: uid,
-        senderName: userProfile?.displayName || auth.currentUser?.displayName || auth.currentUser?.email?.split('@')[0] || 'Trader',
-        senderAvatarURL: userProfile?.avatarURL || userProfile?.photoURL || auth.currentUser?.photoURL || '',
+        senderName: currentDisplayName,
+        senderAvatarURL: currentAvatar,
         text: type === 'image' ? 'Image' : 'Message vocal',
         type, mediaUrl: uploaded.secure_url, mediaPublicId: uploaded.public_id,
         mediaResourceType: uploaded.resource_type || (type === 'voice' ? 'video' : 'image'),
@@ -166,6 +168,7 @@ export function ChatView({ userProfile }: { userProfile: UserProfile | null }) {
       });
       await updateDoc(doc(db, 'conversations', activeId), {
         lastMessage: type === 'image' ? '📷 Image' : '🎤 Message vocal',
+        [`memberNames.${uid}`]: currentDisplayName,
         updatedAt: serverTimestamp()
       });
     } catch (err: any) {
@@ -219,11 +222,11 @@ export function ChatView({ userProfile }: { userProfile: UserProfile | null }) {
       } else {
         await addDoc(collection(db, 'conversations', activeId, 'messages'), {
           senderId: uid,
-          senderName: userProfile?.displayName || auth.currentUser?.displayName || auth.currentUser?.email?.split('@')[0] || 'Trader',
-          senderAvatarURL: userProfile?.avatarURL || userProfile?.photoURL || auth.currentUser?.photoURL || '',
+          senderName: currentDisplayName,
+          senderAvatarURL: currentAvatar,
           text, pinned: false, edited: false, createdAt: serverTimestamp()
         });
-        await updateDoc(doc(db, 'conversations', activeId), { lastMessage: text.slice(0, 500), updatedAt: serverTimestamp() });
+        await updateDoc(doc(db, 'conversations', activeId), { lastMessage: text.slice(0, 500), [`memberNames.${uid}`]: currentDisplayName, updatedAt: serverTimestamp() });
       }
       setDraft('');
     } catch (err: any) { setError(err?.message || 'Échec de l’envoi du message.'); }
@@ -298,7 +301,28 @@ export function ChatView({ userProfile }: { userProfile: UserProfile | null }) {
             const currentDate = message.createdAt?.toDate ? message.createdAt.toDate().toDateString() : '';
             const previousDate = index > 0 && messages[index - 1].createdAt?.toDate ? messages[index - 1].createdAt!.toDate().toDateString() : '';
             const showDay = !!currentDate && currentDate !== previousDate;
-            return <React.Fragment key={message.id}>{showDay && <div className="flex justify-center py-2"><span className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[10px] font-semibold capitalize text-slate-500 shadow-sm">{formatDay(message.createdAt)}</span></div>}<div className={`group relative flex ${mine ? 'justify-end' : 'justify-start'}`}><div className={`relative max-w-[88%] rounded-2xl px-3.5 py-2.5 shadow-sm sm:max-w-[75%] ${mine ? 'rounded-br-md bg-[#dff8ed] text-slate-800' : 'rounded-bl-md border border-slate-100 bg-white text-slate-700'}`}>{active?.group && <div className="mb-2 flex items-center gap-2">{message.senderAvatarURL ? <img src={message.senderAvatarURL} alt="" className="h-7 w-7 rounded-full object-cover" /> : <div className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-[9px] font-black text-emerald-700">{(message.senderName || 'Trader').slice(0, 2).toUpperCase()}</div>}<span className="max-w-[180px] truncate text-[10px] font-bold text-slate-600">{message.senderName || ('Trader ' + message.senderId.slice(0, 7))}</span></div>}{message.pinned && <div className="mb-1 flex items-center gap-1 text-[9px] font-bold text-emerald-700"><Pin className="h-3 w-3" />Épinglé</div>}{message.expiresAt?.toDate && message.expiresAt.toDate().getTime() <= Date.now() ? <p className="text-[11px] italic text-slate-400">Média expiré après 72 heures</p> : message.type === 'image' && message.mediaUrl ? <a href={message.mediaUrl} target="_blank" rel="noreferrer"><img src={message.mediaUrl} alt="Image envoyée" className="mb-2 max-h-72 max-w-full rounded-lg object-contain" /></a> : message.type === 'voice' && message.mediaUrl ? <audio controls preload="metadata" src={message.mediaUrl} className="my-1 max-w-full" /> : <p className="whitespace-pre-wrap break-words text-[12px] leading-5">{message.text}</p>}<div className="mt-1.5 flex items-center justify-end gap-1.5"><span className="text-[9px] text-slate-400">{message.edited ? 'modifié · ' : ''}{formatTime(message.createdAt)}</span>{mine && <CheckCheck className="h-3.5 w-3.5 text-emerald-600" />}</div><button onClick={() => setMenuMessage(menuMessage === message.id ? null : message.id)} className="absolute -right-2 -top-2 hidden rounded-full border border-slate-200 bg-white p-1.5 text-slate-500 shadow-sm group-hover:block" title="Actions"><MoreVertical className="h-3 w-3" /></button>{menuMessage === message.id && <div className="absolute right-0 top-6 z-20 w-40 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-xl"><button onClick={() => togglePin(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Pin className="h-3.5 w-3.5" />{message.pinned ? 'Désépingler' : 'Épingler'}</button>{mine && <button onClick={() => beginEdit(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Pencil className="h-3.5 w-3.5" />Modifier</button>}{mine && <button onClick={() => removeMessage(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-rose-600 hover:bg-rose-50"><Trash2 className="h-3.5 w-3.5" />Supprimer</button>}</div>}</div></div></React.Fragment>; })}
+            const senderName = message.senderName?.trim() || active?.memberNames?.[message.senderId]?.trim() || (mine ? currentDisplayName : `Trader ${message.senderId.slice(0, 7)}`);
+            return <React.Fragment key={message.id}>
+              {showDay && <div className="flex justify-center py-3"><span className="rounded-full border border-slate-200/80 bg-white/90 px-3.5 py-1.5 text-[10px] font-semibold capitalize text-slate-500 shadow-sm">{formatDay(message.createdAt)}</span></div>}
+              <div className={`group relative flex w-full items-end gap-2.5 ${mine ? 'justify-end' : 'justify-start'}`}>
+                {!mine && active?.group && <div className="mb-1 h-9 w-9 shrink-0 overflow-hidden rounded-full ring-2 ring-white shadow-sm">{message.senderAvatarURL ? <img src={message.senderAvatarURL} alt={senderName} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-emerald-100 to-teal-100 text-[10px] font-extrabold text-emerald-800">{senderName.slice(0, 2).toUpperCase()}</div>}</div>}
+                <div className={`relative min-w-0 max-w-[min(78%,560px)] rounded-2xl px-4 py-3 shadow-[0_2px_8px_rgba(15,23,42,0.05)] transition-shadow hover:shadow-md sm:max-w-[72%] ${mine ? 'rounded-br-md border border-emerald-100 bg-gradient-to-br from-[#e5fbf2] to-[#d5f6e8] text-slate-800' : 'rounded-bl-md border border-slate-200/80 bg-white text-slate-700'}`}>
+                  {active?.group && <div className={`mb-1.5 flex items-center gap-2 text-[11px] font-extrabold tracking-[-0.01em] ${mine ? 'text-emerald-800' : 'text-slate-800'}`}><span className="truncate">{senderName}</span>{mine && <span className="rounded-full bg-emerald-100/80 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-emerald-700">Vous</span>}</div>}
+                  {message.pinned && <div className="mb-2 flex items-center gap-1 text-[9px] font-bold text-emerald-700"><Pin className="h-3 w-3" />Message épinglé</div>}
+                  {message.expiresAt?.toDate && message.expiresAt.toDate().getTime() <= Date.now()
+                    ? <p className="text-xs italic text-slate-400">Média expiré après 72 heures</p>
+                    : message.type === 'image' && message.mediaUrl
+                      ? <a href={message.mediaUrl} target="_blank" rel="noreferrer"><img src={message.mediaUrl} alt="Image envoyée" className="mb-1 max-h-72 rounded-xl object-contain" /></a>
+                      : message.type === 'voice' && message.mediaUrl
+                        ? <audio controls preload="metadata" src={message.mediaUrl} className="my-1 max-w-full" />
+                        : <p className="whitespace-pre-wrap break-words text-[13px] leading-6">{message.text}</p>}
+                  <div className="mt-2 flex items-center justify-end gap-1.5"><span className="text-[9px] text-slate-400">{message.edited ? 'modifié · ' : ''}{formatTime(message.createdAt)}</span>{mine && <CheckCheck className="h-3.5 w-3.5 text-emerald-600" />}</div>
+                  <button onClick={() => setMenuMessage(menuMessage === message.id ? null : message.id)} className="absolute -right-2 -top-2 hidden rounded-full border border-slate-200 bg-white p-1.5 text-slate-500 shadow-md group-hover:block" title="Actions"><MoreVertical className="h-3 w-3" /></button>
+                  {menuMessage === message.id && <div className="absolute right-0 top-6 z-20 w-40 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-xl"><button onClick={() => togglePin(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Pin className="h-3.5 w-3.5" />{message.pinned ? 'Désépingler' : 'Épingler'}</button>{mine && <button onClick={() => beginEdit(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Pencil className="h-3.5 w-3.5" />Modifier</button>}{mine && <button onClick={() => removeMessage(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-rose-600 hover:bg-rose-50"><Trash2 className="h-3.5 w-3.5" />Supprimer</button>}</div>}
+                </div>
+                {mine && active?.group && <div className="mb-1 h-9 w-9 shrink-0 overflow-hidden rounded-full ring-2 ring-white shadow-sm">{message.senderAvatarURL || currentAvatar ? <img src={message.senderAvatarURL || currentAvatar} alt={senderName} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-emerald-100 to-teal-100 text-[10px] font-extrabold text-emerald-800">{senderName.slice(0, 2).toUpperCase()}</div>}</div>}
+              </div>
+            </React.Fragment>; }); }
           <div ref={bottomRef} />
         </div>
         <footer className="border-t border-slate-200 bg-white px-3 py-3 sm:px-4">{editingId && <div className="mb-2 flex items-center justify-between rounded-lg bg-amber-50 px-3 py-2 text-[10px] text-amber-800"><span className="flex items-center gap-1.5"><Pencil className="h-3 w-3" />Modification du message</span><button onClick={() => { setEditingId(null); setDraft(''); }}><X className="h-3.5 w-3.5" /></button></div>}<div className="flex items-end gap-2"><input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={e => void handleFile(e.target.files?.[0])} /><button type="button" disabled={!active || uploadingMedia} onClick={() => fileInputRef.current?.click()} title="Envoyer une image" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-40"><ImageIcon className="h-4 w-4" /></button><button type="button" disabled={!active || uploadingMedia} onClick={() => recording ? stopRecording() : void startRecording()} title={recording ? "Arrêter l’enregistrement" : "Enregistrer un vocal"} className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${recording ? 'border-rose-300 bg-rose-50 text-rose-600' : 'border-slate-200 text-slate-500 hover:bg-slate-50'} disabled:opacity-40`}>{recording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}</button><textarea value={draft} onChange={e => setDraft(e.target.value)} onPaste={handlePaste} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void sendMessage(); } }} disabled={!active || sending} placeholder={active ? 'Écrire un message…' : 'Sélectionnez une discussion…'} rows={1} className="max-h-28 min-h-10 flex-1 resize-y rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs leading-5 text-slate-700 outline-none focus:border-emerald-300 focus:bg-white disabled:opacity-50" /><button onClick={() => void sendMessage()} disabled={!active || !draft.trim() || sending || uploadingMedia} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#00a982] text-white shadow-sm hover:bg-[#008f72] disabled:opacity-40" title="Envoyer">{sending || uploadingMedia ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}</button></div><p className="mt-2 pl-2 text-[9px] text-slate-400">Entrée pour envoyer · Maj + Entrée pour un saut de ligne · Coller une image avec Ctrl+V</p></footer>
