@@ -168,7 +168,7 @@ export async function handleEconomicCalendar(request: Request): Promise<Response
 
   const cacheKey = new Request(
     new URL(
-      `/api/economic-calendar?source=date-range-v4&from=${from}&to=${to}`,
+      `/api/economic-calendar?source=date-range-v5&from=${from}&to=${to}`,
       request.url,
     ).toString(),
     { method: 'GET' },
@@ -283,8 +283,18 @@ export async function handleEconomicCalendar(request: Request): Promise<Response
           if (rangeEvents.length > 0) {
             scheduledEvents = rangeEvents;
             source = 'trading-economics-date-range';
+          } else {
+            // Never return this week's events as if they belonged to a historical
+            // or future range. An empty date-aware response is more accurate than
+            // showing unrelated dates and confusing the client.
+            scheduledEvents = [];
+            source = 'trading-economics-date-range-empty';
           }
+        } else {
+          throw new Error(`Trading Economics date-range HTTP ${rangeResponse.status}`);
         }
+      } else {
+        throw new Error('Trading Economics returned an invalid date-range response');
       }
     }
 
