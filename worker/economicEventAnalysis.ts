@@ -38,7 +38,7 @@ async function readFeed(url: string, sourceName: string): Promise<PublicSource[]
     });
     if (!response.ok) return [];
     const xml = await response.text();
-    const blocks = xml.match(/<(?:item|entry)\\b[\\s\\S]*?<\\/(?:item|entry)>/gi) || [];
+    const blocks = xml.match(/<(?:item|entry)\b[\s\S]*?<\/(?:item|entry)>/gi) || [];
     return blocks.slice(0, 12).map((block) => {
       const title = readTag(block, 'title') || sourceName;
       const linkMatch = block.match(/<link[^>]*href=["']([^"']+)["'][^>]*\/?\s*>/i);
@@ -55,9 +55,9 @@ async function readFeed(url: string, sourceName: string): Promise<PublicSource[]
 export async function handleEconomicEventAnalysis(request: Request, env: AnalysisEnv): Promise<Response> {
   if (request.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: {
-      Allow: 'POST, OPTIONS',
+      Allow: 'GET, POST, OPTIONS',
       'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
     }});
   }
