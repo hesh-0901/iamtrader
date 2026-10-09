@@ -57,8 +57,16 @@ service cloud.firestore {
         ? isAuthenticated()
           && request.resource.data.members == resource.data.members
           && request.resource.data.createdBy == resource.data.createdBy
-          && request.resource.data.diff(resource.data).affectedKeys()
-            .hasOnly(['lastMessage', 'updatedAt', 'title', 'memberNames'])
+          && request.resource.data.systemGroup == resource.data.systemGroup
+          && (
+            request.resource.data.diff(resource.data).affectedKeys()
+              .hasOnly(['lastMessage', 'updatedAt', 'memberNames'])
+            || (
+              isAdmin()
+              && request.resource.data.diff(resource.data).affectedKeys()
+                .hasOnly(['title', 'description', 'avatarURL', 'updatedAt'])
+            )
+          )
         : isConversationMember()
           && request.resource.data.members == resource.data.members
           && request.resource.data.createdBy == resource.data.createdBy
