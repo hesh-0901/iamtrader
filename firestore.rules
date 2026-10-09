@@ -93,6 +93,13 @@ service cloud.firestore {
         // The author may edit message content; admins may only backfill
         // display name/avatar metadata on legacy messages.
         allow update: if (
+          // Any conversation member may pin or unpin a message, like a group chat.
+          isMember()
+          && request.resource.data.senderId == resource.data.senderId
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['pinned'])
+          && request.resource.data.pinned is bool
+        ) || (
+          // Authors can edit their own message content and pin state.
           isMember()
           && resource.data.senderId == request.auth.uid
           && request.resource.data.senderId == resource.data.senderId
