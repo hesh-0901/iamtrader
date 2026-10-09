@@ -398,19 +398,19 @@ export function EconomicCalendarView() {
     setAnalysisError(null);
     setOnlineAnalysis(null);
 
-    fetch('/api/economic-calendar/analysis', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({
-        event: event.event,
-        currency: event.currency,
-        date: event.date,
-        time: event.time,
-        impact: event.impact,
-        actual: event.actual,
-        forecast: event.forecast,
-        previous: event.previous,
-      }),
+    const params = new URLSearchParams({
+      event: event.event,
+      currency: event.currency,
+      date: event.date,
+      time: event.time,
+      impact: event.impact,
+      actual: event.actual || '',
+      forecast: event.forecast || '',
+      previous: event.previous || '',
+    });
+    fetch(`/api/economic-calendar/analysis?${params.toString()}`, {
+      method: 'GET',
+      headers: { Accept: 'application/json' },
     })
       .then(async (response) => {
         const data = await response.json();
@@ -791,10 +791,19 @@ export function EconomicCalendarView() {
                       const event = selectedEvent;
                       setAnalysisLoading(true);
                       setAnalysisError(null);
-                      fetch('/api/economic-calendar/analysis', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-                        body: JSON.stringify({ event: event.event, currency: event.currency, date: event.date, time: event.time, impact: event.impact, actual: event.actual, forecast: event.forecast, previous: event.previous }),
+                      const params = new URLSearchParams({
+                        event: event.event,
+                        currency: event.currency,
+                        date: event.date,
+                        time: event.time,
+                        impact: event.impact,
+                        actual: event.actual || '',
+                        forecast: event.forecast || '',
+                        previous: event.previous || '',
+                      });
+                      fetch(`/api/economic-calendar/analysis?${params.toString()}`, {
+                        method: 'GET',
+                        headers: { Accept: 'application/json' },
                       }).then(async (response) => {
                         const data = await response.json();
                         if (!response.ok) throw new Error(data?.error || 'Analyse indisponible pour le moment.');
