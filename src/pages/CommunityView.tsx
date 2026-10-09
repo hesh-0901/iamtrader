@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { MessageCircle, CalendarDays, BookOpen, BarChart3, Activity } from 'lucide-react';
 import { EconomicCalendarView } from './EconomicCalendarView';
+import { ChatView } from './ChatView';
 
 type CommunityTab = 'chat' | 'calendar' | 'courses' | 'analysis' | 'sentiment';
 
@@ -37,9 +38,7 @@ export function CommunityView() {
 
       {activeTab === 'calendar' && <EconomicCalendarView />}
 
-      {activeTab === 'chat' && (
-        <Placeholder title="Chat" icon={MessageCircle} text="Un espace de discussion dédié aux traders IAMTRADER." />
-      )}
+      {activeTab === 'chat' && <ChatView />}
       {activeTab === 'courses' && (
         <Placeholder title="Cours" icon={BookOpen} text="Les cours et ressources pédagogiques seront regroupés ici." />
       )}
