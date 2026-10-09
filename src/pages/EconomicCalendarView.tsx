@@ -863,7 +863,7 @@ export function EconomicCalendarView() {
           rel="noreferrer"
           className="font-semibold hover:text-[#00a982]"
         >
-          Source Forex Factory
+          Source <a href="https://www.financecalendar.com/" target="_blank" rel="noreferrer" className="underline underline-offset-2">Finance Calendar</a> · données économiques
         </a>
       </div>
     </div>
