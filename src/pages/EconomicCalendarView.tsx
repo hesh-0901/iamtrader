@@ -857,7 +857,7 @@ export function EconomicCalendarView() {
 
       <div className="mx-auto flex w-full max-w-[1120px] items-center justify-between px-0.5 text-[9px] text-slate-400">
         <span>Calendrier économique · heures adaptées à votre fuseau ({userTimeZone})</span>
-        <span>Calendrier principal IAMTRADER · données fournies par le service externe en test ci-dessus</span>
+        <span>Calendrier économique IAMTRADER · horaires adaptés à votre fuseau local</span>
       </div>
     </div>
   );
