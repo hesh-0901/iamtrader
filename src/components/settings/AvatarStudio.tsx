@@ -132,7 +132,8 @@ export function AvatarStudio({ userProfile }: AvatarStudioProps) {
     setSaving(true);
     try {
       await updateUserAvatar(userProfile.uid, avatarUrl, config);
-      showToast('Votre avatar personnalisé est enregistré.', 'success');
+      showToast('Votre avatar personnalisé est enregistré. Actualisation du profil…', 'success');
+      window.setTimeout(() => window.location.reload(), 900);
     } catch (error: any) {
       showToast(error?.message || 'Impossible d’enregistrer votre avatar.', 'error');
     } finally {
