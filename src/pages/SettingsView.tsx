@@ -5,7 +5,7 @@ import {
   User, Shield, CreditCard, Sliders, Lock, Mail, Check, ArrowRight,
   Activity, CalendarDays, Clock3, WalletCards, Sparkles, ChevronRight, Phone, X, Crown, Target, Coins, TrendingUp, Star, Receipt
 } from 'lucide-react';
-import { resetUserPassword, updateTraderProfile } from '../services/auth';
+import { resetUserPassword, updateTraderProfile, updateUserAvatar } from '../services/auth';
 import { useToast } from '../components/common/Toast';
 import { TradingJournalSettings } from '../components/settings/TradingJournalSettings';
 import { PaymentHistory } from './PaymentHistory';
@@ -66,6 +66,17 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
   const [socialNetwork, setSocialNetwork] = useState('Instagram');
   const [socialUsername, setSocialUsername] = useState('');
   const [isProfileSaving, setIsProfileSaving] = useState(false);
+  const [selectedAvatar, setSelectedAvatar] = useState(userProfile?.avatarURL || userProfile?.photoURL || '');
+  const [isAvatarSaving, setIsAvatarSaving] = useState(false);
+  const avatarSeeds = ['Milo', 'Zuri', 'Kito', 'Nia', 'Tala', 'Amari', 'Lulu', 'Noah', 'Ayo', 'Mina', 'Kaya', 'Zola', 'Sami', 'Lina', 'Tomi', 'Kiki', 'Neo', 'Amani', 'Maya', 'Jabari', 'Tino', 'Imani', 'Leya', 'Kofi'];
+  const avatarUrl = (seed: string) => `https://api.dicebear.com/9.x/adventurer/svg?seed=${encodeURIComponent(seed)}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,d1f4d8,ffdfbf`;
+  const saveAvatar = async () => {
+    if (!userProfile?.uid || !selectedAvatar) return;
+    setIsAvatarSaving(true);
+    try { await updateUserAvatar(userProfile.uid, selectedAvatar); showToast('Avatar enregistré dans votre profil.', 'success'); }
+    catch (error: any) { showToast(error?.message || 'Impossible d’enregistrer l’avatar.', 'error'); }
+    finally { setIsAvatarSaving(false); }
+  };
   const [isEditingProfile, setIsEditingProfile] = useState(!userProfile?.traderProfile);
   const [defaultCurrency, setDefaultCurrency] = useState(userProfile?.settings?.defaultCurrency || 'USD');
   const [theme, setTheme] = useState<'light'>('light');
@@ -481,6 +492,29 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                   <button type="button" onClick={() => setIsEditingProfile(true)} className="self-start rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 sm:self-auto">Modifier</button>
                 </div>
               </div>
+              </section>
+
+              <section className="rounded-[24px] border border-[#dceee9] bg-gradient-to-br from-white via-[#fbfffd] to-[#f2f0ff] p-6 shadow-[0_14px_40px_rgba(15,23,42,0.05)]">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-full border-2 border-white bg-[#e5faf5] shadow ring-1 ring-[#ccefe5]">
+                      {selectedAvatar ? <img src={selectedAvatar} alt="Avatar choisi" className="h-full w-full object-cover" /> : <User className="h-5 w-5 text-[#00896e]" />}
+                    </div>
+                    <div><div className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#00a982]">Identité PipTalk</div><h3 className="mt-1 text-base font-black text-slate-950">Choisir un avatar</h3><p className="mt-1 text-[11px] text-slate-500">Cet avatar sera associé à votre profil IAMTRADER et réutilisé dans PipTalk.</p></div>
+                  </div>
+                  <button type="button" onClick={saveAvatar} disabled={!selectedAvatar || isAvatarSaving || selectedAvatar === (userProfile?.avatarURL || userProfile?.photoURL || '')} className="rounded-xl bg-[#00a982] px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#008f72] disabled:cursor-not-allowed disabled:opacity-50">{isAvatarSaving ? 'Enregistrement…' : 'Utiliser cet avatar'}</button>
+                </div>
+                <div className="mt-5 grid grid-cols-4 gap-3 sm:grid-cols-6 md:grid-cols-8">
+                  {avatarSeeds.map(seed => {
+                    const url = avatarUrl(seed);
+                    const chosen = selectedAvatar === url;
+                    return <button key={seed} type="button" onClick={() => setSelectedAvatar(url)} aria-label={`Choisir l’avatar ${seed}`} aria-pressed={chosen} className={`group rounded-2xl border-2 p-1.5 transition hover:-translate-y-0.5 hover:shadow-md ${chosen ? 'border-[#00a982] bg-[#e5faf5] shadow-sm' : 'border-slate-100 bg-white hover:border-slate-200'}`}>
+                      <img src={url} alt={`Avatar ${seed}`} loading="lazy" className="aspect-square w-full rounded-xl object-cover" />
+                      <span className={`mt-1 block truncate text-[9px] font-semibold ${chosen ? 'text-[#00896e]' : 'text-slate-500'}`}>{seed}</span>
+                    </button>;
+                  })}
+                </div>
+                <p className="mt-3 text-[10px] text-slate-400">Choisissez un personnage, puis confirmez pour enregistrer votre choix.</p>
               </section>
 
               <section className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-[0_14px_40px_rgba(15,23,42,0.05)]">
