@@ -322,6 +322,9 @@ export async function handleEconomicCalendar(request: Request): Promise<Response
       error: 'Le calendrier économique est temporairement indisponible.',
       source: 'calendar-providers',
       providerStatus: statusMatch ? Number(statusMatch[1]) : null,
+      diagnostic: message.includes('Trading Economics date-range HTTP')
+        ? 'La source historique Trading Economics a refusé la requête ou est indisponible. Vérifiez les accès API du fournisseur.'
+        : 'Les sources de calendrier n’ont pas fourni de réponse exploitable.',
     }, 502);
   }
 }
