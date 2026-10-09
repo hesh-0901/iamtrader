@@ -188,6 +188,7 @@ export async function handleEconomicCalendar(request: Request, env: CalendarEnv 
   try {
     let scheduledEvents: ReturnType<typeof normalizeEvent>[] = [];
     let source = 'forex-factory';
+    const providerDiagnostics: string[] = [];
 
     try {
       const upstream = await fetch(SOURCE_URL, {
@@ -267,7 +268,6 @@ export async function handleEconomicCalendar(request: Request, env: CalendarEnv 
     if (source === 'forex-factory' && from && to && (!requestedRangeHasEvents || requestedRangeOutsideWeeklyFeed)) {
       let dateRangeEvents: ReturnType<typeof normalizeEvent>[] = [];
       let dateRangeSource = '';
-      const providerDiagnostics: string[] = [];
 
       // Trading Economics guest access is not reliable in production; treat it as
       // an optional provider and continue to Finnhub when it is unavailable.
