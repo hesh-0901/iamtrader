@@ -39,6 +39,13 @@ function randomId() {
   return crypto.randomUUID().replace(/-/g, '').slice(0, 24);
 }
 
+function traderFullName(profile: Record<string, unknown>) {
+  const traderProfile = profile.traderProfile as { firstName?: unknown; lastName?: unknown } | undefined;
+  return [traderProfile?.firstName, traderProfile?.lastName]
+    .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
+    .join(' ');
+}
+
 function paymentReference(paymentId: string) {
   const code = paymentId.slice(-8).toUpperCase();
   return `IMAT-${code.slice(0, 4)} ${code.slice(4)}`;
@@ -182,7 +189,7 @@ async function createSasPayCheckout(
     uid: user.uid,
     email: user.email || profile.email || '',
     displayName: profile.displayName || user.email || '',
-    fullName: [profile.traderProfile?.firstName, profile.traderProfile?.lastName].filter(Boolean).join(' ') || '',
+    fullName: traderFullName(profile),
     plan: planKey,
     planName: plan.name,
     amount: Number(amount),
@@ -368,7 +375,7 @@ export async function handlePaymentRequest(request: Request, env: CinetPayEnv) {
       uid: user.uid,
       email: user.email || profile.email || '',
       displayName: profile.displayName || user.email || '',
-      fullName: [profile.traderProfile?.firstName, profile.traderProfile?.lastName].filter(Boolean).join(' ') || '',
+      fullName: traderFullName(profile),
       plan: planKey,
       planName: plan.name,
       amount: chargedAmount,
@@ -667,7 +674,7 @@ export async function handleSimulatedPaymentRequest(request: Request, env: Payme
       uid: user.uid,
       email: user.email || profile.email || '',
       displayName: profile.displayName || user.email || '',
-      fullName: [profile.traderProfile?.firstName, profile.traderProfile?.lastName].filter(Boolean).join(' ') || '',
+      fullName: traderFullName(profile),
       plan: planKey,
       planName: plan.name,
       amount: paymentAmounts.total,
@@ -704,7 +711,7 @@ export async function handleSimulatedPaymentRequest(request: Request, env: Payme
         paymentFee: paymentAmounts.fee,
         currency: plan.currency,
         status: 'processing',
-        reference: paymentReference(idempotencyKey, now),
+        reference: paymentReference(idempotencyKey),
         subscriptionAction: decision.action,
         activationStartAt: decision.start.toISOString(),
         activationExpiresAt: decision.expires.toISOString(),
