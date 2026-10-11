@@ -159,8 +159,8 @@ async function createSasPayCheckout(
   decision: any,
   payerName: string
 ) {
-  if (!env.SASPAY_API_KEY) {
-    return json({ success: false, message: 'SasPay n’est pas configuré côté serveur. Ajoutez le secret SASPAY_API_KEY au Worker.' }, 503);
+  if (!env.SASPAY_API_KEY || !env.SASPAY_WEBHOOK_SECRET) {
+    return json({ success: false, message: 'SasPay n’est pas entièrement configuré côté serveur. Ajoutez les secrets SASPAY_API_KEY et SASPAY_WEBHOOK_SECRET au Worker avant d’accepter des paiements.' }, 503);
   }
 
   const customerEmail = String(user.email || profile.email || '').trim();
