@@ -153,7 +153,7 @@ async function createSasPayCheckout(
   body: any,
   profile: any,
   planKey: keyof typeof PLANS,
-  plan: typeof PLANS[keyof typeof PLANS],
+  plan: (typeof PLANS)[keyof typeof PLANS],
   phone: string,
   amounts: ReturnType<typeof calculatePaymentAmounts>,
   decision: any,
@@ -161,6 +161,11 @@ async function createSasPayCheckout(
 ) {
   if (!env.SASPAY_API_KEY) {
     return json({ success: false, message: 'SasPay n’est pas configuré côté serveur. Ajoutez le secret SASPAY_API_KEY au Worker.' }, 503);
+  }
+
+  const customerEmail = String(user.email || profile.email || '').trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerEmail)) {
+    return json({ success: false, message: 'Une adresse e-mail valide est nécessaire pour créer une session SasPay.' }, 400);
   }
 
   const paymentId = randomId();
@@ -216,7 +221,7 @@ async function createSasPayCheckout(
       currency,
       description,
       country,
-      customer_email: user.email || profile.email,
+      customer_email: customerEmail,
       customer_name: payerName,
       customer_phone: '+243' + phone.slice(1),
       return_url: returnUrl,
