@@ -855,7 +855,8 @@ export async function handleSasPayWebhook(request: Request, env: SasPayEnv) {
       return json({ received: false, message: 'Impossible de vérifier la transaction SasPay.' }, 502);
     }
 
-    const description = String(transaction?.description || eventData?.description || '');
+    // Correlate only from SasPay's canonical transaction response, never webhook fields.
+    const description = String(transaction?.description || '');
     const match = description.match(/IAMTRADER-([a-f0-9]{24})-/i);
     if (!match) {
       console.error('SasPay transaction description has no IAMTRADER reference:', transactionId);
@@ -866,10 +867,18 @@ export async function handleSasPayWebhook(request: Request, env: SasPayEnv) {
     if (!payment || payment.provider !== 'SASPAY') return json({ received: false, message: 'Paiement IAMTRADER introuvable.' }, 404);
     if (payment.status === 'paid') return json({ received: true, duplicate: true });
 
-    const canonicalStatus = String(transaction?.status || eventData?.status || '').toUpperCase();
+    const canonicalStatus = String(transaction?.status || '').toUpperCase();
+    const eventMatchesStatus =
+      (event === 'transaction.success' && canonicalStatus === 'SUCCESS') ||
+      (event === 'transaction.failed' && ['FAILED', 'FAILURE'].includes(canonicalStatus)) ||
+      (event === 'transaction.cancelled' && ['CANCELLED', 'CANCELED', 'EXPIRED'].includes(canonicalStatus));
+    if (!eventMatchesStatus) {
+      // Do not let a stale/mismatched event mark a canonical successful payment as failed.
+      return json({ received: false, message: 'L’événement SasPay ne correspond pas au statut canonique.' }, 409);
+    }
     if (event === 'transaction.success') {
-      const amount = Number(transaction?.requested_amount ?? eventData?.amount);
-      const currency = String(transaction?.currency || eventData?.currency || '').toUpperCase();
+      const amount = Number(transaction?.requested_amount);
+      const currency = String(transaction?.currency || '').toUpperCase();
       if (canonicalStatus !== 'SUCCESS') return json({ received: false, message: 'Le statut canonique SasPay ne confirme pas le paiement.' }, 409);
       if (!Number.isFinite(amount) || Math.abs(amount - Number(payment.amount)) > 0.009) {
         await firestorePatch(env, 'payments/' + paymentId, {
@@ -923,11 +932,11 @@ export async function handleSasPayWebhook(request: Request, env: SasPayEnv) {
       return json({ received: true });
     }
 
-    if (['FAILED', 'CANCELLED', 'EXPIRED'].includes(canonicalStatus) || event !== 'transaction.success') {
+    if (['FAILED', 'FAILURE', 'CANCELLED', 'CANCELED', 'EXPIRED'].includes(canonicalStatus)) {
       await firestorePatch(env, 'payments/' + paymentId, {
         status: 'failed',
-        failureMessage: 'Paiement SasPay ' + (canonicalStatus || event.replace('transaction.', '')) + '.',
-        saspayStatus: canonicalStatus || event,
+        failureMessage: 'Paiement SasPay ' + canonicalStatus + '.',
+        saspayStatus: canonicalStatus,
         updatedAt: new Date().toISOString()
       }, ['status', 'failureMessage', 'saspayStatus', 'updatedAt']);
     }
