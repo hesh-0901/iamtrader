@@ -446,7 +446,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
 
           <section>
             <div className="mb-4 flex items-end justify-between gap-4">
-              <div><span className="text-[9px] font-bold uppercase tracking-[0.16em] text-violet-500">Changer de formule</span><h3 className="mt-1 text-lg font-black text-slate-950">Choisissez votre niveau d’accès</h3><p className="mt-1 text-xs text-slate-500">Paiement en mode test maintenant, puis branchement du prestataire réel lundi.</p></div>
+              <div><span className="text-[9px] font-bold uppercase tracking-[0.16em] text-violet-500">Changer de formule</span><h3 className="mt-1 text-lg font-black text-slate-950">Choisissez votre niveau d’accès</h3><p className="mt-1 text-xs text-slate-500">Choisissez votre prestataire de paiement et confirmez la transaction sur son checkout sécurisé.</p></div>
               <span className="hidden rounded-full bg-slate-100 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wider text-slate-500 sm:inline-flex">Paiement sécurisé</span>
             </div>
             <div className="grid gap-4 md:grid-cols-2">
@@ -671,8 +671,8 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
             </div>
             <div className="space-y-4 p-5">
               {paymentStatus === 'idle' && (<>
-                <div className="grid grid-cols-2 gap-1 rounded-xl bg-slate-100 p-1">
-                  <button type="button" onClick={() => setPaymentMode('simulation')} className={`rounded-lg px-3 py-2 text-[10px] font-bold transition ${paymentMode === 'simulation' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500'}`}>Simulation</button>
+                <div className={`grid ${import.meta.env.DEV && userProfile?.role === 'admin' ? 'grid-cols-2' : 'grid-cols-1'} gap-1 rounded-xl bg-slate-100 p-1`}>
+                  {import.meta.env.DEV && userProfile?.role === 'admin' && <button type="button" onClick={() => setPaymentMode('simulation')} className={`rounded-lg px-3 py-2 text-[10px] font-bold transition ${paymentMode === 'simulation' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500'}`}>Simulation (dev)</button>}
                   <button type="button" onClick={() => setPaymentMode('live')} className={`rounded-lg px-3 py-2 text-[10px] font-bold transition ${paymentMode === 'live' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-500'}`}>Paiement réel</button>
                 </div>
                 {paymentMode === 'simulation' && <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[10px] leading-4 text-amber-800"><b>Mode test.</b> Aucun argent n’est débité. La transaction sera néanmoins créée dans le registre de paiements et visible par l’administration.</div>}
