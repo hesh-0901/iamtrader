@@ -31,12 +31,13 @@ Copy the webhook signing secret when SasPay displays it and save it as `SASPAY_W
 
 ## Production validation checklist
 
-1. Confirm the API key is allowed to create payin checkout sessions.
-2. Add both secrets to the **production** Worker environment.
-3. Configure the webhook and send a test delivery from the SasPay dashboard.
-4. Test one low-value payment using the actual production flow.
-5. Verify the payment record, transaction amount/currency, and user subscription in Firestore.
-6. Verify that a failed/cancelled payment does not activate a subscription.
-7. Check Cloudflare Worker logs for webhook signature or transaction validation errors.
+1. Confirm `PAYMENT_SIMULATION_ENABLED=false` in the production Worker configuration. Simulation is only exposed in development builds to administrators.
+2. Confirm the API key is allowed to create payin checkout sessions.
+3. Add both secrets to the **production** Worker environment.
+4. Configure the webhook and send a test delivery from the SasPay dashboard.
+5. Test one low-value payment using the actual production flow.
+6. Verify the payment record, transaction amount/currency, and user subscription in Firestore.
+7. Verify that a failed/cancelled payment does not activate a subscription.
+8. Check Cloudflare Worker logs for webhook signature or transaction validation errors.
 
 Do not share API keys or webhook signing secrets in chat, commits, screenshots, or client-side code.
