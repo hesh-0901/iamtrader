@@ -74,6 +74,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
   const [dashboardMode, setDashboardMode] = useState<'standard' | 'focus' | 'analysis' | 'compact'>(() => (localStorage.getItem('iamtrader-dashboard-mode') as any) || 'standard');
   const [paymentPlan, setPaymentPlan] = useState<PaidPlan | null>(null);
   const [paymentMode, setPaymentMode] = useState<'simulation' | 'live'>('live');
+  const [paymentGateway, setPaymentGateway] = useState<'cinetpay' | 'saspay'>('cinetpay');
   const [paymentPhone, setPaymentPhone] = useState('');
   const [paymentProvider, setPaymentProvider] = useState('Airtel Money');
   const [paymentPayerName, setPaymentPayerName] = useState(userProfile?.displayName || [userProfile?.traderProfile?.firstName, userProfile?.traderProfile?.lastName].filter(Boolean).join(' ') || '');
@@ -241,13 +242,13 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
     localStorage.setItem('iamtrader-dashboard-mode', mode);
   };
 
-  const startPayment = (plan: PaidPlan) => { setPaymentPlan(plan); setPaymentMode('live'); setPaymentPhone(userProfile?.traderProfile?.whatsapp || ''); setPaymentProvider('Airtel Money'); setPaymentPayerName(userProfile?.displayName || [userProfile?.traderProfile?.firstName, userProfile?.traderProfile?.lastName].filter(Boolean).join(' ') || ''); setPaymentId(null); setPaymentStatus('idle'); setPaymentMessage(''); setPaymentAction(null); setPaymentActivationStart(null); setPaymentActivationExpires(null); };
+  const startPayment = (plan: PaidPlan) => { setPaymentPlan(plan); setPaymentMode('live'); setPaymentGateway('cinetpay'); setPaymentPhone(userProfile?.traderProfile?.whatsapp || ''); setPaymentProvider('Airtel Money'); setPaymentPayerName(userProfile?.displayName || [userProfile?.traderProfile?.firstName, userProfile?.traderProfile?.lastName].filter(Boolean).join(' ') || ''); setPaymentId(null); setPaymentStatus('idle'); setPaymentMessage(''); setPaymentAction(null); setPaymentActivationStart(null); setPaymentActivationExpires(null); };
 
   const submitPayment = async () => {
     if (!paymentPlan) return;
     setIsPaymentLoading(true); setPaymentMessage('');
     try {
-      const details: PaymentDetails = { phone: paymentPhone, paymentMethod: 'mobile_money', paymentProvider, payerName: paymentPayerName.trim() };
+      const details: PaymentDetails = { phone: paymentPhone, paymentMethod: 'mobile_money', paymentProvider: paymentMode === 'live' && paymentGateway === 'saspay' ? 'SasPay' : paymentProvider, payerName: paymentPayerName.trim() };
       const payment = paymentMode === 'simulation'
         ? await createSimulatedPayment(paymentPlan, details)
         : await createPayment(paymentPlan, details);
@@ -694,10 +695,10 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                         </div>
                         <div className="mt-3 flex items-end justify-between border-t border-slate-200 pt-3">
                           <span className="text-xs font-bold text-slate-700">Total à payer</span>
-                          <div className="text-right"><span className="block text-xl font-black text-slate-950">{amounts.cdfTotal.toLocaleString('fr-FR')} CDF</span><span className="text-[10px] font-semibold text-slate-400">≈ ${amounts.total.toFixed(2)}</span></div>
+                          <div className="text-right"><span className="block text-xl font-black text-slate-950">{paymentGateway === 'saspay' ? `$${amounts.total.toFixed(2)} USD` : `${amounts.cdfTotal.toLocaleString('fr-FR')} CDF`}</span><span className="text-[10px] font-semibold text-slate-400">{paymentGateway === 'saspay' ? 'Paiement traité en USD par SasPay' : `≈ $${amounts.total.toFixed(2)} USD`}</span></div>
                         </div>
                       </div>
-                      <p className="mt-3 text-[10px] leading-4 text-slate-400">Le montant CinetPay est débité en CDF. Le total de référence inclut les frais de paiement de 3 % et la conversion utilisée pour le checkout RDC.</p>
+                      <p className="mt-3 text-[10px] leading-4 text-slate-400">{paymentGateway === 'saspay' ? 'SasPay reçoit le montant en USD. Les frais éventuels appliqués par SasPay dépendent de la configuration de votre compte marchand.' : 'Le montant CinetPay est débité en CDF. Le total de référence inclut les frais de paiement de 3 % et la conversion utilisée pour le checkout RDC.'}</p>
                       <p className="mt-1 text-[10px] text-slate-500">L’activation intervient uniquement après confirmation serveur de la transaction.</p>
                       {(() => {
                         const currentExpiry = userProfile?.subscriptionExpiresAt ? new Date(userProfile.subscriptionExpiresAt) : null;
@@ -717,10 +718,11 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                   <div><label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Mode de paiement</label><select value="mobile_money" disabled className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-semibold text-slate-700"><option value="mobile_money">Mobile Money</option></select></div>
                 </div>
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <div><label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Opérateur</label><select value={paymentProvider} onChange={e => setPaymentProvider(e.target.value)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-900"><option>Airtel Money</option><option>M-Pesa</option><option>Orange Money</option><option>Africell Money</option></select></div>
-                  <div><label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Identifiant Mobile Money</label><div className="relative"><Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input value={paymentPhone} onChange={e => setPaymentPhone(e.target.value)} placeholder="0812345678" inputMode="tel" autoComplete="tel" className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-3 text-sm font-semibold text-slate-950 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100" /></div></div>
+                  <div><label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Prestataire de paiement</label><select value={paymentGateway} onChange={e => setPaymentGateway(e.target.value as 'cinetpay' | 'saspay')} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-900"><option value="cinetpay">CinetPay · Mobile Money RDC</option><option value="saspay">SasPay · Checkout sécurisé USD</option></select></div>
+                  {paymentGateway === 'cinetpay' && <div><label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Opérateur Mobile Money</label><select value={paymentProvider} onChange={e => setPaymentProvider(e.target.value)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-semibold text-slate-900"><option>Airtel Money</option><option>M-Pesa</option><option>Orange Money</option><option>Africell Money</option></select></div>}
+                  <div><label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Numéro Mobile Money</label><div className="relative"><Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><input value={paymentPhone} onChange={e => setPaymentPhone(e.target.value)} placeholder="0812345678" inputMode="tel" autoComplete="tel" className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-3 text-sm font-semibold text-slate-950 placeholder:text-slate-400 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-100" /></div></div>
                 </div>
-                <p className="text-[10px] leading-4 text-slate-400">Le nom, l’opérateur et l’identifiant seront associés à la transaction. Pour un paiement réel, utilisez les informations du compte Mobile Money qui recevra la demande.</p>
+                <p className="text-[10px] leading-4 text-slate-400">{paymentGateway === 'saspay' ? 'SasPay ouvrira une page de paiement sécurisée. Le numéro prérempli pourra être vérifié ou modifié selon les options proposées par SasPay.' : 'Le nom, l’opérateur et le numéro seront associés à la transaction CinetPay. Utilisez le numéro Mobile Money qui recevra la demande.'}</p>
                 <button onClick={submitPayment} disabled={isPaymentLoading || !paymentPhone.trim() || !paymentPayerName.trim() || !paymentProvider} className="w-full rounded-xl bg-indigo-600 px-4 py-3 text-xs font-bold text-white shadow-lg shadow-indigo-200 transition hover:bg-indigo-700 disabled:cursor-not-allowed disabled:opacity-50">{isPaymentLoading ? 'Initialisation du paiement…' : 'Continuer vers le paiement'}</button>
               </>)}
               {paymentStatus === 'processing' && (<div className="py-5 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-indigo-50 text-indigo-600"><div className="h-6 w-6 animate-spin rounded-full border-2 border-indigo-200 border-t-indigo-600" /></div><h4 className="mt-4 text-base font-black text-slate-950">Paiement en traitement</h4><p className="mt-2 text-xs leading-5 text-slate-500">{paymentMessage || 'Nous attendons la confirmation du prestataire.'}</p>
