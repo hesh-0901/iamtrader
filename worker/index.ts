@@ -1,7 +1,7 @@
 import { onRequest as handleAiChat } from '../functions/api/ai-chat';
 import { onRequest as handleChloeChat } from '../functions/api/chloe-chat';
 import { onRequestPost as handleContactReply } from '../functions/api/contact-reply';
-import { handlePaymentRequest, handlePaymentCallback, handleCinetPayNotification, handleSimulatedPaymentRequest, handleSimulatedPaymentConfirm } from './payments';
+import { handlePaymentRequest, handlePaymentCallback, handleCinetPayNotification, handleSasPayWebhook, handleSimulatedPaymentRequest, handleSimulatedPaymentConfirm } from './payments';
 import type { PaymentEnv } from './firebaseAdmin';
 import { handleSubscriptionStatus } from './subscriptionStatus';
 import { handlePaymentHistory } from './paymentHistory';
@@ -23,6 +23,9 @@ interface Env {
   CINETPAY_COUNTRY?: string;
   CINETPAY_PLUS_AMOUNT_CDF?: string;
   CINETPAY_COMMUNITY_AMOUNT_CDF?: string;
+  SASPAY_API_KEY?: string;
+  SASPAY_WEBHOOK_SECRET?: string;
+  SASPAY_COUNTRY?: string;
   FIREBASE_API_KEY?: string;
   FIREBASE_SERVICE_ACCOUNT_JSON?: string;
   PAYMENT_SIMULATION_ENABLED?: string;
@@ -91,6 +94,10 @@ export default {
 
     if (url.pathname === '/api/payments/cinetpay/notify') {
       return handleCinetPayNotification(request, env);
+    }
+
+    if (url.pathname === '/api/payments/saspay/webhook') {
+      return handleSasPayWebhook(request, env);
     }
 
     if (url.pathname === '/api/payments/callback') {
