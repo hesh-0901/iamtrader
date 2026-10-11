@@ -69,7 +69,13 @@ function publicPayment(payment: Record<string, unknown>) {
   };
 }
 
-type CinetPayEnv = PaymentEnv & {
+type SasPayEnv = PaymentEnv & {
+  SASPAY_API_KEY?: string;
+  SASPAY_WEBHOOK_SECRET?: string;
+  SASPAY_COUNTRY?: string;
+};
+
+type CinetPayEnv = SasPayEnv & {
   CINETPAY_API_KEY?: string;
   CINETPAY_API_PASSWORD?: string;
   CINETPAY_COUNTRY?: string;
@@ -139,6 +145,141 @@ async function cinetPayRequest(env: CinetPayEnv, path: string, init: RequestInit
   return fetch(`${cinetPayBaseUrl(env.CINETPAY_API_KEY)}${path}`, { ...init, headers });
 }
 
+
+async function createSasPayCheckout(
+  request: Request,
+  env: SasPayEnv,
+  user: any,
+  body: any,
+  profile: any,
+  planKey: keyof typeof PLANS,
+  plan: typeof PLANS[keyof typeof PLANS],
+  phone: string,
+  amounts: ReturnType<typeof calculatePaymentAmounts>,
+  decision: any,
+  payerName: string
+) {
+  if (!env.SASPAY_API_KEY) {
+    return json({ success: false, message: 'SasPay n’est pas configuré côté serveur. Ajoutez le secret SASPAY_API_KEY au Worker.' }, 503);
+  }
+
+  const paymentId = randomId();
+  const now = new Date().toISOString();
+  const amount = amounts.total.toFixed(2);
+  const currency = 'USD';
+  const country = String(env.SASPAY_COUNTRY || 'XC').trim().toUpperCase();
+  if (!['XC', 'XX'].includes(country)) {
+    return json({ success: false, message: 'Pour un paiement IAMTRADER en USD depuis la RDC, SASPAY_COUNTRY doit être XC (RDC/USD) ou XX (International/USD).' }, 503);
+  }
+
+  await firestoreCreate(env, 'payments', paymentId, {
+    id: paymentId,
+    uid: user.uid,
+    email: user.email || profile.email || '',
+    displayName: profile.displayName || user.email || '',
+    fullName: [profile.traderProfile?.firstName, profile.traderProfile?.lastName].filter(Boolean).join(' ') || '',
+    plan: planKey,
+    planName: plan.name,
+    amount: Number(amount),
+    amountUsd: Number(amount),
+    baseAmount: amounts.baseAmount,
+    paymentFee: amounts.fee,
+    paymentFeeRate: PAYMENT_FEE_RATE,
+    currency,
+    phone,
+    payerName,
+    paymentMethod: String(body.paymentMethod || 'mobile_money'),
+    paymentProvider: 'SasPay',
+    provider: 'SASPAY',
+    subscriptionAction: decision.action,
+    currentPlanAtPurchase: decision.currentPlan,
+    activationStartAt: decision.start.toISOString(),
+    activationExpiresAt: decision.expires.toISOString(),
+    status: 'initiated',
+    reference: paymentId,
+    transactionReference: paymentReference(paymentId),
+    invoiceNumber: invoiceNumber(paymentId, now),
+    createdAt: now
+  });
+
+  const origin = new URL(request.url).origin;
+  const returnUrl = new URL('/?payment=' + encodeURIComponent(paymentId), origin).toString();
+  const description = 'IAMTRADER-' + paymentId + '-' + plan.name + ' subscription';
+  const response = await fetch('https://api.saspay.me/api/v1/checkout-sessions/', {
+    method: 'POST',
+    headers: {
+      Authorization: 'Bearer ' + env.SASPAY_API_KEY,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      amount,
+      currency,
+      description,
+      country,
+      customer_email: user.email || profile.email,
+      customer_name: payerName,
+      customer_phone: '+243' + phone.slice(1),
+      return_url: returnUrl,
+      metadata: { iamtrader_payment_id: paymentId, plan: planKey }
+    })
+  });
+
+  const raw = await response.text();
+  let result: any = {};
+  try {
+    result = raw ? JSON.parse(raw) : {};
+  } catch {
+    result = {};
+  }
+
+  const data = result?.data || result;
+  const checkoutUrl = data?.checkout_url || data?.checkoutUrl;
+  const checkoutId = data?.id;
+  if (!response.ok || !checkoutUrl || !checkoutId) {
+    await firestorePatch(env, 'payments/' + paymentId, {
+      status: 'failed',
+      failureMessage: result?.message || result?.detail || 'SasPay a refusé la création de la session.',
+      saspayHttpStatus: response.status,
+      updatedAt: new Date().toISOString()
+    }, ['status', 'failureMessage', 'saspayHttpStatus', 'updatedAt']);
+    console.error('SasPay checkout initialization failed:', response.status, raw.slice(0, 500));
+    return json({
+      success: false,
+      message: result?.message || result?.detail || 'Impossible d’initier le paiement SasPay. Vérifiez que votre clé API autorise les paiements entrants (payin).'
+    }, 502);
+  }
+
+  await firestorePatch(env, 'payments/' + paymentId, {
+    status: 'processing',
+    provider: 'SASPAY',
+    saspayCheckoutId: String(checkoutId),
+    saspayCheckoutUrl: String(checkoutUrl),
+    saspayStatus: String(data?.status || 'PENDING'),
+    updatedAt: new Date().toISOString()
+  }, ['status', 'provider', 'saspayCheckoutId', 'saspayCheckoutUrl', 'saspayStatus', 'updatedAt']);
+
+  return json({
+    success: true,
+    payment: {
+      id: paymentId,
+      plan: planKey,
+      planName: plan.name,
+      amount: Number(amount),
+      amountUsd: Number(amount),
+      baseAmount: amounts.baseAmount,
+      paymentFee: amounts.fee,
+      currency,
+      status: 'processing',
+      reference: paymentReference(paymentId),
+      paymentUrl: checkoutUrl,
+      subscriptionAction: decision.action,
+      activationStartAt: decision.start.toISOString(),
+      activationExpiresAt: decision.expires.toISOString(),
+      message: 'Session SasPay créée. Vous allez être redirigé vers le paiement sécurisé.'
+    }
+  });
+}
+
 export async function handlePaymentRequest(request: Request, env: CinetPayEnv) {
   let paymentStage = 'start';
   if (request.method === 'GET') {
@@ -177,10 +318,11 @@ export async function handlePaymentRequest(request: Request, env: CinetPayEnv) {
     const plan = planKey ? PLANS[planKey] : undefined;
     const phone = normalizePhone(body.phone);
     const amounts = plan ? calculatePaymentAmounts(plan.amount) : undefined;
+    const isSasPay = String(body.paymentProvider || '').trim().toLowerCase() === 'saspay';
 
     if (!plan || !planKey) return json({ success: false, message: 'Formule invalide.' }, 400);
     if (!phone) return json({ success: false, message: 'Numéro Mobile Money invalide. Utilisez un numéro RDC à 10 chiffres.' }, 400);
-    if (!env.CINETPAY_API_KEY || !env.CINETPAY_API_PASSWORD) {
+    if (!isSasPay && (!env.CINETPAY_API_KEY || !env.CINETPAY_API_PASSWORD)) {
       const configState = [
         'API_KEY=' + (env.CINETPAY_API_KEY ? 'OK' : 'MISSING'),
         'API_PASSWORD=' + (env.CINETPAY_API_PASSWORD ? 'OK' : 'MISSING'),
@@ -192,7 +334,7 @@ export async function handlePaymentRequest(request: Request, env: CinetPayEnv) {
         message: 'Configuration CinetPay serveur incomplète (' + configState + '). Vérifiez les secrets du Worker de production.'
       }, 503);
     }
-    if ((env.CINETPAY_COUNTRY || 'CD') !== 'CD') {
+    if (!isSasPay && (env.CINETPAY_COUNTRY || 'CD') !== 'CD') {
       return json({ success: false, message: 'La configuration CinetPay doit utiliser le pays CD (configuration actuelle: ' + env.CINETPAY_COUNTRY + ').' }, 503);
     }
 
@@ -206,6 +348,9 @@ export async function handlePaymentRequest(request: Request, env: CinetPayEnv) {
 
     const payerName = String(body.payerName || profile.displayName || user.email || '').trim();
     if (!payerName || !amounts) return json({ success: false, message: 'Données de paiement invalides.' }, 400);
+    if (isSasPay) {
+      return await createSasPayCheckout(request, env, user, body, profile, planKey, plan, phone, amounts, decision, payerName);
+    }
 
     const chargedAmount = cinetPayAmount(env, planKey);
     const currency = cinetPayCurrency(env.CINETPAY_COUNTRY || 'CD');
@@ -622,5 +767,161 @@ export async function handleSimulatedPaymentConfirm(request: Request, env: Payme
   } catch (error) {
     console.error('Simulated payment confirmation error:', error);
     return json({ success: false, message: error instanceof Error ? error.message : 'Impossible de confirmer la simulation.' }, 500);
+  }
+}
+
+
+async function verifySasPayWebhookSignature(rawBody: string, signature: string, timestamp: string, secret: string) {
+  if (!/^\d{1,12}$/.test(timestamp) || !/^[a-f0-9]{64}$/i.test(signature)) return false;
+  const timestampNumber = Number(timestamp);
+  if (!Number.isSafeInteger(timestampNumber) || Math.abs(Math.floor(Date.now() / 1000) - timestampNumber) > 300) return false;
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const signed = timestamp + '.' + rawBody;
+  const digest = new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(signed)));
+  const expected = Array.from(digest, byte => byte.toString(16).padStart(2, '0')).join('');
+  if (expected.length !== signature.length) return false;
+  let difference = 0;
+  for (let index = 0; index < expected.length; index += 1) {
+    difference |= expected.charCodeAt(index) ^ signature.toLowerCase().charCodeAt(index);
+  }
+  return difference === 0;
+}
+
+export async function handleSasPayWebhook(request: Request, env: SasPayEnv) {
+  if (request.method !== 'POST') return json({ received: false, message: 'Méthode non autorisée.' }, 405);
+  if (!env.SASPAY_WEBHOOK_SECRET || !env.SASPAY_API_KEY) {
+    console.error('SasPay webhook rejected: webhook secret or API key is missing.');
+    return json({ received: false, message: 'Configuration SasPay incomplète.' }, 503);
+  }
+
+  try {
+    const rawBody = await request.text();
+    const signature = request.headers.get('X-Webhook-Signature') || '';
+    const timestamp = request.headers.get('X-Webhook-Timestamp') || '';
+    const headerEvent = request.headers.get('X-Webhook-Event') || '';
+    const valid = await verifySasPayWebhookSignature(rawBody, signature, timestamp, env.SASPAY_WEBHOOK_SECRET);
+    if (!valid) return json({ received: false, message: 'Signature SasPay invalide ou expirée.' }, 401);
+
+    let payload: any;
+    try {
+      payload = JSON.parse(rawBody);
+    } catch {
+      return json({ received: false, message: 'Corps JSON invalide.' }, 400);
+    }
+    const event = String(payload?.event || '');
+    const eventData = payload?.data || {};
+    if (!event || event !== headerEvent) return json({ received: false, message: 'Type d’événement SasPay incohérent.' }, 400);
+    if (!['transaction.success', 'transaction.failed', 'transaction.cancelled'].includes(event)) {
+      return json({ received: true, ignored: true });
+    }
+
+    const transactionId = String(eventData?.id || '').trim();
+    if (!/^[a-f0-9-]{20,}$/i.test(transactionId)) {
+      return json({ received: false, message: 'Identifiant de transaction SasPay invalide.' }, 400);
+    }
+
+    // Always verify against SasPay's canonical transaction record, not only the webhook payload.
+    const transactionResponse = await fetch('https://api.saspay.me/api/v1/transactions/' + encodeURIComponent(transactionId) + '/', {
+      headers: { Authorization: 'Bearer ' + env.SASPAY_API_KEY }
+    });
+    const transactionRaw = await transactionResponse.text();
+    let transactionResult: any = {};
+    try {
+      transactionResult = transactionRaw ? JSON.parse(transactionRaw) : {};
+    } catch {
+      transactionResult = {};
+    }
+    const transaction = transactionResult?.data || transactionResult;
+    if (!transactionResponse.ok || String(transaction?.id || '') !== transactionId) {
+      console.error('SasPay canonical transaction lookup failed:', transactionResponse.status, transactionRaw.slice(0, 300));
+      return json({ received: false, message: 'Impossible de vérifier la transaction SasPay.' }, 502);
+    }
+
+    const description = String(transaction?.description || eventData?.description || '');
+    const match = description.match(/IAMTRADER-([a-f0-9]{24})-/i);
+    if (!match) {
+      console.error('SasPay transaction description has no IAMTRADER reference:', transactionId);
+      return json({ received: false, message: 'Référence IAMTRADER absente de la transaction.' }, 400);
+    }
+    const paymentId = match[1].toLowerCase();
+    const payment = await firestoreGet(env, 'payments/' + paymentId);
+    if (!payment || payment.provider !== 'SASPAY') return json({ received: false, message: 'Paiement IAMTRADER introuvable.' }, 404);
+    if (payment.status === 'paid') return json({ received: true, duplicate: true });
+
+    const canonicalStatus = String(transaction?.status || eventData?.status || '').toUpperCase();
+    if (event === 'transaction.success') {
+      const amount = Number(transaction?.requested_amount ?? eventData?.amount);
+      const currency = String(transaction?.currency || eventData?.currency || '').toUpperCase();
+      if (canonicalStatus !== 'SUCCESS') return json({ received: false, message: 'Le statut canonique SasPay ne confirme pas le paiement.' }, 409);
+      if (!Number.isFinite(amount) || Math.abs(amount - Number(payment.amount)) > 0.009) {
+        await firestorePatch(env, 'payments/' + paymentId, {
+          status: 'failed',
+          failureMessage: 'Montant SasPay différent du montant attendu.',
+          updatedAt: new Date().toISOString()
+        }, ['status', 'failureMessage', 'updatedAt']);
+        return json({ received: true, rejected: 'amount_mismatch' });
+      }
+      if (currency !== String(payment.currency || '').toUpperCase()) {
+        await firestorePatch(env, 'payments/' + paymentId, {
+          status: 'failed',
+          failureMessage: 'Devise SasPay différente de la commande.',
+          updatedAt: new Date().toISOString()
+        }, ['status', 'failureMessage', 'updatedAt']);
+        return json({ received: true, rejected: 'currency_mismatch' });
+      }
+
+      const planKey = payment.plan as keyof typeof PLANS;
+      const profile = await firestoreGet(env, 'users/' + encodeURIComponent(String(payment.uid)));
+      if (!PLANS[planKey] || !profile) return json({ received: false, message: 'Profil ou formule introuvable.' }, 404);
+      const paidAt = String(transaction?.updated_at || eventData?.paid_at || new Date().toISOString());
+      const decision = decideSubscription(profile, planKey, new Date(paidAt));
+      if ('error' in decision) return json({ received: false, message: decision.error }, 409);
+
+      await firestorePatch(env, 'payments/' + paymentId, {
+        status: 'paid',
+        paidAt,
+        provider: 'SASPAY',
+        saspayStatus: 'SUCCESS',
+        saspayTransactionId: transactionId,
+        saspayTransactionReference: String(transaction?.reference || eventData?.reference || ''),
+        saspayChargedAmount: Number(transaction?.debited_amount ?? eventData?.charged ?? amount),
+        saspayNetAmount: Number(transaction?.net_amount ?? eventData?.net_amount ?? amount),
+        updatedAt: paidAt
+      }, ['status', 'paidAt', 'provider', 'saspayStatus', 'saspayTransactionId', 'saspayTransactionReference', 'saspayChargedAmount', 'saspayNetAmount', 'updatedAt']);
+
+      await firestorePatch(
+        env,
+        'users/' + encodeURIComponent(String(payment.uid)),
+        subscriptionFields(
+          profile,
+          planKey,
+          (payment.subscriptionAction as SubscriptionAction) || decision.action,
+          decision.start.toISOString(),
+          decision.expires.toISOString(),
+          paidAt
+        ),
+        ['plan', 'paymentDate', 'subscriptionStartAt', 'subscriptionExpiresAt', 'subscriptionStatus', 'paymentStatus', 'planChangeConfirmedAt', 'pendingPlan', 'planChangeRequestedAt', 'scheduledPlan', 'scheduledStartAt', 'scheduledExpiresAt', 'updatedAt']
+      );
+      return json({ received: true });
+    }
+
+    if (['FAILED', 'CANCELLED', 'EXPIRED'].includes(canonicalStatus) || event !== 'transaction.success') {
+      await firestorePatch(env, 'payments/' + paymentId, {
+        status: 'failed',
+        failureMessage: 'Paiement SasPay ' + (canonicalStatus || event.replace('transaction.', '')) + '.',
+        saspayStatus: canonicalStatus || event,
+        updatedAt: new Date().toISOString()
+      }, ['status', 'failureMessage', 'saspayStatus', 'updatedAt']);
+    }
+    return json({ received: true });
+  } catch (error) {
+    console.error('SasPay webhook processing error:', error);
+    return json({ received: false }, 500);
   }
 }
