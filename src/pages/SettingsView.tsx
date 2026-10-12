@@ -690,7 +690,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                 </div>
               ) : null}
               {paymentStatus === 'idle' && (<>
-                <div className={`grid ${import.meta.env.DEV && userProfile?.role === 'admin' ? 'grid-cols-2' : 'grid-cols-1'} gap-1 rounded-xl bg-slate-100 p-1`}>
+                <div className={'grid ' + (import.meta.env.DEV && userProfile?.role === 'admin' ? 'grid-cols-2' : 'grid-cols-1') + ' gap-1 rounded-xl bg-slate-100 p-1'}>
                   {import.meta.env.DEV && userProfile?.role === 'admin' && <button type="button" onClick={() => setPaymentMode('simulation')} className={`rounded-lg px-3 py-2 text-[10px] font-bold transition ${paymentMode === 'simulation' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500'}`}>Simulation (dev)</button>}
                   <button type="button" onClick={() => setPaymentMode('live')} className={`rounded-lg px-3 py-2 text-[10px] font-bold transition ${paymentMode === 'live' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-500'}`}>Paiement réel</button>
                 </div>
