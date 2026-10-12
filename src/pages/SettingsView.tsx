@@ -79,6 +79,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
   const [paymentProvider, setPaymentProvider] = useState('Airtel Money');
   const [paymentPayerName, setPaymentPayerName] = useState(userProfile?.displayName || [userProfile?.traderProfile?.firstName, userProfile?.traderProfile?.lastName].filter(Boolean).join(' ') || '');
   const [paymentId, setPaymentId] = useState<string | null>(null);
+  const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<'idle' | 'processing' | 'paid' | 'failed'>('idle');
   const [paymentMessage, setPaymentMessage] = useState('');
   const [paymentAction, setPaymentAction] = useState<'initial' | 'renewal' | 'upgrade' | null>(null);
@@ -242,7 +243,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
     localStorage.setItem('iamtrader-dashboard-mode', mode);
   };
 
-  const startPayment = (plan: PaidPlan) => { setPaymentPlan(plan); setPaymentMode('live'); setPaymentGateway('cinetpay'); setPaymentPhone(userProfile?.traderProfile?.whatsapp || ''); setPaymentProvider('Airtel Money'); setPaymentPayerName(userProfile?.displayName || [userProfile?.traderProfile?.firstName, userProfile?.traderProfile?.lastName].filter(Boolean).join(' ') || ''); setPaymentId(null); setPaymentStatus('idle'); setPaymentMessage(''); setPaymentAction(null); setPaymentActivationStart(null); setPaymentActivationExpires(null); };
+  const startPayment = (plan: PaidPlan) => { setPaymentPlan(plan); setPaymentMode('live'); setPaymentGateway('cinetpay'); setPaymentPhone(userProfile?.traderProfile?.whatsapp || ''); setPaymentProvider('Airtel Money'); setPaymentUrl(null); setPaymentPayerName(userProfile?.displayName || [userProfile?.traderProfile?.firstName, userProfile?.traderProfile?.lastName].filter(Boolean).join(' ') || ''); setPaymentId(null); setPaymentStatus('idle'); setPaymentMessage(''); setPaymentAction(null); setPaymentActivationStart(null); setPaymentActivationExpires(null); };
 
   const submitPayment = async () => {
     if (!paymentPlan) return;
@@ -253,12 +254,13 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
         ? await createSimulatedPayment(paymentPlan, details)
         : await createPayment(paymentPlan, details);
       setPaymentId(payment.id);
+      setPaymentUrl(payment.paymentUrl || null);
       setPaymentAction(payment.subscriptionAction || null);
       setPaymentActivationStart(payment.activationStartAt || null);
       setPaymentActivationExpires(payment.activationExpiresAt || null);
       setPaymentStatus('processing');
       setPaymentMessage(payment.message || 'Paiement en cours de traitement.');
-      if (paymentMode === 'live' && payment.paymentUrl) window.location.assign(payment.paymentUrl);
+      if (paymentMode === 'live' && payment.paymentUrl && paymentGateway !== 'saspay') window.location.assign(payment.paymentUrl);
     } catch (error: any) {
       setPaymentStatus('failed');
       setPaymentMessage(error?.message || 'Impossible d’initier le paiement.');
@@ -664,12 +666,29 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
 
       {paymentPlan && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto bg-[#07111f]/70 p-3 backdrop-blur-md sm:p-6">
-          <div className="my-auto w-full max-w-2xl overflow-hidden rounded-3xl border border-white/70 bg-white shadow-[0_32px_100px_rgba(2,12,27,.36)] ring-1 ring-black/5">
+          <div className={`my-auto w-full ${paymentStatus === 'processing' && paymentGateway === 'saspay' && paymentUrl ? 'max-w-6xl' : 'max-w-2xl'} overflow-hidden rounded-3xl border border-white/70 bg-white shadow-[0_32px_100px_rgba(2,12,27,.36)] ring-1 ring-black/5">
             <div className="relative flex items-start justify-between gap-4 border-b border-slate-100 bg-white px-5 py-5 sm:px-7 sm:py-6">
               <div className="flex min-w-0 items-start gap-3"><div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100"><Shield className="h-5 w-5" /></div><div className="min-w-0"><div className="text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-700">Paiement sécurisé</div><h3 className="mt-1 text-xl font-extrabold tracking-tight text-slate-950 sm:text-2xl">{paymentPlan === 'pro' ? 'Passer à Plus' : 'Activer Community'}</h3><p className="mt-1 max-w-lg text-xs leading-5 text-slate-500">Vérifiez votre abonnement avant de continuer. Vous finaliserez le paiement sur la page sécurisée de notre prestataire.</p></div></div>
               <button onClick={() => setPaymentPlan(null)} className="shrink-0 rounded-xl border border-slate-200 bg-white p-2.5 text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900" aria-label="Fermer"><X className="h-4 w-4" /></button>
             </div>
             <div className="space-y-5 p-5 sm:p-7">
+              {paymentStatus === 'processing' && paymentGateway === 'saspay' && paymentUrl ? (
+                <div className="grid gap-5 lg:grid-cols-[0.8fr_1.2fr]">
+                  <section className="rounded-2xl bg-slate-50 p-5 ring-1 ring-slate-200">
+                    <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-700">Récapitulatif</div>
+                    <h4 className="mt-2 text-lg font-black text-slate-950">{paymentPlan === 'pro' ? 'Abonnement Plus' : 'Abonnement Community'}</h4>
+                    <p className="mt-1 text-xs text-slate-500">La transaction est sécurisée et traitée par SasPay.</p>
+                    <div className="mt-5 flex items-end justify-between border-t border-slate-200 pt-4"><span className="text-sm font-semibold text-slate-600">Total prévu</span><strong className="text-2xl font-black text-slate-950">${getPaymentAmounts(paymentPlan!).total.toFixed(2)} USD</strong></div>
+                    <p className="mt-3 text-xs leading-5 text-slate-500">Ne fermez pas cette fenêtre avant la fin du paiement. L’abonnement sera activé uniquement après confirmation serveur.</p>
+                    <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-xs text-emerald-900">{paymentMessage || 'En attente de confirmation de SasPay…'}</div>
+                  </section>
+                  <section className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                    <div className="flex items-center gap-2 border-b border-slate-100 px-4 py-3 text-sm font-bold text-slate-800"><Lock className="h-4 w-4 text-emerald-700" /> Paiement SasPay sécurisé</div>
+                    <iframe title="Paiement sécurisé SasPay" src={paymentUrl} className="h-[68vh] min-h-[520px] w-full bg-white" allow="payment *" referrerPolicy="strict-origin-when-cross-origin" />
+                    <div className="border-t border-slate-100 px-4 py-2 text-[10px] text-slate-500">Si le paiement ne s’affiche pas, <a href={paymentUrl} target="_blank" rel="noreferrer" className="font-semibold text-emerald-700 underline">ouvrez le checkout SasPay dans un nouvel onglet</a>.</div>
+                  </section>
+                </div>
+              ) : null}
               {paymentStatus === 'idle' && (<>
                 <div className={`grid ${import.meta.env.DEV && userProfile?.role === 'admin' ? 'grid-cols-2' : 'grid-cols-1'} gap-1 rounded-xl bg-slate-100 p-1`}>
                   {import.meta.env.DEV && userProfile?.role === 'admin' && <button type="button" onClick={() => setPaymentMode('simulation')} className={`rounded-lg px-3 py-2 text-[10px] font-bold transition ${paymentMode === 'simulation' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500'}`}>Simulation (dev)</button>}
