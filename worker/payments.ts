@@ -334,8 +334,68 @@ export async function handlePaymentRequest(request: Request, env: CinetPayEnv) {
       if (!id || !/^(?:[a-f0-9]{24}|[a-f0-9]{64})$/.test(id)) {
         return json({ success: false, message: 'Référence de paiement invalide.' }, 400);
       }
-      const payment = await firestoreGet(env, `payments/${id}`);
+      let payment = await firestoreGet(env, `payments/${id}`);
       if (!payment || payment.uid !== user.uid) return json({ success: false, message: 'Paiement introuvable.' }, 404);
+
+      // Reconcile Softpay status during frontend polling, in case the webhook is delayed.
+      if (payment.provider === 'SASPAY' && payment.status === 'processing' && payment.saspayPaymentId && env.SASPAY_API_KEY) {
+        const verifyResponse = await fetch('https://api.saspay.me/api/v1/payments/' + encodeURIComponent(String(payment.saspayPaymentId)) + '/verify/', {
+          method: 'GET',
+          headers: { Authorization: 'Bearer ' + env.SASPAY_API_KEY }
+        });
+        const verifyRaw = await verifyResponse.text();
+        let verifyResult: any = {};
+        try { verifyResult = verifyRaw ? JSON.parse(verifyRaw) : {}; } catch { verifyResult = {}; }
+        const canonical = verifyResult?.data || verifyResult;
+        if (verifyResponse.ok && String(canonical?.payment_id || '') === String(payment.saspayPaymentId)) {
+          const canonicalStatus = String(canonical?.status || '').toUpperCase();
+          if (canonicalStatus === 'SUCCESS') {
+            const amountMatches = amountsMatchToCents(Number(canonical?.amount), Number(payment.amount));
+            const currencyMatches = String(canonical?.currency || '').toUpperCase() === String(payment.currency || '').toUpperCase();
+            const expectedReference = 'IAM-SUB-' + id;
+            if (!amountMatches || !currencyMatches || String(canonical?.reference || '') !== expectedReference) {
+              await firestorePatch(env, 'payments/' + id, {
+                status: 'failed',
+                failureMessage: !amountMatches ? 'Montant SasPay différent du montant attendu.' : !currencyMatches ? 'Devise SasPay différente de la commande.' : 'Référence SasPay différente de la commande.',
+                saspayStatus: canonicalStatus,
+                updatedAt: new Date().toISOString()
+              }, ['status', 'failureMessage', 'saspayStatus', 'updatedAt']);
+            } else {
+              const profile = await firestoreGet(env, `users/${encodeURIComponent(String(payment.uid))}`);
+              const planKey = payment.plan as keyof typeof PLANS;
+              if (profile && PLANS[planKey]) {
+                const paidAt = String(canonical?.paid_at || new Date().toISOString());
+                const action = payment.subscriptionAction as SubscriptionAction;
+                const startAt = String(payment.activationStartAt || '');
+                const expiresAt = String(payment.activationExpiresAt || '');
+                const validActivation = ['initial', 'renewal', 'upgrade'].includes(String(action)) && Number.isFinite(new Date(startAt).getTime()) && Number.isFinite(new Date(expiresAt).getTime());
+                const decision = validActivation ? null : decideSubscription(profile, planKey, new Date(paidAt));
+                if (!decision || !('error' in decision)) {
+                  await firestorePatch(env, 'payments/' + id, {
+                    status: 'paid', paidAt, saspayStatus: 'SUCCESS',
+                    saspayTransactionId: String(canonical?.transaction_id || ''),
+                    updatedAt: paidAt
+                  }, ['status', 'paidAt', 'saspayStatus', 'saspayTransactionId', 'updatedAt']);
+                  await firestorePatch(env, 'users/' + encodeURIComponent(String(payment.uid)), subscriptionFields(
+                    profile, planKey, validActivation ? action : decision!.action,
+                    validActivation ? new Date(startAt).toISOString() : decision!.start.toISOString(),
+                    validActivation ? new Date(expiresAt).toISOString() : decision!.expires.toISOString(),
+                    paidAt
+                  ), ['plan', 'paymentDate', 'subscriptionStartAt', 'subscriptionExpiresAt', 'subscriptionStatus', 'paymentStatus', 'planChangeConfirmedAt', 'pendingPlan', 'planChangeRequestedAt', 'scheduledPlan', 'scheduledStartAt', 'scheduledExpiresAt', 'updatedAt']);
+                }
+              }
+            }
+          } else if (['FAILED', 'EXPIRED'].includes(canonicalStatus)) {
+            await firestorePatch(env, 'payments/' + id, {
+              status: 'failed',
+              failureMessage: 'Paiement SasPay ' + canonicalStatus + '.',
+              saspayStatus: canonicalStatus,
+              updatedAt: new Date().toISOString()
+            }, ['status', 'failureMessage', 'saspayStatus', 'updatedAt']);
+          }
+          payment = await firestoreGet(env, `payments/${id}`) || payment;
+        }
+      }
       return json({ success: true, payment: publicPayment(payment) });
     } catch {
       return json({ success: false, message: 'Impossible de consulter le paiement.' }, 500);
