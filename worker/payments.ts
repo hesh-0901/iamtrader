@@ -234,7 +234,7 @@ async function createSasPayCheckout(
       country,
       customer_email: customerEmail,
       customer_name: payerName,
-      customer_phone: '+243' + phone.slice(1),
+      ...(phone ? { customer_phone: '+243' + phone.slice(1) } : {}),
       return_url: returnUrl,
       metadata: { iamtrader_payment_id: paymentId, plan: planKey }
     })
@@ -337,7 +337,7 @@ export async function handlePaymentRequest(request: Request, env: CinetPayEnv) {
     const isSasPay = String(body.paymentProvider || '').trim().toLowerCase() === 'saspay';
 
     if (!plan || !planKey) return json({ success: false, message: 'Formule invalide.' }, 400);
-    if (!phone) return json({ success: false, message: 'Numéro Mobile Money invalide. Utilisez un numéro RDC à 10 chiffres.' }, 400);
+    if (!isSasPay && !phone) return json({ success: false, message: 'Numéro Mobile Money invalide. Utilisez un numéro RDC à 10 chiffres.' }, 400);
     if (!isSasPay && (!env.CINETPAY_API_KEY || !env.CINETPAY_API_PASSWORD)) {
       const configState = [
         'API_KEY=' + (env.CINETPAY_API_KEY ? 'OK' : 'MISSING'),
@@ -362,8 +362,8 @@ export async function handlePaymentRequest(request: Request, env: CinetPayEnv) {
     const decision = decideSubscription(profile, planKey, new Date());
     if ('error' in decision) return json({ success: false, message: decision.error }, 409);
 
-    const payerName = String(body.payerName || profile.displayName || user.email || '').trim();
-    if (!payerName || !amounts) return json({ success: false, message: 'Données de paiement invalides.' }, 400);
+    const payerName = String(body.payerName || profile.displayName || user.email || 'Client IAMTRADER').trim();
+    if (!amounts) return json({ success: false, message: 'Données de paiement invalides.' }, 400);
     if (isSasPay) {
       return await createSasPayCheckout(request, env, user, body, profile, planKey, plan, phone, amounts, decision, payerName);
     }
@@ -388,7 +388,7 @@ export async function handlePaymentRequest(request: Request, env: CinetPayEnv) {
       paymentFee: amounts.fee,
       paymentFeeRate: PAYMENT_FEE_RATE,
       currency,
-      phone,
+      phone: phone || '',
       payerName,
       paymentMethod: String(body.paymentMethod || 'mobile_money'),
       paymentProvider: String(body.paymentProvider || 'CinetPay'),
