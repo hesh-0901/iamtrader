@@ -249,7 +249,8 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
     if (!paymentPlan) return;
     setIsPaymentLoading(true); setPaymentMessage('');
     try {
-      const details: PaymentDetails = { phone: paymentPhone, paymentMethod: 'mobile_money', paymentProvider: paymentMode === 'live' && paymentGateway === 'saspay' ? 'SasPay' : paymentProvider, payerName: paymentPayerName.trim() };
+      const isSasPayDirect = paymentMode === 'live' && paymentGateway === 'saspay';
+      const details: PaymentDetails = { phone: paymentPhone, paymentMethod: isSasPayDirect ? paymentProvider : 'mobile_money', paymentProvider: isSasPayDirect ? 'SasPay' : paymentProvider, payerName: paymentPayerName.trim() };
       const payment = paymentMode === 'simulation'
         ? await createSimulatedPayment(paymentPlan, details)
         : await createPayment(paymentPlan, details);
@@ -731,6 +732,29 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                   <div className="mt-2 flex items-center justify-between gap-3"><span className="text-sm font-semibold text-slate-600">{paymentPlan === 'pro' ? 'Plus · 1 mois' : 'Community · 6 mois'}</span><strong className="text-xl font-black text-slate-950">${getPaymentAmounts(paymentPlan!).total.toFixed(2)} USD</strong></div>
                   <p className="mt-2 text-xs text-slate-500">Compte : {userProfile?.displayName || userProfile?.email || 'Votre compte IAMTRADER'}</p>
                 </div>
+                {paymentGateway === 'saspay' && paymentMode === 'live' && (
+                  <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5">
+                    <div>
+                      <label htmlFor="saspay-network" className="mb-1.5 block text-xs font-bold text-slate-700">Moyen de paiement</label>
+                      <select id="saspay-network" value={paymentProvider} onChange={event => setPaymentProvider(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100">
+                        <option value="Vodacom M-Pesa">Vodacom M-Pesa</option>
+                        <option value="Airtel Money">Airtel Money</option>
+                        <option value="Orange Money">Orange Money</option>
+                        <option value="Visa / Mastercard">Visa / Mastercard</option>
+                      </select>
+                    </div>
+                    {paymentProvider !== 'Visa / Mastercard' && (
+                      <div>
+                        <label htmlFor="saspay-phone" className="mb-1.5 block text-xs font-bold text-slate-700">Numéro Mobile Money</label>
+                        <div className="flex overflow-hidden rounded-xl border border-slate-200 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-100">
+                          <span className="flex items-center border-r border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-600">+243</span>
+                          <input id="saspay-phone" type="tel" inputMode="tel" autoComplete="tel-national" value={paymentPhone} onChange={event => setPaymentPhone(event.target.value)} placeholder="812 345 678" className="min-w-0 flex-1 px-3 py-3 text-sm text-slate-900 outline-none" />
+                        </div>
+                        <p className="mt-1.5 text-[10px] text-slate-500">Saisissez votre numéro congolais sans l’indicatif +243 si celui-ci est déjà affiché.</p>
+                      </div>
+                    )}
+                  </div>
+                )}
                 <div className="rounded-xl border border-emerald-100 bg-emerald-50/70 px-4 py-3 text-xs leading-5 text-emerald-950"><Shield className="mr-2 inline h-4 w-4" />Vous allez continuer vers le paiement sécurisé. Votre abonnement sera activé après confirmation du paiement.</div>
                 <button onClick={submitPayment} disabled={isPaymentLoading} className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-emerald-900/10 transition hover:bg-emerald-700 focus:outline-none focus:ring-4 focus:ring-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50">{isPaymentLoading ? 'Préparation de la redirection…' : paymentGateway === 'saspay' ? 'Continuer vers SasPay' : 'Continuer vers CinetPay'}</button>
               </>)}
