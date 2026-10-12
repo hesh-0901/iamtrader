@@ -713,7 +713,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                           <span className="font-semibold text-slate-700">+${amounts.paymentFee.toFixed(2)}</span>
                         </div>
                         <div className="mt-4 flex items-end justify-between border-t border-slate-200 pt-4">
-                          <span className="text-sm font-bold text-slate-800">Total à payer</span>
+                          <div className="text-right"><span className="block text-2xl font-extrabold tracking-tight text-slate-950">{paymentGateway === 'saspay' ? '$' + amounts.total.toFixed(2) + ' USD' : amounts.cdfTotal.toLocaleString('fr-FR') + ' CDF'}</span><span className="text-[10px] font-semibold text-slate-400">{paymentGateway === 'saspay' ? 'Paiement traité en USD par SasPay' : '≈ $' + amounts.total.toFixed(2) + ' USD'}</span></div>
                           <div className="text-right"><span className="block text-2xl font-extrabold tracking-tight text-slate-950">{paymentGateway === 'saspay' ? '</span><span className="text-[10px] font-semibold text-slate-400">{paymentGateway === 'saspay' ? 'Paiement traité en USD par SasPay' : '≈ </span></div>
                         </div>
                       </div>
