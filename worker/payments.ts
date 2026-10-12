@@ -221,7 +221,7 @@ async function createSasPayCheckout(
   const origin = new URL(request.url).origin;
   const returnUrl = new URL('/?payment=' + encodeURIComponent(paymentId), origin).toString();
   const description = 'IAMTRADER-' + paymentId + '-' + plan.name + ' subscription';
-  const providerLabel = String(body.paymentProvider || 'Airtel Money').trim().toLowerCase();
+  const providerLabel = String(body.network || (String(body.paymentProvider || '').trim().toLowerCase() === 'saspay' ? body.paymentMethod : body.paymentProvider) || 'Airtel Money').trim().toLowerCase();
   const networkMap: Record<string, string> = {
     'vodacom m-pesa': 'vodacom_cd',
     'vodacom mpesa': 'vodacom_cd',
