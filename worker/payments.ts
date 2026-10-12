@@ -165,7 +165,7 @@ async function createSasPayCheckout(
   profile: any,
   planKey: keyof typeof PLANS,
   plan: (typeof PLANS)[keyof typeof PLANS],
-  phone: string | null,
+  phone: string,
   amounts: ReturnType<typeof calculatePaymentAmounts>,
   decision: any,
   payerName: string
@@ -221,47 +221,23 @@ async function createSasPayCheckout(
   const origin = new URL(request.url).origin;
   const returnUrl = new URL('/?payment=' + encodeURIComponent(paymentId), origin).toString();
   const description = 'IAMTRADER-' + paymentId + '-' + plan.name + ' subscription';
-  const providerLabel = String(body.network || (String(body.paymentProvider || '').trim().toLowerCase() === 'saspay' ? body.paymentMethod : body.paymentProvider) || 'Airtel Money').trim().toLowerCase();
-  const networkMap: Record<string, string> = {
-    'vodacom m-pesa': 'vodacom_cd',
-    'vodacom mpesa': 'vodacom_cd',
-    'm-pesa': 'vodacom_cd',
-    'mpesa': 'vodacom_cd',
-    'airtel money': 'airtel_cd',
-    'orange money': 'orange_cd',
-    'visa / mastercard': 'card',
-    'card': 'card'
-  };
-  const network = networkMap[providerLabel];
-  if (!network) {
-    await firestorePatch(env, 'payments/' + paymentId, {
-      status: 'failed',
-      failureMessage: 'Réseau SasPay non pris en charge.',
-      updatedAt: new Date().toISOString()
-    }, ['status', 'failureMessage', 'updatedAt']);
-    return json({ success: false, message: 'Choisissez Vodacom M-Pesa, Airtel Money, Orange Money ou Visa/Mastercard.' }, 400);
-  }
-  const e164Phone = phone ? (phone.startsWith('+') ? phone : '+243' + phone.replace(/^0/, '')) : '';
-  const idempotencyKey = crypto.randomUUID();
-  const requestPayload: Record<string, unknown> = {
-    amount: Number(amount),
-    currency,
-    network,
-    customer_email: customerEmail,
-    reference: 'IAM-SUB-' + paymentId,
-    description
-  };
-  if (network !== 'card') requestPayload.phone_number = e164Phone;
-  else requestPayload.return_url = returnUrl;
-
-  const response = await fetch('https://api.saspay.me/api/v1/payments/softpay/initialize/', {
+  const response = await fetch('https://api.saspay.me/api/v1/checkout-sessions/', {
     method: 'POST',
     headers: {
       Authorization: 'Bearer ' + env.SASPAY_API_KEY,
-      'Content-Type': 'application/json',
-      'Idempotency-Key': idempotencyKey
+      'Content-Type': 'application/json'
     },
-    body: JSON.stringify(requestPayload)
+    body: JSON.stringify({
+      amount,
+      currency,
+      description,
+      country,
+      customer_email: customerEmail,
+      customer_name: payerName,
+      ...(phone ? { customer_phone: '+243' + phone.slice(1) } : {}),
+      return_url: returnUrl,
+      metadata: { iamtrader_payment_id: paymentId, plan: planKey }
+    })
   });
 
   const raw = await response.text();
@@ -271,34 +247,32 @@ async function createSasPayCheckout(
   } catch {
     result = {};
   }
+
   const data = result?.data || result;
-  const saspayPaymentId = data?.payment_id || data?.paymentId || data?.id;
-  const status = String(data?.status || '').toUpperCase();
-  if (!response.ok || result?.success === false || !saspayPaymentId || !['PENDING', 'PROCESSING', 'SUCCESS'].includes(status)) {
+  const checkoutUrl = data?.checkout_url || data?.checkoutUrl;
+  const checkoutId = data?.id;
+  if (!response.ok || !checkoutUrl || !checkoutId) {
     await firestorePatch(env, 'payments/' + paymentId, {
       status: 'failed',
-      failureMessage: result?.message || result?.detail || 'SasPay a refusé l’initialisation du paiement.',
+      failureMessage: result?.message || result?.detail || 'SasPay a refusé la création de la session.',
       saspayHttpStatus: response.status,
       updatedAt: new Date().toISOString()
     }, ['status', 'failureMessage', 'saspayHttpStatus', 'updatedAt']);
-    console.error('SasPay Softpay initialization failed:', response.status, raw.slice(0, 500));
+    console.error('SasPay checkout initialization failed:', response.status, raw.slice(0, 500));
     return json({
       success: false,
-      message: result?.message || result?.detail || 'Impossible d’initier le paiement direct SasPay. Vérifiez la configuration de votre compte marchand.'
+      message: result?.message || result?.detail || 'Impossible d’initier le paiement SasPay. Vérifiez que votre clé API autorise les paiements entrants (payin).'
     }, 502);
   }
 
   await firestorePatch(env, 'payments/' + paymentId, {
-    status: status === 'SUCCESS' ? 'processing' : 'processing',
+    status: 'processing',
     provider: 'SASPAY',
-    saspayPaymentId: String(saspayPaymentId),
-    saspayNetwork: network,
-    saspayIdempotencyKey: idempotencyKey,
-    saspayStatus: status,
-    saspayUserInstructions: String(data?.user_instructions || ''),
-    saspayReference: String(data?.reference || requestPayload.reference),
+    saspayCheckoutId: String(checkoutId),
+    saspayCheckoutUrl: String(checkoutUrl),
+    saspayStatus: String(data?.status || 'PENDING'),
     updatedAt: new Date().toISOString()
-  }, ['status', 'provider', 'saspayPaymentId', 'saspayNetwork', 'saspayIdempotencyKey', 'saspayStatus', 'saspayUserInstructions', 'saspayReference', 'updatedAt']);
+  }, ['status', 'provider', 'saspayCheckoutId', 'saspayCheckoutUrl', 'saspayStatus', 'updatedAt']);
 
   return json({
     success: true,
@@ -313,11 +287,11 @@ async function createSasPayCheckout(
       currency,
       status: 'processing',
       reference: paymentReference(paymentId),
-      paymentUrl: network === 'card' ? (data?.payment_url || data?.checkout_url || null) : null,
+      paymentUrl: checkoutUrl,
       subscriptionAction: decision.action,
       activationStartAt: decision.start.toISOString(),
       activationExpiresAt: decision.expires.toISOString(),
-      message: String(data?.user_instructions || 'Demande envoyée. Validez le paiement sur votre téléphone, puis attendez la confirmation.')
+      message: 'Session SasPay créée. Vous allez être redirigé vers le paiement sécurisé.'
     }
   });
 }
@@ -334,68 +308,8 @@ export async function handlePaymentRequest(request: Request, env: CinetPayEnv) {
       if (!id || !/^(?:[a-f0-9]{24}|[a-f0-9]{64})$/.test(id)) {
         return json({ success: false, message: 'Référence de paiement invalide.' }, 400);
       }
-      let payment = await firestoreGet(env, `payments/${id}`);
+      const payment = await firestoreGet(env, `payments/${id}`);
       if (!payment || payment.uid !== user.uid) return json({ success: false, message: 'Paiement introuvable.' }, 404);
-
-      // Reconcile Softpay status during frontend polling, in case the webhook is delayed.
-      if (payment.provider === 'SASPAY' && payment.status === 'processing' && payment.saspayPaymentId && env.SASPAY_API_KEY) {
-        const verifyResponse = await fetch('https://api.saspay.me/api/v1/payments/' + encodeURIComponent(String(payment.saspayPaymentId)) + '/verify/', {
-          method: 'GET',
-          headers: { Authorization: 'Bearer ' + env.SASPAY_API_KEY }
-        });
-        const verifyRaw = await verifyResponse.text();
-        let verifyResult: any = {};
-        try { verifyResult = verifyRaw ? JSON.parse(verifyRaw) : {}; } catch { verifyResult = {}; }
-        const canonical = verifyResult?.data || verifyResult;
-        if (verifyResponse.ok && String(canonical?.payment_id || '') === String(payment.saspayPaymentId)) {
-          const canonicalStatus = String(canonical?.status || '').toUpperCase();
-          if (canonicalStatus === 'SUCCESS') {
-            const amountMatches = amountsMatchToCents(Number(canonical?.amount), Number(payment.amount));
-            const currencyMatches = String(canonical?.currency || '').toUpperCase() === String(payment.currency || '').toUpperCase();
-            const expectedReference = 'IAM-SUB-' + id;
-            if (!amountMatches || !currencyMatches || String(canonical?.reference || '') !== expectedReference) {
-              await firestorePatch(env, 'payments/' + id, {
-                status: 'failed',
-                failureMessage: !amountMatches ? 'Montant SasPay différent du montant attendu.' : !currencyMatches ? 'Devise SasPay différente de la commande.' : 'Référence SasPay différente de la commande.',
-                saspayStatus: canonicalStatus,
-                updatedAt: new Date().toISOString()
-              }, ['status', 'failureMessage', 'saspayStatus', 'updatedAt']);
-            } else {
-              const profile = await firestoreGet(env, `users/${encodeURIComponent(String(payment.uid))}`);
-              const planKey = payment.plan as keyof typeof PLANS;
-              if (profile && PLANS[planKey]) {
-                const paidAt = String(canonical?.paid_at || new Date().toISOString());
-                const action = payment.subscriptionAction as SubscriptionAction;
-                const startAt = String(payment.activationStartAt || '');
-                const expiresAt = String(payment.activationExpiresAt || '');
-                const validActivation = ['initial', 'renewal', 'upgrade'].includes(String(action)) && Number.isFinite(new Date(startAt).getTime()) && Number.isFinite(new Date(expiresAt).getTime());
-                const decision = validActivation ? null : decideSubscription(profile, planKey, new Date(paidAt));
-                if (!decision || !('error' in decision)) {
-                  await firestorePatch(env, 'payments/' + id, {
-                    status: 'paid', paidAt, saspayStatus: 'SUCCESS',
-                    saspayTransactionId: String(canonical?.transaction_id || ''),
-                    updatedAt: paidAt
-                  }, ['status', 'paidAt', 'saspayStatus', 'saspayTransactionId', 'updatedAt']);
-                  await firestorePatch(env, 'users/' + encodeURIComponent(String(payment.uid)), subscriptionFields(
-                    profile, planKey, validActivation ? action : decision!.action,
-                    validActivation ? new Date(startAt).toISOString() : decision!.start.toISOString(),
-                    validActivation ? new Date(expiresAt).toISOString() : decision!.expires.toISOString(),
-                    paidAt
-                  ), ['plan', 'paymentDate', 'subscriptionStartAt', 'subscriptionExpiresAt', 'subscriptionStatus', 'paymentStatus', 'planChangeConfirmedAt', 'pendingPlan', 'planChangeRequestedAt', 'scheduledPlan', 'scheduledStartAt', 'scheduledExpiresAt', 'updatedAt']);
-                }
-              }
-            }
-          } else if (['FAILED', 'EXPIRED'].includes(canonicalStatus)) {
-            await firestorePatch(env, 'payments/' + id, {
-              status: 'failed',
-              failureMessage: 'Paiement SasPay ' + canonicalStatus + '.',
-              saspayStatus: canonicalStatus,
-              updatedAt: new Date().toISOString()
-            }, ['status', 'failureMessage', 'saspayStatus', 'updatedAt']);
-          }
-          payment = await firestoreGet(env, `payments/${id}`) || payment;
-        }
-      }
       return json({ success: true, payment: publicPayment(payment) });
     } catch {
       return json({ success: false, message: 'Impossible de consulter le paiement.' }, 500);
@@ -919,130 +833,144 @@ export async function handleSasPayWebhook(
   const now = dependencies.now || (() => new Date());
   if (request.method !== 'POST') return json({ received: false, message: 'Méthode non autorisée.' }, 405);
   if (!env.SASPAY_WEBHOOK_SECRET || !env.SASPAY_API_KEY) {
+    console.error('SasPay webhook rejected: webhook secret or API key is missing.');
     return json({ received: false, message: 'Configuration SasPay incomplète.' }, 503);
   }
 
   try {
     const rawBody = await request.text();
-    const signedHeader = request.headers.get('X-SasPay-Signature') || '';
-    const simpleSignature = request.headers.get('X-Signature') || '';
-    let valid = false;
-
-    // SasPay Softpay: X-SasPay-Signature: t=<unix>,v1=<hex> signs "<timestamp>.<raw body>".
-    const timestampMatch = signedHeader.match(/(?:^|[, ])t=(\d+)/);
-    const v1Match = signedHeader.match(/(?:^|[, ])v1=([a-f0-9]{64})/i);
-    if (timestampMatch && v1Match) {
-      valid = await verifySasPayWebhookSignature(
-        rawBody,
-        v1Match[1],
-        timestampMatch[1],
-        env.SASPAY_WEBHOOK_SECRET,
-        Math.floor(now().getTime() / 1000)
-      );
-    } else if (/^[a-f0-9]{64}$/i.test(simpleSignature)) {
-      const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(env.SASPAY_WEBHOOK_SECRET), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
-      const digest = new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(rawBody)));
-      const expected = Array.from(digest, byte => byte.toString(16).padStart(2, '0')).join('');
-      if (expected.length === simpleSignature.length) {
-        let difference = 0;
-        for (let i = 0; i < expected.length; i++) difference |= expected.charCodeAt(i) ^ simpleSignature.toLowerCase().charCodeAt(i);
-        valid = difference === 0;
-      }
-    }
+    const signature = request.headers.get('X-Webhook-Signature') || '';
+    const timestamp = request.headers.get('X-Webhook-Timestamp') || '';
+    const headerEvent = request.headers.get('X-Webhook-Event') || '';
+    const valid = await verifySasPayWebhookSignature(rawBody, signature, timestamp, env.SASPAY_WEBHOOK_SECRET, Math.floor(now().getTime() / 1000));
     if (!valid) return json({ received: false, message: 'Signature SasPay invalide ou expirée.' }, 401);
 
     let payload: any;
-    try { payload = JSON.parse(rawBody); }
-    catch { return json({ received: false, message: 'Corps JSON invalide.' }, 400); }
-
-    const event = String(payload?.event || request.headers.get('X-Webhook-Event') || '');
-    const eventData = payload?.data || payload;
-    const saspayPaymentId = String(eventData?.payment_id || payload?.payment_id || '').trim();
-    const reference = String(eventData?.reference || payload?.reference || '').trim();
-    const match = reference.match(/^IAM-SUB-([a-f0-9]{24})$/i);
-    const paymentId = match?.[1]?.toLowerCase();
-    if (!paymentId || !saspayPaymentId) {
-      return json({ received: false, message: 'Référence ou identifiant de paiement SasPay manquant.' }, 400);
+    try {
+      payload = JSON.parse(rawBody);
+    } catch {
+      return json({ received: false, message: 'Corps JSON invalide.' }, 400);
+    }
+    const event = String(payload?.event || '');
+    const eventData = payload?.data || {};
+    if (!event || event !== headerEvent) return json({ received: false, message: 'Type d’événement SasPay incohérent.' }, 400);
+    if (!['transaction.success', 'transaction.failed', 'transaction.cancelled'].includes(event)) {
+      return json({ received: true, ignored: true });
     }
 
-    const payment = await readDocument(env, 'payments/' + paymentId);
-    if (!payment || payment.provider !== 'SASPAY' || String(payment.saspayPaymentId || '') !== saspayPaymentId) {
-      return json({ received: false, message: 'Paiement IAMTRADER introuvable ou non correspondant.' }, 404);
+    const transactionId = String(eventData?.id || '').trim();
+    if (!/^[a-f0-9-]{20,}$/i.test(transactionId)) {
+      return json({ received: false, message: 'Identifiant de transaction SasPay invalide.' }, 400);
     }
-    if (payment.status === 'paid') return json({ received: true, duplicate: true });
 
-    // Never activate an account from the webhook body alone: confirm with SasPay's status endpoint.
-    const verifyResponse = await fetcher('https://api.saspay.me/api/v1/payments/' + encodeURIComponent(saspayPaymentId) + '/verify/', {
-      method: 'GET',
+    // Always verify against SasPay's canonical transaction record, not only the webhook payload.
+    const transactionResponse = await fetcher('https://api.saspay.me/api/v1/transactions/' + encodeURIComponent(transactionId) + '/', {
       headers: { Authorization: 'Bearer ' + env.SASPAY_API_KEY }
     });
-    const verifyRaw = await verifyResponse.text();
-    let verifyResult: any = {};
-    try { verifyResult = verifyRaw ? JSON.parse(verifyRaw) : {}; } catch { verifyResult = {}; }
-    const canonical = verifyResult?.data || verifyResult;
-    if (!verifyResponse.ok || String(canonical?.payment_id || '') !== saspayPaymentId) {
-      console.error('SasPay Softpay status verification failed:', verifyResponse.status, verifyRaw.slice(0, 300));
-      return json({ received: false, message: 'Impossible de vérifier le statut du paiement SasPay.' }, 502);
+    const transactionRaw = await transactionResponse.text();
+    let transactionResult: any = {};
+    try {
+      transactionResult = transactionRaw ? JSON.parse(transactionRaw) : {};
+    } catch {
+      transactionResult = {};
+    }
+    const transaction = transactionResult?.data || transactionResult;
+    if (!transactionResponse.ok || String(transaction?.id || '') !== transactionId) {
+      console.error('SasPay canonical transaction lookup failed:', transactionResponse.status, transactionRaw.slice(0, 300));
+      return json({ received: false, message: 'Impossible de vérifier la transaction SasPay.' }, 502);
     }
 
-    const status = String(canonical?.status || '').toUpperCase();
-    const expectedEvent = status === 'SUCCESS'
-      ? ['payment.success', 'transaction.success'].includes(event)
-      : ['FAILED', 'EXPIRED'].includes(status)
-        ? ['payment.failed', 'transaction.failed', 'payment.expired'].includes(event)
-        : false;
-    if (!expectedEvent) {
-      if (status === 'PENDING' || status === 'PROCESSING') return json({ received: true, pending: true });
-      return json({ received: false, message: 'L’événement ne correspond pas au statut confirmé par SasPay.' }, 409);
+    // Correlate only from SasPay's canonical transaction response, never webhook fields.
+    const description = String(transaction?.description || '');
+    const match = description.match(/IAMTRADER-([a-f0-9]{24})-/i);
+    if (!match) {
+      console.error('SasPay transaction description has no IAMTRADER reference:', transactionId);
+      return json({ received: false, message: 'Référence IAMTRADER absente de la transaction.' }, 400);
     }
+    const paymentId = match[1].toLowerCase();
+    const payment = await readDocument(env, 'payments/' + paymentId);
+    if (!payment || payment.provider !== 'SASPAY') return json({ received: false, message: 'Paiement IAMTRADER introuvable.' }, 404);
 
-    if (status === 'SUCCESS') {
-      const amount = Number(canonical?.amount);
-      const currency = String(canonical?.currency || '').toUpperCase();
+    const canonicalStatus = String(transaction?.status || '').toUpperCase();
+    const eventMatchesStatus =
+      (event === 'transaction.success' && canonicalStatus === 'SUCCESS') ||
+      (event === 'transaction.failed' && ['FAILED', 'FAILURE'].includes(canonicalStatus)) ||
+      (event === 'transaction.cancelled' && ['CANCELLED', 'CANCELED', 'EXPIRED'].includes(canonicalStatus));
+    if (!eventMatchesStatus) {
+      // Do not let a stale/mismatched event mark a canonical successful payment as failed.
+      return json({ received: false, message: 'L’événement SasPay ne correspond pas au statut canonique.' }, 409);
+    }
+    if (payment.status === 'paid' && event !== 'transaction.success') {
+      return json({ received: true, duplicate: true });
+    }
+    if (event === 'transaction.success') {
+      const amount = Number(transaction?.requested_amount);
+      const currency = String(transaction?.currency || '').toUpperCase();
+      if (canonicalStatus !== 'SUCCESS') return json({ received: false, message: 'Le statut canonique SasPay ne confirme pas le paiement.' }, 409);
       if (!amountsMatchToCents(amount, Number(payment.amount))) {
-        await patchDocument(env, 'payments/' + paymentId, { status: 'failed', failureMessage: 'Montant SasPay différent du montant attendu.', updatedAt: now().toISOString() }, ['status', 'failureMessage', 'updatedAt']);
+        if (payment.status === 'paid') return json({ received: false, message: 'Le montant de la transaction payée ne correspond plus au paiement.' }, 409);
+        await patchDocument(env, 'payments/' + paymentId, {
+          status: 'failed',
+          failureMessage: 'Montant SasPay différent du montant attendu.',
+          updatedAt: now().toISOString()
+        }, ['status', 'failureMessage', 'updatedAt']);
         return json({ received: true, rejected: 'amount_mismatch' });
       }
       if (currency !== String(payment.currency || '').toUpperCase()) {
-        await patchDocument(env, 'payments/' + paymentId, { status: 'failed', failureMessage: 'Devise SasPay différente de la commande.', updatedAt: now().toISOString() }, ['status', 'failureMessage', 'updatedAt']);
+        if (payment.status === 'paid') return json({ received: false, message: 'La devise de la transaction payée ne correspond plus au paiement.' }, 409);
+        await patchDocument(env, 'payments/' + paymentId, {
+          status: 'failed',
+          failureMessage: 'Devise SasPay différente de la commande.',
+          updatedAt: now().toISOString()
+        }, ['status', 'failureMessage', 'updatedAt']);
         return json({ received: true, rejected: 'currency_mismatch' });
       }
 
       const planKey = payment.plan as keyof typeof PLANS;
       const profile = await readDocument(env, 'users/' + encodeURIComponent(String(payment.uid)));
       if (!PLANS[planKey] || !profile) return json({ received: false, message: 'Profil ou formule introuvable.' }, 404);
-      const paidAt = String(canonical?.paid_at || now().toISOString());
+      const paidAt = String(transaction?.updated_at || eventData?.paid_at || now().toISOString());
       const storedAction = payment.subscriptionAction;
       const storedStart = new Date(String(payment.activationStartAt || ''));
       const storedExpires = new Date(String(payment.activationExpiresAt || ''));
-      const activationValid = ['initial', 'renewal', 'upgrade'].includes(String(storedAction)) && Number.isFinite(storedStart.getTime()) && Number.isFinite(storedExpires.getTime());
-      const decision = activationValid ? null : decideSubscription(profile, planKey, new Date(paidAt));
+      const storedActivationIsValid =
+        ['initial', 'renewal', 'upgrade'].includes(String(storedAction)) &&
+        Number.isFinite(storedStart.getTime()) && Number.isFinite(storedExpires.getTime());
+      const decision = storedActivationIsValid ? null : decideSubscription(profile, planKey, new Date(paidAt));
       if (decision && 'error' in decision) return json({ received: false, message: decision.error }, 409);
+      const subscriptionAction = storedActivationIsValid ? storedAction as SubscriptionAction : decision!.action;
+      const activationStartAt = storedActivationIsValid ? storedStart.toISOString() : decision!.start.toISOString();
+      const activationExpiresAt = storedActivationIsValid ? storedExpires.toISOString() : decision!.expires.toISOString();
 
       await patchDocument(env, 'payments/' + paymentId, {
-        status: 'paid', paidAt, provider: 'SASPAY', saspayStatus: 'SUCCESS',
-        saspayTransactionId: String(canonical?.transaction_id || ''),
-        saspayTransactionReference: reference,
+        status: 'paid',
+        paidAt,
+        provider: 'SASPAY',
+        saspayStatus: 'SUCCESS',
+        saspayTransactionId: transactionId,
+        saspayTransactionReference: String(transaction?.reference || eventData?.reference || ''),
+        saspayChargedAmount: Number(transaction?.debited_amount ?? eventData?.charged ?? amount),
+        saspayNetAmount: Number(transaction?.net_amount ?? eventData?.net_amount ?? amount),
         updatedAt: paidAt
-      }, ['status', 'paidAt', 'provider', 'saspayStatus', 'saspayTransactionId', 'saspayTransactionReference', 'updatedAt']);
+      }, ['status', 'paidAt', 'provider', 'saspayStatus', 'saspayTransactionId', 'saspayTransactionReference', 'saspayChargedAmount', 'saspayNetAmount', 'updatedAt']);
 
-      await patchDocument(env, 'users/' + encodeURIComponent(String(payment.uid)), subscriptionFields(
-        profile,
-        planKey,
-        activationValid ? storedAction as SubscriptionAction : decision!.action,
-        activationValid ? storedStart.toISOString() : decision!.start.toISOString(),
-        activationValid ? storedExpires.toISOString() : decision!.expires.toISOString(),
-        paidAt
-      ), ['plan', 'paymentDate', 'subscriptionStartAt', 'subscriptionExpiresAt', 'subscriptionStatus', 'paymentStatus', 'planChangeConfirmedAt', 'pendingPlan', 'planChangeRequestedAt', 'scheduledPlan', 'scheduledStartAt', 'scheduledExpiresAt', 'updatedAt']);
+      await patchDocument(
+        env,
+        'users/' + encodeURIComponent(String(payment.uid)),
+        subscriptionFields(profile, planKey, subscriptionAction, activationStartAt, activationExpiresAt, paidAt),
+        ['plan', 'paymentDate', 'subscriptionStartAt', 'subscriptionExpiresAt', 'subscriptionStatus', 'paymentStatus', 'planChangeConfirmedAt', 'pendingPlan', 'planChangeRequestedAt', 'scheduledPlan', 'scheduledStartAt', 'scheduledExpiresAt', 'updatedAt']
+      );
       return json({ received: true });
     }
 
-    await patchDocument(env, 'payments/' + paymentId, {
-      status: 'failed',
-      failureMessage: 'Paiement SasPay ' + status + '.',
-      saspayStatus: status,
-      updatedAt: now().toISOString()
-    }, ['status', 'failureMessage', 'saspayStatus', 'updatedAt']);
+    if (['FAILED', 'FAILURE', 'CANCELLED', 'CANCELED', 'EXPIRED'].includes(canonicalStatus)) {
+      await patchDocument(env, 'payments/' + paymentId, {
+        status: 'failed',
+        failureMessage: 'Paiement SasPay ' + canonicalStatus + '.',
+        saspayStatus: canonicalStatus,
+        updatedAt: now().toISOString()
+      }, ['status', 'failureMessage', 'saspayStatus', 'updatedAt']);
+    }
     return json({ received: true });
   } catch (error) {
     console.error('SasPay webhook processing error:', error);
