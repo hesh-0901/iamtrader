@@ -165,7 +165,7 @@ async function createSasPayCheckout(
   profile: any,
   planKey: keyof typeof PLANS,
   plan: (typeof PLANS)[keyof typeof PLANS],
-  phone: string,
+  phone: string | null,
   amounts: ReturnType<typeof calculatePaymentAmounts>,
   decision: any,
   payerName: string
@@ -241,7 +241,7 @@ async function createSasPayCheckout(
     }, ['status', 'failureMessage', 'updatedAt']);
     return json({ success: false, message: 'Choisissez Vodacom M-Pesa, Airtel Money, Orange Money ou Visa/Mastercard.' }, 400);
   }
-  const e164Phone = phone.startsWith('+') ? phone : '+243' + phone.replace(/^0/, '');
+  const e164Phone = phone ? (phone.startsWith('+') ? phone : '+243' + phone.replace(/^0/, '')) : '';
   const idempotencyKey = crypto.randomUUID();
   const requestPayload: Record<string, unknown> = {
     amount: Number(amount),
