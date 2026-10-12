@@ -18,6 +18,17 @@
     "CINETPAY_COMMUNITY_AMOUNT_CDF": "210196",
     "SASPAY_COUNTRY": "XC"
   },
+  "previews": {
+    "vars": {
+      "PAYMENT_SIMULATION_ENABLED": "false",
+      "RESEND_FROM_EMAIL": "preview@example.invalid",
+      "RESEND_REPLY_TO": "preview@example.invalid",
+      "CINETPAY_COUNTRY": "CD",
+      "CINETPAY_PLUS_AMOUNT_CDF": "23335",
+      "CINETPAY_COMMUNITY_AMOUNT_CDF": "210196",
+      "SASPAY_COUNTRY": "XC"
+    }
+  },
   "triggers": { "crons": ["0 * * * *"] },
   "observability": {
     "enabled": true
