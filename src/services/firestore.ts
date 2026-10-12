@@ -12,6 +12,7 @@ import {
   orderBy,
   limit,
   deleteField,
+  type FieldValue,
   addDoc as addFirestoreDoc
 } from 'firebase/firestore';
 import { db, auth } from '../firebase/config';
@@ -258,8 +259,8 @@ export async function updateUserRoleAndPlan(
     subscriptionExpiresAt?: string;
     subscriptionStatus?: 'pending' | 'active' | 'expired';
     paymentStatus?: 'unpaid' | 'paid' | 'refunded';
-    pendingPlan?: 'free' | 'pro' | 'community';
-    planChangeRequestedAt?: string;
+    pendingPlan?: 'free' | 'pro' | 'community' | FieldValue;
+    planChangeRequestedAt?: string | FieldValue;
     planChangeConfirmedAt?: string;
   }
 ): Promise<void> {

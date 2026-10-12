@@ -9,7 +9,7 @@ async function adminMutation<T = unknown>(body: Record<string, unknown>): Promis
     headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
     body: JSON.stringify(body)
   });
-  const payload = await response.json().catch(() => ({}));
+  const payload = (await response.json().catch(() => ({}))) as { error?: string };
   if (!response.ok) throw new Error(payload?.error || 'Action administrative refusée.');
   return payload as T;
 }

@@ -372,13 +372,14 @@ export function EconomicCalendarView() {
         throw new Error(`HTTP ${response.status}`);
       }
 
-      const payload = await response.json();
+      const payload = await response.json() as ApiEvent[] | { events?: ApiEvent[]; data?: ApiEvent[] };
+      const payloadObject = payload as { events?: ApiEvent[]; data?: ApiEvent[] };
       const rawEvents: ApiEvent[] = Array.isArray(payload)
         ? payload
-        : Array.isArray(payload?.events)
-          ? payload.events
-          : Array.isArray(payload?.data)
-            ? payload.data
+        : Array.isArray(payloadObject.events)
+          ? payloadObject.events
+          : Array.isArray(payloadObject.data)
+            ? payloadObject.data
             : [];
 
       setEvents(rawEvents.map(normalizeEvent));
@@ -417,7 +418,7 @@ export function EconomicCalendarView() {
       headers: { Accept: 'application/json' },
     })
       .then(async (response) => {
-        const data = await response.json();
+        const data = await response.json() as { summary: string; sources: Array<{ title: string; url: string; date?: string }>; fetchedAt: string; error?: string };
         if (!response.ok) throw new Error(data?.error || 'Analyse indisponible pour le moment.');
         if (!cancelled) setOnlineAnalysis(data);
       })
@@ -837,7 +838,7 @@ export function EconomicCalendarView() {
                         method: 'GET',
                         headers: { Accept: 'application/json' },
                       }).then(async (response) => {
-                        const data = await response.json();
+                        const data = await response.json() as { summary: string; sources: Array<{ title: string; url: string; date?: string }>; fetchedAt: string; error?: string };
                         if (!response.ok) throw new Error(data?.error || 'Analyse indisponible pour le moment.');
                         setOnlineAnalysis(data);
                       }).catch((error) => setAnalysisError(error?.message || 'Analyse indisponible pour le moment.')).finally(() => setAnalysisLoading(false));

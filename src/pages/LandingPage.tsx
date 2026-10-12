@@ -276,15 +276,15 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
         }),
       });
 
-      const data = await response.json().catch(() => ({}));
-
-      if (!response.ok || typeof data.reply !== 'string') {
+      const data = (await response.json().catch(() => ({}))) as { reply?: string; error?: string };
+      const reply = data.reply;
+      if (!response.ok || typeof reply !== 'string') {
         throw new Error(typeof data.error === 'string' ? data.error : 'Réponse IA indisponible.');
       }
 
       setAiMessages((messages) => [
         ...messages,
-        { role: 'assistant', text: data.reply, createdAt: Date.now() },
+        { role: 'assistant', text: reply, createdAt: Date.now() },
       ]);
     } catch (error) {
       console.error('AI assistant request failed:', error);

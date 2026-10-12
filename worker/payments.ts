@@ -9,10 +9,14 @@ const PLANS = {
 
 const PAYMENT_FEE_RATE = 0.03;
 
-function calculatePaymentAmounts(baseAmount: number) {
+export function calculatePaymentAmounts(baseAmount: number) {
   const fee = Math.round(baseAmount * PAYMENT_FEE_RATE * 100) / 100;
   const total = Math.round((baseAmount + fee) * 100) / 100;
   return { baseAmount, fee, total };
+}
+
+function amountsMatchToCents(actual: number, expected: number) {
+  return Number.isFinite(actual) && Math.round(actual * 100) === Math.round(expected * 100);
 }
 
 function json(data: unknown, status = 200) {
@@ -783,10 +787,16 @@ export async function handleSimulatedPaymentConfirm(request: Request, env: Payme
 }
 
 
-async function verifySasPayWebhookSignature(rawBody: string, signature: string, timestamp: string, secret: string) {
+export async function verifySasPayWebhookSignature(
+  rawBody: string,
+  signature: string,
+  timestamp: string,
+  secret: string,
+  nowSeconds = Math.floor(Date.now() / 1000)
+) {
   if (!/^\d{1,12}$/.test(timestamp) || !/^[a-f0-9]{64}$/i.test(signature)) return false;
   const timestampNumber = Number(timestamp);
-  if (!Number.isSafeInteger(timestampNumber) || Math.abs(Math.floor(Date.now() / 1000) - timestampNumber) > 300) return false;
+  if (!Number.isSafeInteger(timestampNumber) || Math.abs(nowSeconds - timestampNumber) > 300) return false;
   const key = await crypto.subtle.importKey(
     'raw',
     new TextEncoder().encode(secret),
@@ -805,7 +815,22 @@ async function verifySasPayWebhookSignature(rawBody: string, signature: string, 
   return difference === 0;
 }
 
-export async function handleSasPayWebhook(request: Request, env: SasPayEnv) {
+type SasPayWebhookDependencies = {
+  fetch: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+  firestoreGet: typeof firestoreGet;
+  firestorePatch: typeof firestorePatch;
+  now: () => Date;
+};
+
+export async function handleSasPayWebhook(
+  request: Request,
+  env: SasPayEnv,
+  dependencies: Partial<SasPayWebhookDependencies> = {}
+) {
+  const fetcher = dependencies.fetch || ((input, init) => globalThis.fetch(input, init));
+  const readDocument = dependencies.firestoreGet || firestoreGet;
+  const patchDocument = dependencies.firestorePatch || firestorePatch;
+  const now = dependencies.now || (() => new Date());
   if (request.method !== 'POST') return json({ received: false, message: 'Méthode non autorisée.' }, 405);
   if (!env.SASPAY_WEBHOOK_SECRET || !env.SASPAY_API_KEY) {
     console.error('SasPay webhook rejected: webhook secret or API key is missing.');
@@ -817,7 +842,7 @@ export async function handleSasPayWebhook(request: Request, env: SasPayEnv) {
     const signature = request.headers.get('X-Webhook-Signature') || '';
     const timestamp = request.headers.get('X-Webhook-Timestamp') || '';
     const headerEvent = request.headers.get('X-Webhook-Event') || '';
-    const valid = await verifySasPayWebhookSignature(rawBody, signature, timestamp, env.SASPAY_WEBHOOK_SECRET);
+    const valid = await verifySasPayWebhookSignature(rawBody, signature, timestamp, env.SASPAY_WEBHOOK_SECRET, Math.floor(now().getTime() / 1000));
     if (!valid) return json({ received: false, message: 'Signature SasPay invalide ou expirée.' }, 401);
 
     let payload: any;
@@ -839,7 +864,7 @@ export async function handleSasPayWebhook(request: Request, env: SasPayEnv) {
     }
 
     // Always verify against SasPay's canonical transaction record, not only the webhook payload.
-    const transactionResponse = await fetch('https://api.saspay.me/api/v1/transactions/' + encodeURIComponent(transactionId) + '/', {
+    const transactionResponse = await fetcher('https://api.saspay.me/api/v1/transactions/' + encodeURIComponent(transactionId) + '/', {
       headers: { Authorization: 'Bearer ' + env.SASPAY_API_KEY }
     });
     const transactionRaw = await transactionResponse.text();
@@ -863,9 +888,8 @@ export async function handleSasPayWebhook(request: Request, env: SasPayEnv) {
       return json({ received: false, message: 'Référence IAMTRADER absente de la transaction.' }, 400);
     }
     const paymentId = match[1].toLowerCase();
-    const payment = await firestoreGet(env, 'payments/' + paymentId);
+    const payment = await readDocument(env, 'payments/' + paymentId);
     if (!payment || payment.provider !== 'SASPAY') return json({ received: false, message: 'Paiement IAMTRADER introuvable.' }, 404);
-    if (payment.status === 'paid') return json({ received: true, duplicate: true });
 
     const canonicalStatus = String(transaction?.status || '').toUpperCase();
     const eventMatchesStatus =
@@ -876,35 +900,49 @@ export async function handleSasPayWebhook(request: Request, env: SasPayEnv) {
       // Do not let a stale/mismatched event mark a canonical successful payment as failed.
       return json({ received: false, message: 'L’événement SasPay ne correspond pas au statut canonique.' }, 409);
     }
+    if (payment.status === 'paid' && event !== 'transaction.success') {
+      return json({ received: true, duplicate: true });
+    }
     if (event === 'transaction.success') {
       const amount = Number(transaction?.requested_amount);
       const currency = String(transaction?.currency || '').toUpperCase();
       if (canonicalStatus !== 'SUCCESS') return json({ received: false, message: 'Le statut canonique SasPay ne confirme pas le paiement.' }, 409);
-      if (!Number.isFinite(amount) || Math.abs(amount - Number(payment.amount)) > 0.009) {
-        await firestorePatch(env, 'payments/' + paymentId, {
+      if (!amountsMatchToCents(amount, Number(payment.amount))) {
+        if (payment.status === 'paid') return json({ received: false, message: 'Le montant de la transaction payée ne correspond plus au paiement.' }, 409);
+        await patchDocument(env, 'payments/' + paymentId, {
           status: 'failed',
           failureMessage: 'Montant SasPay différent du montant attendu.',
-          updatedAt: new Date().toISOString()
+          updatedAt: now().toISOString()
         }, ['status', 'failureMessage', 'updatedAt']);
         return json({ received: true, rejected: 'amount_mismatch' });
       }
       if (currency !== String(payment.currency || '').toUpperCase()) {
-        await firestorePatch(env, 'payments/' + paymentId, {
+        if (payment.status === 'paid') return json({ received: false, message: 'La devise de la transaction payée ne correspond plus au paiement.' }, 409);
+        await patchDocument(env, 'payments/' + paymentId, {
           status: 'failed',
           failureMessage: 'Devise SasPay différente de la commande.',
-          updatedAt: new Date().toISOString()
+          updatedAt: now().toISOString()
         }, ['status', 'failureMessage', 'updatedAt']);
         return json({ received: true, rejected: 'currency_mismatch' });
       }
 
       const planKey = payment.plan as keyof typeof PLANS;
-      const profile = await firestoreGet(env, 'users/' + encodeURIComponent(String(payment.uid)));
+      const profile = await readDocument(env, 'users/' + encodeURIComponent(String(payment.uid)));
       if (!PLANS[planKey] || !profile) return json({ received: false, message: 'Profil ou formule introuvable.' }, 404);
-      const paidAt = String(transaction?.updated_at || eventData?.paid_at || new Date().toISOString());
-      const decision = decideSubscription(profile, planKey, new Date(paidAt));
-      if ('error' in decision) return json({ received: false, message: decision.error }, 409);
+      const paidAt = String(transaction?.updated_at || eventData?.paid_at || now().toISOString());
+      const storedAction = payment.subscriptionAction;
+      const storedStart = new Date(String(payment.activationStartAt || ''));
+      const storedExpires = new Date(String(payment.activationExpiresAt || ''));
+      const storedActivationIsValid =
+        ['initial', 'renewal', 'upgrade'].includes(String(storedAction)) &&
+        Number.isFinite(storedStart.getTime()) && Number.isFinite(storedExpires.getTime());
+      const decision = storedActivationIsValid ? null : decideSubscription(profile, planKey, new Date(paidAt));
+      if (decision && 'error' in decision) return json({ received: false, message: decision.error }, 409);
+      const subscriptionAction = storedActivationIsValid ? storedAction as SubscriptionAction : decision!.action;
+      const activationStartAt = storedActivationIsValid ? storedStart.toISOString() : decision!.start.toISOString();
+      const activationExpiresAt = storedActivationIsValid ? storedExpires.toISOString() : decision!.expires.toISOString();
 
-      await firestorePatch(env, 'payments/' + paymentId, {
+      await patchDocument(env, 'payments/' + paymentId, {
         status: 'paid',
         paidAt,
         provider: 'SASPAY',
@@ -916,28 +954,21 @@ export async function handleSasPayWebhook(request: Request, env: SasPayEnv) {
         updatedAt: paidAt
       }, ['status', 'paidAt', 'provider', 'saspayStatus', 'saspayTransactionId', 'saspayTransactionReference', 'saspayChargedAmount', 'saspayNetAmount', 'updatedAt']);
 
-      await firestorePatch(
+      await patchDocument(
         env,
         'users/' + encodeURIComponent(String(payment.uid)),
-        subscriptionFields(
-          profile,
-          planKey,
-          (payment.subscriptionAction as SubscriptionAction) || decision.action,
-          decision.start.toISOString(),
-          decision.expires.toISOString(),
-          paidAt
-        ),
+        subscriptionFields(profile, planKey, subscriptionAction, activationStartAt, activationExpiresAt, paidAt),
         ['plan', 'paymentDate', 'subscriptionStartAt', 'subscriptionExpiresAt', 'subscriptionStatus', 'paymentStatus', 'planChangeConfirmedAt', 'pendingPlan', 'planChangeRequestedAt', 'scheduledPlan', 'scheduledStartAt', 'scheduledExpiresAt', 'updatedAt']
       );
       return json({ received: true });
     }
 
     if (['FAILED', 'FAILURE', 'CANCELLED', 'CANCELED', 'EXPIRED'].includes(canonicalStatus)) {
-      await firestorePatch(env, 'payments/' + paymentId, {
+      await patchDocument(env, 'payments/' + paymentId, {
         status: 'failed',
         failureMessage: 'Paiement SasPay ' + canonicalStatus + '.',
         saspayStatus: canonicalStatus,
-        updatedAt: new Date().toISOString()
+        updatedAt: now().toISOString()
       }, ['status', 'failureMessage', 'saspayStatus', 'updatedAt']);
     }
     return json({ received: true });

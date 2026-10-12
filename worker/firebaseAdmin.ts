@@ -176,7 +176,7 @@ export async function firestoreQueryCollection(
   collectionName: string,
   limit = 200,
   orderByField = 'createdAt'
-) {
+): Promise<Array<Record<string, unknown> & { id?: string }>> {
   const token = await accessToken(env);
   const response = await fetch(`${FIRESTORE_BASE}:runQuery`, {
     method: 'POST',
@@ -194,7 +194,7 @@ export async function firestoreQueryCollection(
   return rows.filter(row => row.document).map(row => ({
     id: String(row.document.name || '').split('/').pop(),
     ...fromFirestoreDocument(row.document)
-  }));
+  }) as Record<string, unknown> & { id?: string });
 }
 
 export async function firestoreCreate(env: PaymentEnv, collectionName: string, documentId: string, data: Record<string, unknown>) {

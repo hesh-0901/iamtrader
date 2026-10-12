@@ -176,7 +176,7 @@ export async function handleEconomicCalendar(request: Request, env: CalendarEnv 
     { method: 'GET' },
   );
 
-  const cache = caches.default;
+  const cache = (caches as CacheStorage & { default: Cache }).default;
   const cached = await cache.match(cacheKey);
 
   if (cached) {

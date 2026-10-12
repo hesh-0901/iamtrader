@@ -20,6 +20,7 @@ export interface PaymentInitResult {
 }
 
 export interface PaymentDetails { phone: string; paymentMethod: 'mobile_money'; paymentProvider: string; payerName: string; }
+type PaymentResponse = { success?: boolean; message?: string; payment?: unknown; subscription?: unknown };
 
 export async function createPayment(plan: PaidPlan, details: PaymentDetails): Promise<PaymentInitResult> {
   const user = auth.currentUser;
@@ -30,7 +31,7 @@ export async function createPayment(plan: PaidPlan, details: PaymentDetails): Pr
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
     body: JSON.stringify({ plan, ...details })
   });
-  const data = await response.json();
+  const data = await response.json() as PaymentResponse;
   if (!response.ok || !data.success) throw new Error(data.message || 'Impossible d’initier le paiement.');
   return data.payment as PaymentInitResult;
 }
@@ -42,7 +43,7 @@ export async function getPaymentStatus(id: string) {
   const response = await fetch(`/api/payments?id=${encodeURIComponent(id)}`, {
     headers: { Authorization: `Bearer ${idToken}` }
   });
-  const data = await response.json();
+  const data = await response.json() as PaymentResponse;
   if (!response.ok || !data.success) throw new Error(data.message || 'Impossible de consulter le paiement.');
   return data.payment as {
     id: string;
@@ -67,7 +68,7 @@ export async function createSimulatedPayment(plan: PaidPlan, details: PaymentDet
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
     body: JSON.stringify({ plan, ...details, idempotencyKey })
   });
-  const data = await response.json();
+  const data = await response.json() as PaymentResponse;
   if (!response.ok || !data.success) throw new Error(data.message || 'Impossible de créer la simulation.');
   return data.payment as PaymentInitResult;
 }
@@ -81,7 +82,7 @@ export async function confirmSimulatedPayment(id: string) {
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
     body: JSON.stringify({ id })
   });
-  const data = await response.json();
+  const data = await response.json() as PaymentResponse;
   if (!response.ok || !data.success) throw new Error(data.message || 'Impossible de confirmer la simulation.');
   return data.payment as PaymentInitResult & { paidAt?: string };
 }
@@ -94,7 +95,7 @@ export async function syncSubscriptionStatus() {
   const response = await fetch('/api/subscription/status', {
     headers: { Authorization: `Bearer ${idToken}` }
   });
-  const data = await response.json();
+  const data = await response.json() as PaymentResponse;
   if (!response.ok || !data.success) throw new Error(data.message || 'Impossible de synchroniser l’abonnement.');
   return data.subscription as {
     plan: PaidPlan | 'free';

@@ -170,6 +170,7 @@ export interface UserProfile {
   subscriptionStatus?: SubscriptionStatus;
   paymentStatus?: PaymentStatus;
   pendingPlan?: SubscriptionPlan;
+  planRequest?: { plan?: SubscriptionPlan; requestedAt?: string } | null;
   planChangeRequestedAt?: string;
   planChangeConfirmedAt?: string;
   scheduledPlan?: SubscriptionPlan;

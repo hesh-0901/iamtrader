@@ -268,7 +268,12 @@ export function ChloeChat({ isOpen, onClose, userId, userProfile, accounts, trad
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: [...messages, { role: 'user', content: visibleText, timestamp: messageTimestamp }], userContext: context, attachments }),
       });
-      const data = await response.json().catch(() => ({}));
+      const data = (await response.json().catch(() => ({}))) as {
+        error?: string;
+        reply?: string;
+        action?: ChloeAction | null;
+        details?: { provider?: string; reason?: string };
+      };
       if (!response.ok) {
         const diagnostic = data?.details?.provider || data?.details?.reason || '';
         throw new Error(diagnostic ? `${data.error || 'Chloé est indisponible.'} [${diagnostic}]` : (data.error || 'Chloé est indisponible.'));

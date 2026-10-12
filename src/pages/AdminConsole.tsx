@@ -92,6 +92,45 @@ export function AdminConsole() {
   const [analyticsTab, setAnalyticsTab] = useState<'profiles' | 'engagement' | 'trading' | 'subscriptions'>('profiles');
   const perPage = 10;
 
+  function openManage(user: UserProfile) {
+    setSelected(user);
+    setPlan(user.plan || 'free');
+    setStatus(user.status || 'active');
+    setPayment(user.paymentStatus || 'unpaid');
+    setExpiry(inputDate(user.subscriptionExpiresAt));
+    setDays('');
+    setHistoryOpen(false);
+  }
+
+  async function saveManagedUser() {
+    if (!selected || busy) return;
+    setBusy(true);
+    const subscriptionExpiresAt = isoDate(expiry) || '';
+    const update: Pick<UserProfile, 'plan' | 'status' | 'paymentStatus' | 'subscriptionExpiresAt' | 'subscriptionStatus'> = {
+      plan,
+      status,
+      paymentStatus: payment,
+      subscriptionExpiresAt,
+      subscriptionStatus: plan === 'free' ? 'expired' : subscriptionExpiresAt ? 'active' : 'pending'
+    };
+    try {
+      await adminUpdateUser(selected.uid, update);
+      setUsers(current => current.map(user => user.uid === selected.uid ? { ...user, ...update } : user));
+      await adminAddLog({
+        action: 'user-subscription-updated',
+        userUid: selected.uid,
+        userName: selected.displayName || selected.email,
+        details: `Plan=${plan}; statut=${status}; paiement=${payment}; échéance=${subscriptionExpiresAt || 'aucune'}`
+      }).catch(error => console.warn('IAMTRADER Admin audit log unavailable:', error));
+      setSelected(null);
+      showToast('Profil utilisateur mis à jour.', 'success');
+    } catch (error: any) {
+      showToast(error?.message || 'Mise à jour impossible.', 'error');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function refreshPayments() {
     try {
       const paymentData = await adminGetPayments<{ success: boolean; payments: PaymentRecord[] }>();
@@ -226,7 +265,7 @@ export function AdminConsole() {
         filter === 'all' ||
         (filter === 'active' && u.status === 'active') ||
         (filter === 'suspended' && u.status === 'suspended') ||
-        (filter === 'pending' && Boolean((u as any).planRequest)) ||
+        (filter === 'pending' && Boolean(u.planRequest)) ||
         (filter === 'expiring' && d !== null && d >= 0 && d <= 5) ||
         (filter === 'expired' && d !== null && d < 0);
       return matchesSearch && matchesFilter;
@@ -276,7 +315,7 @@ export function AdminConsole() {
           conversationId: selectedMessage.id
         })
       });
-      const payload = await response.json().catch(() => ({}));
+      const payload = (await response.json().catch(() => ({}))) as { error?: string; messageId?: string; id?: string };
       if (!response.ok) throw new Error(payload?.error || 'Envoi impossible');
 
       const now = new Date().toISOString();
@@ -774,6 +813,18 @@ export function AdminConsole() {
 
           {adminTab==='audit' && <section className="rounded-2xl border border-slate-200 bg-white shadow-sm"><div className="border-b p-5"><h2 className="text-sm font-black">Journal d’audit</h2><p className="mt-1 text-[10px] text-slate-400">Traçabilité des actions administratives.</p></div><div className="divide-y divide-slate-100">{logs.slice(0,50).map(l=><div key={l.id} className="flex gap-3 p-4"><div className="flex h-8 w-8 items-center justify-center rounded-xl bg-slate-100"><History className="h-3.5 w-3.5 text-slate-500"/></div><div><b className="text-[10px] text-slate-800">{l.action} · {l.userName}</b><p className="mt-1 text-[9px] text-slate-400">{l.details}</p></div></div>)}{!logs.length&&<div className="p-10 text-center text-xs text-slate-400">Aucune action enregistrée.</div>}</div></section>}
 
+          {selected && <div className="fixed inset-0 z-[90] flex items-center justify-center bg-[#071a2d]/55 p-4" role="dialog" aria-modal="true" aria-labelledby="manage-user-title" onClick={() => setSelected(null)}>
+            <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl" onClick={event => event.stopPropagation()}>
+              <div className="mb-5 flex items-start justify-between"><div><h2 id="manage-user-title" className="text-sm font-black text-[#0b1f35]">Gérer l’abonnement</h2><p className="mt-1 text-[10px] text-slate-500">{selected.displayName || selected.email}</p></div><button type="button" onClick={() => setSelected(null)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100" aria-label="Fermer"><X className="h-4 w-4" /></button></div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <label className="text-[10px] font-bold text-slate-500">Forfait<select value={plan} onChange={event => setPlan(event.target.value as SubscriptionPlan)} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-800"><option value="free">Starter</option><option value="pro">Plus</option><option value="community">Community</option></select></label>
+                <label className="text-[10px] font-bold text-slate-500">Compte<select value={status} onChange={event => setStatus(event.target.value as UserStatus)} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-800"><option value="active">Actif</option><option value="suspended">Suspendu</option></select></label>
+                <label className="text-[10px] font-bold text-slate-500">Paiement<select value={payment} onChange={event => setPayment(event.target.value as typeof payment)} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-800"><option value="unpaid">Non payé</option><option value="paid">Payé</option><option value="refunded">Remboursé</option></select></label>
+                <label className="text-[10px] font-bold text-slate-500">Échéance<input type="date" value={expiry} onChange={event => setExpiry(event.target.value)} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-xs text-slate-800" /></label>
+              </div>
+              <div className="mt-5 flex justify-end gap-2"><button type="button" onClick={() => setSelected(null)} className="rounded-lg border border-slate-200 px-3 py-2 text-[10px] font-bold text-slate-600">Annuler</button><button type="button" disabled={busy} onClick={() => void saveManagedUser()} className="rounded-lg bg-[#0b1f35] px-4 py-2 text-[10px] font-bold text-white disabled:opacity-50">{busy ? 'Enregistrement…' : 'Enregistrer'}</button></div>
+            </div>
+          </div>}
           {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">{error}</div>}
         </main>
       </div>

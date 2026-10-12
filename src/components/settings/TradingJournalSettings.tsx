@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Plus, Trash2, Save, Settings2 } from 'lucide-react';
-import { TradingInstrument, TradingSetup, UserProfile } from '../types';
+import { TradingInstrument, TradingSetup, UserProfile } from '../../types';
 import { updateUserSettings } from '../../services/firestore';
 import { useToast } from '../common/Toast';
 
