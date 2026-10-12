@@ -1,7 +1,7 @@
 import { verifyFirebaseIdToken, firestoreGet } from '../../worker/firebaseAdmin';
 interface Env {
-  RESEND_API_KEY: string;
-  RESEND_FROM_EMAIL: string;
+  RESEND_API_KEY?: string;
+  RESEND_FROM_EMAIL?: string;
   RESEND_REPLY_TO?: string;
 }
 function json(data: unknown, status=200) {

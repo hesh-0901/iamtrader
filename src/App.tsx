@@ -255,6 +255,7 @@ function MainAppContent() {
     'psychology': 'Matrice Psychologique',
     'trader-score': 'Trader Score™',
     'accounts': 'Comptes de Trading',
+    'history': 'Historique des paiements',
     'settings': 'Paramètres Système',
     'community': 'Community',
     'admin': 'Console Administration'

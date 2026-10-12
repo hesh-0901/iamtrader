@@ -2,7 +2,7 @@ import { IAMTRADER_KNOWLEDGE } from './vyra-knowledge';
 import { VYRA_STYLE_INSTRUCTIONS } from './vyra-style';
 
 interface Env {
-  GEMINI_API_KEY: string;
+  GEMINI_API_KEY?: string;
   GEMINI_MODEL?: string;
 }
 

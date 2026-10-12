@@ -33,7 +33,7 @@ export async function getPaymentHistory(): Promise<PaymentHistoryItem[]> {
   const response = await fetch('/api/payments/history', {
     headers: { Authorization: `Bearer ${idToken}` }
   });
-  const data = await response.json();
+  const data = await response.json() as { success?: boolean; message?: string; payments?: PaymentHistoryItem[] };
   if (!response.ok || !data.success) throw new Error(data.message || 'Impossible de récupérer votre historique.');
   return data.payments as PaymentHistoryItem[];
 }

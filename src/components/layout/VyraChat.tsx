@@ -105,11 +105,12 @@ export function VyraChat({ isOpen, onClose }: VyraChatProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: nextMessages }),
       });
-      const data = await response.json().catch(() => ({}));
-      if (!response.ok || typeof data.reply !== 'string') {
+      const data = (await response.json().catch(() => ({}))) as { reply?: string; error?: string };
+      const reply = data.reply;
+      if (!response.ok || typeof reply !== 'string') {
         throw new Error(typeof data.error === 'string' ? data.error : 'Réponse IA indisponible.');
       }
-      setMessages(prev => [...prev, { role: 'assistant', content: data.reply }]);
+      setMessages(prev => [...prev, { role: 'assistant', content: reply }]);
     } catch (error: any) {
       setMessages(prev => [...prev, {
         role: 'assistant',
