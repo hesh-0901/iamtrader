@@ -19,7 +19,7 @@ export interface PaymentInitResult {
   activationExpiresAt?: string;
 }
 
-export interface PaymentDetails { phone: string; paymentMethod: 'mobile_money'; paymentProvider: string; payerName: string; }
+export interface PaymentDetails { phone: string; paymentMethod: string; paymentProvider: string; payerName: string; }
 type PaymentResponse = { success?: boolean; message?: string; payment?: unknown; subscription?: unknown };
 
 export async function createPayment(plan: PaidPlan, details: PaymentDetails): Promise<PaymentInitResult> {
