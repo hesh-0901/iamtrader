@@ -691,8 +691,8 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
               ) : null}
               {paymentStatus === 'idle' && (<>
                 <div className={'grid ' + (import.meta.env.DEV && userProfile?.role === 'admin' ? 'grid-cols-2' : 'grid-cols-1') + ' gap-1 rounded-xl bg-slate-100 p-1'}>
-                  {import.meta.env.DEV && userProfile?.role === 'admin' && <button type="button" onClick={() => setPaymentMode('simulation')} className={`rounded-lg px-3 py-2 text-[10px] font-bold transition ${paymentMode === 'simulation' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500'}`}>Simulation (dev)</button>}
-                  <button type="button" onClick={() => setPaymentMode('live')} className={`rounded-lg px-3 py-2 text-[10px] font-bold transition ${paymentMode === 'live' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-500'}`}>Paiement réel</button>
+                  {import.meta.env.DEV && userProfile?.role === 'admin' && <button type="button" onClick={() => setPaymentMode('simulation')} className={'rounded-lg px-3 py-2 text-[10px] font-bold transition ' + (paymentMode === 'simulation' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500')}>Simulation (dev)</button>}
+                  <button type="button" onClick={() => setPaymentMode('live')} className={'rounded-lg px-3 py-2 text-[10px] font-bold transition ' + (paymentMode === 'live' ? 'bg-white text-slate-700 shadow-sm' : 'text-slate-500')}>Paiement réel</button>
                 </div>
                 {paymentMode === 'simulation' && <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-[10px] leading-4 text-amber-800"><b>Mode test.</b> Aucun argent n’est débité. La transaction sera néanmoins créée dans le registre de paiements et visible par l’administration.</div>}
                 {(() => {
