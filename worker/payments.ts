@@ -221,23 +221,47 @@ async function createSasPayCheckout(
   const origin = new URL(request.url).origin;
   const returnUrl = new URL('/?payment=' + encodeURIComponent(paymentId), origin).toString();
   const description = 'IAMTRADER-' + paymentId + '-' + plan.name + ' subscription';
-  const response = await fetch('https://api.saspay.me/api/v1/checkout-sessions/', {
+  const providerLabel = String(body.paymentProvider || 'Airtel Money').trim().toLowerCase();
+  const networkMap: Record<string, string> = {
+    'vodacom m-pesa': 'vodacom_cd',
+    'vodacom mpesa': 'vodacom_cd',
+    'm-pesa': 'vodacom_cd',
+    'mpesa': 'vodacom_cd',
+    'airtel money': 'airtel_cd',
+    'orange money': 'orange_cd',
+    'visa / mastercard': 'card',
+    'card': 'card'
+  };
+  const network = networkMap[providerLabel];
+  if (!network) {
+    await firestorePatch(env, 'payments/' + paymentId, {
+      status: 'failed',
+      failureMessage: 'Réseau SasPay non pris en charge.',
+      updatedAt: new Date().toISOString()
+    }, ['status', 'failureMessage', 'updatedAt']);
+    return json({ success: false, message: 'Choisissez Vodacom M-Pesa, Airtel Money, Orange Money ou Visa/Mastercard.' }, 400);
+  }
+  const e164Phone = phone.startsWith('+') ? phone : '+243' + phone.replace(/^0/, '');
+  const idempotencyKey = crypto.randomUUID();
+  const requestPayload: Record<string, unknown> = {
+    amount: Number(amount),
+    currency,
+    network,
+    customer_email: customerEmail,
+    reference: 'IAM-SUB-' + paymentId,
+    description
+  };
+  if (network !== 'card') requestPayload.phone_number = e164Phone;
+  else requestPayload.return_url = returnUrl;
+
+  const response = await fetch('https://api.saspay.me/api/v1/payments/softpay/initialize/', {
     method: 'POST',
     headers: {
       Authorization: 'Bearer ' + env.SASPAY_API_KEY,
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
+      'Idempotency-Key': idempotencyKey
     },
-    body: JSON.stringify({
-      amount,
-      currency,
-      description,
-      country,
-      customer_email: customerEmail,
-      customer_name: payerName,
-      ...(phone ? { customer_phone: '+243' + phone.slice(1) } : {}),
-      return_url: returnUrl,
-      metadata: { iamtrader_payment_id: paymentId, plan: planKey }
-    })
+    body: JSON.stringify(requestPayload)
   });
 
   const raw = await response.text();
@@ -247,32 +271,34 @@ async function createSasPayCheckout(
   } catch {
     result = {};
   }
-
   const data = result?.data || result;
-  const checkoutUrl = data?.checkout_url || data?.checkoutUrl;
-  const checkoutId = data?.id;
-  if (!response.ok || !checkoutUrl || !checkoutId) {
+  const saspayPaymentId = data?.payment_id || data?.paymentId || data?.id;
+  const status = String(data?.status || '').toUpperCase();
+  if (!response.ok || result?.success === false || !saspayPaymentId || !['PENDING', 'PROCESSING', 'SUCCESS'].includes(status)) {
     await firestorePatch(env, 'payments/' + paymentId, {
       status: 'failed',
-      failureMessage: result?.message || result?.detail || 'SasPay a refusé la création de la session.',
+      failureMessage: result?.message || result?.detail || 'SasPay a refusé l’initialisation du paiement.',
       saspayHttpStatus: response.status,
       updatedAt: new Date().toISOString()
     }, ['status', 'failureMessage', 'saspayHttpStatus', 'updatedAt']);
-    console.error('SasPay checkout initialization failed:', response.status, raw.slice(0, 500));
+    console.error('SasPay Softpay initialization failed:', response.status, raw.slice(0, 500));
     return json({
       success: false,
-      message: result?.message || result?.detail || 'Impossible d’initier le paiement SasPay. Vérifiez que votre clé API autorise les paiements entrants (payin).'
+      message: result?.message || result?.detail || 'Impossible d’initier le paiement direct SasPay. Vérifiez la configuration de votre compte marchand.'
     }, 502);
   }
 
   await firestorePatch(env, 'payments/' + paymentId, {
-    status: 'processing',
+    status: status === 'SUCCESS' ? 'processing' : 'processing',
     provider: 'SASPAY',
-    saspayCheckoutId: String(checkoutId),
-    saspayCheckoutUrl: String(checkoutUrl),
-    saspayStatus: String(data?.status || 'PENDING'),
+    saspayPaymentId: String(saspayPaymentId),
+    saspayNetwork: network,
+    saspayIdempotencyKey: idempotencyKey,
+    saspayStatus: status,
+    saspayUserInstructions: String(data?.user_instructions || ''),
+    saspayReference: String(data?.reference || requestPayload.reference),
     updatedAt: new Date().toISOString()
-  }, ['status', 'provider', 'saspayCheckoutId', 'saspayCheckoutUrl', 'saspayStatus', 'updatedAt']);
+  }, ['status', 'provider', 'saspayPaymentId', 'saspayNetwork', 'saspayIdempotencyKey', 'saspayStatus', 'saspayUserInstructions', 'saspayReference', 'updatedAt']);
 
   return json({
     success: true,
@@ -287,11 +313,11 @@ async function createSasPayCheckout(
       currency,
       status: 'processing',
       reference: paymentReference(paymentId),
-      paymentUrl: checkoutUrl,
+      paymentUrl: network === 'card' ? (data?.payment_url || data?.checkout_url || null) : null,
       subscriptionAction: decision.action,
       activationStartAt: decision.start.toISOString(),
       activationExpiresAt: decision.expires.toISOString(),
-      message: 'Session SasPay créée. Vous allez être redirigé vers le paiement sécurisé.'
+      message: String(data?.user_instructions || 'Demande envoyée. Validez le paiement sur votre téléphone, puis attendez la confirmation.')
     }
   });
 }
