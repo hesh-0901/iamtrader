@@ -869,7 +869,7 @@ export async function handleSasPayWebhook(
     let valid = false;
 
     // SasPay Softpay: X-SasPay-Signature: t=<unix>,v1=<hex> signs "<timestamp>.<raw body>".
-    const timestampMatch = signedHeader.match(/(?:^|[, ])t=(\\d+)/);
+    const timestampMatch = signedHeader.match(/(?:^|[, ])t=(\d+)/);
     const v1Match = signedHeader.match(/(?:^|[, ])v1=([a-f0-9]{64})/i);
     if (timestampMatch && v1Match) {
       valid = await verifySasPayWebhookSignature(
