@@ -712,7 +712,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                         </div>
                         <div className="mt-4 flex items-end justify-between border-t border-slate-200 pt-4">
                           <span className="text-sm font-bold text-slate-800">Total à payer</span>
-                          <div className="text-right"><span className="block text-2xl font-extrabold tracking-tight text-slate-950">{paymentGateway === 'saspay' ? `$${amounts.total.toFixed(2)} USD` : `${amounts.cdfTotal.toLocaleString('fr-FR')} CDF`}</span><span className="text-[10px] font-semibold text-slate-400">{paymentGateway === 'saspay' ? 'Paiement traité en USD par SasPay' : `≈ $${amounts.total.toFixed(2)} USD`}</span></div>
+                          <div className="text-right"><span className="block text-2xl font-extrabold tracking-tight text-slate-950">{`${amounts.total.toFixed(2)} USD`}</span><span className="text-[10px] font-semibold text-slate-400">{paymentGateway === 'saspay' ? 'Paiement traité en USD par SasPay' : `≈ $${amounts.total.toFixed(2)} USD`}</span></div>
                         </div>
                       </div>
                       <p className="mt-3 text-[10px] leading-4 text-slate-400">{paymentGateway === 'saspay' ? 'SasPay reçoit le montant en USD. Les frais éventuels appliqués par SasPay dépendent de la configuration de votre compte marchand.' : 'Le montant CinetPay est débité en CDF. Le total de référence inclut les frais de paiement de 3 % et la conversion utilisée pour le checkout RDC.'}</p>
