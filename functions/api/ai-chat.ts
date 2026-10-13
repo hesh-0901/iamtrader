@@ -198,8 +198,8 @@ export async function onRequest(context: { request: Request; env: Env }) {
   const configuredModel = (context.env.GEMINI_MODEL || '').trim();
   const result = await callGeminiUnified(contents, {
     apiKey,
-    preferredModel: configuredModel || undefined,
-    fallbackModels: ['gemini-2.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.8-flash'],
+    preferredModel: 'gemini-3.5-flash-lite',
+    fallbackModels: ['gemini-3.8-flash'],
     systemInstruction: `${SYSTEM_INSTRUCTIONS}\n\nBASE DE CONNAISSANCES IAMTRADER\n${IAMTRADER_KNOWLEDGE}`,
     temperature: 0.3,
     maxTokens: 1200,
