@@ -690,17 +690,44 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                 </div>
               ) : null}
               {paymentStatus === 'idle' && (<>
-                <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-4 shadow-sm sm:p-5">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="min-w-0">
-                      <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">Votre formule</div>
-                      <div className="mt-1 text-base font-black text-slate-950">{paymentPlan === 'pro' ? 'Plus · 1 mois' : 'Community · 6 mois'}</div>
-                      <p className="mt-1 break-words text-xs text-slate-500">Compte : {userProfile?.displayName || userProfile?.email || 'Votre compte IAMTRADER'}</p>
-                    </div>
-                    <div className="shrink-0 text-right">
-                      <div className="text-[10px] font-semibold text-slate-400">Total à payer</div>
-                      <div className="mt-1 text-xl font-black tracking-tight text-slate-950">{paymentGateway === 'saspay' ? '$' + getPaymentAmounts(paymentPlan).total.toFixed(2) + ' USD' : getPaymentAmounts(paymentPlan).cdfTotal.toLocaleString('fr-FR') + ' CDF'}</div>
-                    </div>
+                <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-5">
+                  <div className="min-w-0">
+                    <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">Votre formule</div>
+                    <div className="mt-1 text-base font-black text-slate-950">{paymentPlan === 'pro' ? 'Plus · 1 mois' : 'Community · 6 mois'}</div>
+                    <p className="mt-1 break-words text-xs text-slate-500">Compte : {userProfile?.displayName || userProfile?.email || 'Votre compte IAMTRADER'}</p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <div className="text-[10px] font-semibold text-slate-400">Total à payer</div>
+                    <div className="mt-1 text-xl font-black tracking-tight text-slate-950">{paymentGateway === 'saspay' ? '
+                {paymentGateway === 'saspay' && paymentMode === 'live' && (
+                  <div>
+                    <label htmlFor="saspay-network" className="mb-1.5 block text-xs font-bold text-slate-700">Moyen de paiement</label>
+                    <select id="saspay-network" value={paymentProvider} onChange={event => setPaymentProvider(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100">
+                      <option value="Vodacom M-Pesa">Vodacom M-Pesa</option>
+                      <option value="Airtel Money">Airtel Money</option>
+                      <option value="Orange Money">Orange Money</option>
+                    </select>
+                  </div>
+                )}
+                <p className="text-xs leading-5 text-slate-500"><Shield className="mr-2 inline h-4 w-4 text-emerald-700" />Paiement sécurisé. Votre abonnement sera activé après confirmation du paiement.</p>
+                <button onClick={submitPayment} disabled={isPaymentLoading} className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-emerald-900/10 transition hover:bg-emerald-700 focus:outline-none focus:ring-4 focus:ring-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50">{isPaymentLoading ? 'Préparation de la redirection…' : paymentGateway === 'saspay' ? 'Continuer vers SasPay' : 'Continuer vers CinetPay'}</button>
+              </>)}
+              {paymentStatus === 'processing' && !(paymentGateway === 'saspay' && paymentUrl) && (<div className="py-5 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-indigo-50 text-indigo-600"><div className="h-6 w-6 animate-spin rounded-full border-2 border-indigo-200 border-t-indigo-600" /></div><h4 className="mt-4 text-base font-black text-slate-950">Paiement en traitement</h4><p className="mt-2 text-xs leading-5 text-slate-500">{paymentMessage || 'Nous attendons la confirmation du prestataire.'}</p>
+                {paymentActivationStart && <div className="mt-4 rounded-xl bg-slate-50 p-3 text-left text-[10px]">
+                  <div className="flex justify-between gap-3"><span className="text-slate-500">Type</span><b className="text-slate-800">{paymentAction === 'upgrade' ? 'Upgrade programmé' : paymentAction === 'renewal' ? 'Renouvellement' : 'Nouvelle souscription'}</b></div>
+                  <div className="mt-1 flex justify-between gap-3"><span className="text-slate-500">Début</span><b className="text-slate-800">{formatDate(paymentActivationStart)}</b></div>
+                  <div className="mt-1 flex justify-between gap-3"><span className="text-slate-500">Expiration</span><b className="text-slate-800">{formatDate(paymentActivationExpires || undefined)}</b></div>
+                </div>}{paymentMode === 'simulation' ? <button onClick={confirmSimulation} disabled={isPaymentLoading} className="mt-5 w-full rounded-xl bg-emerald-600 px-4 py-3 text-xs font-bold text-white disabled:opacity-50">{isPaymentLoading ? 'Confirmation serveur…' : 'Simuler la validation du paiement'}</button> : <div className="mt-4 rounded-xl bg-amber-50 px-3 py-2 text-[10px] font-semibold text-amber-700">Validez la demande Mobile Money avant de fermer.</div>}</div>)}
+              {paymentStatus === 'paid' && (<div className="py-6 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-600"><Check className="h-7 w-7" /></div><h4 className="mt-4 text-base font-black text-slate-950">Paiement confirmé</h4><p className="mt-2 text-xs text-slate-500">{paymentMessage}</p><div className="mt-4 rounded-xl bg-emerald-50 px-3 py-2 text-[10px] font-semibold text-emerald-700">Référence : {paymentId}</div></div>)}
+              {paymentStatus === 'failed' && (<div className="space-y-4 py-3 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-rose-50 text-rose-600">!</div><h4 className="text-base font-black text-slate-950">Paiement non finalisé</h4><p className="text-xs leading-5 text-slate-500">{paymentMessage}</p><button onClick={() => setPaymentStatus('idle')} className="w-full rounded-xl bg-slate-950 px-4 py-3 text-xs font-bold text-white">Réessayer</button></div>)}
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+ + getPaymentAmounts(paymentPlan).total.toFixed(2) + ' USD' : getPaymentAmounts(paymentPlan).cdfTotal.toLocaleString('fr-FR') + ' CDF'}</div>
                   </div>
                 </div>
                 {paymentGateway === 'saspay' && paymentMode === 'live' && (
