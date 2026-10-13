@@ -741,7 +741,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                   </div>
                   <div className="shrink-0 text-right">
                     <div className="text-[10px] font-semibold text-slate-400">Total à payer</div>
-                    <div className="mt-1 text-xl font-black tracking-tight text-slate-950">{paymentGateway === 'saspay' ? '$' + getPaymentAmounts(paymentPlan).total.toFixed(2) + ' USD' : getPaymentAmounts(paymentPlan).cdfTotal.toLocaleString('fr-FR') + ' CDF'}</div>
+                    <div className="mt-1 text-xl font-black tracking-tight text-slate-950">{paymentGateway === 'saspay' ? `${getPaymentAmounts(paymentPlan).total.toFixed(2)} USD` : `${getPaymentAmounts(paymentPlan).cdfTotal.toLocaleString('fr-FR')} CDF`}</div>
                   </div>
                 </div>
                 {paymentGateway === 'saspay' && paymentMode === 'live' && (
