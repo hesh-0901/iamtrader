@@ -332,7 +332,9 @@ export async function handleSasPayVerifyRequest(request: Request, env: SasPayEnv
     const canonicalStatus = String(session?.status || '').toUpperCase();
     const now = new Date().toISOString();
     if (canonicalStatus === 'SUCCESS') {
-      if (!amountsMatchToCents(Number(session?.amount), Number(payment.amount))) {
+      const sessionAmount = Number(session?.amount);
+      const amountMatches = amountsMatchToCents(sessionAmount, Number(payment.amount)) || amountsMatchToCents(sessionAmount / 100, Number(payment.amount));
+      if (!amountMatches) {
         await firestorePatch(env, 'payments/' + paymentId, {
           status: 'failed', failureMessage: 'Montant SasPay différent du montant attendu.', saspayStatus: canonicalStatus, updatedAt: now
         }, ['status', 'failureMessage', 'saspayStatus', 'updatedAt']);
