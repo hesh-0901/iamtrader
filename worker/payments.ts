@@ -802,7 +802,7 @@ export async function handleSasPayWebhook(
     }
 
     const transactionId = String(eventData?.id || '').trim();
-    if (!/^[a-f0-9-]{20,}$/i.test(transactionId)) {
+    if (!/^[a-z0-9_-]{10,128}$/i.test(transactionId)) {
       return json({ received: false, message: 'Identifiant de transaction SasPay invalide.' }, 400);
     }
 
