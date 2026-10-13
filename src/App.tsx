@@ -395,6 +395,11 @@ function MainAppContent() {
               trades={trades}
               selectedAccountId={selectedAccountId}
               onRequestPlan={handleRequestPlan}
+              onSubscriptionRefresh={async () => {
+                if (!currentUser) return;
+                const refreshed = await getUserProfile(currentUser.uid);
+                if (refreshed) setUserProfile(previous => ({ ...refreshed, role: previous?.role || refreshed.role }));
+              }}
             />
           )}
 
