@@ -131,20 +131,20 @@ export async function onRequest(context: { request: Request; env: Env }) {
     parts.push({ inlineData: { mimeType: file.mimeType, data: cleanData } });
   }
 
-  // Garder le modèle configuré en priorité, puis essayer des modèles de secours récents.
-  // Chaque tentative est limitée pour éviter qu'un seul modèle lent bloque Chloé.
-  const preferredModel = (context.env.GEMINI_CHLOE_MODEL || '').trim() || 'gemini-3.5-flash-lite';
+  // Priorité au modèle Flash principal, puis repli sur Flash-Lite si le premier échoue.
+  // GEMINI_CHLOE_MODEL permet de changer le modèle principal depuis Cloudflare sans modifier le code.
+  const preferredModel = (context.env.GEMINI_CHLOE_MODEL || '').trim() || 'gemini-3.8-flash';
   const result = await callGeminiUnified(
     [{ role: 'user', parts }],
     {
       apiKey,
       preferredModel,
-      fallbackModels: ['gemini-3.6-flash', 'gemini-3.8-flash'],
+      fallbackModels: ['gemini-3.5-flash-lite'],
       systemInstruction: SYSTEM_INSTRUCTIONS,
       responseJson: true,
       temperature: 0.2,
-      maxTokens: 1800,
-      timeoutMs: 8000,
+      maxTokens: 1000,
+      timeoutMs: 9000,
     },
   );
 
