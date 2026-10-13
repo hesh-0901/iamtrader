@@ -201,6 +201,25 @@ async function createSasPayCheckout(
   const country = SASPAY_COUNTRIES[countryCode as keyof typeof SASPAY_COUNTRIES];
   const network = country && Object.prototype.hasOwnProperty.call(country.networks, String(body.paymentProvider || '')) ? String(body.paymentProvider) : '';
   if (!country || !network) return json({ success: false, message: 'Pays ou opérateur Mobile Money non pris en charge par IAMTRADER.' }, 400);
+
+  // Validate against the merchant-specific payin availability, not just the public SasPay catalogue.
+  const ratesResponse = await fetch('https://api.saspay.me/api/v1/pricing/my-rates/?page_size=100', {
+    method: 'GET',
+    headers: { Authorization: 'Bearer ' + env.SASPAY_API_KEY, 'Content-Type': 'application/json' }
+  });
+  const ratesRaw = await ratesResponse.text();
+  let ratesData: any = {};
+  try { ratesData = ratesRaw ? JSON.parse(ratesRaw) : {}; } catch { ratesData = {}; }
+  const rates = Array.isArray(ratesData) ? ratesData : Array.isArray(ratesData?.results) ? ratesData.results : [];
+  if (!ratesResponse.ok) {
+    console.error('SasPay merchant rates lookup failed:', ratesResponse.status, ratesRaw.slice(0, 300));
+    return json({ success: false, message: 'Impossible de vérifier la disponibilité de cet opérateur auprès de SasPay. Réessayez plus tard.' }, 503);
+  }
+  const merchantRoute = rates.find((item: any) => String(item?.country_code || '').toUpperCase() === countryCode && String(item?.network_code || '') === network);
+  if (!merchantRoute?.payin?.available) {
+    return json({ success: false, message: 'Cet opérateur n’est pas activé pour les paiements sur votre compte SasPay. Choisissez un autre réseau ou contactez SasPay.' }, 400);
+  }
+
   const email = String(user.email || profile.email || '').trim();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ success: false, message: 'Une adresse e-mail valide est nécessaire pour créer le paiement.' }, 400);
   const paymentId = randomId(), reference = 'IMAT-' + paymentId.toUpperCase(), now = new Date().toISOString();
