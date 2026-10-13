@@ -46,8 +46,37 @@ function daysBetween(from?: string, to?: string) {
   return Math.max(0, Math.ceil((new Date(to).getTime() - new Date(from).getTime()) / 86400000));
 }
 const countryOptions = [
-  'Afrique du Sud','Algérie','Allemagne','Angola','Australie','Autriche','Belgique','Bénin','Botswana','Brésil','Burkina Faso','Burundi','Cameroun','Canada','Chine','Colombie','Congo','Côte d’Ivoire','Égypte','Émirats arabes unis','Espagne','États-Unis','France','Gabon','Ghana','Guinée','Inde','Italie','Kenya','Madagascar','Malawi','Mali','Maroc','Maurice','Mozambique','Namibie','Niger','Nigeria','Ouganda','République démocratique du Congo','Royaume-Uni','Rwanda','Sénégal','Suisse','Tanzanie','Tchad','Togo','Tunisie','Turquie','Ukraine','Zambie','Zimbabwe'
+  { name: 'République démocratique du Congo', code: 'CD', flag: '🇨🇩', supported: true },
+  { name: 'Zambie', code: 'ZM', flag: '🇿🇲', supported: false },
+  { name: 'France', code: 'FR', flag: '🇫🇷', supported: false },
+  { name: 'Belgique', code: 'BE', flag: '🇧🇪', supported: false },
+  { name: 'États-Unis', code: 'US', flag: '🇺🇸', supported: false },
+  { name: 'Royaume-Uni', code: 'GB', flag: '🇬🇧', supported: false },
+  { name: 'Afrique du Sud', code: 'ZA', flag: '🇿🇦', supported: false },
+  { name: 'Angola', code: 'AO', flag: '🇦🇴', supported: false },
+  { name: 'Congo', code: 'CG', flag: '🇨🇬', supported: false },
+  { name: 'Côte d’Ivoire', code: 'CI', flag: '🇨🇮', supported: false },
+  { name: 'Kenya', code: 'KE', flag: '🇰🇪', supported: false },
+  { name: 'Rwanda', code: 'RW', flag: '🇷🇼', supported: false },
+  { name: 'Tanzanie', code: 'TZ', flag: '🇹🇿', supported: false },
+  { name: 'Ouganda', code: 'UG', flag: '🇺🇬', supported: false },
+  { name: 'Nigeria', code: 'NG', flag: '🇳🇬', supported: false },
+  { name: 'Ghana', code: 'GH', flag: '🇬🇭', supported: false },
+  { name: 'Canada', code: 'CA', flag: '🇨🇦', supported: false },
+  { name: 'Allemagne', code: 'DE', flag: '🇩🇪', supported: false },
+  { name: 'Suisse', code: 'CH', flag: '🇨🇭', supported: false },
+  { name: 'Émirats arabes unis', code: 'AE', flag: '🇦🇪', supported: false }
 ];
+const detectCountryCode = () => {
+  const zone = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+  if (zone.startsWith('Africa/Lusaka')) return 'ZM';
+  if (zone.startsWith('Europe/Paris')) return 'FR';
+  if (zone.startsWith('Europe/Brussels')) return 'BE';
+  if (zone.startsWith('Europe/London')) return 'GB';
+  if (zone.startsWith('Africa/Johannesburg')) return 'ZA';
+  if (zone.startsWith('America/')) return 'US';
+  return 'CD';
+};
 
 
 export function SettingsView({ userProfile, accounts, trades, selectedAccountId, onRequestPlan, pendingPaymentReference }: SettingsViewProps) {
@@ -77,6 +106,9 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
   const [paymentMode, setPaymentMode] = useState<'simulation' | 'live'>('live');
   const [paymentGateway, setPaymentGateway] = useState<'cinetpay' | 'saspay'>('saspay');
   const [paymentPhone, setPaymentPhone] = useState('');
+  const [paymentCountryCode, setPaymentCountryCode] = useState<string>(() => detectCountryCode());
+  const [countrySearch, setCountrySearch] = useState('');
+  const [isCountryListOpen, setIsCountryListOpen] = useState(false);
   const [paymentProvider, setPaymentProvider] = useState('Airtel Money');
   const [paymentPayerName, setPaymentPayerName] = useState(userProfile?.displayName || [userProfile?.traderProfile?.firstName, userProfile?.traderProfile?.lastName].filter(Boolean).join(' ') || '');
   const [paymentId, setPaymentId] = useState<string | null>(null);
@@ -730,13 +762,32 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
       {activeTab === 'journal' && <TradingJournalSettings userProfile={userProfile} />}
 
       {paymentPlan && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto bg-[#07111f]/70 p-3 backdrop-blur-md sm:p-6">
-          <div className={'my-auto w-full ' + (paymentStatus === 'processing' && paymentGateway === 'saspay' && paymentUrl ? 'max-w-6xl' : 'max-w-2xl') + ' overflow-hidden rounded-3xl border border-white/70 bg-white shadow-[0_32px_100px_rgba(2,12,27,.36)] ring-1 ring-black/5'}>
-            <div className="relative flex items-start justify-between gap-4 border-b border-slate-100 bg-white px-5 py-5 sm:px-7 sm:py-6">
-              <div className="flex min-w-0 items-start gap-3"><div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100"><Shield className="h-5 w-5" /></div><div className="min-w-0"><div className="text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-700">Paiement sécurisé</div><h3 className="mt-1 text-xl font-extrabold tracking-tight text-slate-950 sm:text-2xl">{paymentPlan === 'pro' ? 'Passer à Plus' : 'Activer Community'}</h3><p className="mt-1 max-w-lg text-xs leading-5 text-slate-500">Vérifiez votre formule et poursuivez vers le paiement sécurisé pour activer votre abonnement.</p></div></div>
-              <button onClick={() => setPaymentPlan(null)} className="shrink-0 rounded-xl border border-slate-200 bg-white p-2.5 text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900" aria-label="Fermer"><X className="h-4 w-4" /></button>
+        <div className="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto bg-[#020b12]/85 p-2 backdrop-blur-xl sm:p-5">
+          <div className="relative my-auto grid w-full max-w-6xl overflow-hidden rounded-[28px] border border-emerald-300/25 bg-[#08151d] text-white shadow-[0_35px_120px_rgba(0,0,0,.65)] animate-in fade-in zoom-in-95 duration-300 lg:grid-cols-[0.88fr_1.12fr]">
+            <aside className="relative hidden overflow-hidden border-r border-emerald-300/15 bg-[radial-gradient(ellipse_at_top_left,rgba(0,199,150,.32),transparent_55%),linear-gradient(145deg,#06382f,#061b20_65%,#07131b)] p-8 lg:flex lg:flex-col xl:p-10">
+              <div className="pointer-events-none absolute inset-0 opacity-30" style={{backgroundImage:'linear-gradient(rgba(0,220,166,.12) 1px, transparent 1px),linear-gradient(90deg,rgba(0,220,166,.12) 1px, transparent 1px)',backgroundSize:'34px 34px',maskImage:'linear-gradient(to bottom,black,transparent)'}} />
+              <div className="relative flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-300/30"><TrendingUp className="h-6 w-6" /></div>
+                <div><div className="text-xl font-black tracking-tight">IAM<span className="text-emerald-400">TRADER</span></div><div className="text-[9px] font-semibold tracking-[.24em] text-emerald-100/65">TRADE · TRACK · PROGRESS</div></div>
+              </div>
+              <div className="relative mt-12"><span className="inline-flex rounded-full border border-emerald-300/25 bg-emerald-300/10 px-3 py-1 text-[10px] font-extrabold uppercase tracking-[.2em] text-emerald-300">Passez au niveau supérieur</span><h2 className="mt-5 max-w-sm text-4xl font-black leading-[1.08] tracking-tight">Votre trading mérite de meilleurs outils.</h2><p className="mt-4 max-w-sm text-sm leading-6 text-slate-300/80">Analysez vos résultats, maîtrisez vos habitudes et progressez avec une vision plus claire.</p></div>
+              <div className="relative mt-9 space-y-5">
+                {[
+                  ['Journal de trading avancé','Analysez vos performances en détail',Activity],
+                  ['Statistiques & analytics','Visualisez votre progression',TrendingUp],
+                  ['IA Vyra','Un assistant pour mieux structurer vos décisions',Sparkles],
+                  ['Gestion multi-comptes','Vos comptes au même endroit',WalletCards],
+                  ['Export & suivi','Gardez une trace claire de vos données',Receipt]
+                ].map(([title,desc,Icon]: any) => <div key={title} className="flex items-center gap-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-emerald-300/20 bg-emerald-300/10 text-emerald-300"><Icon className="h-4 w-4" /></div><div><div className="text-sm font-bold text-white">{title}</div><div className="mt-0.5 text-xs text-slate-300/65">{desc}</div></div></div>)}
+              </div>
+              <div className="relative mt-auto pt-8"><div className="rounded-2xl border border-emerald-300/20 bg-black/15 p-4 text-sm leading-6 text-emerald-50/85">« Un meilleur suivi. De meilleures décisions. De meilleurs résultats. »</div></div>
+            </aside>
+            <section className="min-w-0 bg-[radial-gradient(ellipse_at_top_right,rgba(0,199,150,.08),transparent_42%),linear-gradient(150deg,#0b1a23,#07121a)]">
+            <div className="relative flex items-start justify-between gap-4 border-b border-white/10 px-5 py-5 sm:px-7 sm:py-6">
+              <div className="flex min-w-0 items-start gap-3"><div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-400/10 text-emerald-300 ring-1 ring-emerald-300/20"><Shield className="h-5 w-5" /></div><div className="min-w-0"><div className="text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-300">Paiement sécurisé par SasPay</div><h3 className="mt-1 text-xl font-extrabold tracking-tight text-white sm:text-2xl">{paymentPlan === 'pro' ? 'Passer à Plus' : 'Activer Community'}</h3><p className="mt-1 max-w-lg text-xs leading-5 text-slate-300/70">Vérifiez votre formule et poursuivez vers le paiement sécurisé pour activer votre abonnement.</p></div></div>
+              <button onClick={() => setPaymentPlan(null)} className="shrink-0 rounded-xl border border-white/10 bg-white/5 p-2.5 text-slate-300 transition hover:border-emerald-300/40 hover:bg-emerald-300/10 hover:text-white" aria-label="Fermer"><X className="h-4 w-4" /></button>
             </div>
-            <div className="space-y-5 p-5 sm:p-7">
+            <div className="space-y-5 p-5 sm:p-7 lg:p-8">
               {paymentStatus === 'processing' && paymentGateway === 'saspay' && paymentUrl ? (
                 <div className="grid gap-5 lg:grid-cols-[0.8fr_1.2fr]">
                   <section className="rounded-2xl bg-slate-50 p-5 ring-1 ring-slate-200">
@@ -766,14 +817,27 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                   </div>
                 </div>
                 {paymentMode === 'live' && (
-                  <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5">
+                  <div className="space-y-4 rounded-2xl border border-white/10 bg-white/[0.035] p-4 sm:p-5">
+                    <div className="relative">
+                      <label className="mb-1.5 block text-xs font-bold text-slate-200">Pays de paiement</label>
+                      <button type="button" onClick={() => setIsCountryListOpen(open => !open)} className="flex w-full items-center gap-3 rounded-xl border border-emerald-400/45 bg-[#10242c] px-3 py-3 text-left transition hover:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-400/25">
+                        <span className="text-2xl leading-none">{countryOptions.find(item => item.code === paymentCountryCode)?.flag || '🌐'}</span>
+                        <span className="min-w-0 flex-1"><span className="mr-2 text-xs font-black text-emerald-300">{paymentCountryCode}</span><span className="text-sm font-semibold text-white">{countryOptions.find(item => item.code === paymentCountryCode)?.name || 'Sélectionner un pays'}</span><span className="mt-0.5 block text-[10px] text-sky-300">{paymentCountryCode === 'CD' ? 'Pays détecté · paiement disponible' : 'Pays sélectionné · paiement pas encore disponible'}</span></span>
+                        <ChevronRight className={'h-4 w-4 text-slate-400 transition ' + (isCountryListOpen ? 'rotate-90' : '')} />
+                      </button>
+                      {isCountryListOpen && <div className="absolute left-0 right-0 top-full z-30 mt-2 overflow-hidden rounded-2xl border border-white/15 bg-[#0c1c25] p-2 shadow-2xl shadow-black/50">
+                        <input value={countrySearch} onChange={event => setCountrySearch(event.target.value)} placeholder="Rechercher un pays..." className="mb-2 w-full rounded-xl border border-white/10 bg-white/5 px-3 py-2.5 text-xs text-white outline-none placeholder:text-slate-500 focus:border-emerald-400/60" />
+                        <div className="max-h-52 overflow-y-auto">{countryOptions.filter(item => (item.name + item.code).toLowerCase().includes(countrySearch.toLowerCase())).map(item => <button type="button" key={item.code} onClick={() => { setPaymentCountryCode(item.code); setIsCountryListOpen(false); setCountrySearch(''); }} className={'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ' + (paymentCountryCode === item.code ? 'bg-emerald-400/10 text-emerald-200 ring-1 ring-emerald-400/50' : 'text-slate-200 hover:bg-white/5')}><span className="text-xl">{item.flag}</span><span className="w-7 text-xs font-black">{item.code}</span><span className="flex-1 text-xs">{item.name}</span>{paymentCountryCode === item.code && <Check className="h-4 w-4 text-emerald-300" />}</button>)}</div>
+                      </div>}
+                    </div>
+                    {paymentCountryCode !== 'CD' && <div className="rounded-xl border border-amber-300/20 bg-amber-300/5 px-3 py-3 text-xs leading-5 text-amber-100/90">Le paiement Mobile Money via SasPay est actuellement configuré pour la RDC. Vous pouvez choisir ce pays, mais le paiement ne sera pas lancé tant que son opérateur n’est pas pris en charge.</div>}
                     <div>
                       <label htmlFor="saspay-phone" className="mb-1.5 block text-xs font-bold text-slate-700">Numéro Mobile Money</label>
-                      <input id="saspay-phone" type="tel" inputMode="tel" autoComplete="tel" required aria-required="true" value={paymentPhone} onChange={event => setPaymentPhone(event.target.value)} placeholder="+243 8XX XXX XXX" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100" />
+                      <input id="saspay-phone" type="tel" inputMode="tel" autoComplete="tel" required aria-required="true" value={paymentPhone} onChange={event => setPaymentPhone(event.target.value)} placeholder="+243 8XX XXX XXX" className="w-full rounded-xl border border-white/10 bg-[#10242c] px-3 py-3 text-sm text-white outline-none placeholder:text-slate-500 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/15" />
                     </div>
                     <div>
                       <label htmlFor="saspay-network" className="mb-1.5 block text-xs font-bold text-slate-700">Moyen de paiement</label>
-                      <select id="saspay-network" value={paymentProvider} onChange={event => setPaymentProvider(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100">
+                      <select id="saspay-network" value={paymentProvider} onChange={event => setPaymentProvider(event.target.value)} className="w-full rounded-xl border border-white/10 bg-[#10242c] px-3 py-3 text-sm text-white outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-400/15">
                         <option value="Vodacom M-Pesa">Vodacom M-Pesa</option>
                         <option value="Airtel Money">Airtel Money</option>
                         <option value="Orange Money">Orange Money</option>
@@ -781,8 +845,8 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                     </div>
                   </div>
                 )}
-                <div className="rounded-xl border border-emerald-100 bg-emerald-50/70 px-4 py-3 text-xs leading-5 text-emerald-950"><Shield className="mr-2 inline h-4 w-4" />Paiement sécurisé intégré à IAMTRADER. Une demande de confirmation sera envoyée par votre opérateur. L’abonnement ne sera activé qu’après confirmation serveur.</div>
-                <button onClick={submitPayment} disabled={isPaymentLoading || (paymentGateway === 'saspay' && paymentMode === 'live' && !paymentPhone.trim())} className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-emerald-900/10 transition hover:bg-emerald-700 focus:outline-none focus:ring-4 focus:ring-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50">{isPaymentLoading ? 'Envoi de la demande…' : 'Payer l’abonnement'}</button>
+                <div className="rounded-xl border border-emerald-300/20 bg-emerald-300/[0.07] px-4 py-3 text-xs leading-5 text-emerald-100/90"><Shield className="mr-2 inline h-4 w-4" />Paiement sécurisé intégré à IAMTRADER. Une demande de confirmation sera envoyée par votre opérateur. L’abonnement ne sera activé qu’après confirmation serveur.</div>
+                <button onClick={submitPayment} disabled={isPaymentLoading || (paymentGateway === 'saspay' && paymentMode === 'live' && (!paymentPhone.trim() || paymentCountryCode !== 'CD'))} className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-400 via-emerald-400 to-teal-300 px-4 py-3.5 text-sm font-extrabold text-[#05221b] shadow-[0_10px_30px_rgba(0,199,150,.18)] transition hover:-translate-y-0.5 hover:shadow-[0_14px_36px_rgba(0,199,150,.25)] focus:outline-none focus:ring-4 focus:ring-emerald-400/20 disabled:cursor-not-allowed disabled:opacity-40">{isPaymentLoading ? 'Envoi de la demande…' : 'Continuer vers le paiement'}</button>
               </>)}
               {paymentStatus === 'processing' && !(paymentGateway === 'saspay' && paymentUrl) && (<div className="py-5 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-indigo-50 text-indigo-600"><div className="h-6 w-6 animate-spin rounded-full border-2 border-indigo-200 border-t-indigo-600" /></div><h4 className="mt-4 text-base font-black text-slate-950">Paiement en traitement</h4><p className="mt-2 text-xs leading-5 text-slate-500">{paymentMessage || 'Nous attendons la confirmation du prestataire.'}</p>
                 {paymentActivationStart && <div className="mt-4 rounded-xl bg-slate-50 p-3 text-left text-[10px]">
@@ -793,6 +857,9 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
               {paymentStatus === 'paid' && (<div className="py-6 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-600"><Check className="h-7 w-7" /></div><h4 className="mt-4 text-base font-black text-slate-950">Paiement confirmé</h4><p className="mt-2 text-xs text-slate-500">{paymentMessage}</p><div className="mt-4 rounded-xl bg-emerald-50 px-3 py-2 text-[10px] font-semibold text-emerald-700">Référence : {paymentId}</div></div>)}
               {paymentStatus === 'failed' && (<div className="space-y-4 py-3 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-rose-50 text-rose-600">!</div><h4 className="text-base font-black text-slate-950">Paiement non finalisé</h4><p className="text-xs leading-5 text-slate-500">{paymentMessage}</p><button onClick={() => setPaymentStatus('idle')} className="w-full rounded-xl bg-slate-950 px-4 py-3 text-xs font-bold text-white">Réessayer</button></div>)}
             </div>
+          </div>
+        </div>
+            </section>
           </div>
         </div>
       )}
