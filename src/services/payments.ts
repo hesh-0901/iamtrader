@@ -36,6 +36,23 @@ export async function createPayment(plan: PaidPlan, details: PaymentDetails): Pr
   return data.payment as PaymentInitResult;
 }
 
+export async function verifySasPayPayment(reference: string) {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Vous devez être connecté.');
+  const idToken = await user.getIdToken();
+  const response = await fetch('/api/payments/verify?reference=' + encodeURIComponent(reference), {
+    headers: { Authorization: `Bearer ${idToken}` }
+  });
+  const data = await response.json() as {
+    success?: boolean;
+    status?: 'paid' | 'processing' | 'failed' | 'unknown';
+    message?: string;
+    payment?: { id: string; plan: PaidPlan; planName: string; amount: number; currency: string; status: string; reference: string };
+  };
+  if (!response.ok || !data.success) throw new Error(data.message || 'Impossible de vérifier le paiement SasPay.');
+  return { status: data.status || 'unknown', payment: data.payment };
+}
+
 export async function getPaymentStatus(id: string) {
   const user = auth.currentUser;
   if (!user) throw new Error('Vous devez être connecté.');
