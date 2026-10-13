@@ -847,7 +847,7 @@ export async function handleSasPayWebhook(
       return json({ received: true, duplicate: true });
     }
     if (event === 'transaction.success') {
-      const amount = Number(transaction?.requested_amount);
+      const amount = Number(transaction?.requested_amount ?? transaction?.amount);
       const currency = String(transaction?.currency || '').toUpperCase();
       if (canonicalStatus !== 'SUCCESS') return json({ received: false, message: 'Le statut canonique SasPay ne confirme pas le paiement.' }, 409);
       if (!amountsMatchToCents(amount, Number(payment.amount))) {
