@@ -207,6 +207,103 @@ async function createSasPayCheckout(
   }
 }
 
+export async function handleSasPayVerifyRequest(request: Request, env: SasPayEnv) {
+  if (request.method !== 'GET') return json({ success: false, message: 'Méthode non autorisée.' }, 405);
+  const token = authHeader(request);
+  if (!token) return json({ success: false, message: 'Authentification requise.' }, 401);
+  if (!env.SASPAY_API_KEY) return json({ success: false, message: 'SasPay n’est pas configuré côté serveur.' }, 503);
+
+  try {
+    const user = await verifyFirebaseIdToken(env, token);
+    const reference = new URL(request.url).searchParams.get('reference') || '';
+    if (!/^[a-f0-9]{24}$/i.test(reference)) return json({ success: false, message: 'Référence de paiement invalide.' }, 400);
+
+    const paymentId = reference.toLowerCase();
+    const payment = await firestoreGet(env, 'payments/' + paymentId);
+    if (!payment || payment.uid !== user.uid || payment.provider !== 'SASPAY') {
+      return json({ success: false, message: 'Paiement SasPay introuvable.' }, 404);
+    }
+    if (payment.status === 'paid') return json({ success: true, status: 'paid', payment: publicPayment(payment) });
+
+    const checkoutId = String(payment.saspayCheckoutId || '');
+    if (!checkoutId) return json({ success: false, status: 'unknown', message: 'La session SasPay est introuvable pour cette référence.' }, 409);
+    const response = await fetch('https://api.saspay.me/api/v1/checkout-sessions/' + encodeURIComponent(checkoutId) + '/', {
+      method: 'GET',
+      headers: { Authorization: 'Bearer ' + env.SASPAY_API_KEY, 'Content-Type': 'application/json' }
+    });
+    const raw = await response.text();
+    let result: any = {};
+    try { result = raw ? JSON.parse(raw) : {}; } catch { result = {}; }
+    const session = result?.data || result;
+    if (!response.ok || String(session?.id || '') !== checkoutId) {
+      console.error('SasPay checkout verification failed:', response.status, raw.slice(0, 300));
+      return json({ success: true, status: 'unknown', payment: publicPayment(payment) });
+    }
+
+    const canonicalStatus = String(session?.status || '').toUpperCase();
+    const now = new Date().toISOString();
+    if (canonicalStatus === 'SUCCESS') {
+      const sessionAmount = Number(session?.amount);
+      const amountMatches = amountsMatchToCents(sessionAmount, Number(payment.amount)) || amountsMatchToCents(sessionAmount / 100, Number(payment.amount));
+      if (!amountMatches) {
+        await firestorePatch(env, 'payments/' + paymentId, {
+          status: 'failed', failureMessage: 'Montant SasPay différent du montant attendu.', saspayStatus: canonicalStatus, updatedAt: now
+        }, ['status', 'failureMessage', 'saspayStatus', 'updatedAt']);
+        return json({ success: true, status: 'failed', payment: publicPayment({ ...payment, status: 'failed' }) });
+      }
+      if (String(session?.currency || '').toUpperCase() !== String(payment.currency || '').toUpperCase()) {
+        await firestorePatch(env, 'payments/' + paymentId, {
+          status: 'failed', failureMessage: 'Devise SasPay différente de la commande.', saspayStatus: canonicalStatus, updatedAt: now
+        }, ['status', 'failureMessage', 'saspayStatus', 'updatedAt']);
+        return json({ success: true, status: 'failed', payment: publicPayment({ ...payment, status: 'failed' }) });
+      }
+      const metadataPaymentId = String(session?.metadata?.iamtrader_payment_id || '').trim().toLowerCase();
+      if (metadataPaymentId && metadataPaymentId !== paymentId) {
+        return json({ success: false, status: 'unknown', message: 'La référence retournée par SasPay ne correspond pas à cette commande.' }, 409);
+      }
+
+      const planKey = payment.plan as keyof typeof PLANS;
+      const profile = await firestoreGet(env, 'users/' + encodeURIComponent(String(payment.uid)));
+      if (!PLANS[planKey] || !profile) return json({ success: false, message: 'Profil ou formule introuvable.' }, 404);
+      const paidAt = String(session?.updated_at || session?.paid_at || now);
+      const storedAction = payment.subscriptionAction;
+      const storedStart = new Date(String(payment.activationStartAt || ''));
+      const storedExpires = new Date(String(payment.activationExpiresAt || ''));
+      const storedActivationIsValid = ['initial', 'renewal', 'upgrade'].includes(String(storedAction)) &&
+        Number.isFinite(storedStart.getTime()) && Number.isFinite(storedExpires.getTime());
+      const decision = storedActivationIsValid ? null : decideSubscription(profile, planKey, new Date(paidAt));
+      if (decision && 'error' in decision) return json({ success: false, message: decision.error }, 409);
+      const action = storedActivationIsValid ? storedAction as SubscriptionAction : decision!.action;
+      const start = storedActivationIsValid ? storedStart.toISOString() : decision!.start.toISOString();
+      const expires = storedActivationIsValid ? storedExpires.toISOString() : decision!.expires.toISOString();
+
+      await firestorePatch(env, 'payments/' + paymentId, {
+        status: 'paid', paidAt, provider: 'SASPAY', saspayStatus: canonicalStatus, updatedAt: paidAt
+      }, ['status', 'paidAt', 'provider', 'saspayStatus', 'updatedAt']);
+      await firestorePatch(env, 'users/' + encodeURIComponent(String(payment.uid)),
+        subscriptionFields(profile, planKey, action, start, expires, paidAt),
+        ['plan', 'paymentDate', 'subscriptionStartAt', 'subscriptionExpiresAt', 'subscriptionStatus', 'paymentStatus', 'planChangeConfirmedAt', 'pendingPlan', 'planChangeRequestedAt', 'scheduledPlan', 'scheduledStartAt', 'scheduledExpiresAt', 'updatedAt']);
+      const updated = await firestoreGet(env, 'payments/' + paymentId);
+      return json({ success: true, status: 'paid', payment: publicPayment(updated || { ...payment, status: 'paid', paidAt }) });
+    }
+
+    if (['FAILED', 'FAILURE', 'EXPIRED', 'CANCELLED', 'CANCELED'].includes(canonicalStatus)) {
+      await firestorePatch(env, 'payments/' + paymentId, {
+        status: 'failed', failureMessage: 'Paiement SasPay ' + canonicalStatus + '.', saspayStatus: canonicalStatus, updatedAt: now
+      }, ['status', 'failureMessage', 'saspayStatus', 'updatedAt']);
+      return json({ success: true, status: 'failed', payment: publicPayment({ ...payment, status: 'failed' }) });
+    }
+    await firestorePatch(env, 'payments/' + paymentId, {
+      status: 'processing', saspayStatus: canonicalStatus || 'PENDING', updatedAt: now
+    }, ['status', 'saspayStatus', 'updatedAt']);
+    return json({ success: true, status: 'processing', payment: publicPayment({ ...payment, status: 'processing' }) });
+  } catch (error) {
+    console.error('SasPay verification error:', error);
+    return json({ success: false, message: error instanceof Error ? error.message : 'Impossible de vérifier le paiement SasPay.' }, 500);
+  }
+}
+
+
 export async function handleSasPayStatusRequest(request: Request, env: SasPayEnv) {
   if (request.method !== 'GET') return json({ success: false, message: 'Méthode non autorisée.' }, 405);
   const token = authHeader(request);
