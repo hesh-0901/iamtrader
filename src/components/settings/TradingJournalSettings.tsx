@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Plus, Trash2, Settings2, CandlestickChart, Layers3, X, CheckCircle2 } from 'lucide-react';
+import { Plus, Trash2, Settings2, CandlestickChart, Layers3, X, CheckCircle2, Sparkles, AlertTriangle } from 'lucide-react';
 import { TradingInstrument, TradingSetup, UserProfile } from '../../types';
 import { updateUserSettings } from '../../services/firestore';
 import { useToast } from '../common/Toast';
@@ -16,6 +16,7 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
   const [instruments, setInstruments] = useState<TradingInstrument[]>(userProfile?.settings?.instruments || []);
   const [setups, setSetups] = useState<TradingSetup[]>(userProfile?.settings?.setups || []);
   const [newSetup, setNewSetup] = useState('');
+  const [deleteTarget, setDeleteTarget] = useState<{ type: 'instrument' | 'setup'; id: string; label: string } | null>(null);
   const [instrument, setInstrument] = useState<TradingInstrument>({
     id: '',
     symbol: '',
@@ -26,6 +27,14 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
     defaultPositionSize: ''
   });
   const [saving, setSaving] = useState(false);
+
+  const setupSuggestions = useMemo(() => {
+    const catalog = ['FVG', 'IFVG', 'BISI', 'SIBI', 'Order Block', 'Breaker Block', 'Mitigation Block', 'Unicorn', 'Market Structure Shift (MSS)', 'Change of Character (CHOCH)', 'Liquidity Sweep', 'Buy Side Liquidity (BSL)', 'Sell Side Liquidity (SSL)', 'Fair Value Gap', 'SMT Divergence', 'OTE', 'Support / Resistance', 'Trendline Breakout', 'Supply and Demand', 'Opening Range Breakout'];
+    const query = newSetup.trim().toLowerCase();
+    if (!query) return [];
+    const initialsQuery = query.replace(/[^a-z0-9]/g, '');
+    return catalog.filter(name => { const words = name.toLowerCase().split(/[^a-z0-9]+/).filter(Boolean); const initials = words.map(word => word[0]).join(''); return name.toLowerCase().includes(query) || initials.startsWith(initialsQuery); }).filter(name => !setups.some(item => item.name.toLowerCase() === name.toLowerCase())).slice(0, 5);
+  }, [newSetup, setups]);
 
   const canAddInstrument = useMemo(
     () => Boolean(instrument.symbol.trim() && instrument.name.trim() && Number(instrument.priceStep) > 0 && Number(instrument.valuePerPriceUnit) > 0),
@@ -68,6 +77,7 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
   const removeInstrument = async (id: string) => {
     const next = instruments.filter(item => item.id !== id);
     setInstruments(next);
+    setDeleteTarget(null);
     await persist(next, setups);
   };
 
@@ -83,7 +93,14 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
   const removeSetup = async (id: string) => {
     const next = setups.filter(item => item.id !== id);
     setSetups(next);
+    setDeleteTarget(null);
     await persist(instruments, next);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    if (deleteTarget.type === 'instrument') await removeInstrument(deleteTarget.id);
+    else await removeSetup(deleteTarget.id);
   };
 
   return (
@@ -103,17 +120,28 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
           <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-3.5 text-xs leading-5 text-emerald-900">« Valeur par 1.00 » correspond au gain ou à la perte pour un mouvement de 1.00 avec une unité de taille, dans la devise du compte.</div>
           <button type="button" disabled={!canAddInstrument||saving} onClick={addInstrument} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"><Plus className="h-4 w-4"/> Ajouter l’instrument</button>
           <div className="border-t border-slate-100 pt-4"><div className="mb-3 flex items-center justify-between"><h5 className="text-sm font-bold text-slate-900">Instruments configurés</h5><span className="text-xs text-slate-400">{instruments.length} au total</span></div>
-            {instruments.length ? <div className="space-y-2">{instruments.map(item=><div key={item.id} className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-slate-200 px-3.5 py-3 transition hover:border-emerald-200"><div className="flex min-w-0 items-center gap-3"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-xs font-black text-slate-600">{item.symbol.slice(0,3)}</div><div className="min-w-0"><p className="truncate text-sm font-bold text-slate-900">{item.symbol}</p><p className="truncate text-xs text-slate-500">{item.name} · Valeur {item.valuePerPriceUnit}/1.00</p></div></div><button type="button" aria-label={`Supprimer ${item.symbol}`} disabled={saving} onClick={()=>removeInstrument(item.id)} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 disabled:opacity-40"><Trash2 className="h-4 w-4"/></button></div>)}</div>:<div className="rounded-2xl border border-dashed border-slate-200 px-4 py-8 text-center"><CandlestickChart className="mx-auto h-7 w-7 text-slate-300"/><p className="mt-2 text-sm font-semibold text-slate-700">Aucun instrument configuré</p><p className="mt-1 text-xs text-slate-500">Ajoutez votre premier instrument ci-dessus.</p></div>}
+            {instruments.length ? <div className="space-y-2">{instruments.map(item=><div key={item.id} className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-slate-200 px-3.5 py-3 transition hover:border-emerald-200"><div className="flex min-w-0 items-center gap-3"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-xs font-black text-slate-600">{item.symbol.slice(0,3)}</div><div className="min-w-0"><p className="truncate text-sm font-bold text-slate-900">{item.symbol}</p><p className="truncate text-xs text-slate-500">{item.name} · Valeur {item.valuePerPriceUnit}/1.00</p></div></div><button type="button" aria-label={`Supprimer ${item.symbol}`} disabled={saving} onClick={()=>setDeleteTarget({type:'instrument',id:item.id,label:item.symbol})} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 disabled:opacity-40"><Trash2 className="h-4 w-4"/></button></div>)}</div>:<div className="rounded-2xl border border-dashed border-slate-200 px-4 py-8 text-center"><CandlestickChart className="mx-auto h-7 w-7 text-slate-300"/><p className="mt-2 text-sm font-semibold text-slate-700">Aucun instrument configuré</p><p className="mt-1 text-xs text-slate-500">Ajoutez votre premier instrument ci-dessus.</p></div>}
           </div></div>
         </section>
         <section className="min-w-0 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
           <div className="border-b border-slate-100 px-5 py-4 sm:px-6"><div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-50 text-teal-700"><Layers3 className="h-5 w-5"/></div><div><h4 className="text-base font-extrabold text-slate-950">Setups & stratégies</h4><p className="mt-0.5 text-xs text-slate-500">Vos configurations d’entrée habituelles.</p></div><span className="ml-auto rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600">{setups.length}</span></div></div>
-          <div className="p-5 sm:p-6"><label className={labelClass}>Nouveau setup</label><div className="flex gap-2"><input className={inputClass} value={newSetup} onChange={e=>setNewSetup(e.target.value)} placeholder="FVG, Order Block, MSS…" onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();void addSetup();}}}/><button type="button" aria-label="Ajouter le setup" disabled={!newSetup.trim()||saving} onClick={()=>void addSetup()} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"><Plus className="h-5 w-5"/></button></div>
-            <div className="mt-5">{setups.length?<div className="space-y-2">{setups.map(item=><div key={item.id} className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 px-3.5 py-3"><div className="flex min-w-0 items-center gap-2.5"><span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500"/><span className="truncate text-sm font-semibold text-slate-800">{item.name}</span></div><button type="button" aria-label={`Supprimer le setup ${item.name}`} disabled={saving} onClick={()=>void removeSetup(item.id)} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 disabled:opacity-40"><X className="h-4 w-4"/></button></div>)}</div>:<div className="rounded-2xl border border-dashed border-slate-200 px-4 py-8 text-center"><Layers3 className="mx-auto h-7 w-7 text-slate-300"/><p className="mt-2 text-sm font-semibold text-slate-700">Aucun setup enregistré</p><p className="mt-1 text-xs text-slate-500">Ajoutez une stratégie pour la retrouver dans le journal.</p></div>}</div>
+          <div className="p-5 sm:p-6"><label className={labelClass}>Nouveau setup</label><div className="flex gap-2"><input className={inputClass} value={newSetup} onChange={e=>setNewSetup(e.target.value)} placeholder="Tapez FVG, OB, MSS…" onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();void addSetup();}}}/><button type="button" aria-label="Ajouter le setup" disabled={!newSetup.trim()||saving} onClick={()=>void addSetup()} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"><Plus className="h-5 w-5"/></button></div>
+            {setupSuggestions.length > 0 && <div className="mt-3 rounded-2xl border border-emerald-100 bg-emerald-50/60 p-3"><p className="mb-2 flex items-center gap-1.5 text-xs font-bold text-emerald-800"><Sparkles className="h-3.5 w-3.5"/> Suggestions de setups</p><div className="flex flex-wrap gap-2">{setupSuggestions.map(name=><button key={name} type="button" onClick={()=>setNewSetup(name)} className="rounded-full border border-emerald-100 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 transition hover:border-emerald-400 hover:text-emerald-800">{name}</button>)}</div></div>}
+            <div className="mt-5">{setups.length?<div className="space-y-2">{setups.map(item=><div key={item.id} className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 px-3.5 py-3"><div className="flex min-w-0 items-center gap-2.5"><span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500"/><span className="truncate text-sm font-semibold text-slate-800">{item.name}</span></div><button type="button" aria-label={`Supprimer le setup ${item.name}`} disabled={saving} onClick={()=>setDeleteTarget({type:'setup',id:item.id,label:item.name})} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 disabled:opacity-40"><X className="h-4 w-4"/></button></div>)}</div>:<div className="rounded-2xl border border-dashed border-slate-200 px-4 py-8 text-center"><Layers3 className="mx-auto h-7 w-7 text-slate-300"/><p className="mt-2 text-sm font-semibold text-slate-700">Aucun setup enregistré</p><p className="mt-1 text-xs text-slate-500">Ajoutez une stratégie pour la retrouver dans le journal.</p></div>}</div>
           <div className="mt-5 rounded-2xl bg-slate-50 p-4"><p className="text-xs font-bold text-slate-700">À savoir</p><p className="mt-1 text-xs leading-5 text-slate-500">Les instruments et setups sont enregistrés dans votre compte et réutilisables dans le journal.</p></div>
           </div>
         </section>
       </div>
+      {deleteTarget && (
+        <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm" onMouseDown={event=>{if(event.target===event.currentTarget)setDeleteTarget(null);}}>
+          <div role="dialog" aria-modal="true" aria-labelledby="journal-delete-title" className="w-full max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-50 text-rose-600"><AlertTriangle className="h-6 w-6"/></div>
+            <h3 id="journal-delete-title" className="mt-4 text-lg font-black text-slate-950">Confirmer la suppression</h3>
+            <p className="mt-2 text-sm leading-6 text-slate-600">Voulez-vous vraiment supprimer <strong>{deleteTarget.label}</strong> ? Cette action ne peut pas être annulée.</p>
+            <div className="mt-6 flex justify-end gap-2"><button type="button" onClick={()=>setDeleteTarget(null)} className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50">Annuler</button><button type="button" disabled={saving} onClick={()=>void confirmDelete()} className="rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-rose-700 disabled:opacity-50">{saving?'Suppression…':'Supprimer'}</button></div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
