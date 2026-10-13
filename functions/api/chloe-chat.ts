@@ -1,3 +1,5 @@
+import { callGeminiUnified } from './common/gemini-client';
+
 interface Env {
   GEMINI_API_KEY?: string;
   GEMINI_MODEL?: string;
@@ -128,52 +130,42 @@ export async function onRequest(context: { request: Request; env: Env }) {
     parts.push({ inlineData: { mimeType: file.mimeType, data: cleanData } });
   }
 
-  // Chloé utilise exactement la même sélection de modèle que VYRA.
-  const model = (context.env.GEMINI_MODEL || 'gemini-3.5-flash-lite').trim();
+  const configuredModel = (context.env.GEMINI_MODEL || '').trim();
+  const result = await callGeminiUnified(
+    [{ role: 'user', parts }],
+    {
+      apiKey,
+      preferredModel: configuredModel || undefined,
+      fallbackModels: ['gemini-2.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.8-flash'],
+      systemInstruction: SYSTEM_INSTRUCTIONS,
+      responseJson: true,
+      temperature: 0.2,
+      maxTokens: 1800,
+      timeoutMs: 6500,
+    },
+  );
 
-  try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
-      {
-        method: 'POST',
-        headers: { 'x-goog-api-key': apiKey, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: SYSTEM_INSTRUCTIONS }] },
-          contents: [{ role: 'user', parts }],
-          generationConfig: { responseMimeType: 'application/json' },
-        }),
-      }
-    );
-
-    const raw = await response.text();
-    let data: any = {};
-    try { data = raw ? JSON.parse(raw) : {}; } catch {}
-
-    if (!response.ok) {
-      console.error('Chloe Gemini API error:', { status: response.status, model, response: raw.slice(0, 3000) });
-      return json({ error: 'Chloé ne peut pas répondre pour le moment.', details: { status: response.status, model, provider: raw.slice(0, 4000) } }, 502);
-    }
-
-    const output = data?.candidates?.[0]?.content?.parts
-      ?.map((p: any) => p?.text || '')
-      .filter(Boolean)
-      .join('\n') || '';
-
-    if (!output.trim()) return json({ error: 'La réponse de Chloé est vide.' }, 502);
-
-    let parsed: any;
-    try {
-      parsed = JSON.parse(output);
-    } catch {
-      parsed = { reply: output.trim(), action: null };
-    }
-
+  if (!result.success || !result.text) {
+    console.error('Chloe Gemini request failed:', { model: configuredModel || undefined, status: result.httpStatus });
     return json({
-      reply: typeof parsed.reply === 'string' ? parsed.reply : 'Je n’ai pas pu formuler une réponse exploitable.',
-      action: parsed.action ?? null,
-    });
-  } catch (error) {
-    console.error('Chloe fetch failed:', error);
-    return json({ error: 'Le service IA n’a pas pu répondre pour le moment.', details: { reason: error instanceof Error ? error.message : String(error), model } }, 502);
+      error: 'Chloé ne peut pas répondre pour le moment.',
+      details: {
+        reason: result.error,
+        model: configuredModel || undefined,
+        httpStatus: result.httpStatus,
+      },
+    }, 502);
   }
+
+  let parsed: any;
+  try {
+    parsed = JSON.parse(result.text);
+  } catch {
+    parsed = { reply: result.text.trim(), action: null };
+  }
+
+  return json({
+    reply: typeof parsed.reply === 'string' ? parsed.reply : 'Je n’ai pas pu formuler une réponse exploitable.',
+    action: parsed.action ?? null,
+  });
 }
