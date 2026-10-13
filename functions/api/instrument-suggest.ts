@@ -52,24 +52,59 @@ valuePerPriceUnit est le gain/perte approximatif, dans la devise du compte indiq
 Fais une proposition pratique à partir des spécifications usuelles connues. N'invente pas une certitude : le contrat, la taille de lot et la valeur peuvent varier selon le broker, notamment pour les CFD, indices, futures et paires dont la devise de cotation diffère de celle du compte. Explique brièvement cette réserve dans note. Ne prétends pas avoir consulté le broker de l'utilisateur. Si l'actif est inconnu, utilise category "other", name égal au symbole, priceStep 0.01 et valuePerPriceUnit 1 comme valeurs provisoires clairement signalées dans note.
 Tous les nombres doivent être strictement positifs.`;
 
-  // Prefer Chloé's dedicated model setting, then the shared Gemini setting.
-  // The default matches the existing Chloé chat endpoint.
-  const model = (env.GEMINI_CHLOE_MODEL || env.GEMINI_MODEL || 'gemini-3.5-flash-lite').trim();
+  // Use the same preferred model as Chloé, with a fast fallback for this lightweight task.
+  // GEMINI_CHLOE_MODEL can override the instrument-specific model without changing the chat.
+  const configuredModel = (env.GEMINI_CHLOE_MODEL || env.GEMINI_MODEL || '').trim();
+  const models = [...new Set([
+    configuredModel || 'gemini-3.5-flash-lite',
+    'gemini-2.5-flash-lite',
+  ])];
+  let response: Response | undefined;
+  let model = models[0];
+  let lastError: unknown;
 
-  try {
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
-      {
-        method: 'POST',
-        headers: { 'x-goog-api-key': env.GEMINI_API_KEY.trim(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: { responseMimeType: 'application/json', maxOutputTokens: 250, temperature: 0.1 },
-        }),
-        // Instrument suggestions may take longer during Gemini load; allow a reasonable response window.
-        signal: AbortSignal.timeout(25000),
-      },
-    );
+  for (const candidate of models) {
+    model = candidate;
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 9000);
+    const startedAt = Date.now();
+    try {
+      response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(candidate)}:generateContent`,
+        {
+          method: 'POST',
+          headers: { 'x-goog-api-key': env.GEMINI_API_KEY.trim(), 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            generationConfig: { responseMimeType: 'application/json', maxOutputTokens: 250, temperature: 0.1 },
+          }),
+          signal: controller.signal,
+        },
+      );
+      clearTimeout(timer);
+      console.log('Instrument suggestion Gemini response:', {
+        model: candidate, status: response.status, durationMs: Date.now() - startedAt,
+      });
+      // Retry another model for model/access errors, rate limits, or temporary provider failures.
+      if (response.ok || ![400, 404, 429, 500, 502, 503, 504].includes(response.status)) break;
+      lastError = new Error(`Gemini HTTP ${response.status} for model ${candidate}`);
+      if (candidate === models[models.length - 1]) break;
+    } catch (error) {
+      clearTimeout(timer);
+      lastError = error;
+      console.warn('Instrument suggestion Gemini attempt failed:', {
+        model: candidate,
+        durationMs: Date.now() - startedAt,
+        reason: error instanceof Error ? error.message : String(error),
+      });
+      if (candidate === models[models.length - 1]) throw error;
+    }
+  }
+
+  if (!response) throw lastError instanceof Error ? lastError : new Error('Gemini n’a retourné aucune réponse.');
+  if (!response.ok && lastError instanceof Error) {
+    // Read the final provider response below so the caller receives the useful HTTP details.
+  }
     const raw = await response.text();
     let data: any = {};
     try { data = raw ? JSON.parse(raw) : {}; } catch {}
