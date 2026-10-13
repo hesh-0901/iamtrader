@@ -183,7 +183,7 @@ async function createSasPayCheckout(
     invoiceNumber: invoiceNumber(paymentId, now), createdAt: now
   });
   try {
-    const customerNames = String(profile.displayName || payerName || email).trim().split(/\\s+/).filter(Boolean);
+    const customerNames = String(profile.displayName || payerName || email).trim().split(/\s+/).filter(Boolean);
     const firstName = customerNames.shift() || 'IAMTRADER';
     const lastName = customerNames.join(' ') || 'Trader';
     const response = await fetch('https://api.saspay.me/api/v1/payments/softpay/', {
