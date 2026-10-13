@@ -1,7 +1,7 @@
 import { onRequest as handleAiChat } from '../functions/api/ai-chat';
 import { onRequest as handleChloeChat } from '../functions/api/chloe-chat';
 import { onRequestPost as handleContactReply } from '../functions/api/contact-reply';
-import { handlePaymentRequest, handlePaymentCallback, handleCinetPayNotification, handleSasPayWebhook, handleSimulatedPaymentRequest, handleSimulatedPaymentConfirm } from './payments';
+import { handlePaymentRequest, handlePaymentCallback, handleCinetPayNotification, handleSasPayWebhook, handleSasPayStatusRequest, handleSimulatedPaymentRequest, handleSimulatedPaymentConfirm } from './payments';
 import type { PaymentEnv } from './firebaseAdmin';
 import { handleSubscriptionStatus } from './subscriptionStatus';
 import { handlePaymentHistory } from './paymentHistory';
@@ -88,8 +88,12 @@ export default {
       return handleAdminMutation(request, env);
     }
 
-    if (url.pathname === '/api/payments') {
+    if (url.pathname === '/api/payments/initialize' || url.pathname === '/api/payments') {
       return handlePaymentRequest(request, env);
+    }
+
+    if (url.pathname === '/api/payments/status') {
+      return handleSasPayStatusRequest(request, env);
     }
 
     if (url.pathname === '/api/payments/cinetpay/notify') {
