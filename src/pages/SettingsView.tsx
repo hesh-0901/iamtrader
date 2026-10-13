@@ -765,11 +765,11 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                     <div className="mt-1 text-xl font-black tracking-tight text-slate-950">{paymentGateway === 'saspay' ? `${getPaymentAmounts(paymentPlan).total.toFixed(2)} USD` : `${getPaymentAmounts(paymentPlan).cdfTotal.toLocaleString('fr-FR')} CDF`}</div>
                   </div>
                 </div>
-                {paymentGateway === 'saspay' && paymentMode === 'live' && (
+                {paymentMode === 'live' && (
                   <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5">
                     <div>
                       <label htmlFor="saspay-phone" className="mb-1.5 block text-xs font-bold text-slate-700">Numéro Mobile Money</label>
-                      <input id="saspay-phone" type="tel" inputMode="tel" autoComplete="tel" value={paymentPhone} onChange={event => setPaymentPhone(event.target.value)} placeholder="+243 8XX XXX XXX" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100" />
+                      <input id="saspay-phone" type="tel" inputMode="tel" autoComplete="tel" required aria-required="true" value={paymentPhone} onChange={event => setPaymentPhone(event.target.value)} placeholder="+243 8XX XXX XXX" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100" />
                     </div>
                     <div>
                       <label htmlFor="saspay-network" className="mb-1.5 block text-xs font-bold text-slate-700">Moyen de paiement</label>
