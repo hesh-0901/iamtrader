@@ -39,6 +39,7 @@ function MainAppContent() {
 
   // Navigation State
   const [currentPage, setCurrentPage] = useState<NavigationPage>('dashboard');
+  const [pendingPaymentReference, setPendingPaymentReference] = useState<string | null>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
 
@@ -56,6 +57,21 @@ function MainAppContent() {
   const [inspectingTrade, setInspectingTrade] = useState<Trade | null>(null);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isChloeOpen, setIsChloeOpen] = useState(false);
+
+  // Capture le retour du checkout sans considérer les paramètres URL comme une preuve de paiement.
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const paymentState = url.searchParams.get('payment');
+    const reference = url.searchParams.get('reference') || '';
+    if ((paymentState === 'callback' || paymentState === 'cancelled') && /^[a-f0-9]{24}$/i.test(reference)) {
+      setCurrentPage('settings');
+      setPendingPaymentReference(reference.toLowerCase());
+      url.searchParams.delete('payment');
+      url.searchParams.delete('reference');
+      url.searchParams.delete('session_id');
+      window.history.replaceState({}, document.title, url.pathname + url.search + url.hash);
+    }
+  }, []);
 
   // 1. Auth Subscription
   useEffect(() => {
@@ -395,6 +411,7 @@ function MainAppContent() {
               trades={trades}
               selectedAccountId={selectedAccountId}
               onRequestPlan={handleRequestPlan}
+              pendingPaymentReference={pendingPaymentReference}
             />
           )}
 
