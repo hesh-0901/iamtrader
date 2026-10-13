@@ -277,9 +277,17 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
   };
 
   const startPayment = (plan: PaidPlan) => {
+    const savedPhone = (userProfile?.traderProfile?.whatsapp || '').trim();
+    const digits = savedPhone.replace(/[^0-9]/g, '');
+    const matchedCountry = countryOptions.find(item => digits.startsWith(item.dialCode.replace(/[^0-9]/g, '')));
+    const initialCountry = matchedCountry || countryOptions.find(item => item.code === paymentCountryCode) || countryOptions[0];
+    const dialDigits = initialCountry.dialCode.replace(/[^0-9]/g, '');
+    const nationalDigits = digits.startsWith(dialDigits) ? digits.slice(dialDigits.length) : digits;
+    setPaymentCountryCode(initialCountry.code);
+    setPaymentPhone(nationalDigits.replace(/^0+/, '').slice(0, initialCountry.phoneLength));
     setPaymentPlan(plan); setPaymentMode('live'); setPaymentGateway('saspay');
-    setPaymentPhone(userProfile?.traderProfile?.whatsapp || '');
-    setPaymentProvider('Airtel Money'); setPaymentUrl(null); setPaymentPayerName('');
+    setPaymentProvider(initialCountry.networks[0]?.value || '');
+    setPaymentUrl(null); setPaymentPayerName('');
     setPaymentId(null); setPaymentReference(null); setPaymentStatus('idle'); setPaymentMessage('');
     setPaymentAction(null); setPaymentActivationStart(null); setPaymentActivationExpires(null);
   };
@@ -781,10 +789,10 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
               .iam-payment-progress:after { content:""; position:absolute; inset:0; width:42%; background:linear-gradient(90deg,transparent,rgba(255,255,255,.85),transparent); animation:iamProgressShine 2s ease-in-out infinite }
               @media (prefers-reduced-motion: reduce) { .iam-checkout-brand:before,.iam-payment-enter,.iam-payment-ripple,.iam-payment-phone,.iam-payment-spinner,.iam-payment-progress:after { animation:none !important } }
             `}</style>
-            <aside className="iam-checkout-brand relative hidden overflow-hidden border-r border-emerald-200 bg-[radial-gradient(ellipse_at_12%_95%,rgba(0,210,150,.24),transparent_42%),linear-gradient(145deg,#ffffff_0%,#f3fff9_48%,#dcfff1_100%)] p-7 lg:flex lg:flex-col">
+            <aside className="iam-checkout-brand relative hidden overflow-hidden border-r border-emerald-200 bg-[radial-gradient(ellipse_at_10%_90%,rgba(16,185,129,.18),transparent_44%),linear-gradient(145deg,#f0faf5_0%,#e2f3e9_52%,#d2eadb_100%)] p-7 text-left lg:flex lg:flex-col lg:items-start">
               
               <div className="relative flex items-center"><img src="/brand/logo-iamtrader-full.png" alt="IAMTRADER" className="h-10 w-auto object-contain" /></div>
-              <div className="relative mt-8"><span className="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-[10px] font-extrabold uppercase tracking-[.16em] text-emerald-700">IAMTRADER Plus</span><h2 className="mt-4 max-w-xs text-3xl font-black leading-tight tracking-tight text-slate-900">Progressez avec de meilleurs outils.</h2><p className="mt-3 max-w-xs text-sm leading-6 text-slate-500">Un suivi clair de vos performances et de vos décisions.</p></div>
+              <div className="relative mt-8 w-full text-left"><span className="inline-flex rounded-full bg-emerald-200/80 px-3 py-1 text-[10px] font-extrabold uppercase tracking-[.16em] text-emerald-900">IAMTRADER Plus</span><h2 className="mt-4 max-w-xs text-3xl font-black leading-tight tracking-tight text-slate-900">Progressez avec de meilleurs outils.</h2><p className="mt-3 max-w-xs text-sm leading-6 text-slate-500">Un suivi clair de vos performances et de vos décisions.</p></div>
               <div className="relative mt-7 space-y-4">
                 {[
                   ['Journal avancé',Activity],
@@ -841,19 +849,21 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                         <div className="max-h-52 overflow-y-auto">{countryOptions.filter(item => (item.name + item.code).toLowerCase().includes(countrySearch.toLowerCase())).map(item => <button type="button" key={item.code} onClick={() => { setPaymentCountryCode(item.code); setPaymentProvider(item.networks[0]?.value || ''); setPaymentPhone(''); setIsCountryListOpen(false); setCountrySearch(''); }} className={'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ' + (paymentCountryCode === item.code ? 'bg-emerald-400/10 text-emerald-700 ring-1 ring-emerald-200' : 'text-slate-700 hover:bg-slate-50')}><img src={`https://flagcdn.com/w40/${item.code.toLowerCase()}.png`} alt={item.code} loading="lazy" className="h-4 w-6 shrink-0 rounded-sm object-cover shadow-sm" onError={event => { event.currentTarget.style.display = 'none'; }} /><span className="w-7 text-xs font-black">{item.code}</span><span className="flex-1 text-xs">{item.name}</span>{paymentCountryCode === item.code && <Check className="h-4 w-4 text-emerald-600" />}</button>)}</div>
                       </div>}
                     </div>
-                    <div>
-                      <label htmlFor="saspay-phone" className="mb-1.5 block text-xs font-bold text-slate-700">Numéro Mobile Money</label>
-                      <div className="flex overflow-hidden rounded-xl border border-slate-200 bg-white transition focus-within:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-100">
-                        <span aria-label={`Indicatif téléphonique ${countryOptions.find(item => item.code === paymentCountryCode)?.dialCode || '+243'}`} className="flex shrink-0 items-center border-r border-slate-200 bg-slate-50 px-3 text-sm font-bold text-slate-700">{countryOptions.find(item => item.code === paymentCountryCode)?.dialCode || '+243'}</span>
-                        <input id="saspay-phone" type="tel" inputMode="numeric" autoComplete="tel-national" required aria-required="true" value={paymentPhone} onChange={event => setPaymentPhone(event.target.value.replace(/[^0-9]/g, '').replace(/^0+/, '').slice(0, countryOptions.find(item => item.code === paymentCountryCode)?.phoneLength || 9))} placeholder={'X'.repeat(countryOptions.find(item => item.code === paymentCountryCode)?.phoneLength || 9)} className="min-w-0 w-full bg-transparent px-3 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400" />
+                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-2">
+                      <div className="min-w-0">
+                        <label htmlFor="saspay-phone" className="mb-1.5 block text-xs font-bold text-slate-700">Numéro Mobile Money</label>
+                        <div className="flex min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white transition focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-100">
+                          <span aria-label={`Indicatif téléphonique ${countryOptions.find(item => item.code === paymentCountryCode)?.dialCode || '+243'}`} className="flex shrink-0 items-center border-r border-slate-200 bg-emerald-50 px-2.5 text-sm font-bold text-emerald-800">{countryOptions.find(item => item.code === paymentCountryCode)?.dialCode || '+243'}</span>
+                          <input id="saspay-phone" type="tel" inputMode="numeric" autoComplete="tel-national" required aria-required="true" value={paymentPhone} onChange={event => setPaymentPhone(event.target.value.replace(/[^0-9]/g, '').replace(/^0+/, '').slice(0, countryOptions.find(item => item.code === paymentCountryCode)?.phoneLength || 9))} placeholder={'X'.repeat(countryOptions.find(item => item.code === paymentCountryCode)?.phoneLength || 9)} className="min-w-0 w-full bg-transparent px-3 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400" />
+                        </div>
+                        <p className="mt-1.5 text-[10px] leading-4 text-slate-500">Indicatif ajouté automatiquement, sans le 0 initial.</p>
                       </div>
-                      <p className="mt-1.5 text-[10px] text-slate-500">L’indicatif est ajouté automatiquement. Saisissez uniquement votre numéro, sans le 0 initial.</p>
-                    </div>
-                    <div>
-                      <label htmlFor="saspay-network" className="mb-1.5 block text-xs font-bold text-slate-700">Moyen de paiement</label>
-                      <select id="saspay-network" value={paymentProvider} onChange={event => setPaymentProvider(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100">
-                        {(countryOptions.find(item => item.code === paymentCountryCode)?.networks || []).map(network => <option key={network.value} value={network.value}>{network.label}</option>)}
-                      </select>
+                      <div className="min-w-0">
+                        <label htmlFor="saspay-network" className="mb-1.5 block text-xs font-bold text-slate-700">Réseau Mobile Money</label>
+                        <select id="saspay-network" value={paymentProvider} onChange={event => setPaymentProvider(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100">
+                          {(countryOptions.find(item => item.code === paymentCountryCode)?.networks || []).map(network => <option key={network.value} value={network.value}>{network.label}</option>)}
+                        </select>
+                      </div>
                     </div>
                   </div>
                 )}
