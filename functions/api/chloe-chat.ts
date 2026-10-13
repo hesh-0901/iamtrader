@@ -151,13 +151,9 @@ export async function onRequest(context: { request: Request; env: Env }) {
   if (!result.success || !result.text) {
     console.error('Chloe Gemini request failed:', { model: preferredModel, status: result.httpStatus });
     return json({
-      error: 'Chloé ne peut pas répondre pour le moment.',
-      details: {
-        reason: result.error,
-        model: preferredModel,
-        httpStatus: result.httpStatus,
-      },
-    }, 502);
+      reply: 'Chloé est momentanément indisponible. Réessaie dans quelques instants.',
+      action: null,
+    }, 200);
   }
 
   let parsed: any;
