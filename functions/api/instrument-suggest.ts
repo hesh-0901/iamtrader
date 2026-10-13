@@ -60,7 +60,9 @@ Tous les nombres doivent être strictement positifs.`;
         headers: { 'x-goog-api-key': env.GEMINI_API_KEY!.trim(), 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: { responseMimeType: 'application/json', temperature: 0.1, maxOutputTokens: 400 },
+          // Keep this compatible with the Gemini model configured for Chloé.
+          // The model's default generation settings are used intentionally.
+          generationConfig: { responseMimeType: 'application/json', maxOutputTokens: 400 },
         }),
         signal: AbortSignal.timeout(12000),
       },
