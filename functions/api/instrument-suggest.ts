@@ -55,9 +55,12 @@ Tous les nombres doivent être strictement positifs.`;
   // Use the same preferred model as Chloé, with a fast fallback for this lightweight task.
   // GEMINI_CHLOE_MODEL can override the instrument-specific model without changing the chat.
   const configuredModel = (env.GEMINI_CHLOE_MODEL || env.GEMINI_MODEL || '').trim();
+  // Keep current supported models as fallbacks. Gemini 2.5 access may be restricted
+  // for projects that have not used those models before.
   const models = [...new Set([
     configuredModel || 'gemini-3.5-flash-lite',
-    'gemini-2.5-flash-lite',
+    'gemini-3.5-flash-lite',
+    'gemini-3.8-flash',
   ])];
   let response: Response | undefined;
   let model = models[0];
