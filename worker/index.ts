@@ -1,5 +1,6 @@
 import { onRequest as handleAiChat } from '../functions/api/ai-chat';
 import { onRequest as handleChloeChat } from '../functions/api/chloe-chat';
+import { onRequest as handleInstrumentSuggest } from '../functions/api/instrument-suggest';
 import { onRequestPost as handleContactReply } from '../functions/api/contact-reply';
 import { handlePaymentRequest, handlePaymentCallback, handleCinetPayNotification, handleSasPayWebhook, handleSasPayVerifyRequest, handleSasPayStatusRequest, handleSimulatedPaymentRequest, handleSimulatedPaymentConfirm } from './payments';
 import type { PaymentEnv } from './firebaseAdmin';
@@ -62,6 +63,10 @@ export default {
 
     if (url.pathname === '/api/chloe-chat') {
       return handleChloeChat({ request, env });
+    }
+
+    if (url.pathname === '/api/instruments/suggest') {
+      return handleInstrumentSuggest({ request, env });
     }
 
     if (url.pathname === '/api/contact-reply') {
