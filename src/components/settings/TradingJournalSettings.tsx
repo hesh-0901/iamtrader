@@ -47,8 +47,7 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
     [instrument]
   );
 
-  // Chloé's first-pass catalogue suggestions: descriptive metadata only.
-  // Broker-dependent numeric settings are deliberately never guessed.
+  // Local fallback for recognized symbols; Chloé's server endpoint supplies the full editable suggestion.
   const suggestInstrument = (rawSymbol: string, current: TradingInstrument): TradingInstrument => {
     const symbol = rawSymbol.trim().toUpperCase();
     const known: Record<string, { name: string; category: TradingInstrument['category'] }> = {
