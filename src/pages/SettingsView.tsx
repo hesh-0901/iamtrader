@@ -843,7 +843,11 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                     </div>
                     <div>
                       <label htmlFor="saspay-phone" className="mb-1.5 block text-xs font-bold text-slate-700">Numéro Mobile Money</label>
-                      <input id="saspay-phone" type="tel" inputMode="tel" autoComplete="tel" required aria-required="true" value={paymentPhone} onChange={event => setPaymentPhone(event.target.value)} placeholder={`${countryOptions.find(item => item.code === paymentCountryCode)?.dialCode || '+243'} ${'X'.repeat(countryOptions.find(item => item.code === paymentCountryCode)?.phoneLength || 9)}`} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100" />
+                      <div className="flex overflow-hidden rounded-xl border border-slate-200 bg-white transition focus-within:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-100">
+                        <span aria-label={`Indicatif téléphonique ${countryOptions.find(item => item.code === paymentCountryCode)?.dialCode || '+243'}`} className="flex shrink-0 items-center border-r border-slate-200 bg-slate-50 px-3 text-sm font-bold text-slate-700">{countryOptions.find(item => item.code === paymentCountryCode)?.dialCode || '+243'}</span>
+                        <input id="saspay-phone" type="tel" inputMode="numeric" autoComplete="tel-national" required aria-required="true" value={paymentPhone} onChange={event => setPaymentPhone(event.target.value.replace(/[^0-9]/g, '').replace(/^0+/, '').slice(0, countryOptions.find(item => item.code === paymentCountryCode)?.phoneLength || 9))} placeholder={'X'.repeat(countryOptions.find(item => item.code === paymentCountryCode)?.phoneLength || 9)} className="min-w-0 w-full bg-transparent px-3 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400" />
+                      </div>
+                      <p className="mt-1.5 text-[10px] text-slate-500">L’indicatif est ajouté automatiquement. Saisissez uniquement votre numéro, sans le 0 initial.</p>
                     </div>
                     <div>
                       <label htmlFor="saspay-network" className="mb-1.5 block text-xs font-bold text-slate-700">Moyen de paiement</label>
