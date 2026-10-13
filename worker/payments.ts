@@ -921,7 +921,8 @@ export async function handleSasPayWebhook(
 
     // Correlate only from SasPay's canonical transaction response, never webhook fields.
     const description = String(transaction?.description || '');
-    const match = description.match(/IAMTRADER-([a-f0-9]{24})-/i);
+    const canonicalReference = String(transaction?.reference || transaction?.metadata?.reference || '');
+    const match = description.match(/IAMTRADER-([a-f0-9]{24})-/i) || canonicalReference.match(/^IMAT-([a-f0-9]{24})$/i);
     if (!match) {
       console.error('SasPay transaction description has no IAMTRADER reference:', transactionId);
       return json({ received: false, message: 'Référence IAMTRADER absente de la transaction.' }, 400);
@@ -943,7 +944,7 @@ export async function handleSasPayWebhook(
       return json({ received: true, duplicate: true });
     }
     if (event === 'transaction.success') {
-      const amount = Number(transaction?.requested_amount);
+      const amount = Number(transaction?.requested_amount ?? transaction?.amount ?? transaction?.total_amount);
       const currency = String(transaction?.currency || '').toUpperCase();
       if (canonicalStatus !== 'SUCCESS') return json({ received: false, message: 'Le statut canonique SasPay ne confirme pas le paiement.' }, 409);
       if (!amountsMatchToCents(amount, Number(payment.amount))) {
