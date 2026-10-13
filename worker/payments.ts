@@ -207,7 +207,7 @@ async function createSasPayCheckout(
   const amount = amounts.total, currency = 'USD', e164Phone = phone;
   await firestoreCreate(env, 'payments', paymentId, {
     id: paymentId, uid: user.uid, email, displayName: profile.displayName || email, fullName: traderFullName(profile),
-    plan: planKey, planName: plan.name, amount, amountUsd: amount, baseAmount: amounts.baseAmount,
+    countryCode, network, plan: planKey, planName: plan.name, amount, amountUsd: amount, baseAmount: amounts.baseAmount,
     paymentFee: amounts.fee, paymentFeeRate: PAYMENT_FEE_RATE, currency, phone: e164Phone, payerName,
     paymentMethod: 'mobile_money', paymentProvider: 'SasPay Softpay', provider: 'SASPAY',
     subscriptionAction: decision.action, currentPlanAtPurchase: decision.currentPlan,
@@ -515,7 +515,7 @@ export async function handlePaymentRequest(request: Request, env: CinetPayEnv) {
         client_email: user.email || profile.email || '',
         client_first_name: parts[0] || 'Trader',
         client_last_name: parts.slice(1).join(' ') || 'Trader',
-        client_phone_number: '+243' + phone.slice(1),
+        client_phone_number: phone,
         client_country: 'CD',
         success_url: returnUrl,
         failed_url: failedUrl,
@@ -735,10 +735,10 @@ export async function handleSimulatedPaymentRequest(request: Request, env: Payme
 
   try {
     const user = await verifyFirebaseIdToken(env, token);
-    const body = await request.json() as { plan?: keyof typeof PLANS; phone?: string; idempotencyKey?: string; paymentMethod?: string; paymentProvider?: string; payerName?: string };
+    const body = await request.json() as { plan?: keyof typeof PLANS; phone?: string; countryCode?: string; idempotencyKey?: string; paymentMethod?: string; paymentProvider?: string; payerName?: string };
     const planKey = body.plan;
     const plan = planKey ? PLANS[planKey] : undefined;
-    const phone = normalizePhone(body.phone);
+    const phone = normalizePhone(body.phone, String(body.countryCode || 'CD').toUpperCase());
     const paymentAmounts = plan ? calculatePaymentAmounts(plan.amount) : undefined;
     const idempotencyKey = String(body.idempotencyKey || '').replace(/[^a-f0-9]/gi, '').toLowerCase();
 
