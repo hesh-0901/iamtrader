@@ -1,6 +1,7 @@
 interface Env {
   GEMINI_API_KEY?: string;
   GEMINI_MODEL?: string;
+  GEMINI_CHLOE_MODEL?: string;
 }
 
 const categories = ['forex', 'metal', 'index', 'futures', 'crypto', 'stock', 'other'] as const;
@@ -51,17 +52,18 @@ valuePerPriceUnit est le gain/perte approximatif, dans la devise du compte indiq
 Fais une proposition pratique à partir des spécifications usuelles connues. N'invente pas une certitude : le contrat, la taille de lot et la valeur peuvent varier selon le broker, notamment pour les CFD, indices, futures et paires dont la devise de cotation diffère de celle du compte. Explique brièvement cette réserve dans note. Ne prétends pas avoir consulté le broker de l'utilisateur. Si l'actif est inconnu, utilise category "other", name égal au symbole, priceStep 0.01 et valuePerPriceUnit 1 comme valeurs provisoires clairement signalées dans note.
 Tous les nombres doivent être strictement positifs.`;
 
+  // Prefer Chloé's dedicated model setting, then the shared Gemini setting.
+  // The default matches the existing Chloé chat endpoint.
+  const model = (env.GEMINI_CHLOE_MODEL || env.GEMINI_MODEL || 'gemini-3.5-flash-lite').trim();
+
   try {
-    const model = (env.GEMINI_MODEL || 'gemini-3.5-flash-lite').trim();
     const response = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
       {
         method: 'POST',
-        headers: { 'x-goog-api-key': env.GEMINI_API_KEY!.trim(), 'Content-Type': 'application/json' },
+        headers: { 'x-goog-api-key': env.GEMINI_API_KEY.trim(), 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          // Keep this compatible with the Gemini model configured for Chloé.
-          // The model's default generation settings are used intentionally.
           generationConfig: { responseMimeType: 'application/json', maxOutputTokens: 400 },
         }),
         signal: AbortSignal.timeout(12000),
@@ -71,22 +73,37 @@ Tous les nombres doivent être strictement positifs.`;
     let data: any = {};
     try { data = raw ? JSON.parse(raw) : {}; } catch {}
     if (!response.ok) {
-      console.error('Instrument suggestion Gemini error:', response.status, raw.slice(0, 1000));
-      return json({ error: 'Chloé n’a pas pu compléter cet instrument. Réessayez.' }, 502);
+      const providerError = data?.error || {};
+      console.error('Instrument suggestion Gemini error:', {
+        status: response.status,
+        model,
+        providerCode: providerError.code,
+        providerStatus: providerError.status,
+        providerMessage: typeof providerError.message === 'string' ? providerError.message.slice(0, 500) : undefined,
+      });
+      return json({
+        error: 'Gemini a refusé la requête de Chloé.',
+        details: {
+          httpStatus: response.status,
+          model,
+          providerStatus: typeof providerError.status === 'string' ? providerError.status : undefined,
+          providerMessage: typeof providerError.message === 'string' ? providerError.message.slice(0, 500) : 'Aucun détail fourni par Gemini.',
+        },
+      }, 502);
     }
     const output = data?.candidates?.[0]?.content?.parts?.map((part: any) => part?.text || '').join('\n').trim();
-    if (!output) return json({ error: 'Chloé n’a retourné aucune suggestion.' }, 502);
+    if (!output) return json({ error: 'Chloé n’a retourné aucune suggestion.', details: { model, finishReason: data?.candidates?.[0]?.finishReason } }, 502);
 
     let suggestion: any;
     try { suggestion = JSON.parse(output); }
-    catch { return json({ error: 'La suggestion de Chloé était illisible. Réessayez.' }, 502); }
+    catch { return json({ error: 'La suggestion de Chloé était illisible. Réessayez.', details: { model } }, 502); }
 
     const category: Category = categories.includes(suggestion.category) ? suggestion.category : 'other';
     const priceStep = positiveNumber(suggestion.priceStep);
     const valuePerPriceUnit = positiveNumber(suggestion.valuePerPriceUnit);
     const defaultPositionSize = positiveNumber(suggestion.defaultPositionSize) ?? 1;
     if (!priceStep || !valuePerPriceUnit) {
-      return json({ error: 'Les paramètres numériques proposés sont incomplets. Veuillez réessayer.' }, 502);
+      return json({ error: 'Les paramètres numériques proposés sont incomplets. Veuillez réessayer.', details: { model } }, 502);
     }
 
     return json({
@@ -103,6 +120,9 @@ Tous les nombres doivent être strictement positifs.`;
     });
   } catch (error) {
     console.error('Instrument suggestion failed:', error);
-    return json({ error: 'Chloé est temporairement indisponible. Vous pouvez compléter l’instrument manuellement.' }, 502);
+    return json({
+      error: 'Chloé est temporairement indisponible. Vous pouvez compléter l’instrument manuellement.',
+      details: { model, reason: error instanceof Error ? error.message : String(error) },
+    }, 502);
   }
 }
