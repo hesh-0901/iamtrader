@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Plus, Trash2, Pencil, Settings2, CandlestickChart, Layers3, X, CheckCircle2, Sparkles, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, Pencil, Loader2, Settings2, CandlestickChart, Layers3, X, CheckCircle2, Sparkles, AlertTriangle } from 'lucide-react';
 import { TradingInstrument, TradingSetup, UserProfile } from '../../types';
 import { updateUserSettings } from '../../services/firestore';
 import { useToast } from '../common/Toast';
@@ -18,6 +18,9 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
   const [newSetup, setNewSetup] = useState('');
   const [instrumentFormOpen, setInstrumentFormOpen] = useState(false);
   const [editingInstrumentId, setEditingInstrumentId] = useState<string | null>(null);
+  const [instrumentDetailsOpen, setInstrumentDetailsOpen] = useState(false);
+  const [suggestingInstrument, setSuggestingInstrument] = useState(false);
+  const [instrumentSuggestionNote, setInstrumentSuggestionNote] = useState('');
   const [setupFormOpen, setSetupFormOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ type: 'instrument' | 'setup'; id: string; label: string } | null>(null);
   const [instrument, setInstrument] = useState<TradingInstrument>({
@@ -81,11 +84,50 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
       defaultPositionSize: item.defaultPositionSize == null ? '' : String(item.defaultPositionSize)
     });
     setInstrumentFormOpen(true);
+    setInstrumentDetailsOpen(true);
+    setInstrumentSuggestionNote('');
+  };
+
+  const completeInstrumentWithChloe = async () => {
+    const symbol = instrument.symbol.trim().toUpperCase();
+    if (!symbol || suggestingInstrument) return;
+    setSuggestingInstrument(true);
+    setInstrumentSuggestionNote('');
+    try {
+      const response = await fetch('/api/instruments/suggest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ symbol, accountCurrency: userProfile?.settings?.defaultCurrency || 'USD' })
+      });
+      const data = await response.json().catch(() => ({})) as {
+        error?: string;
+        instrument?: { symbol: string; name: string; category: TradingInstrument['category']; priceStep: number; valuePerPriceUnit: number; defaultPositionSize: number };
+        note?: string;
+      };
+      if (!response.ok || !data.instrument) throw new Error(data.error || 'Chloé n’a pas pu compléter cet instrument.');
+      setInstrument(current => ({
+        ...current,
+        ...data.instrument,
+        id: editingInstrumentId || current.id,
+        priceStep: String(data.instrument!.priceStep),
+        valuePerPriceUnit: String(data.instrument!.valuePerPriceUnit),
+        defaultPositionSize: String(data.instrument!.defaultPositionSize)
+      }));
+      setInstrumentDetailsOpen(true);
+      setInstrumentSuggestionNote(data.note || 'Vérifiez les spécifications du broker avant de vous fier aux calculs.');
+      showToast('Chloé a proposé les paramètres de l’instrument.', 'success');
+    } catch (error: any) {
+      showToast(error?.message || 'Impossible de contacter Chloé.', 'error');
+    } finally {
+      setSuggestingInstrument(false);
+    }
   };
 
   const closeInstrumentForm = () => {
     setInstrumentFormOpen(false);
     setEditingInstrumentId(null);
+    setInstrumentDetailsOpen(false);
+    setInstrumentSuggestionNote('');
     setInstrument({ id: '', symbol: '', name: '', category: 'forex', priceStep: '', valuePerPriceUnit: '', defaultPositionSize: '' });
   };
 
@@ -165,16 +207,30 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
       <div className="grid gap-5 xl:grid-cols-[1.15fr_.85fr]">
         <section className="min-w-0 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
           <div className="border-b border-slate-100 px-5 py-4 sm:px-6"><div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700"><CandlestickChart className="h-5 w-5" /></div><div><h4 className="text-base font-extrabold text-slate-950">Instruments</h4><p className="mt-0.5 text-xs text-slate-500">Valeurs utilisées pour calculer les résultats.</p></div><span className="ml-auto rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600">{instruments.length}</span></div></div>
-          <div className="space-y-4 p-5 sm:p-6"><button type="button" onClick={() => instrumentFormOpen ? closeInstrumentForm() : setInstrumentFormOpen(true)} className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700"><Plus className="h-4 w-4" />{instrumentFormOpen ? 'Fermer le formulaire' : 'Ajouter un instrument'}</button>{instrumentFormOpen && <div className="space-y-4 rounded-2xl border border-emerald-100 bg-emerald-50/40 p-4"><div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div><label className={labelClass}>Symbole *</label><input className={inputClass} value={instrument.symbol} onChange={e=>setInstrument(v=>suggestInstrument(e.target.value,v))} placeholder="XAUUSD"/></div>
-            <div className="sm:col-span-2"><p className="text-xs leading-5 text-slate-600">Saisissez le symbole : Chloé propose le nom et la catégorie lorsqu’ils sont reconnus. Les paramètres numériques dépendant du broker restent à vérifier et modifiables.</p></div><div><label className={labelClass}>Nom *</label><input className={inputClass} value={instrument.name} onChange={e=>setInstrument(v=>({...v,name:e.target.value}))} placeholder="Gold"/></div>
-            <div><label className={labelClass}>Catégorie</label><select className={inputClass} value={instrument.category} onChange={e=>setInstrument(v=>({...v,category:e.target.value as TradingInstrument['category']}))}><option value="forex">Forex</option><option value="metal">Métal</option><option value="index">Indice</option><option value="futures">Futures</option><option value="crypto">Crypto</option><option value="stock">Action</option><option value="other">Autre</option></select></div>
-            <div><label className={labelClass}>Pas de prix *</label><input type="number" step="any" min="0" className={inputClass} value={instrument.priceStep} onChange={e=>setInstrument(v=>({...v,priceStep:e.target.value}))} placeholder="0.01"/></div>
-            <div><label className={labelClass}>Valeur par 1.00 *</label><input type="number" step="any" min="0" className={inputClass} value={instrument.valuePerPriceUnit} onChange={e=>setInstrument(v=>({...v,valuePerPriceUnit:e.target.value}))} placeholder="100"/></div>
-            <div><label className={labelClass}>Taille par défaut</label><input type="number" step="any" min="0" className={inputClass} value={instrument.defaultPositionSize} onChange={e=>setInstrument(v=>({...v,defaultPositionSize:e.target.value}))} placeholder="1"/></div>
-          </div>
-          <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-3.5 text-xs leading-5 text-emerald-900">« Valeur par 1.00 » correspond au gain ou à la perte pour un mouvement de 1.00 avec une unité de taille, dans la devise du compte.</div>
-          <div className="flex flex-wrap gap-2"><button type="button" disabled={!canAddInstrument||saving} onClick={addInstrument} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"><CheckCircle2 className="h-4 w-4"/>{editingInstrumentId ? 'Enregistrer les modifications' : 'Ajouter l’instrument'}</button><button type="button" disabled={saving} onClick={closeInstrumentForm} className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-white">Annuler</button></div>
+          <div className="space-y-4 p-5 sm:p-6"><button type="button" onClick={() => instrumentFormOpen ? closeInstrumentForm() : setInstrumentFormOpen(true)} className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700"><Plus className="h-4 w-4" />{instrumentFormOpen ? 'Fermer le formulaire' : 'Ajouter un instrument'}</button>{instrumentFormOpen && <div className="space-y-4 rounded-2xl border border-emerald-100 bg-emerald-50/40 p-4">
+            <div>
+              <label className={labelClass}>Symbole de l’instrument *</label>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <input className={inputClass} value={instrument.symbol} onChange={e=>setInstrument(v=>suggestInstrument(e.target.value,v))} placeholder="XAUUSD, EURUSD, NAS100…" autoComplete="off"/>
+                <button type="button" disabled={!instrument.symbol.trim()||suggestingInstrument||saving} onClick={()=>void completeInstrumentWithChloe()} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-slate-950 px-4 py-3 text-sm font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50">
+                  {suggestingInstrument ? <Loader2 className="h-4 w-4 animate-spin"/> : <Sparkles className="h-4 w-4"/>}
+                  {suggestingInstrument ? 'Chloé analyse…' : 'Compléter avec Chloé'}
+                </button>
+              </div>
+              <p className="mt-2 text-xs leading-5 text-slate-600">Saisissez uniquement le symbole. Chloé propose ensuite le nom, la catégorie et les paramètres de calcul usuels.</p>
+            </div>
+            {instrumentDetailsOpen && <div className="space-y-4 border-t border-emerald-100 pt-4">
+              <div className="flex items-center gap-2 text-sm font-bold text-slate-800"><CheckCircle2 className="h-4 w-4 text-emerald-600"/> Paramètres proposés — modifiables</div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div><label className={labelClass}>Nom *</label><input className={inputClass} value={instrument.name} onChange={e=>setInstrument(v=>({...v,name:e.target.value}))} placeholder="Gold"/></div>
+                <div><label className={labelClass}>Catégorie</label><select className={inputClass} value={instrument.category} onChange={e=>setInstrument(v=>({...v,category:e.target.value as TradingInstrument['category']}))}><option value="forex">Forex</option><option value="metal">Métal</option><option value="index">Indice</option><option value="futures">Futures</option><option value="crypto">Crypto</option><option value="stock">Action</option><option value="other">Autre</option></select></div>
+                <div><label className={labelClass}>Pas de prix *</label><input type="number" step="any" min="0" className={inputClass} value={instrument.priceStep} onChange={e=>setInstrument(v=>({...v,priceStep:e.target.value}))} placeholder="0.01"/></div>
+                <div><label className={labelClass}>Valeur par 1.00 *</label><input type="number" step="any" min="0" className={inputClass} value={instrument.valuePerPriceUnit} onChange={e=>setInstrument(v=>({...v,valuePerPriceUnit:e.target.value}))} placeholder="100"/></div>
+                <div><label className={labelClass}>Taille par défaut</label><input type="number" step="any" min="0" className={inputClass} value={instrument.defaultPositionSize} onChange={e=>setInstrument(v=>({...v,defaultPositionSize:e.target.value}))} placeholder="1"/></div>
+              </div>
+              <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3.5 text-xs leading-5 text-amber-950"><strong>À vérifier :</strong> les valeurs proposées sont des estimations fondées sur les spécifications usuelles. Le contrat, le lot et la devise de cotation peuvent varier selon le broker. {instrumentSuggestionNote}</div>
+              <div className="flex flex-wrap gap-2"><button type="button" disabled={!canAddInstrument||saving||suggestingInstrument} onClick={()=>void addInstrument()} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"><CheckCircle2 className="h-4 w-4"/>{editingInstrumentId ? 'Enregistrer les modifications' : 'Ajouter l’instrument'}</button><button type="button" disabled={saving||suggestingInstrument} onClick={closeInstrumentForm} className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-white">Annuler</button></div>
+            </div>}
           </div>}
           <div className="border-t border-slate-100 pt-4"><div className="mb-3 flex items-center justify-between"><h5 className="text-sm font-bold text-slate-900">Instruments configurés</h5><span className="text-xs text-slate-400">{instruments.length} au total</span></div>
             {instruments.length ? <div className="space-y-2">{instruments.map(item=><div key={item.id} className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-slate-200 px-3.5 py-3 transition hover:border-emerald-200"><div className="flex min-w-0 items-center gap-3"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-xs font-black text-slate-600">{item.symbol.slice(0,3)}</div><div className="min-w-0"><p className="truncate text-sm font-bold text-slate-900">{item.symbol}</p><p className="truncate text-xs text-slate-500">{item.name} · Valeur {item.valuePerPriceUnit}/1.00</p></div></div><div className="flex shrink-0 items-center gap-1"><button type="button" aria-label={`Modifier ${item.symbol}`} disabled={saving} onClick={()=>startEditInstrument(item)} className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-500 transition hover:bg-emerald-50 hover:text-emerald-700 disabled:opacity-40"><Pencil className="h-4 w-4"/></button><button type="button" aria-label={`Supprimer ${item.symbol}`} disabled={saving} onClick={()=>setDeleteTarget({type:'instrument',id:item.id,label:item.symbol})} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 disabled:opacity-40"><Trash2 className="h-4 w-4"/></button></div></div>)}</div>:<div className="rounded-2xl border border-dashed border-slate-200 px-4 py-8 text-center"><CandlestickChart className="mx-auto h-7 w-7 text-slate-300"/><p className="mt-2 text-sm font-semibold text-slate-700">Aucun instrument configuré</p><p className="mt-1 text-xs text-slate-500">Ajoutez votre premier instrument ci-dessus.</p></div>}
