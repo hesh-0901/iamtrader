@@ -46,30 +46,29 @@ function daysBetween(from?: string, to?: string) {
   return Math.max(0, Math.ceil((new Date(to).getTime() - new Date(from).getTime()) / 86400000));
 }
 const countryOptions = [
-  { name: 'République démocratique du Congo', code: 'CD', flag: '🇨🇩', supported: true },
-  { name: 'Zambie', code: 'ZM', flag: '🇿🇲', supported: false },
-  { name: 'France', code: 'FR', flag: '🇫🇷', supported: false },
-  { name: 'Belgique', code: 'BE', flag: '🇧🇪', supported: false },
-  { name: 'États-Unis', code: 'US', flag: '🇺🇸', supported: false },
-  { name: 'Royaume-Uni', code: 'GB', flag: '🇬🇧', supported: false },
-  { name: 'Afrique du Sud', code: 'ZA', flag: '🇿🇦', supported: false },
-  { name: 'Angola', code: 'AO', flag: '🇦🇴', supported: false },
-  { name: 'Congo', code: 'CG', flag: '🇨🇬', supported: false },
-  { name: 'Côte d’Ivoire', code: 'CI', flag: '🇨🇮', supported: false },
-  { name: 'Kenya', code: 'KE', flag: '🇰🇪', supported: false },
-  { name: 'Rwanda', code: 'RW', flag: '🇷🇼', supported: false },
-  { name: 'Tanzanie', code: 'TZ', flag: '🇹🇿', supported: false },
-  { name: 'Ouganda', code: 'UG', flag: '🇺🇬', supported: false },
-  { name: 'Nigeria', code: 'NG', flag: '🇳🇬', supported: false },
-  { name: 'Ghana', code: 'GH', flag: '🇬🇭', supported: false },
-  { name: 'Canada', code: 'CA', flag: '🇨🇦', supported: false },
-  { name: 'Allemagne', code: 'DE', flag: '🇩🇪', supported: false },
-  { name: 'Suisse', code: 'CH', flag: '🇨🇭', supported: false },
-  { name: 'Émirats arabes unis', code: 'AE', flag: '🇦🇪', supported: false }
+  { name: 'République démocratique du Congo', code: 'CD', flag: '🇨🇩', dialCode: '+243', phoneLength: 9, networks: [{ value: 'vodacom_cd', label: 'Vodacom M-Pesa' }, { value: 'airtel_cd', label: 'Airtel Money' }, { value: 'orange_cd', label: 'Orange Money' }] },
+  { name: 'Mali', code: 'ML', flag: '🇲🇱', dialCode: '+223', phoneLength: 8, networks: [{ value: 'mobi_cash_ml', label: 'Mobi Cash' }, { value: 'moov_ml', label: 'Moov Money' }, { value: 'orange_ml', label: 'Orange Money' }] },
+  { name: 'Zambie', code: 'ZM', flag: '🇿🇲', dialCode: '+260', phoneLength: 9, networks: [{ value: 'airtel_zm', label: 'Airtel Money' }, { value: 'mtn_zm', label: 'MTN MoMo' }, { value: 'zamtel_zm', label: 'Zamtel Kwacha' }] },
+  { name: 'Bénin', code: 'BJ', flag: '🇧🇯', dialCode: '+229', phoneLength: 10, networks: [{ value: 'celtiis_bj', label: 'Celtiis Cash' }, { value: 'moov_bj', label: 'Moov Money' }, { value: 'mtn_bj', label: 'MTN MoMo' }] },
+  { name: 'Burkina Faso', code: 'BF', flag: '🇧🇫', dialCode: '+226', phoneLength: 8, networks: [{ value: 'moov_bf', label: 'Moov Money' }, { value: 'orange_bf', label: 'Orange Money' }] },
+  { name: 'Côte d’Ivoire', code: 'CI', flag: '🇨🇮', dialCode: '+225', phoneLength: 10, networks: [{ value: 'moov_ci', label: 'Moov Money' }, { value: 'mtn_ci', label: 'MTN MoMo' }, { value: 'orange_ci', label: 'Orange Money' }, { value: 'wave_ci', label: 'Wave' }] },
+  { name: 'Cameroun', code: 'CM', flag: '🇨🇲', dialCode: '+237', phoneLength: 9, networks: [{ value: 'mtn_cm', label: 'MTN MoMo' }, { value: 'orange_cm', label: 'Orange Money' }] },
+  { name: 'Ghana', code: 'GH', flag: '🇬🇭', dialCode: '+233', phoneLength: 9, networks: [{ value: 'mtn_gh', label: 'MTN MoMo' }, { value: 'tigo_gh', label: 'AirtelTigo' }, { value: 'vodafone_gh', label: 'Telecel Cash' }] },
+  { name: 'Guinée', code: 'GN', flag: '🇬🇳', dialCode: '+224', phoneLength: 9, networks: [{ value: 'mtn_gn', label: 'MTN MoMo' }] },
+  { name: 'Kenya', code: 'KE', flag: '🇰🇪', dialCode: '+254', phoneLength: 9, networks: [{ value: 'mpesa_ke', label: 'M-Pesa' }] },
+  { name: 'Malawi', code: 'MW', flag: '🇲🇼', dialCode: '+265', phoneLength: 9, networks: [{ value: 'airtel_mw', label: 'Airtel Money' }, { value: 'tnm_mw', label: 'TNM Mpamba' }] },
+  { name: 'Niger', code: 'NE', flag: '🇳🇪', dialCode: '+227', phoneLength: 8, networks: [{ value: 'airtel_ne', label: 'Airtel Money' }] },
+  { name: 'Nigeria', code: 'NG', flag: '🇳🇬', dialCode: '+234', phoneLength: 10, networks: [{ value: 'airtel_ng', label: 'Airtel Money' }, { value: 'mtn_ng', label: 'MTN MoMo' }] },
+  { name: 'Rwanda', code: 'RW', flag: '🇷🇼', dialCode: '+250', phoneLength: 9, networks: [{ value: 'airtel_rw', label: 'Airtel Money' }, { value: 'mtn_rw', label: 'MTN MoMo' }] },
+  { name: 'Sénégal', code: 'SN', flag: '🇸🇳', dialCode: '+221', phoneLength: 9, networks: [{ value: 'freemoney_sn', label: 'Free Money' }, { value: 'orange_sn', label: 'Orange Money' }, { value: 'wave_sn', label: 'Wave' }, { value: 'wizall_sn', label: 'Wizall' }] },
+  { name: 'Togo', code: 'TG', flag: '🇹🇬', dialCode: '+228', phoneLength: 8, networks: [{ value: 'moov_tg', label: 'Moov Money' }, { value: 'togocel', label: 'Togocel Money' }] },
+  { name: 'Tanzanie', code: 'TZ', flag: '🇹🇿', dialCode: '+255', phoneLength: 9, networks: [{ value: 'airtel_tz', label: 'Airtel Money' }, { value: 'halopesa_tz', label: 'Halopesa' }, { value: 'mpesa_tz', label: 'M-Pesa' }, { value: 'tigo_tz', label: 'Tigo Pesa' }] },
+  { name: 'Ouganda', code: 'UG', flag: '🇺🇬', dialCode: '+256', phoneLength: 9, networks: [{ value: 'airtel_ug', label: 'Airtel Money' }, { value: 'mtn_ug', label: 'MTN MoMo' }] }
 ];
 const detectCountryCode = () => {
   const zone = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
   if (zone.startsWith('Africa/Lusaka')) return 'ZM';
+  if (zone.startsWith('Africa/Bamako')) return 'ML';
   if (zone.startsWith('Europe/Paris')) return 'FR';
   if (zone.startsWith('Europe/Brussels')) return 'BE';
   if (zone.startsWith('Europe/London')) return 'GB';
@@ -109,7 +108,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
   const [paymentCountryCode, setPaymentCountryCode] = useState<string>(() => detectCountryCode());
   const [countrySearch, setCountrySearch] = useState('');
   const [isCountryListOpen, setIsCountryListOpen] = useState(false);
-  const [paymentProvider, setPaymentProvider] = useState('Airtel Money');
+  const [paymentProvider, setPaymentProvider] = useState('airtel_cd');
   const [paymentPayerName, setPaymentPayerName] = useState(userProfile?.displayName || [userProfile?.traderProfile?.firstName, userProfile?.traderProfile?.lastName].filter(Boolean).join(' ') || '');
   const [paymentId, setPaymentId] = useState<string | null>(null);
   const [paymentReference, setPaymentReference] = useState<string | null>(null);
@@ -291,6 +290,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
     try {
       const details: PaymentDetails = {
         phone: paymentPhone.trim(),
+        countryCode: paymentCountryCode,
         paymentMethod: 'mobile_money',
         paymentProvider,
         payerName: paymentPayerName.trim()
@@ -833,31 +833,28 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                       <label className="mb-1.5 block text-xs font-bold text-slate-700">Pays de paiement</label>
                       <button type="button" onClick={() => setIsCountryListOpen(open => !open)} className="flex w-full items-center gap-3 rounded-xl border border-emerald-200 bg-white px-3 py-3 text-left transition hover:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100">
                         <img src={`https://flagcdn.com/w40/${paymentCountryCode.toLowerCase()}.png`} alt={paymentCountryCode} className="h-5 w-7 shrink-0 rounded-sm object-cover shadow-sm" onError={event => { event.currentTarget.style.display = 'none'; }} />
-                        <span className="min-w-0 flex-1"><span className="mr-2 text-xs font-black text-emerald-300">{paymentCountryCode}</span><span className="text-sm font-semibold text-slate-800">{countryOptions.find(item => item.code === paymentCountryCode)?.name || 'Sélectionner un pays'}</span><span className="mt-0.5 block text-[10px] text-sky-700">{paymentCountryCode === 'CD' ? 'Pays détecté · paiement disponible' : 'Pays sélectionné · paiement pas encore disponible'}</span></span>
+                        <span className="min-w-0 flex-1"><span className="mr-2 text-xs font-black text-emerald-300">{paymentCountryCode}</span><span className="text-sm font-semibold text-slate-800">{countryOptions.find(item => item.code === paymentCountryCode)?.name || 'Sélectionner un pays'}</span><span className="mt-0.5 block text-[10px] text-sky-700">{`Indicatif ${countryOptions.find(item => item.code === paymentCountryCode)?.dialCode || ''} · Mobile Money`}</span></span>
                         <ChevronRight className={'h-4 w-4 text-slate-400 transition ' + (isCountryListOpen ? 'rotate-90' : '')} />
                       </button>
                       {isCountryListOpen && <div className="absolute left-0 right-0 top-full z-30 mt-2 overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 shadow-xl shadow-slate-900/10">
                         <input value={countrySearch} onChange={event => setCountrySearch(event.target.value)} placeholder="Rechercher un pays..." className="mb-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-800 outline-none placeholder:text-slate-400 focus:border-emerald-400" />
-                        <div className="max-h-52 overflow-y-auto">{countryOptions.filter(item => (item.name + item.code).toLowerCase().includes(countrySearch.toLowerCase())).map(item => <button type="button" key={item.code} onClick={() => { setPaymentCountryCode(item.code); setIsCountryListOpen(false); setCountrySearch(''); }} className={'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ' + (paymentCountryCode === item.code ? 'bg-emerald-400/10 text-emerald-700 ring-1 ring-emerald-200' : 'text-slate-700 hover:bg-slate-50')}><img src={`https://flagcdn.com/w40/${item.code.toLowerCase()}.png`} alt={item.code} loading="lazy" className="h-4 w-6 shrink-0 rounded-sm object-cover shadow-sm" onError={event => { event.currentTarget.style.display = 'none'; }} /><span className="w-7 text-xs font-black">{item.code}</span><span className="flex-1 text-xs">{item.name}</span>{paymentCountryCode === item.code && <Check className="h-4 w-4 text-emerald-600" />}</button>)}</div>
+                        <div className="max-h-52 overflow-y-auto">{countryOptions.filter(item => (item.name + item.code).toLowerCase().includes(countrySearch.toLowerCase())).map(item => <button type="button" key={item.code} onClick={() => { setPaymentCountryCode(item.code); setPaymentProvider(item.networks[0]?.value || ''); setPaymentPhone(''); setIsCountryListOpen(false); setCountrySearch(''); }} className={'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ' + (paymentCountryCode === item.code ? 'bg-emerald-400/10 text-emerald-700 ring-1 ring-emerald-200' : 'text-slate-700 hover:bg-slate-50')}><img src={`https://flagcdn.com/w40/${item.code.toLowerCase()}.png`} alt={item.code} loading="lazy" className="h-4 w-6 shrink-0 rounded-sm object-cover shadow-sm" onError={event => { event.currentTarget.style.display = 'none'; }} /><span className="w-7 text-xs font-black">{item.code}</span><span className="flex-1 text-xs">{item.name}</span>{paymentCountryCode === item.code && <Check className="h-4 w-4 text-emerald-600" />}</button>)}</div>
                       </div>}
                     </div>
-                    {paymentCountryCode !== 'CD' && <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-3 text-xs leading-5 text-amber-800">Le paiement Mobile Money via SasPay est actuellement configuré pour la RDC. Vous pouvez choisir ce pays, mais le paiement ne sera pas lancé tant que son opérateur n’est pas pris en charge.</div>}
                     <div>
                       <label htmlFor="saspay-phone" className="mb-1.5 block text-xs font-bold text-slate-700">Numéro Mobile Money</label>
-                      <input id="saspay-phone" type="tel" inputMode="tel" autoComplete="tel" required aria-required="true" value={paymentPhone} onChange={event => setPaymentPhone(event.target.value)} placeholder="+243 8XX XXX XXX" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100" />
+                      <input id="saspay-phone" type="tel" inputMode="tel" autoComplete="tel" required aria-required="true" value={paymentPhone} onChange={event => setPaymentPhone(event.target.value)} placeholder={`${countryOptions.find(item => item.code === paymentCountryCode)?.dialCode || '+243'} ${'X'.repeat(countryOptions.find(item => item.code === paymentCountryCode)?.phoneLength || 9)}`} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100" />
                     </div>
                     <div>
                       <label htmlFor="saspay-network" className="mb-1.5 block text-xs font-bold text-slate-700">Moyen de paiement</label>
                       <select id="saspay-network" value={paymentProvider} onChange={event => setPaymentProvider(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100">
-                        <option value="Vodacom M-Pesa">Vodacom M-Pesa</option>
-                        <option value="Airtel Money">Airtel Money</option>
-                        <option value="Orange Money">Orange Money</option>
+                        {(countryOptions.find(item => item.code === paymentCountryCode)?.networks || []).map(network => <option key={network.value} value={network.value}>{network.label}</option>)}
                       </select>
                     </div>
                   </div>
                 )}
                 <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-xs leading-5 text-emerald-800"><Shield className="mr-2 inline h-4 w-4" />Paiement sécurisé intégré à IAMTRADER. Une demande de confirmation sera envoyée par votre opérateur. L’abonnement ne sera activé qu’après confirmation serveur.</div>
-                <button onClick={submitPayment} disabled={isPaymentLoading || (paymentGateway === 'saspay' && paymentMode === 'live' && (!paymentPhone.trim() || paymentCountryCode !== 'CD'))} className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-400 px-4 py-3.5 text-sm font-extrabold text-white shadow-[0_10px_30px_rgba(0,199,150,.18)] transition hover:-translate-y-0.5 hover:shadow-[0_14px_36px_rgba(0,199,150,.25)] focus:outline-none focus:ring-4 focus:ring-emerald-400/20 disabled:cursor-not-allowed disabled:opacity-40">{isPaymentLoading ? 'Envoi de la demande…' : 'Continuer vers le paiement'}</button>
+                <button onClick={submitPayment} disabled={isPaymentLoading || (paymentGateway === 'saspay' && paymentMode === 'live' && (!paymentPhone.trim() || !paymentProvider))} className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-400 px-4 py-3.5 text-sm font-extrabold text-white shadow-[0_10px_30px_rgba(0,199,150,.18)] transition hover:-translate-y-0.5 hover:shadow-[0_14px_36px_rgba(0,199,150,.25)] focus:outline-none focus:ring-4 focus:ring-emerald-400/20 disabled:cursor-not-allowed disabled:opacity-40">{isPaymentLoading ? 'Envoi de la demande…' : 'Continuer vers le paiement'}</button>
               </>)}
               {paymentStatus === 'processing' && !(paymentGateway === 'saspay' && paymentUrl) && (<div className="iam-payment-enter space-y-5 py-2">
                 <div className="grid items-center gap-5 md:grid-cols-[0.78fr_1.22fr] md:gap-8">
