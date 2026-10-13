@@ -565,169 +565,126 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
       )}
 
       {activeTab === 'profile' && (
-        <div className="space-y-5">
+        <div className="space-y-4 sm:space-y-5">
           {!isEditingProfile ? (
-            <div className="space-y-6">
-              <section className="relative overflow-hidden rounded-[24px] border border-slate-200 bg-gradient-to-br from-white via-white to-[#effaf7] p-6 shadow-[0_18px_50px_rgba(15,23,42,0.07)]">
-                <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-[#00a982]/10 blur-2xl" />
-                <div className="relative border-b border-slate-200/80 pb-6">
-                <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
-                  <div className="min-w-0">
-                    <div className="text-[9px] font-bold uppercase tracking-[0.2em] text-[#00a982]">Profil trader</div>
-                    <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
-                      <h2 className="text-3xl font-black tracking-[-0.03em] text-slate-950">{displayName || [firstName, lastName].filter(Boolean).join(' ') || 'Trader IAMTRADER'}</h2>
-                      <PlanBadge plan={userProfile?.plan || 'free'} />
+            <>
+              <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+                <div className="h-2 bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-100" />
+                <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-7">
+                  <div className="flex min-w-0 items-center gap-4">
+                    <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-emerald-50 text-xl font-black text-emerald-700 ring-1 ring-emerald-100">
+                      {(userProfile?.avatarURL || userProfile?.photoURL) ? <img src={userProfile?.avatarURL || userProfile?.photoURL || ''} alt="Avatar" className="h-full w-full object-cover" /> : (displayName || [firstName, lastName].filter(Boolean).join(' ') || 'T').charAt(0).toUpperCase()}
                     </div>
-                    <p className="mt-1 text-xs text-slate-500">{[city, country].filter(Boolean).join(', ') || 'Localisation non renseignée'}{city || country ? ' · ' : ''}{userProfile?.email || '—'}</p>
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700">Profil trader</p>
+                      <h2 className="mt-1 truncate text-2xl font-black tracking-tight text-slate-950">{displayName || [firstName, lastName].filter(Boolean).join(' ') || 'Trader IAMTRADER'}</h2>
+                      <p className="mt-1 truncate text-sm text-slate-500">{userProfile?.email || 'Adresse e-mail non renseignée'}</p>
+                      <div className="mt-2"><PlanBadge plan={userProfile?.plan || 'free'} /></div>
+                    </div>
                   </div>
-                  <button type="button" onClick={() => setIsEditingProfile(true)} className="self-start rounded-lg border border-slate-200 bg-white px-3.5 py-2 text-xs font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 sm:self-auto">Modifier</button>
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" onClick={() => setIsAvatarModalOpen(true)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"><Sparkles className="h-4 w-4" /> Avatar</button>
+                    <button type="button" onClick={() => setIsEditingProfile(true)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-700"><User className="h-4 w-4" /> Modifier le profil</button>
+                  </div>
                 </div>
-              </div>
               </section>
 
-              <section className="flex flex-col gap-4 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600"><Sparkles className="h-5 w-5" /></div>
-                  <div>
-                    <h3 className="text-sm font-black text-slate-900">Avatar personnalisé</h3>
-                    <p className="mt-1 text-xs text-slate-500">Créez et personnalisez votre identité visuelle sur IAMTRADER et PipTalk.</p>
-                  </div>
-                </div>
-                <button type="button" onClick={() => setIsAvatarModalOpen(true)} className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-xs font-bold text-white shadow-sm transition hover:bg-blue-700">
-                  <Sparkles className="h-4 w-4" /> {userProfile?.avatarURL || userProfile?.photoURL ? 'Modifier mon avatar' : 'Créer mon avatar'}
-                </button>
-              </section>
               {isAvatarModalOpen && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-3 backdrop-blur-sm sm:p-6" onMouseDown={event => { if (event.target === event.currentTarget) setIsAvatarModalOpen(false); }}>
                   <div role="dialog" aria-modal="true" aria-label="Studio de création d’avatar" className="relative max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-[26px] bg-white shadow-2xl">
                     <button type="button" aria-label="Fermer le studio d’avatar" onClick={() => setIsAvatarModalOpen(false)} className="sticky top-3 z-10 ml-auto mr-3 mt-3 flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:bg-slate-50 hover:text-slate-900"><X className="h-4 w-4" /></button>
-                    <div className="px-3 pb-3 sm:px-5 sm:pb-5">
-                      <AvatarStudio userProfile={userProfile} onSaved={() => setIsAvatarModalOpen(false)} />
-                    </div>
+                    <div className="px-3 pb-3 sm:px-5 sm:pb-5"><AvatarStudio userProfile={userProfile} onSaved={() => setIsAvatarModalOpen(false)} /></div>
                   </div>
                 </div>
               )}
 
-              <section className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-[0_14px_40px_rgba(15,23,42,0.05)]">
-                <div className="mb-5 flex items-center gap-3"><span className="flex h-8 w-8 items-center justify-center rounded-xl bg-[#e5faf5] text-[#00896e]"><User className="h-4 w-4" /></span><div><div className="text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">Informations personnelles</div><div className="mt-0.5 text-sm font-bold text-slate-900">Identité & coordonnées</div></div></div>
-                <div className="grid gap-x-8 gap-y-5 sm:grid-cols-2 lg:grid-cols-4">
+              <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+                <div className="mb-5 flex items-center justify-between gap-3">
+                  <div><h3 className="text-base font-extrabold text-slate-950">Informations personnelles</h3><p className="mt-1 text-sm text-slate-500">Les informations principales de votre compte.</p></div>
+                  <span className="rounded-xl bg-slate-50 p-2.5 text-slate-500"><User className="h-4 w-4" /></span>
+                </div>
+                <div className="grid gap-x-8 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
                   {[
-                    ['Prénom', firstName], ['Nom', lastName], ['Sexe', gender], ['Âge', age ? age + ' ans' : '—'],
-                    ['Ville', city], ['Pays', country], ['WhatsApp', whatsapp], ['Membre depuis', formatDate(userProfile?.createdAt)]
-                  ].map(([label, value]) => (
-                    <div key={label} className="min-w-0">
-                      <div className="text-[9px] font-semibold uppercase tracking-wider text-slate-400">{label}</div>
-                      <div className="mt-1.5 truncate text-sm font-semibold text-slate-900">{value || '—'}</div>
+                    ['Prénom', firstName], ['Nom', lastName], ['WhatsApp', whatsapp], ['Ville', city], ['Pays', country], ['Membre depuis', formatDate(userProfile?.createdAt)]
+                  ].filter(([, value]) => Boolean(value)).map(([label, value]) => (
+                    <div key={String(label)} className="min-w-0 border-b border-slate-100 pb-3">
+                      <p className="text-xs text-slate-500">{label}</p><p className="mt-1 truncate text-sm font-semibold text-slate-900">{value}</p>
                     </div>
                   ))}
+                  {!firstName && !lastName && !whatsapp && !city && !country && <p className="text-sm text-slate-500">Complétez votre profil pour afficher vos informations ici.</p>}
                 </div>
               </section>
 
-              <section className="relative overflow-hidden rounded-[24px] border border-[#dceee9] bg-gradient-to-br from-[#f8fffd] via-white to-[#eef8ff] p-6 shadow-[0_14px_42px_rgba(15,23,42,0.06)]">
-                <div className="pointer-events-none absolute -right-10 -top-12 h-40 w-40 rounded-full bg-[#00a982]/10 blur-3xl" />
-                <div className="pointer-events-none absolute -bottom-16 left-1/3 h-32 w-32 rounded-full bg-blue-100/60 blur-3xl" />
-                <div className="relative">
-                  <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#00a982]">Trading</div>
-                      <h3 className="mt-1 text-lg font-black tracking-tight text-slate-950">Profil de trading</h3>
-                      <p className="mt-1 text-[11px] text-slate-500">Votre style, votre niveau et vos marchés principaux.</p>
-                    </div>
-                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white text-[#00a982] shadow-sm ring-1 ring-[#dceee9]"><TrendingUp className="h-4 w-4" /></div>
-                  </div>
-                  <div className="grid gap-3 md:grid-cols-3">
-                    <div className="rounded-2xl border border-white bg-white/90 p-4 shadow-sm">
-                      <div className="flex items-start justify-between gap-3">
-                        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-amber-50 text-amber-600 ring-1 ring-amber-100"><Crown className="h-4 w-4" /></span>
-                        <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Niveau</span>
-                      </div>
-                      <div className="mt-3 text-sm font-black text-slate-950">{traderLevel || '—'}</div>
-                    </div>
-                    <div className="rounded-2xl border border-white bg-white/90 p-4 shadow-sm">
-                      <div className="flex items-start justify-between gap-3">
-                        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-50 text-violet-600 ring-1 ring-violet-100"><Target className="h-4 w-4" /></span>
-                        <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Style</span>
-                      </div>
-                      <div className="mt-3 text-sm font-black text-slate-950">{traderStyle || '—'}</div>
-                    </div>
-                    <div className="rounded-2xl border border-white bg-white/90 p-4 shadow-sm">
-                      <div className="flex items-start justify-between gap-3">
-                        <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600 ring-1 ring-emerald-100"><Coins className="h-4 w-4" /></span>
-                        <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Marchés</span>
-                      </div>
-                      <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1.5">
-                        {traderMarkets.length ? traderMarkets.map(m => <span key={m} className="text-sm font-black text-slate-950">{m}</span>) : <span className="text-sm font-black text-slate-950">—</span>}
-                      </div>
-                    </div>
-                  </div>
+              <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+                <div className="mb-4 flex items-center justify-between gap-3"><div><h3 className="text-base font-extrabold text-slate-950">Votre profil de trading</h3><p className="mt-1 text-sm text-slate-500">Votre niveau, votre style et vos marchés.</p></div><TrendingUp className="h-5 w-5 text-emerald-600" /></div>
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {[
+                    { label: 'Niveau', value: traderLevel || 'Non renseigné' },
+                    { label: 'Style', value: traderStyle || 'Non renseigné' },
+                    { label: 'Marchés', value: traderMarkets.length ? traderMarkets.join(' · ') : 'Non renseignés' }
+                  ].map(item => <div key={item.label} className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-medium text-slate-500">{item.label}</p><p className="mt-2 text-sm font-bold text-slate-900">{item.value}</p></div>)}
                 </div>
               </section>
 
-              <section className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-[0_14px_40px_rgba(15,23,42,0.05)]">
-                <div className="mb-5 flex items-center gap-3"><span className="flex h-8 w-8 items-center justify-center rounded-xl bg-violet-50 text-violet-600">◎</span><div className="text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">Réseaux sociaux</div></div>
-                {socialLinks.length ? (
-                  <div className="flex flex-wrap gap-x-6 gap-y-3">
-                    {socialLinks.map((link, index) => <div key={link.network + link.username + index} className="text-sm"><span className="font-semibold text-slate-900">{link.network}</span><span className="mx-2 text-slate-300">·</span><span className="text-slate-500">{link.username}</span></div>)}
-                  </div>
-                ) : <p className="text-xs text-slate-500">Aucun réseau social renseigné.</p>}
-              </section>
+              {socialLinks.length > 0 && (
+                <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
+                  <h3 className="text-base font-extrabold text-slate-950">Réseaux sociaux</h3>
+                  <div className="mt-3 flex flex-wrap gap-2">{socialLinks.map((link, index) => <span key={link.network + link.username + index} className="rounded-full bg-slate-50 px-3 py-1.5 text-sm text-slate-700">{link.network} <span className="text-slate-400">·</span> {link.username}</span>)}</div>
+                </section>
+              )}
 
-              <section className="relative overflow-hidden rounded-[24px] border border-slate-200 bg-gradient-to-r from-white via-[#f7fffc] to-[#f5f3ff] p-5 shadow-[0_12px_35px_rgba(15,23,42,0.05)]">
-                <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-amber-50 text-amber-500 ring-1 ring-amber-100"><Star className="h-5 w-5" /></div>
-                    <div>
-                      <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-slate-400">IAMTRADER Rating</div>
-                      <div className="mt-1 text-sm font-black text-slate-950">Cote automatique de performance</div>
-                      <p className="mt-1 text-[10px] text-slate-500">{traderRating.isSufficientData ? traderRating.tradesAnalyzed + ' trades analysés · Win Rate ' + traderRating.winRate.toFixed(1) + '% · PF ' + traderRating.profitFactor.toFixed(2) : traderRating.tradesAnalyzed + '/5 trades nécessaires pour obtenir une cote'}</p>
-                    </div>
+              <section className="flex flex-col gap-4 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700">IAMTRADER Rating</p>
+                  <h3 className="mt-1 text-base font-extrabold text-slate-950">Votre cote de performance</h3>
+                  <p className="mt-1 text-sm text-slate-500">{traderRating.isSufficientData ? traderRating.tradesAnalyzed + ' trades analysés · Win rate ' + traderRating.winRate.toFixed(1) + '% · PF ' + traderRating.profitFactor.toFixed(2) : traderRating.tradesAnalyzed + '/5 trades nécessaires pour calculer votre cote'}</p>
+                </div>
+                <div className="flex shrink-0 flex-wrap items-center gap-3">
+                  <div className={traderRating.isSufficientData ? 'flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-2 text-emerald-800' : 'flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 text-slate-600'}>
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-xs font-black shadow-sm">{traderRating.grade}</span>
+                    <span className="text-sm font-bold">{traderRating.isSufficientData ? traderRating.label : 'En attente'}</span>
+                    {traderRating.isSufficientData && <span className="text-xs font-black">{traderRating.score}/100</span>}
                   </div>
-                  <div className="flex flex-col items-start gap-2 self-start sm:items-end sm:self-auto">
-                    <div className={traderRating.isSufficientData ? 'flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 shadow-sm' : 'flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2 shadow-sm'}>
-                      <span className={traderRating.isSufficientData ? 'flex h-7 w-7 items-center justify-center rounded-full bg-white text-[11px] font-black text-emerald-700 ring-1 ring-emerald-200' : 'flex h-7 w-7 items-center justify-center rounded-full bg-white text-[11px] font-black text-slate-500 ring-1 ring-slate-200'}>{traderRating.grade}</span>
-                      <span className={traderRating.isSufficientData ? 'text-xs font-black text-emerald-800' : 'text-xs font-black text-slate-600'}>{traderRating.isSufficientData ? traderRating.label : 'En attente'}</span>
-                      {traderRating.isSufficientData && <span className="text-[10px] font-bold text-emerald-600">{traderRating.score}/100</span>}
-                    </div>
-                    <button type="button" onClick={downloadTraderBadge} disabled={!traderRating.isSufficientData} className="rounded-xl bg-slate-950 px-4 py-2 text-[10px] font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40">Télécharger le badge</button>
-                  </div>
+                  <button type="button" onClick={downloadTraderBadge} disabled={!traderRating.isSufficientData} className="rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40">Télécharger le badge</button>
                 </div>
               </section>
-            </div>
+            </>
           ) : (
             <>
-              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <div className="flex items-center justify-between gap-4 border-b border-slate-100 pb-5">
-                  <div><h3 className="text-lg font-black text-slate-900">Profil du trader</h3><p className="mt-1 text-xs text-slate-500">Les informations visibles dans votre profil IAMTRADER.</p></div>
-                  <PlanBadge plan={userProfile?.plan || 'free'} />
-                </div>
+              <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+                <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-4"><div><h3 className="text-lg font-black text-slate-950">Modifier le profil</h3><p className="mt-1 text-sm text-slate-500">Mettez à jour vos informations essentielles.</p></div><button type="button" onClick={() => setIsEditingProfile(false)} className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50">Annuler</button></div>
                 <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
                   {[
                     ['Prénom', firstName, setFirstName], ['Nom', lastName, setLastName], ['Nom d’affichage', displayName, setDisplayName],
                     ['Âge', age, setAge], ['Ville', city, setCity], ['WhatsApp', whatsapp, setWhatsapp]
-                  ].map(([label, value, setter], index) => <div key={String(label)} className={index === 2 ? 'lg:col-span-1' : ''}><label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">{label as string}</label><input value={value as string} onChange={e => (setter as React.Dispatch<React.SetStateAction<string>>)(e.target.value)} type={label === 'WhatsApp' ? 'tel' : 'text'} inputMode={label === 'Âge' ? 'numeric' : label === 'WhatsApp' ? 'tel' : undefined} placeholder={label === 'WhatsApp' ? '+243 9XX XXX XXX' : undefined} autoComplete={label === 'WhatsApp' ? 'tel' : undefined} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-[#00a982] focus:ring-2 focus:ring-[#e5faf5]" /></div>)}
-                  <div><label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Pays</label><select value={country} onChange={e => setCountry(e.target.value)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-[#00a982] focus:ring-2 focus:ring-[#e5faf5]"><option value="">Sélectionner un pays</option>{countryOptions.map(item => <option key={item.code} value={item.name}>{item.name}</option>)}</select></div>
-                  <div><label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Sexe</label><select value={gender} onChange={e => setGender(e.target.value)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-[#00a982]"><option value="">Sélectionner</option><option>Homme</option><option>Femme</option><option>Autre</option></select></div>
-                  <div><label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">E-mail</label><input disabled value={userProfile?.email || ''} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-500" /></div>
-                  <div><label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Date d’inscription</label><input disabled value={formatDate(userProfile?.createdAt)} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm text-slate-500" /></div>
+                  ].map(([label, value, setter], index) => <div key={String(label)}><label className="mb-1.5 block text-xs font-semibold text-slate-600">{label as string}</label><input value={value as string} onChange={e => (setter as React.Dispatch<React.SetStateAction<string>>)(e.target.value)} type={label === 'WhatsApp' ? 'tel' : 'text'} inputMode={label === 'Âge' ? 'numeric' : label === 'WhatsApp' ? 'tel' : undefined} placeholder={label === 'WhatsApp' ? '+243 9XX XXX XXX' : undefined} autoComplete={label === 'WhatsApp' ? 'tel' : undefined} className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-900 outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100" /></div>)}
+                  <div><label className="mb-1.5 block text-xs font-semibold text-slate-600">Pays</label><select value={country} onChange={e => setCountry(e.target.value)} className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100"><option value="">Sélectionner un pays</option>{countryOptions.map(item => <option key={item.code} value={item.name}>{item.name}</option>)}</select></div>
+                  <div><label className="mb-1.5 block text-xs font-semibold text-slate-600">Sexe</label><select value={gender} onChange={e => setGender(e.target.value)} className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-900 outline-none focus:border-emerald-500"><option value="">Sélectionner</option><option>Homme</option><option>Femme</option><option>Autre</option></select></div>
+                  <div><label className="mb-1.5 block text-xs font-semibold text-slate-600">E-mail</label><input disabled value={userProfile?.email || ''} className="w-full rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-sm text-slate-500" /></div>
                 </div>
               </section>
 
-              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <h3 className="text-sm font-black text-slate-900">Profil de trading</h3>
-                <div className="mt-4 grid gap-4 sm:grid-cols-3">
-                  <div><label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Niveau</label><select value={traderLevel} onChange={e => setTraderLevel(e.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"><option value="">Sélectionner</option><option>Débutant</option><option>Intermédiaire</option><option>Avancé</option><option>Professionnel</option></select></div>
-                  <div><label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Style</label><select value={traderStyle} onChange={e => setTraderStyle(e.target.value)} className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm"><option value="">Sélectionner</option><option>Scalping</option><option>Day Trading</option><option>Swing Trading</option><option>Position Trading</option></select></div>
-                  <div><label className="mb-1.5 block text-[10px] font-bold uppercase tracking-wider text-slate-500">Marchés principaux</label><div className="flex flex-wrap gap-2">{['Forex','Gold','Indices','Crypto'].map(m => <button type="button" key={m} onClick={() => toggleMarket(m)} className={`rounded-full px-3 py-1.5 text-[10px] font-bold ${traderMarkets.includes(m) ? 'bg-[#e5faf5] text-[#007f60] ring-1 ring-[#b7ebdd]' : 'bg-slate-100 text-slate-500'}`}>{m}</button>)}</div></div>
+              <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+                <h3 className="text-base font-extrabold text-slate-950">Profil de trading</h3>
+                <p className="mt-1 text-sm text-slate-500">Sélectionnez les informations qui décrivent votre pratique.</p>
+                <div className="mt-5 grid gap-4 sm:grid-cols-3">
+                  <div><label className="mb-1.5 block text-xs font-semibold text-slate-600">Niveau</label><select value={traderLevel} onChange={e => setTraderLevel(e.target.value)} className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm"><option value="">Sélectionner</option><option>Débutant</option><option>Intermédiaire</option><option>Avancé</option><option>Professionnel</option></select></div>
+                  <div><label className="mb-1.5 block text-xs font-semibold text-slate-600">Style</label><select value={traderStyle} onChange={e => setTraderStyle(e.target.value)} className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm"><option value="">Sélectionner</option><option>Scalping</option><option>Day Trading</option><option>Swing Trading</option><option>Position Trading</option></select></div>
+                  <div><label className="mb-1.5 block text-xs font-semibold text-slate-600">Marchés principaux</label><div className="flex flex-wrap gap-2">{['Forex','Gold','Indices','Crypto'].map(m => <button type="button" key={m} onClick={() => toggleMarket(m)} className={`rounded-full px-3 py-2 text-xs font-bold transition ${traderMarkets.includes(m) ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>{m}</button>)}</div></div>
                 </div>
               </section>
 
-              <section className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-                <h3 className="text-sm font-black text-slate-900">Réseaux sociaux</h3><p className="mt-1 text-xs text-slate-500">Choisissez un réseau et ajoutez uniquement votre identifiant.</p>
-                <div className="mt-4 flex flex-col gap-2 sm:flex-row"><select value={socialNetwork} onChange={e => setSocialNetwork(e.target.value)} className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm sm:w-40"><option>Instagram</option><option>Facebook</option><option>TikTok</option><option>X</option><option>LinkedIn</option><option>YouTube</option></select><input value={socialUsername} onChange={e => setSocialUsername(e.target.value)} placeholder="@votre_nom" className="min-w-0 flex-1 rounded-xl border border-slate-200 px-3 py-2.5 text-sm" /><button type="button" onClick={addSocialLink} className="rounded-xl bg-slate-950 px-4 py-2.5 text-xs font-bold text-white">+ Ajouter</button></div>
-                {socialLinks.length > 0 && <div className="mt-4 flex flex-wrap gap-2">{socialLinks.map((link, index) => <div key={link.network + link.username + index} className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs"><span className="font-bold text-slate-700">{link.network}</span><span className="text-slate-500">{link.username}</span><button type="button" onClick={() => removeSocialLink(index)} className="text-slate-400 hover:text-rose-500">×</button></div>)}</div>}
+              <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+                <h3 className="text-base font-extrabold text-slate-950">Réseaux sociaux</h3>
+                <p className="mt-1 text-sm text-slate-500">Facultatif : ajoutez les profils que vous souhaitez partager.</p>
+                <div className="mt-4 flex flex-col gap-2 sm:flex-row"><select value={socialNetwork} onChange={e => setSocialNetwork(e.target.value)} className="rounded-xl border border-slate-200 px-3.5 py-3 text-sm sm:w-44"><option>Instagram</option><option>Facebook</option><option>TikTok</option><option>X</option><option>LinkedIn</option><option>YouTube</option></select><input value={socialUsername} onChange={e => setSocialUsername(e.target.value)} placeholder="@votre_nom" className="min-w-0 flex-1 rounded-xl border border-slate-200 px-3.5 py-3 text-sm" /><button type="button" onClick={addSocialLink} className="rounded-xl bg-slate-900 px-4 py-3 text-sm font-bold text-white">Ajouter</button></div>
+                {socialLinks.length > 0 && <div className="mt-4 flex flex-wrap gap-2">{socialLinks.map((link, index) => <div key={link.network + link.username + index} className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs"><span className="font-semibold text-slate-700">{link.network}</span><span className="text-slate-500">{link.username}</span><button type="button" aria-label={`Retirer ${link.network}`} onClick={() => removeSocialLink(index)} className="text-slate-400 hover:text-rose-600">×</button></div>)}</div>}
               </section>
 
-              <div className="flex justify-end gap-2"><button type="button" onClick={() => setIsEditingProfile(false)} className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-xs font-bold text-slate-700">Annuler</button><button onClick={saveTraderProfile} disabled={isProfileSaving} className="rounded-xl bg-[#0a192f] px-5 py-3 text-xs font-bold text-white disabled:opacity-50">{isProfileSaving ? 'Enregistrement…' : 'Enregistrer le profil'}</button></div>
+              <div className="sticky bottom-3 z-10 flex justify-end gap-2 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-lg backdrop-blur">
+                <button type="button" onClick={() => setIsEditingProfile(false)} className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700">Annuler</button>
+                <button type="button" onClick={saveTraderProfile} disabled={isProfileSaving} className="rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50">{isProfileSaving ? 'Enregistrement…' : 'Enregistrer les modifications'}</button>
+              </div>
             </>
           )}
         </div>
