@@ -76,8 +76,8 @@ Tous les nombres doivent être strictement positifs.`;
   const configuredModel = (env.GEMINI_CHLOE_MODEL || env.GEMINI_MODEL || '').trim();
   const result = await callGeminiUnified(prompt, {
     apiKey: env.GEMINI_API_KEY,
-    preferredModel: configuredModel || undefined,
-    fallbackModels: ['gemini-2.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.8-flash'],
+    preferredModel: 'gemini-3.5-flash-lite',
+    fallbackModels: ['gemini-3.8-flash'],
     responseJson: true,
     temperature: 0.1,
     maxTokens: 300,
