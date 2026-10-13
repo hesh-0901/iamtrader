@@ -373,10 +373,10 @@ export async function handlePaymentRequest(request: Request, env: CinetPayEnv) {
     const plan = planKey ? PLANS[planKey] : undefined;
     const phone = normalizePhone(body.phone);
     const amounts = plan ? calculatePaymentAmounts(plan.amount) : undefined;
-    const isSasPay = String(body.paymentProvider || '').trim().toLowerCase() === 'saspay';
+    const isSasPay = ['saspay', 'vodacom m-pesa', 'm-pesa', 'mpesa', 'orange money', 'airtel money'].includes(String(body.paymentProvider || '').trim().toLowerCase());
 
     if (!plan || !planKey) return json({ success: false, message: 'Formule invalide.' }, 400);
-    if (!isSasPay && !phone) return json({ success: false, message: 'Numéro Mobile Money invalide. Utilisez un numéro RDC à 10 chiffres.' }, 400);
+    if (!phone) return json({ success: false, message: 'Numéro Mobile Money invalide. Utilisez un numéro RDC à 10 chiffres.' }, 400);
     if (!isSasPay && (!env.CINETPAY_API_KEY || !env.CINETPAY_API_PASSWORD)) {
       const configState = [
         'API_KEY=' + (env.CINETPAY_API_KEY ? 'OK' : 'MISSING'),
