@@ -131,15 +131,19 @@ export async function onRequest(context: { request: Request; env: Env }) {
     parts.push({ inlineData: { mimeType: file.mimeType, data: cleanData } });
   }
 
-  // Priorité au modèle Flash principal, puis repli sur Flash-Lite si le premier échoue.
-  // GEMINI_CHLOE_MODEL permet de changer le modèle principal depuis Cloudflare sans modifier le code.
+  // Respecter le modèle configuré, mais toujours tenter un modèle différent en secours.
+  // Si la variable Cloudflare pointe déjà vers Flash-Lite, le secours devient Flash.
   const preferredModel = (context.env.GEMINI_CHLOE_MODEL || '').trim() || 'gemini-3.8-flash';
+  const fallbackModels = preferredModel === 'gemini-3.5-flash-lite'
+    ? ['gemini-3.8-flash']
+    : ['gemini-3.5-flash-lite'];
+
   const result = await callGeminiUnified(
     [{ role: 'user', parts }],
     {
       apiKey,
       preferredModel,
-      fallbackModels: ['gemini-3.5-flash-lite'],
+      fallbackModels,
       systemInstruction: SYSTEM_INSTRUCTIONS,
       responseJson: true,
       temperature: 0.2,
@@ -149,7 +153,14 @@ export async function onRequest(context: { request: Request; env: Env }) {
   );
 
   if (!result.success || !result.text) {
-    console.error('Chloe Gemini request failed:', { model: preferredModel, status: result.httpStatus });
+    // Garder les détails dans les logs serveur uniquement, jamais dans la réponse au client.
+    console.error('Chloe Gemini request failed:', {
+      preferredModel,
+      fallbackModels,
+      modelUsed: result.modelUsed,
+      status: result.httpStatus,
+      reason: result.error,
+    });
     return json({
       reply: 'Chloé est momentanément indisponible. Réessaie dans quelques instants.',
       action: null,
