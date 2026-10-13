@@ -669,7 +669,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
         <div className="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto bg-[#07111f]/70 p-3 backdrop-blur-md sm:p-6">
           <div className={'my-auto w-full ' + (paymentStatus === 'processing' && paymentGateway === 'saspay' && paymentUrl ? 'max-w-6xl' : 'max-w-2xl') + ' overflow-hidden rounded-3xl border border-white/70 bg-white shadow-[0_32px_100px_rgba(2,12,27,.36)] ring-1 ring-black/5'}>
             <div className="relative flex items-start justify-between gap-4 border-b border-slate-100 bg-white px-5 py-5 sm:px-7 sm:py-6">
-              <div className="flex min-w-0 items-start gap-3"><div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100"><Shield className="h-5 w-5" /></div><div className="min-w-0"><div className="text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-700">Paiement sécurisé</div><h3 className="mt-1 text-xl font-extrabold tracking-tight text-slate-950 sm:text-2xl">{paymentPlan === 'pro' ? 'Passer à Plus' : 'Activer Community'}</h3><p className="mt-1 max-w-lg text-xs leading-5 text-slate-500">Vérifiez votre abonnement avant de continuer. Vous finaliserez le paiement sur la page sécurisée de notre prestataire.</p></div></div>
+              <div className="flex min-w-0 items-start gap-3"><div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100"><Shield className="h-5 w-5" /></div><div className="min-w-0"><div className="text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-700">Paiement sécurisé</div><h3 className="mt-1 text-xl font-extrabold tracking-tight text-slate-950 sm:text-2xl">{paymentPlan === 'pro' ? 'Passer à Plus' : 'Activer Community'}</h3><p className="mt-1 max-w-lg text-xs leading-5 text-slate-500">Vérifiez votre formule et poursuivez vers le paiement sécurisé pour activer votre abonnement.</p></div></div>
               <button onClick={() => setPaymentPlan(null)} className="shrink-0 rounded-xl border border-slate-200 bg-white p-2.5 text-slate-500 transition hover:border-slate-300 hover:bg-slate-50 hover:text-slate-900" aria-label="Fermer"><X className="h-4 w-4" /></button>
             </div>
             <div className="space-y-5 p-5 sm:p-7">
@@ -690,47 +690,18 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                 </div>
               ) : null}
               {paymentStatus === 'idle' && (<>
-                {(() => {
-                  const amounts = getPaymentAmounts(paymentPlan);
-                  return (
-                    <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-5 shadow-sm sm:p-6">
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="text-xs font-semibold text-slate-500">Votre formule</span>
-                        <span className="text-sm font-black text-slate-950">{paymentPlan === 'pro' ? 'Plus · 1 mois' : 'Community · 6 mois'}</span>
-                      </div>
-                      <div className="mt-4 space-y-2 text-[11px]">
-                        <div className="flex items-center justify-between text-slate-500">
-                          <span>Abonnement</span>
-                          <span className="font-semibold text-slate-700">${amounts.baseAmount.toFixed(2)}</span>
-                        </div>
-                        <div className="flex items-center justify-between text-slate-500">
-                          <span>Frais de paiement (3 %)</span>
-                          <span className="font-semibold text-slate-700">+${amounts.paymentFee.toFixed(2)}</span>
-                        </div>
-                        <div className="mt-4 flex items-end justify-between border-t border-slate-200 pt-4">
-                          <span className="text-sm font-bold text-slate-800">Total à payer</span>
-                          <div className="text-right"><span className="block text-2xl font-extrabold tracking-tight text-slate-950">{paymentGateway === 'saspay' ? '$' + amounts.total.toFixed(2) + ' USD' : amounts.cdfTotal.toLocaleString('fr-FR') + ' CDF'}</span><span className="text-[10px] font-semibold text-slate-400">{paymentGateway === 'saspay' ? 'Paiement traité en USD par SasPay' : '≈ $' + amounts.total.toFixed(2) + ' USD'}</span></div>
-                        </div>
-                      </div>
-                      <p className="mt-3 text-[10px] leading-4 text-slate-400">{paymentGateway === 'saspay' ? 'SasPay reçoit le montant en USD. Les frais éventuels appliqués par SasPay dépendent de la configuration de votre compte marchand.' : 'Le montant CinetPay est débité en CDF. Le total de référence inclut les frais de paiement de 3 % et la conversion utilisée pour le checkout RDC.'}</p>
-                      <p className="mt-1 text-[10px] text-slate-500">L’activation intervient uniquement après confirmation serveur de la transaction.</p>
-                      {(() => {
-                        const currentExpiry = userProfile?.subscriptionExpiresAt ? new Date(userProfile.subscriptionExpiresAt) : null;
-                        const activeNow = !!currentExpiry && currentExpiry.getTime() > Date.now() && userProfile?.plan !== 'free';
-                        const estimatedStart = activeNow ? currentExpiry : new Date();
-                        const estimatedEnd = new Date(estimatedStart.getTime() + (paymentPlan === 'pro' ? 30 : 180) * 86400000);
-                        return <div className="mt-3 grid grid-cols-2 gap-2 text-[10px]">
-                          <div className="rounded-xl bg-white p-2.5 ring-1 ring-slate-200"><div className="font-bold uppercase tracking-wider text-slate-400">Début prévu</div><div className="mt-1 font-black text-slate-800">{formatDate(estimatedStart.toISOString())}</div></div>
-                          <div className="rounded-xl bg-white p-2.5 ring-1 ring-slate-200"><div className="font-bold uppercase tracking-wider text-slate-400">Fin prévue</div><div className="mt-1 font-black text-slate-800">{formatDate(estimatedEnd.toISOString())}</div></div>
-                        </div>;
-                      })()}
+                <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-4 shadow-sm sm:p-5">
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="min-w-0">
+                      <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">Votre formule</div>
+                      <div className="mt-1 text-base font-black text-slate-950">{paymentPlan === 'pro' ? 'Plus · 1 mois' : 'Community · 6 mois'}</div>
+                      <p className="mt-1 break-words text-xs text-slate-500">Compte : {userProfile?.displayName || userProfile?.email || 'Votre compte IAMTRADER'}</p>
                     </div>
-                  );
-                })()}
-                <div className="rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-50 to-white p-5 shadow-sm sm:p-6">
-                  <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">Votre abonnement</div>
-                  <div className="mt-2 flex items-center justify-between gap-3"><span className="text-sm font-semibold text-slate-600">{paymentPlan === 'pro' ? 'Plus · 1 mois' : 'Community · 6 mois'}</span><strong className="text-xl font-black text-slate-950">${getPaymentAmounts(paymentPlan!).total.toFixed(2)} USD</strong></div>
-                  <p className="mt-2 text-xs text-slate-500">Compte : {userProfile?.displayName || userProfile?.email || 'Votre compte IAMTRADER'}</p>
+                    <div className="shrink-0 text-right">
+                      <div className="text-[10px] font-semibold text-slate-400">Total à payer</div>
+                      <div className="mt-1 text-xl font-black tracking-tight text-slate-950">{paymentGateway === 'saspay' ? '$' + getPaymentAmounts(paymentPlan).total.toFixed(2) + ' USD' : getPaymentAmounts(paymentPlan).cdfTotal.toLocaleString('fr-FR') + ' CDF'}</div>
+                    </div>
+                  </div>
                 </div>
                 {paymentGateway === 'saspay' && paymentMode === 'live' && (
                   <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5">
