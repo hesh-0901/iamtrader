@@ -52,6 +52,7 @@ valuePerPriceUnit est le gain/perte approximatif, dans la devise du compte indiq
 Fais une proposition pratique à partir des spécifications usuelles connues. N'invente pas une certitude : le contrat, la taille de lot et la valeur peuvent varier selon le broker, notamment pour les CFD, indices, futures et paires dont la devise de cotation diffère de celle du compte. Explique brièvement cette réserve dans note. Ne prétends pas avoir consulté le broker de l'utilisateur. Si l'actif est inconnu, utilise category "other", name égal au symbole, priceStep 0.01 et valuePerPriceUnit 1 comme valeurs provisoires clairement signalées dans note.
 Tous les nombres doivent être strictement positifs.`;
 
+  try {
   // Use the same preferred model as Chloé, with a fast fallback for this lightweight task.
   // GEMINI_CHLOE_MODEL can override the instrument-specific model without changing the chat.
   const configuredModel = (env.GEMINI_CHLOE_MODEL || env.GEMINI_MODEL || '').trim();
