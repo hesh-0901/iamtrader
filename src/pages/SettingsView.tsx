@@ -11,7 +11,7 @@ import { useToast } from '../components/common/Toast';
 import { TradingJournalSettings } from '../components/settings/TradingJournalSettings';
 import { PaymentHistory } from './PaymentHistory';
 import { calculateTraderRating, formatCurrency } from '../utils/calculations';
-import { confirmSimulatedPayment, createPayment, createSimulatedPayment, getPaymentStatus, verifySasPayPayment, PaidPlan, PaymentDetails } from '../services/payments';
+import { confirmSimulatedPayment, createPayment, createSimulatedPayment, getSasPayPaymentStatus, verifySasPayPayment, PaidPlan, PaymentDetails } from '../services/payments';
 
 interface SettingsViewProps {
   userProfile: UserProfile | null;
@@ -80,6 +80,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
   const [paymentProvider, setPaymentProvider] = useState('Airtel Money');
   const [paymentPayerName, setPaymentPayerName] = useState(userProfile?.displayName || [userProfile?.traderProfile?.firstName, userProfile?.traderProfile?.lastName].filter(Boolean).join(' ') || '');
   const [paymentId, setPaymentId] = useState<string | null>(null);
+  const [paymentReference, setPaymentReference] = useState<string | null>(null);
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<'idle' | 'processing' | 'paid' | 'failed'>('idle');
   const [paymentMessage, setPaymentMessage] = useState('');
@@ -244,25 +245,35 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
     localStorage.setItem('iamtrader-dashboard-mode', mode);
   };
 
-  const startPayment = (plan: PaidPlan) => { setPaymentPlan(plan); setPaymentMode('live'); setPaymentGateway('saspay'); setPaymentPhone(userProfile?.traderProfile?.whatsapp || ''); setPaymentProvider('Airtel Money'); setPaymentUrl(null); setPaymentPayerName(userProfile?.displayName || [userProfile?.traderProfile?.firstName, userProfile?.traderProfile?.lastName].filter(Boolean).join(' ') || ''); setPaymentId(null); setPaymentStatus('idle'); setPaymentMessage(''); setPaymentAction(null); setPaymentActivationStart(null); setPaymentActivationExpires(null); };
+  const startPayment = (plan: PaidPlan) => {
+    setPaymentPlan(plan); setPaymentMode('live'); setPaymentGateway('saspay');
+    setPaymentPhone(userProfile?.traderProfile?.whatsapp || '');
+    setPaymentProvider('Airtel Money'); setPaymentUrl(null); setPaymentPayerName('');
+    setPaymentId(null); setPaymentReference(null); setPaymentStatus('idle'); setPaymentMessage('');
+    setPaymentAction(null); setPaymentActivationStart(null); setPaymentActivationExpires(null);
+  };
 
   const submitPayment = async () => {
     if (!paymentPlan) return;
     setIsPaymentLoading(true); setPaymentMessage('');
     try {
-      const isSasPayDirect = paymentMode === 'live' && paymentGateway === 'saspay';
-      const details: PaymentDetails = { phone: isSasPayDirect ? '' : paymentPhone, paymentMethod: isSasPayDirect ? paymentProvider : 'mobile_money', paymentProvider: isSasPayDirect ? 'SasPay' : paymentProvider, payerName: paymentPayerName.trim() };
+      const details: PaymentDetails = {
+        phone: paymentPhone.trim(),
+        paymentMethod: 'mobile_money',
+        paymentProvider,
+        payerName: paymentPayerName.trim()
+      };
       const payment = paymentMode === 'simulation'
         ? await createSimulatedPayment(paymentPlan, details)
         : await createPayment(paymentPlan, details);
       setPaymentId(payment.id);
-      setPaymentUrl(payment.paymentUrl || null);
+      setPaymentReference(payment.reference || null);
+      setPaymentUrl(null);
       setPaymentAction(payment.subscriptionAction || null);
       setPaymentActivationStart(payment.activationStartAt || null);
       setPaymentActivationExpires(payment.activationExpiresAt || null);
       setPaymentStatus('processing');
-      setPaymentMessage(payment.message || 'Paiement en cours de traitement.');
-      if (paymentMode === 'live' && payment.paymentUrl) window.location.assign(payment.paymentUrl);
+      setPaymentMessage(payment.message || 'Demande Mobile Money envoyée. Confirmez-la sur votre téléphone.');
     } catch (error: any) {
       setPaymentStatus('failed');
       setPaymentMessage(error?.message || 'Impossible d’initier le paiement.');
@@ -283,6 +294,37 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
   };
 
   React.useEffect(() => {
+    if (!paymentReference || paymentStatus !== 'processing' || paymentMode === 'simulation') return;
+    let cancelled = false;
+    let attempts = 0;
+    let timer: number | undefined;
+    const check = async () => {
+      attempts += 1;
+      try {
+        const result = await getSasPayPaymentStatus(paymentReference);
+        if (cancelled) return;
+        if (result.status === 'SUCCESS') {
+          setPaymentStatus('paid');
+          setPaymentMessage('Paiement confirmé. Votre abonnement est activé.');
+          window.setTimeout(() => window.location.reload(), 1200);
+          return;
+        }
+        if (['FAILED', 'FAILURE', 'CANCELLED', 'CANCELED', 'EXPIRED'].includes(result.status)) {
+          setPaymentStatus('failed');
+          setPaymentMessage('Le paiement a été refusé, annulé ou expiré. Vous pouvez réessayer.');
+          return;
+        }
+      } catch (error: any) {
+        if (!cancelled) setPaymentMessage(error?.message || 'Vérification du paiement en cours…');
+      }
+      if (!cancelled && attempts < 60) timer = window.setTimeout(check, 4000);
+      else if (!cancelled) setPaymentMessage('Le paiement est toujours en attente. Revenez vérifier votre abonnement plus tard.');
+    };
+    void check();
+    return () => { cancelled = true; if (timer !== undefined) window.clearTimeout(timer); };
+  }, [paymentReference, paymentStatus, paymentMode]);
+
+  React.useEffect(() => {
     if (!pendingPaymentReference) return;
     let cancelled = false;
     let attempts = 0;
@@ -292,8 +334,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
     setPaymentId(pendingPaymentReference);
     setPaymentStatus('processing');
     setPaymentMessage('Vérification du paiement auprès de SasPay…');
-
-    const checkPayment = async () => {
+    const checkPending = async () => {
       attempts += 1;
       try {
         const result = await verifySasPayPayment(pendingPaymentReference);
@@ -301,8 +342,8 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
         if (result.payment?.plan === 'pro' || result.payment?.plan === 'community') setPaymentPlan(result.payment.plan);
         if (result.status === 'paid') {
           setPaymentStatus('paid');
-          setPaymentMessage('Paiement confirmé par SasPay. Actualisation de votre abonnement…');
-          window.setTimeout(() => window.location.reload(), 1400);
+          setPaymentMessage('Paiement confirmé. Actualisation de votre abonnement…');
+          window.setTimeout(() => window.location.reload(), 1200);
           return;
         }
         if (result.status === 'failed') {
@@ -310,35 +351,15 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
           setPaymentMessage('Le paiement n’a pas été finalisé. Vous pouvez réessayer.');
           return;
         }
-        setPaymentStatus('processing');
-        setPaymentMessage('Traitement en cours par votre opérateur. Nous vérifions encore le statut du paiement…');
       } catch (error: any) {
-        if (cancelled) return;
-        setPaymentMessage(error?.message || 'Vérification temporairement indisponible. Nouvelle tentative en cours…');
+        if (!cancelled) setPaymentMessage(error?.message || 'Vérification temporairement indisponible.');
       }
-      if (!cancelled && attempts < 40) timer = window.setTimeout(checkPayment, 3000);
-      else if (!cancelled) setPaymentMessage('Le paiement est toujours en cours ou sa vérification est momentanément indisponible. Revenez vérifier votre abonnement plus tard.');
+      if (!cancelled && attempts < 40) timer = window.setTimeout(checkPending, 3000);
+      else if (!cancelled) setPaymentMessage('Le paiement est toujours en attente. Revenez vérifier votre abonnement plus tard.');
     };
-
-    void checkPayment();
+    void checkPending();
     return () => { cancelled = true; if (timer !== undefined) window.clearTimeout(timer); };
   }, [pendingPaymentReference]);
-
-  React.useEffect(() => {
-    if (pendingPaymentReference || !paymentId || paymentStatus !== 'processing' || paymentMode === 'simulation') return;
-    let cancelled = false; let attempts = 0;
-    const timer = window.setInterval(async () => {
-      attempts += 1;
-      try {
-        const payment = await getPaymentStatus(paymentId);
-        if (cancelled) return;
-        if (payment.status === 'paid') { setPaymentStatus('paid'); setPaymentMessage('Paiement confirmé. Votre formule va être activée.'); window.clearInterval(timer); window.setTimeout(() => window.location.reload(), 1200); }
-        else if (payment.status === 'failed') { setPaymentStatus('failed'); setPaymentMessage('Le paiement a été refusé ou annulé.'); window.clearInterval(timer); }
-        else if (attempts >= 40) { setPaymentMessage('Le paiement est toujours en cours. Revenez vérifier votre abonnement plus tard.'); window.clearInterval(timer); }
-      } catch { if (attempts >= 40) window.clearInterval(timer); }
-    }, 3000);
-    return () => { cancelled = true; window.clearInterval(timer); };
-  }, [paymentId, paymentStatus, paymentMode]);
 
   const saveTraderProfile = async () => {
     if (!userProfile?.uid) return;
@@ -747,6 +768,10 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                 {paymentGateway === 'saspay' && paymentMode === 'live' && (
                   <div className="space-y-4 rounded-2xl border border-slate-200 bg-white p-5">
                     <div>
+                      <label htmlFor="saspay-phone" className="mb-1.5 block text-xs font-bold text-slate-700">Numéro Mobile Money</label>
+                      <input id="saspay-phone" type="tel" inputMode="tel" autoComplete="tel" value={paymentPhone} onChange={event => setPaymentPhone(event.target.value)} placeholder="+243 8XX XXX XXX" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100" />
+                    </div>
+                    <div>
                       <label htmlFor="saspay-network" className="mb-1.5 block text-xs font-bold text-slate-700">Moyen de paiement</label>
                       <select id="saspay-network" value={paymentProvider} onChange={event => setPaymentProvider(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100">
                         <option value="Vodacom M-Pesa">Vodacom M-Pesa</option>
@@ -756,8 +781,8 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                     </div>
                   </div>
                 )}
-                <div className="rounded-xl border border-emerald-100 bg-emerald-50/70 px-4 py-3 text-xs leading-5 text-emerald-950"><Shield className="mr-2 inline h-4 w-4" />Vous allez continuer vers le paiement sécurisé. Votre abonnement sera activé après confirmation du paiement.</div>
-                <button onClick={submitPayment} disabled={isPaymentLoading} className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-emerald-900/10 transition hover:bg-emerald-700 focus:outline-none focus:ring-4 focus:ring-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50">{isPaymentLoading ? 'Préparation de la redirection…' : paymentGateway === 'saspay' ? 'Continuer vers SasPay' : 'Continuer vers CinetPay'}</button>
+                <div className="rounded-xl border border-emerald-100 bg-emerald-50/70 px-4 py-3 text-xs leading-5 text-emerald-950"><Shield className="mr-2 inline h-4 w-4" />Paiement sécurisé intégré à IAMTRADER. Une demande de confirmation sera envoyée par votre opérateur. L’abonnement ne sera activé qu’après confirmation serveur.</div>
+                <button onClick={submitPayment} disabled={isPaymentLoading || (paymentGateway === 'saspay' && paymentMode === 'live' && !paymentPhone.trim())} className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3.5 text-sm font-bold text-white shadow-lg shadow-emerald-900/10 transition hover:bg-emerald-700 focus:outline-none focus:ring-4 focus:ring-emerald-500/20 disabled:cursor-not-allowed disabled:opacity-50">{isPaymentLoading ? 'Envoi de la demande…' : 'Payer l’abonnement'}</button>
               </>)}
               {paymentStatus === 'processing' && !(paymentGateway === 'saspay' && paymentUrl) && (<div className="py-5 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-indigo-50 text-indigo-600"><div className="h-6 w-6 animate-spin rounded-full border-2 border-indigo-200 border-t-indigo-600" /></div><h4 className="mt-4 text-base font-black text-slate-950">Paiement en traitement</h4><p className="mt-2 text-xs leading-5 text-slate-500">{paymentMessage || 'Nous attendons la confirmation du prestataire.'}</p>
                 {paymentActivationStart && <div className="mt-4 rounded-xl bg-slate-50 p-3 text-left text-[10px]">

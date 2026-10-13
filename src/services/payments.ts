@@ -26,10 +26,11 @@ export async function createPayment(plan: PaidPlan, details: PaymentDetails): Pr
   const user = auth.currentUser;
   if (!user) throw new Error('Vous devez être connecté.');
   const idToken = await user.getIdToken();
-  const response = await fetch('/api/payments', {
+  const idempotencyKey = crypto.randomUUID();
+  const response = await fetch('/api/payments/initialize', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
-    body: JSON.stringify({ plan, ...details })
+    body: JSON.stringify({ plan, ...details, idempotencyKey })
   });
   const data = await response.json() as PaymentResponse;
   if (!response.ok || !data.success) throw new Error(data.message || 'Impossible d’initier le paiement.');
@@ -51,6 +52,18 @@ export async function verifySasPayPayment(reference: string) {
   };
   if (!response.ok || !data.success) throw new Error(data.message || 'Impossible de vérifier le paiement SasPay.');
   return { status: data.status || 'unknown', payment: data.payment };
+}
+
+export async function getSasPayPaymentStatus(reference: string) {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Vous devez être connecté.');
+  const idToken = await user.getIdToken();
+  const response = await fetch('/api/payments/status?reference=' + encodeURIComponent(reference), {
+    headers: { Authorization: `Bearer ${idToken}` }
+  });
+  const data = await response.json() as { success?: boolean; status?: string; message?: string };
+  if (!response.ok || !data.success) throw new Error(data.message || 'Impossible de consulter le statut du paiement.');
+  return { status: String(data.status || 'PENDING').toUpperCase() };
 }
 
 export async function getPaymentStatus(id: string) {
