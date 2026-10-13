@@ -131,20 +131,20 @@ export async function onRequest(context: { request: Request; env: Env }) {
     parts.push({ inlineData: { mimeType: file.mimeType, data: cleanData } });
   }
 
-  // Gemini indique que gemini-2.5-flash n'est plus disponible pour les nouveaux utilisateurs.
-  // Utiliser le modèle recommandé par le fournisseur, sans laisser une ancienne variable GEMINI_MODEL le remplacer.
-  const preferredModel = (context.env.GEMINI_CHLOE_MODEL || '').trim() || 'gemini-3.8-flash';
+  // Garder le modèle configuré en priorité, puis essayer des modèles de secours récents.
+  // Chaque tentative est limitée pour éviter qu'un seul modèle lent bloque Chloé.
+  const preferredModel = (context.env.GEMINI_CHLOE_MODEL || '').trim() || 'gemini-3.5-flash-lite';
   const result = await callGeminiUnified(
     [{ role: 'user', parts }],
     {
       apiKey,
       preferredModel,
-      fallbackModels: [],
+      fallbackModels: ['gemini-3.6-flash', 'gemini-3.8-flash'],
       systemInstruction: SYSTEM_INSTRUCTIONS,
       responseJson: true,
       temperature: 0.2,
       maxTokens: 1800,
-      timeoutMs: 12000,
+      timeoutMs: 8000,
     },
   );
 
