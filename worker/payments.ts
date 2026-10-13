@@ -7,7 +7,7 @@ const PLANS = {
   community: { name: 'Community', amount: 89.99, currency: 'USD', durationDays: 180 }
 } as const;
 
-const PAYMENT_FEE_RATE = 0.03;
+const PAYMENT_FEE_RATE = 0;
 
 export function calculatePaymentAmounts(baseAmount: number) {
   const fee = Math.round(baseAmount * PAYMENT_FEE_RATE * 100) / 100;
