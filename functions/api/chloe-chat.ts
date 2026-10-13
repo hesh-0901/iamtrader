@@ -131,14 +131,15 @@ export async function onRequest(context: { request: Request; env: Env }) {
     parts.push({ inlineData: { mimeType: file.mimeType, data: cleanData } });
   }
 
-  const configuredModel = (context.env.GEMINI_CHLOE_MODEL || context.env.GEMINI_MODEL || '').trim();
-  const preferredModel = configuredModel || 'gemini-2.5-flash';
+  // Gemini indique que gemini-2.5-flash n'est plus disponible pour les nouveaux utilisateurs.
+  // Utiliser le modèle recommandé par le fournisseur, sans laisser une ancienne variable GEMINI_MODEL le remplacer.
+  const preferredModel = (context.env.GEMINI_CHLOE_MODEL || '').trim() || 'gemini-3.8-flash';
   const result = await callGeminiUnified(
     [{ role: 'user', parts }],
     {
       apiKey,
       preferredModel,
-      fallbackModels: ['gemini-2.5-flash'],
+      fallbackModels: [],
       systemInstruction: SYSTEM_INSTRUCTIONS,
       responseJson: true,
       temperature: 0.2,
@@ -148,12 +149,12 @@ export async function onRequest(context: { request: Request; env: Env }) {
   );
 
   if (!result.success || !result.text) {
-    console.error('Chloe Gemini request failed:', { model: configuredModel || undefined, status: result.httpStatus });
+    console.error('Chloe Gemini request failed:', { model: preferredModel, status: result.httpStatus });
     return json({
       error: 'Chloé ne peut pas répondre pour le moment.',
       details: {
         reason: result.error,
-        model: configuredModel || undefined,
+        model: preferredModel,
         httpStatus: result.httpStatus,
       },
     }, 502);
