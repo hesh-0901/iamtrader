@@ -109,13 +109,37 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
         const context = [data.details?.model, data.details?.providerStatus, diagnostic].filter(Boolean).join(' — ');
         throw new Error([data.error || 'Chloé n’a pas pu compléter cet instrument.', context].filter(Boolean).join(' '));
       }
+      const suggestion = data.instrument;
+      if (!editingInstrumentId) {
+        const duplicate = instruments.some(item => item.symbol.toUpperCase() === symbol);
+        if (duplicate) {
+          showToast('Cet instrument existe déjà. Ouvrez-le pour le modifier.', 'error');
+          return;
+        }
+        const normalized: TradingInstrument = {
+          id: crypto.randomUUID(),
+          symbol,
+          name: suggestion.name.trim(),
+          category: suggestion.category,
+          priceStep: Number(suggestion.priceStep),
+          valuePerPriceUnit: Number(suggestion.valuePerPriceUnit),
+          defaultPositionSize: Number(suggestion.defaultPositionSize) || 1
+        };
+        const next = [...instruments, normalized];
+        setInstruments(next);
+        closeInstrumentForm();
+        await persist(next, setups);
+        setInstrumentSuggestionNote(data.note || 'Les paramètres sont des estimations : vérifiez les spécifications de votre broker.');
+        showToast('Actif ajouté automatiquement par Chloé. Vérifiez ses paramètres broker dans la liste.', 'success');
+        return;
+      }
       setInstrument(current => ({
         ...current,
-        ...data.instrument,
+        ...suggestion,
         id: editingInstrumentId || current.id,
-        priceStep: String(data.instrument!.priceStep),
-        valuePerPriceUnit: String(data.instrument!.valuePerPriceUnit),
-        defaultPositionSize: String(data.instrument!.defaultPositionSize)
+        priceStep: String(suggestion.priceStep),
+        valuePerPriceUnit: String(suggestion.valuePerPriceUnit),
+        defaultPositionSize: String(suggestion.defaultPositionSize)
       }));
       setInstrumentDetailsOpen(true);
       setInstrumentSuggestionNote(data.note || 'Vérifiez les spécifications du broker avant de vous fier aux calculs.');
