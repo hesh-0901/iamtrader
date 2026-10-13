@@ -250,7 +250,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
     setIsPaymentLoading(true); setPaymentMessage('');
     try {
       const isSasPayDirect = paymentMode === 'live' && paymentGateway === 'saspay';
-      const details: PaymentDetails = { phone: paymentPhone, paymentMethod: isSasPayDirect ? paymentProvider : 'mobile_money', paymentProvider: isSasPayDirect ? 'SasPay' : paymentProvider, payerName: paymentPayerName.trim() };
+      const details: PaymentDetails = { phone: isSasPayDirect ? '' : paymentPhone, paymentMethod: isSasPayDirect ? paymentProvider : 'mobile_money', paymentProvider: isSasPayDirect ? 'SasPay' : paymentProvider, payerName: paymentPayerName.trim() };
       const payment = paymentMode === 'simulation'
         ? await createSimulatedPayment(paymentPlan, details)
         : await createPayment(paymentPlan, details);
@@ -743,16 +743,6 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                         <option value="Visa / Mastercard">Visa / Mastercard</option>
                       </select>
                     </div>
-                    {paymentProvider !== 'Visa / Mastercard' && (
-                      <div>
-                        <label htmlFor="saspay-phone" className="mb-1.5 block text-xs font-bold text-slate-700">Numéro Mobile Money</label>
-                        <div className="flex overflow-hidden rounded-xl border border-slate-200 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-100">
-                          <span className="flex items-center border-r border-slate-200 bg-slate-50 px-3 text-sm font-semibold text-slate-600">+243</span>
-                          <input id="saspay-phone" type="tel" inputMode="tel" autoComplete="tel-national" value={paymentPhone} onChange={event => setPaymentPhone(event.target.value)} placeholder="812 345 678" className="min-w-0 flex-1 px-3 py-3 text-sm text-slate-900 outline-none" />
-                        </div>
-                        <p className="mt-1.5 text-[10px] text-slate-500">Saisissez votre numéro congolais sans l’indicatif +243 si celui-ci est déjà affiché.</p>
-                      </div>
-                    )}
                   </div>
                 )}
                 <div className="rounded-xl border border-emerald-100 bg-emerald-50/70 px-4 py-3 text-xs leading-5 text-emerald-950"><Shield className="mr-2 inline h-4 w-4" />Vous allez continuer vers le paiement sécurisé. Votre abonnement sera activé après confirmation du paiement.</div>
