@@ -186,7 +186,7 @@ async function createSasPayCheckout(
     const response = await fetch('https://api.saspay.me/api/v1/payments/softpay/initialize/', {
       method: 'POST',
       headers: { Authorization: 'Bearer ' + env.SASPAY_API_KEY, 'Content-Type': 'application/json', 'Idempotency-Key': idempotencyKey },
-      body: JSON.stringify({ amount, currency, network, phone_number: e164Phone, reference })
+      body: JSON.stringify({ amount, currency, network, phone_number: e164Phone, reference, description: 'IAMTRADER-' + paymentId + '-' + plan.name + ' subscription' })
     });
     const raw = await response.text(); let result: any = {};
     try { result = raw ? JSON.parse(raw) : {}; } catch { result = {}; }
@@ -204,37 +204,6 @@ async function createSasPayCheckout(
     await firestorePatch(env, 'payments/' + paymentId, { status: 'failed', failureMessage: 'Impossible de joindre SasPay.', updatedAt: new Date().toISOString() }, ['status', 'failureMessage', 'updatedAt']);
     console.error('SasPay Softpay network error:', error);
     return json({ success: false, message: 'Impossible de joindre SasPay. Vérifiez votre connexion et réessayez.' }, 502);
-  }
-}
-
-export async function handleSasPayStatusRequest(request: Request, env: SasPayEnv) {
-  if (request.method !== 'GET') return json({ success: false, message: 'Méthode non autorisée.' }, 405);
-  const token = authHeader(request);
-  if (!token) return json({ success: false, message: 'Authentification requise.' }, 401);
-  if (!env.SASPAY_API_KEY) return json({ success: false, message: 'SasPay n’est pas configuré côté serveur.' }, 503);
-  try {
-    const user = await verifyFirebaseIdToken(env, token);
-    const reference = String(new URL(request.url).searchParams.get('reference') || '').trim();
-    if (!/^IMAT-[A-F0-9]{24}$/i.test(reference)) return json({ success: false, message: 'Référence de paiement invalide.' }, 400);
-    const paymentId = reference.slice(5).toLowerCase();
-    const payment = await firestoreGet(env, 'payments/' + paymentId);
-    if (!payment || payment.uid !== user.uid || payment.provider !== 'SASPAY') return json({ success: false, message: 'Paiement introuvable.' }, 404);
-    if (payment.status === 'paid') return json({ success: true, status: 'SUCCESS', payment: publicPayment(payment) });
-    if (payment.status === 'failed') return json({ success: true, status: 'FAILED', payment: publicPayment(payment) });
-    const transactionId = String(payment.saspayTransactionId || '');
-    if (!transactionId) return json({ success: true, status: 'PENDING', payment: publicPayment(payment) });
-    const response = await fetch('https://api.saspay.me/api/v1/payments/' + encodeURIComponent(transactionId) + '/status/', { headers: { Authorization: 'Bearer ' + env.SASPAY_API_KEY, 'Content-Type': 'application/json' } });
-    const raw = await response.text(); let result: any = {};
-    try { result = raw ? JSON.parse(raw) : {}; } catch { result = {}; }
-    const data = result?.data || result;
-    if (!response.ok) { console.error('SasPay Softpay status lookup failed:', response.status, raw.slice(0, 300)); return json({ success: true, status: 'PENDING', providerStatus: 'UNKNOWN', payment: publicPayment(payment) }); }
-    const providerStatus = String(data?.status || 'PENDING').toUpperCase();
-    // A provider SUCCESS is not proof that Firestore activation has completed; the webhook remains authoritative.
-    const status = providerStatus === 'SUCCESS' ? 'PENDING' : providerStatus;
-    return json({ success: true, status, providerStatus, payment: publicPayment(payment) });
-  } catch (error) {
-    console.error('SasPay status check error:', error);
-    return json({ success: false, message: 'Impossible de vérifier le statut du paiement.' }, 500);
   }
 }
 
@@ -837,7 +806,7 @@ export async function handleSasPayWebhook(
     }
 
     // Always verify against SasPay's canonical transaction record, not only the webhook payload.
-    const transactionResponse = await fetcher('https://api.saspay.me/api/v1/transactions/' + encodeURIComponent(transactionId) + '/', {
+    const transactionResponse = await fetcher('https://api.saspay.me/api/v1/payments/' + encodeURIComponent(transactionId) + '/verify/', {
       headers: { Authorization: 'Bearer ' + env.SASPAY_API_KEY }
     });
     const transactionRaw = await transactionResponse.text();
