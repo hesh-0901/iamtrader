@@ -135,8 +135,8 @@ export async function onRequest(context: { request: Request; env: Env }) {
     [{ role: 'user', parts }],
     {
       apiKey,
-      preferredModel: configuredModel || undefined,
-      fallbackModels: ['gemini-2.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.8-flash'],
+      preferredModel: 'gemini-3.5-flash-lite',
+      fallbackModels: ['gemini-3.8-flash'],
       systemInstruction: SYSTEM_INSTRUCTIONS,
       responseJson: true,
       temperature: 0.2,
