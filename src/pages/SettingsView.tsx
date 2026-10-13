@@ -859,36 +859,50 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                 <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-xs leading-5 text-emerald-800"><Shield className="mr-2 inline h-4 w-4" />Paiement sécurisé intégré à IAMTRADER. Une demande de confirmation sera envoyée par votre opérateur. L’abonnement ne sera activé qu’après confirmation serveur.</div>
                 <button onClick={submitPayment} disabled={isPaymentLoading || (paymentGateway === 'saspay' && paymentMode === 'live' && (!paymentPhone.trim() || paymentCountryCode !== 'CD'))} className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-400 px-4 py-3.5 text-sm font-extrabold text-white shadow-[0_10px_30px_rgba(0,199,150,.18)] transition hover:-translate-y-0.5 hover:shadow-[0_14px_36px_rgba(0,199,150,.25)] focus:outline-none focus:ring-4 focus:ring-emerald-400/20 disabled:cursor-not-allowed disabled:opacity-40">{isPaymentLoading ? 'Envoi de la demande…' : 'Continuer vers le paiement'}</button>
               </>)}
-              {paymentStatus === 'processing' && !(paymentGateway === 'saspay' && paymentUrl) && (<div className="iam-payment-enter mx-auto max-w-2xl py-3 text-center">
-                <div className="relative mx-auto flex h-44 w-44 items-center justify-center">
-                  <div className="iam-payment-ripple" />
-                  <div className="iam-payment-ripple delay" />
-                  <div className="absolute inset-5 rounded-full bg-emerald-100/70 blur-xl" />
-                  <svg className="iam-payment-phone relative z-10 h-32 w-24" viewBox="0 0 96 144" fill="none" role="img" aria-label="Téléphone en attente de confirmation Mobile Money">
-                    <defs><linearGradient id="iamPhoneFrame" x1="10" y1="8" x2="86" y2="136" gradientUnits="userSpaceOnUse"><stop stopColor="#10B981"/><stop offset="1" stopColor="#064E3B"/></linearGradient><linearGradient id="iamPhoneScreen" x1="20" y1="18" x2="76" y2="126" gradientUnits="userSpaceOnUse"><stop stopColor="#ECFDF5"/><stop offset="1" stopColor="#D1FAE5"/></linearGradient></defs>
-                    <rect x="7" y="3" width="82" height="138" rx="17" fill="#0F2925" stroke="url(#iamPhoneFrame)" strokeWidth="3"/>
-                    <rect x="13" y="12" width="70" height="120" rx="11" fill="url(#iamPhoneScreen)"/>
-                    <path d="M37 18h22" stroke="#6B9085" strokeWidth="3" strokeLinecap="round"/>
-                    <rect x="24" y="39" width="48" height="48" rx="15" fill="#fff" stroke="#A7F3D0"/>
-                    <circle cx="48" cy="63" r="12" stroke="#A7F3D0" strokeWidth="3"/>
-                    <circle className="iam-payment-spinner" cx="48" cy="63" r="12" stroke="#059669" strokeWidth="3" strokeLinecap="round" strokeDasharray="28 48"/>
-                    <path d="M29 101h38M35 110h26" stroke="#A7BDB5" strokeWidth="3" strokeLinecap="round"/>
-                    <circle cx="48" cy="137" r="1.5" fill="#A7F3D0"/>
-                  </svg>
-                  <div className="absolute right-1 top-7 z-20 flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-100 bg-white text-emerald-600 shadow-lg"><Shield className="h-4 w-4" /></div>
+              {paymentStatus === 'processing' && !(paymentGateway === 'saspay' && paymentUrl) && (<div className="iam-payment-enter space-y-5 py-2">
+                <div className="grid items-center gap-5 md:grid-cols-[0.78fr_1.22fr] md:gap-8">
+                  <div className="relative flex min-h-[230px] items-center justify-center overflow-hidden rounded-[26px] border border-emerald-100 bg-[radial-gradient(ellipse_at_center,rgba(16,185,129,.16),transparent_68%),linear-gradient(145deg,#f0fdf8,#ffffff_68%,#ecfdf5)] p-5">
+                    <div className="iam-payment-ripple h-36 w-36" />
+                    <div className="iam-payment-ripple delay h-36 w-36" />
+                    <div className="absolute h-40 w-40 rounded-full bg-emerald-200/40 blur-2xl" />
+                    <svg className="iam-payment-phone relative z-10 h-40 w-28" viewBox="0 0 96 144" fill="none" role="img" aria-label="Téléphone en attente de confirmation Mobile Money">
+                      <defs><linearGradient id="iamPhoneFrame" x1="10" y1="8" x2="86" y2="136" gradientUnits="userSpaceOnUse"><stop stopColor="#10B981"/><stop offset="1" stopColor="#064E3B"/></linearGradient><linearGradient id="iamPhoneScreen" x1="20" y1="18" x2="76" y2="126" gradientUnits="userSpaceOnUse"><stop stopColor="#10B981"/><stop offset="1" stopColor="#064E3B"/></linearGradient></defs>
+                      <rect x="7" y="3" width="82" height="138" rx="17" fill="#0F2925" stroke="url(#iamPhoneFrame)" strokeWidth="3"/>
+                      <rect x="13" y="12" width="70" height="120" rx="11" fill="url(#iamPhoneScreen)"/>
+                      <path d="M37 18h22" stroke="#A7F3D0" strokeWidth="3" strokeLinecap="round"/>
+                      <circle cx="48" cy="57" r="18" stroke="#A7F3D0" strokeWidth="4" opacity=".5"/>
+                      <circle className="iam-payment-spinner" cx="48" cy="57" r="18" stroke="#FFFFFF" strokeWidth="4" strokeLinecap="round" strokeDasharray="38 75"/>
+                      <rect x="24" y="86" width="48" height="17" rx="8.5" fill="#FFFFFF" fillOpacity=".16"/>
+                      <path d="M32 94.5h32" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round"/>
+                      <circle cx="39" cy="115" r="2.5" fill="#A7F3D0"/><circle cx="48" cy="115" r="2.5" fill="#A7F3D0" opacity=".75"/><circle cx="57" cy="115" r="2.5" fill="#A7F3D0" opacity=".5"/>
+                    </svg>
+                    <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2">
+                      <span className="rounded-full border border-emerald-100 bg-white/90 px-2.5 py-1 text-[10px] font-bold text-slate-700 shadow-sm">M-Pesa</span>
+                      <span className="rounded-full border border-emerald-100 bg-white/90 px-2.5 py-1 text-[10px] font-bold text-slate-700 shadow-sm">Airtel</span>
+                      <span className="rounded-full border border-emerald-100 bg-white/90 px-2.5 py-1 text-[10px] font-bold text-slate-700 shadow-sm">Orange</span>
+                    </div>
+                  </div>
+                  <div className="min-w-0 py-2 text-center md:text-left">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[.13em] text-emerald-700"><span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />Paiement sécurisé par SasPay</div>
+                    <h4 className="mt-4 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">Paiement <span className="text-emerald-600">en traitement</span></h4>
+                    <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500 md:mx-0">{paymentMessage || 'Demande Mobile Money envoyée. Confirmez le paiement sur votre téléphone.'}</p>
+                    <div className="iam-payment-progress relative mt-5 h-2 overflow-hidden rounded-full bg-emerald-50 ring-1 ring-emerald-100"><div className="h-full w-full rounded-full bg-gradient-to-r from-emerald-600 via-emerald-400 to-teal-300" /></div>
+                    <div className="mt-5 grid grid-cols-3 items-start gap-2">
+                      <div className="flex flex-col items-center gap-2 md:items-start"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-600 text-xs font-black text-white shadow-md shadow-emerald-600/20"><Check className="h-4 w-4" /></span><span className="text-[10px] font-bold leading-4 text-slate-700">Demande envoyée</span></div>
+                      <div className="flex flex-col items-center gap-2 border-x border-slate-100 px-1"><span className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-emerald-500 bg-emerald-50 text-xs font-black text-emerald-700"><span className="h-2.5 w-2.5 animate-pulse rounded-full bg-emerald-500" /></span><span className="text-center text-[10px] font-bold leading-4 text-emerald-700">Confirmez sur votre téléphone</span></div>
+                      <div className="flex flex-col items-center gap-2"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-xs font-black text-slate-400">3</span><span className="text-center text-[10px] font-semibold leading-4 text-slate-400">Confirmation opérateur</span></div>
+                    </div>
+                  </div>
                 </div>
-                <div className="mt-1 inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.13em] text-emerald-700"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />Connexion sécurisée</div>
-                <h4 className="mt-3 text-lg font-black tracking-tight text-slate-950">Paiement en traitement</h4>
-                <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">{paymentMessage || 'Demande Mobile Money envoyée. Confirmez le paiement sur votre téléphone.'}</p>
-                <div className="mx-auto mt-5 max-w-md rounded-full bg-slate-100 p-1"><div className="iam-payment-progress relative h-1.5 overflow-hidden rounded-full bg-gradient-to-r from-emerald-600 via-emerald-400 to-teal-300" /></div>
-                <p className="mt-2 text-[10px] font-medium text-slate-400">En attente de la confirmation de l’opérateur</p>
-                {paymentActivationStart && <div className="mt-5 rounded-2xl border border-slate-100 bg-slate-50/90 p-4 text-left text-xs">
-                  <div className="flex justify-between gap-3"><span className="text-slate-500">Type</span><b className="text-slate-800">{paymentAction === 'upgrade' ? 'Upgrade programmé' : paymentAction === 'renewal' ? 'Renouvellement' : 'Nouvelle souscription'}</b></div>
-                  <div className="mt-2 flex justify-between gap-3"><span className="text-slate-500">Début</span><b className="text-slate-800">{formatDate(paymentActivationStart)}</b></div>
-                  <div className="mt-2 flex justify-between gap-3"><span className="text-slate-500">Expiration</span><b className="text-slate-800">{formatDate(paymentActivationExpires || undefined)}</b></div>
+                {paymentActivationStart && <div className="rounded-2xl border border-slate-200 bg-slate-50/90 px-4 py-3.5">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <div><div className="text-[10px] font-medium text-slate-500">Type</div><div className="mt-1 text-xs font-bold text-slate-800">{paymentAction === 'upgrade' ? 'Upgrade programmé' : paymentAction === 'renewal' ? 'Renouvellement' : 'Nouvelle souscription'}</div></div>
+                    <div><div className="text-[10px] font-medium text-slate-500">Début</div><div className="mt-1 text-xs font-bold text-slate-800">{formatDate(paymentActivationStart)}</div></div>
+                    <div><div className="text-[10px] font-medium text-slate-500">Expiration</div><div className="mt-1 text-xs font-bold text-slate-800">{formatDate(paymentActivationExpires || undefined)}</div></div>
+                  </div>
                 </div>}
-                {paymentMode === 'simulation' ? <button onClick={confirmSimulation} disabled={isPaymentLoading} className="mt-5 w-full rounded-xl bg-emerald-600 px-4 py-3 text-xs font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50">{isPaymentLoading ? 'Confirmation serveur…' : 'Simuler la validation du paiement'}</button> : <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-800">Validez la demande Mobile Money sur votre téléphone avant de fermer cette fenêtre.</div>}</div>)}
-              {paymentStatus === 'paid' && (<div className="py-6 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-600"><Check className="h-7 w-7" /></div><h4 className="mt-4 text-base font-black text-slate-950">Paiement confirmé</h4><p className="mt-2 text-xs text-slate-500">{paymentMessage}</p><div className="mt-4 rounded-xl bg-emerald-50 px-3 py-2 text-[10px] font-semibold text-emerald-700">Référence : {paymentId}</div></div>)}
+                {paymentMode === 'simulation' ? <button onClick={confirmSimulation} disabled={isPaymentLoading} className="w-full rounded-xl bg-emerald-600 px-4 py-3 text-xs font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50">{isPaymentLoading ? 'Confirmation serveur…' : 'Simuler la validation du paiement'}</button> : <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3.5 text-left"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700"><svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/></svg></div><div><div className="text-xs font-extrabold text-amber-800">Validez la demande Mobile Money sur votre téléphone</div><p className="mt-1 text-xs leading-5 text-amber-700">Une notification vient d’être envoyée. Ouvrez-la et confirmez le paiement avant de fermer cette fenêtre.</p></div></div>}
+              </div>)}{paymentStatus === 'paid' && (<div className="py-6 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-600"><Check className="h-7 w-7" /></div><h4 className="mt-4 text-base font-black text-slate-950">Paiement confirmé</h4><p className="mt-2 text-xs text-slate-500">{paymentMessage}</p><div className="mt-4 rounded-xl bg-emerald-50 px-3 py-2 text-[10px] font-semibold text-emerald-700">Référence : {paymentId}</div></div>)}
               {paymentStatus === 'failed' && (<div className="space-y-4 py-3 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-rose-50 text-rose-600">!</div><h4 className="text-base font-black text-slate-950">Paiement non finalisé</h4><p className="text-xs leading-5 text-slate-500">{paymentMessage}</p><button onClick={() => setPaymentStatus('idle')} className="w-full rounded-xl bg-slate-950 px-4 py-3 text-xs font-bold text-white">Réessayer</button></div>)}
             </div>
             </section>
