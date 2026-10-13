@@ -215,6 +215,7 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
                   {suggestingInstrument ? <Loader2 className="h-4 w-4 animate-spin"/> : <Sparkles className="h-4 w-4"/>}
                   {suggestingInstrument ? 'Chloé analyse…' : 'Compléter avec Chloé'}
                 </button>
+                <button type="button" disabled={saving||suggestingInstrument} onClick={()=>{setInstrumentDetailsOpen(true);setInstrumentSuggestionNote('Saisie manuelle : vérifiez les spécifications exactes de votre broker.');}} className="shrink-0 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50">Saisie manuelle</button>
               </div>
               <p className="mt-2 text-xs leading-5 text-slate-600">Saisissez uniquement le symbole. Chloé propose ensuite le nom, la catégorie et les paramètres de calcul usuels.</p>
             </div>
