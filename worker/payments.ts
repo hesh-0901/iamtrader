@@ -31,12 +31,44 @@ function authHeader(request: Request) {
   return value.startsWith('Bearer ') ? value.slice(7) : null;
 }
 
-function normalizePhone(value: unknown) {
-  const raw = String(value || '').trim().replace(/[\s-]/g, '');
-  if (/^\+243\d{9}$/.test(raw)) return '0' + raw.slice(4);
-  if (/^243\d{9}$/.test(raw)) return '0' + raw.slice(3);
-  if (/^0\d{9}$/.test(raw)) return raw;
-  return null;
+const SASPAY_COUNTRIES = {
+  CD: { name: 'République démocratique du Congo', dialCode: '+243', currency: 'CDF', phoneLength: 9, networks: { vodacom_cd: 'Vodacom M-Pesa', airtel_cd: 'Airtel Money', orange_cd: 'Orange Money' } },
+  ML: { name: 'Mali', dialCode: '+223', currency: 'XOF', phoneLength: 8, networks: { mobi_cash_ml: 'Mobi Cash', moov_ml: 'Moov Money', orange_ml: 'Orange Money' } },
+  ZM: { name: 'Zambie', dialCode: '+260', currency: 'ZMW', phoneLength: 9, networks: { airtel_zm: 'Airtel Money', mtn_zm: 'MTN MoMo', zamtel_zm: 'Zamtel Kwacha' } },
+  BJ: { name: 'Bénin', dialCode: '+229', currency: 'XOF', phoneLength: 10, networks: { celtiis_bj: 'Celtiis Cash', moov_bj: 'Moov Money', mtn_bj: 'MTN MoMo' } },
+  BF: { name: 'Burkina Faso', dialCode: '+226', currency: 'XOF', phoneLength: 8, networks: { moov_bf: 'Moov Money', orange_bf: 'Orange Money' } },
+  CI: { name: 'Côte d’Ivoire', dialCode: '+225', currency: 'XOF', phoneLength: 10, networks: { moov_ci: 'Moov Money', mtn_ci: 'MTN MoMo', orange_ci: 'Orange Money', wave_ci: 'Wave' } },
+  CM: { name: 'Cameroun', dialCode: '+237', currency: 'XAF', phoneLength: 9, networks: { mtn_cm: 'MTN MoMo', orange_cm: 'Orange Money' } },
+  GH: { name: 'Ghana', dialCode: '+233', currency: 'GHS', phoneLength: 9, networks: { mtn_gh: 'MTN MoMo', tigo_gh: 'AirtelTigo', vodafone_gh: 'Telecel Cash' } },
+  GN: { name: 'Guinée', dialCode: '+224', currency: 'GNF', phoneLength: 9, networks: { mtn_gn: 'MTN MoMo' } },
+  KE: { name: 'Kenya', dialCode: '+254', currency: 'KES', phoneLength: 9, networks: { mpesa_ke: 'M-Pesa' } },
+  MW: { name: 'Malawi', dialCode: '+265', currency: 'MWK', phoneLength: 9, networks: { airtel_mw: 'Airtel Money', tnm_mw: 'TNM Mpamba' } },
+  NE: { name: 'Niger', dialCode: '+227', currency: 'XOF', phoneLength: 8, networks: { airtel_ne: 'Airtel Money' } },
+  NG: { name: 'Nigeria', dialCode: '+234', currency: 'NGN', phoneLength: 10, networks: { airtel_ng: 'Airtel Money', mtn_ng: 'MTN MoMo' } },
+  RW: { name: 'Rwanda', dialCode: '+250', currency: 'RWF', phoneLength: 9, networks: { airtel_rw: 'Airtel Money', mtn_rw: 'MTN MoMo' } },
+  SN: { name: 'Sénégal', dialCode: '+221', currency: 'XOF', phoneLength: 9, networks: { freemoney_sn: 'Free Money', orange_sn: 'Orange Money', wave_sn: 'Wave', wizall_sn: 'Wizall' } },
+  TG: { name: 'Togo', dialCode: '+228', currency: 'XOF', phoneLength: 8, networks: { moov_tg: 'Moov Money', togocel: 'Togocel Money' } },
+  TZ: { name: 'Tanzanie', dialCode: '+255', currency: 'TZS', phoneLength: 9, networks: { airtel_tz: 'Airtel Money', halopesa_tz: 'Halopesa', mpesa_tz: 'M-Pesa', tigo_tz: 'Tigo Pesa' } },
+  UG: { name: 'Ouganda', dialCode: '+256', currency: 'UGX', phoneLength: 9, networks: { airtel_ug: 'Airtel Money', mtn_ug: 'MTN MoMo' } }
+} as const;
+
+function normalizePhone(value: unknown, countryCode: string) {
+  const country = SASPAY_COUNTRIES[countryCode as keyof typeof SASPAY_COUNTRIES];
+  if (!country) return null;
+  const raw = String(value || '').trim().replace(/[\s().-]/g, '');
+  const dialDigits = country.dialCode.slice(1);
+  let national = '';
+  if (raw.startsWith('+')) {
+    if (!raw.startsWith(country.dialCode)) return null;
+    national = raw.slice(country.dialCode.length);
+  } else if (raw.startsWith(dialDigits)) {
+    national = raw.slice(dialDigits.length);
+  } else {
+    national = raw;
+    if (national.startsWith('0') && national.length === country.phoneLength + 1) national = national.slice(1);
+  }
+  if (national.length !== country.phoneLength || !/^\d+$/.test(national)) return null;
+  return country.dialCode + national;
 }
 
 function randomId() {
@@ -165,13 +197,14 @@ async function createSasPayCheckout(
   if (!env.SASPAY_API_KEY || !env.SASPAY_WEBHOOK_SECRET) return json({ success: false, message: 'SasPay n’est pas entièrement configuré côté serveur. Ajoutez SASPAY_API_KEY et SASPAY_WEBHOOK_SECRET au Worker.' }, 503);
   const idempotencyKey = String(body.idempotencyKey || '');
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(idempotencyKey)) return json({ success: false, message: 'Clé d’idempotence invalide. Réessayez le paiement.' }, 400);
-  const networkMap: Record<string, string> = { 'vodacom m-pesa': 'vodacom_cd', 'm-pesa': 'vodacom_cd', mpesa: 'vodacom_cd', 'orange money': 'orange_cd', 'airtel money': 'airtel_cd' };
-  const network = networkMap[String(body.paymentProvider || '').trim().toLowerCase()];
-  if (!network) return json({ success: false, message: 'Opérateur Mobile Money non pris en charge.' }, 400);
+  const countryCode = String(body.countryCode || 'CD').toUpperCase();
+  const country = SASPAY_COUNTRIES[countryCode as keyof typeof SASPAY_COUNTRIES];
+  const network = country && Object.prototype.hasOwnProperty.call(country.networks, String(body.paymentProvider || '')) ? String(body.paymentProvider) : '';
+  if (!country || !network) return json({ success: false, message: 'Pays ou opérateur Mobile Money non pris en charge par IAMTRADER.' }, 400);
   const email = String(user.email || profile.email || '').trim();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ success: false, message: 'Une adresse e-mail valide est nécessaire pour créer le paiement.' }, 400);
   const paymentId = randomId(), reference = 'IMAT-' + paymentId.toUpperCase(), now = new Date().toISOString();
-  const amount = amounts.total, currency = 'USD', e164Phone = '+243' + phone.slice(1);
+  const amount = amounts.total, currency = 'USD', e164Phone = phone;
   await firestoreCreate(env, 'payments', paymentId, {
     id: paymentId, uid: user.uid, email, displayName: profile.displayName || email, fullName: traderFullName(profile),
     plan: planKey, planName: plan.name, amount, amountUsd: amount, baseAmount: amounts.baseAmount,
@@ -192,7 +225,7 @@ async function createSasPayCheckout(
       body: JSON.stringify({
         amount: amount.toFixed(2),
         currency,
-        country: 'CD',
+        country: countryCode,
         network,
         customer: { email, first_name: firstName, last_name: lastName, phone: e164Phone },
         reference,
@@ -376,18 +409,24 @@ export async function handlePaymentRequest(request: Request, env: CinetPayEnv) {
     const body = await request.json() as {
       plan?: keyof typeof PLANS;
       phone?: string;
+      countryCode?: string;
       paymentMethod?: string;
       paymentProvider?: string;
       payerName?: string;
     };
     const planKey = body.plan;
     const plan = planKey ? PLANS[planKey] : undefined;
-    const phone = normalizePhone(body.phone);
+    const countryCode = String(body.countryCode || 'CD').toUpperCase();
+    const phone = normalizePhone(body.phone, countryCode);
     const amounts = plan ? calculatePaymentAmounts(plan.amount) : undefined;
-    const isSasPay = ['saspay', 'vodacom m-pesa', 'm-pesa', 'mpesa', 'orange money', 'airtel money'].includes(String(body.paymentProvider || '').trim().toLowerCase());
+    const countryConfig = SASPAY_COUNTRIES[countryCode as keyof typeof SASPAY_COUNTRIES];
+    const isSasPay = Boolean(countryConfig && Object.prototype.hasOwnProperty.call(countryConfig.networks, String(body.paymentProvider || '')));
 
     if (!plan || !planKey) return json({ success: false, message: 'Formule invalide.' }, 400);
-    if (!phone) return json({ success: false, message: 'Numéro Mobile Money invalide. Utilisez un numéro RDC à 10 chiffres.' }, 400);
+    if (!phone) {
+      const country = SASPAY_COUNTRIES[countryCode as keyof typeof SASPAY_COUNTRIES];
+      return json({ success: false, message: country ? `Numéro invalide pour ${country.name}. Utilisez l’indicatif ${country.dialCode} et ${country.phoneLength} chiffres nationaux.` : 'Pays de paiement non pris en charge.' }, 400);
+    }
     if (!isSasPay && (!env.CINETPAY_API_KEY || !env.CINETPAY_API_PASSWORD)) {
       const configState = [
         'API_KEY=' + (env.CINETPAY_API_KEY ? 'OK' : 'MISSING'),
@@ -416,6 +455,9 @@ export async function handlePaymentRequest(request: Request, env: CinetPayEnv) {
     if (!amounts) return json({ success: false, message: 'Données de paiement invalides.' }, 400);
     if (isSasPay) {
       return await createSasPayCheckout(request, env, user, body, profile, planKey, plan, phone, amounts, decision, payerName);
+    }
+    if (countryCode !== 'CD') {
+      return json({ success: false, message: 'Ce pays est disponible avec SasPay Mobile Money. Sélectionnez un réseau SasPay valide.' }, 400);
     }
 
     const chargedAmount = cinetPayAmount(env, planKey);
