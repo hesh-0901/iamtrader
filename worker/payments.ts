@@ -183,10 +183,21 @@ async function createSasPayCheckout(
     invoiceNumber: invoiceNumber(paymentId, now), createdAt: now
   });
   try {
-    const response = await fetch('https://api.saspay.me/api/v1/payments/softpay/initialize/', {
+    const customerNames = String(profile.displayName || payerName || email).trim().split(/\s+/).filter(Boolean);
+    const firstName = customerNames.shift() || 'IAMTRADER';
+    const lastName = customerNames.join(' ') || 'Trader';
+    const response = await fetch('https://api.saspay.me/api/v1/payments/softpay/', {
       method: 'POST',
       headers: { Authorization: 'Bearer ' + env.SASPAY_API_KEY, 'Content-Type': 'application/json', 'Idempotency-Key': idempotencyKey },
-      body: JSON.stringify({ amount, currency, network, phone_number: e164Phone, reference, description: 'IAMTRADER-' + paymentId + '-' + plan.name + ' subscription' })
+      body: JSON.stringify({
+        amount: amount.toFixed(2),
+        currency,
+        country: 'CD',
+        network,
+        customer: { email, first_name: firstName, last_name: lastName, phone: e164Phone },
+        reference,
+        description: 'IAMTRADER-' + paymentId + '-' + plan.name + ' subscription'
+      })
     });
     const raw = await response.text(); let result: any = {};
     try { result = raw ? JSON.parse(raw) : {}; } catch { result = {}; }
