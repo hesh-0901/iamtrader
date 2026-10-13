@@ -764,7 +764,24 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
       {paymentPlan && (
         <div className="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto bg-slate-900/35 p-2 backdrop-blur-md sm:p-5">
           <div className="relative my-auto grid w-full max-w-6xl overflow-hidden rounded-[28px] border border-emerald-100 bg-white text-slate-900 shadow-[0_30px_100px_rgba(15,23,42,.22)] animate-in fade-in zoom-in-95 duration-300 lg:grid-cols-[0.72fr_1.28fr]">
-            <aside className="relative hidden overflow-hidden border-r border-emerald-100 bg-gradient-to-br from-white via-white to-emerald-50 p-7 lg:flex lg:flex-col">
+            <style>{`
+              @keyframes iamAmbientGlow { 0%,100% { opacity:.24; transform:scale(1) } 50% { opacity:.52; transform:scale(1.12) } }
+              @keyframes iamRipple { 0% { transform:scale(.65); opacity:.65 } 100% { transform:scale(1.55); opacity:0 } }
+              @keyframes iamPhoneFloat { 0%,100% { transform:translateY(0) rotate(-2deg) } 50% { transform:translateY(-8px) rotate(1deg) } }
+              @keyframes iamScreenSpin { to { transform:rotate(360deg) } }
+              @keyframes iamProgressShine { 0% { transform:translateX(-110%) } 100% { transform:translateX(240%) } }
+              @keyframes iamEntrance { from { opacity:0; transform:translateY(12px) scale(.985) } to { opacity:1; transform:translateY(0) scale(1) } }
+              .iam-checkout-brand:before { content:""; position:absolute; width:230px; height:230px; right:-100px; bottom:-80px; border-radius:999px; background:rgba(0,210,150,.24); filter:blur(45px); animation:iamAmbientGlow 8s ease-in-out infinite; pointer-events:none }
+              .iam-checkout-brand:after { content:""; position:absolute; inset:0; opacity:.22; pointer-events:none; background-image:linear-gradient(rgba(5,150,105,.09) 1px,transparent 1px),linear-gradient(90deg,rgba(5,150,105,.09) 1px,transparent 1px); background-size:28px 28px; mask-image:linear-gradient(to bottom,black,transparent 85%) }
+              .iam-payment-enter { animation:iamEntrance .45s cubic-bezier(.16,1,.3,1) both }
+              .iam-payment-ripple { position:absolute; inset:0; border:1px solid rgba(16,185,129,.48); border-radius:999px; animation:iamRipple 2.4s cubic-bezier(.2,.7,.3,1) infinite; pointer-events:none }
+              .iam-payment-ripple.delay { animation-delay:1.2s }
+              .iam-payment-phone { animation:iamPhoneFloat 3s ease-in-out infinite; filter:drop-shadow(0 14px 18px rgba(5,150,105,.15)) }
+              .iam-payment-spinner { transform-origin:center; animation:iamScreenSpin 1.15s linear infinite }
+              .iam-payment-progress:after { content:""; position:absolute; inset:0; width:42%; background:linear-gradient(90deg,transparent,rgba(255,255,255,.85),transparent); animation:iamProgressShine 2s ease-in-out infinite }
+              @media (prefers-reduced-motion: reduce) { .iam-checkout-brand:before,.iam-payment-enter,.iam-payment-ripple,.iam-payment-phone,.iam-payment-spinner,.iam-payment-progress:after { animation:none !important } }
+            `}</style>
+            <aside className="iam-checkout-brand relative hidden overflow-hidden border-r border-emerald-200 bg-[radial-gradient(ellipse_at_12%_95%,rgba(0,210,150,.24),transparent_42%),linear-gradient(145deg,#ffffff_0%,#f3fff9_48%,#dcfff1_100%)] p-7 lg:flex lg:flex-col">
               
               <div className="relative flex items-center"><img src="/brand/logo-iamtrader-full.png" alt="IAMTRADER" className="h-10 w-auto object-contain" /></div>
               <div className="relative mt-8"><span className="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-[10px] font-extrabold uppercase tracking-[.16em] text-emerald-700">IAMTRADER Plus</span><h2 className="mt-4 max-w-xs text-3xl font-black leading-tight tracking-tight text-slate-900">Progressez avec de meilleurs outils.</h2><p className="mt-3 max-w-xs text-sm leading-6 text-slate-500">Un suivi clair de vos performances et de vos décisions.</p></div>
@@ -842,12 +859,35 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                 <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-xs leading-5 text-emerald-800"><Shield className="mr-2 inline h-4 w-4" />Paiement sécurisé intégré à IAMTRADER. Une demande de confirmation sera envoyée par votre opérateur. L’abonnement ne sera activé qu’après confirmation serveur.</div>
                 <button onClick={submitPayment} disabled={isPaymentLoading || (paymentGateway === 'saspay' && paymentMode === 'live' && (!paymentPhone.trim() || paymentCountryCode !== 'CD'))} className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-400 px-4 py-3.5 text-sm font-extrabold text-white shadow-[0_10px_30px_rgba(0,199,150,.18)] transition hover:-translate-y-0.5 hover:shadow-[0_14px_36px_rgba(0,199,150,.25)] focus:outline-none focus:ring-4 focus:ring-emerald-400/20 disabled:cursor-not-allowed disabled:opacity-40">{isPaymentLoading ? 'Envoi de la demande…' : 'Continuer vers le paiement'}</button>
               </>)}
-              {paymentStatus === 'processing' && !(paymentGateway === 'saspay' && paymentUrl) && (<div className="py-5 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-indigo-50 text-indigo-600"><div className="h-6 w-6 animate-spin rounded-full border-2 border-indigo-200 border-t-indigo-600" /></div><h4 className="mt-4 text-base font-black text-slate-950">Paiement en traitement</h4><p className="mt-2 text-xs leading-5 text-slate-500">{paymentMessage || 'Nous attendons la confirmation du prestataire.'}</p>
-                {paymentActivationStart && <div className="mt-4 rounded-xl bg-slate-50 p-3 text-left text-[10px]">
+              {paymentStatus === 'processing' && !(paymentGateway === 'saspay' && paymentUrl) && (<div className="iam-payment-enter mx-auto max-w-2xl py-3 text-center">
+                <div className="relative mx-auto flex h-44 w-44 items-center justify-center">
+                  <div className="iam-payment-ripple" />
+                  <div className="iam-payment-ripple delay" />
+                  <div className="absolute inset-5 rounded-full bg-emerald-100/70 blur-xl" />
+                  <svg className="iam-payment-phone relative z-10 h-32 w-24" viewBox="0 0 96 144" fill="none" role="img" aria-label="Téléphone en attente de confirmation Mobile Money">
+                    <defs><linearGradient id="iamPhoneFrame" x1="10" y1="8" x2="86" y2="136" gradientUnits="userSpaceOnUse"><stop stopColor="#10B981"/><stop offset="1" stopColor="#064E3B"/></linearGradient><linearGradient id="iamPhoneScreen" x1="20" y1="18" x2="76" y2="126" gradientUnits="userSpaceOnUse"><stop stopColor="#ECFDF5"/><stop offset="1" stopColor="#D1FAE5"/></linearGradient></defs>
+                    <rect x="7" y="3" width="82" height="138" rx="17" fill="#0F2925" stroke="url(#iamPhoneFrame)" strokeWidth="3"/>
+                    <rect x="13" y="12" width="70" height="120" rx="11" fill="url(#iamPhoneScreen)"/>
+                    <path d="M37 18h22" stroke="#6B9085" strokeWidth="3" strokeLinecap="round"/>
+                    <rect x="24" y="39" width="48" height="48" rx="15" fill="#fff" stroke="#A7F3D0"/>
+                    <circle cx="48" cy="63" r="12" stroke="#A7F3D0" strokeWidth="3"/>
+                    <circle className="iam-payment-spinner" cx="48" cy="63" r="12" stroke="#059669" strokeWidth="3" strokeLinecap="round" strokeDasharray="28 48"/>
+                    <path d="M29 101h38M35 110h26" stroke="#A7BDB5" strokeWidth="3" strokeLinecap="round"/>
+                    <circle cx="48" cy="137" r="1.5" fill="#A7F3D0"/>
+                  </svg>
+                  <div className="absolute right-1 top-7 z-20 flex h-9 w-9 items-center justify-center rounded-xl border border-emerald-100 bg-white text-emerald-600 shadow-lg"><Shield className="h-4 w-4" /></div>
+                </div>
+                <div className="mt-1 inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.13em] text-emerald-700"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />Connexion sécurisée</div>
+                <h4 className="mt-3 text-lg font-black tracking-tight text-slate-950">Paiement en traitement</h4>
+                <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">{paymentMessage || 'Demande Mobile Money envoyée. Confirmez le paiement sur votre téléphone.'}</p>
+                <div className="mx-auto mt-5 max-w-md rounded-full bg-slate-100 p-1"><div className="iam-payment-progress relative h-1.5 overflow-hidden rounded-full bg-gradient-to-r from-emerald-600 via-emerald-400 to-teal-300" /></div>
+                <p className="mt-2 text-[10px] font-medium text-slate-400">En attente de la confirmation de l’opérateur</p>
+                {paymentActivationStart && <div className="mt-5 rounded-2xl border border-slate-100 bg-slate-50/90 p-4 text-left text-xs">
                   <div className="flex justify-between gap-3"><span className="text-slate-500">Type</span><b className="text-slate-800">{paymentAction === 'upgrade' ? 'Upgrade programmé' : paymentAction === 'renewal' ? 'Renouvellement' : 'Nouvelle souscription'}</b></div>
-                  <div className="mt-1 flex justify-between gap-3"><span className="text-slate-500">Début</span><b className="text-slate-800">{formatDate(paymentActivationStart)}</b></div>
-                  <div className="mt-1 flex justify-between gap-3"><span className="text-slate-500">Expiration</span><b className="text-slate-800">{formatDate(paymentActivationExpires || undefined)}</b></div>
-                </div>}{paymentMode === 'simulation' ? <button onClick={confirmSimulation} disabled={isPaymentLoading} className="mt-5 w-full rounded-xl bg-emerald-600 px-4 py-3 text-xs font-bold text-white disabled:opacity-50">{isPaymentLoading ? 'Confirmation serveur…' : 'Simuler la validation du paiement'}</button> : <div className="mt-4 rounded-xl bg-amber-50 px-3 py-2 text-[10px] font-semibold text-amber-700">Validez la demande Mobile Money avant de fermer.</div>}</div>)}
+                  <div className="mt-2 flex justify-between gap-3"><span className="text-slate-500">Début</span><b className="text-slate-800">{formatDate(paymentActivationStart)}</b></div>
+                  <div className="mt-2 flex justify-between gap-3"><span className="text-slate-500">Expiration</span><b className="text-slate-800">{formatDate(paymentActivationExpires || undefined)}</b></div>
+                </div>}
+                {paymentMode === 'simulation' ? <button onClick={confirmSimulation} disabled={isPaymentLoading} className="mt-5 w-full rounded-xl bg-emerald-600 px-4 py-3 text-xs font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50">{isPaymentLoading ? 'Confirmation serveur…' : 'Simuler la validation du paiement'}</button> : <div className="mt-5 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs font-semibold text-amber-800">Validez la demande Mobile Money sur votre téléphone avant de fermer cette fenêtre.</div>}</div>)}
               {paymentStatus === 'paid' && (<div className="py-6 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-600"><Check className="h-7 w-7" /></div><h4 className="mt-4 text-base font-black text-slate-950">Paiement confirmé</h4><p className="mt-2 text-xs text-slate-500">{paymentMessage}</p><div className="mt-4 rounded-xl bg-emerald-50 px-3 py-2 text-[10px] font-semibold text-emerald-700">Référence : {paymentId}</div></div>)}
               {paymentStatus === 'failed' && (<div className="space-y-4 py-3 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-rose-50 text-rose-600">!</div><h4 className="text-base font-black text-slate-950">Paiement non finalisé</h4><p className="text-xs leading-5 text-slate-500">{paymentMessage}</p><button onClick={() => setPaymentStatus('idle')} className="w-full rounded-xl bg-slate-950 px-4 py-3 text-xs font-bold text-white">Réessayer</button></div>)}
             </div>
