@@ -7,7 +7,7 @@ In Cloudflare Dashboard → Workers & Pages → `iamtrader` → Settings → Var
 - `SASPAY_API_KEY`: SasPay secret API key with **payin** permission. A payout-only key returns `api_key_scope_forbidden`.
 - `SASPAY_WEBHOOK_SECRET`: the signing secret configured for the webhook in the SasPay dashboard.
 
-The non-secret country configuration is `SASPAY_COUNTRY=XC`, already set in `wrangler.jsonc`. The country list returned by SasPay marks `XC` (DRC/USD) active. If the merchant account does not support this country/currency combination, confirm the correct setup with SasPay before enabling live payments.
+IAMTRADER now sends the selected ISO country, the exact SasPay network code, and the matching international phone prefix for each supported Mobile Money country. The frontend/backend catalogue follows SasPay’s reference list of countries, active mobile-money networks, currencies and phone formats. The production merchant account/API key must still have payin access and the chosen country/network must be active for that merchant. See https://docs.saspay.me/api-reference/reference/formats and https://docs.saspay.me/api-reference/reference/networks.
 
 ## SasPay dashboard webhook
 
