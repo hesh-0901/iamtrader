@@ -766,21 +766,15 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
           <div className="relative my-auto grid w-full max-w-6xl overflow-hidden rounded-[28px] border border-emerald-100 bg-white text-slate-900 shadow-[0_30px_100px_rgba(15,23,42,.22)] animate-in fade-in zoom-in-95 duration-300 lg:grid-cols-[0.72fr_1.28fr]">
             <aside className="relative hidden overflow-hidden border-r border-emerald-100 bg-gradient-to-br from-white via-white to-emerald-50 p-7 lg:flex lg:flex-col">
               
-              <div className="relative flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-400/15 text-emerald-300 ring-1 ring-emerald-300/30"><TrendingUp className="h-6 w-6" /></div>
-                <div><div className="text-xl font-black tracking-tight">IAM<span className="text-emerald-400">TRADER</span></div><div className="text-[9px] font-semibold tracking-[.24em] text-emerald-100/65">TRADE · TRACK · PROGRESS</div></div>
-              </div>
+              <div className="relative flex items-center"><img src="/brand/logo-iamtrader-full.png" alt="IAMTRADER" className="h-10 w-auto object-contain" /></div>
               <div className="relative mt-8"><span className="inline-flex rounded-full bg-emerald-100 px-3 py-1 text-[10px] font-extrabold uppercase tracking-[.16em] text-emerald-700">IAMTRADER Plus</span><h2 className="mt-4 max-w-xs text-3xl font-black leading-tight tracking-tight text-slate-900">Progressez avec de meilleurs outils.</h2><p className="mt-3 max-w-xs text-sm leading-6 text-slate-500">Un suivi clair de vos performances et de vos décisions.</p></div>
-              <div className="relative mt-9 space-y-5">
+              <div className="relative mt-7 space-y-4">
                 {[
-                  ['Journal de trading avancé','Analysez vos performances en détail',Activity],
-                  ['Statistiques & analytics','Visualisez votre progression',TrendingUp],
-                  ['IA Chloé','Un assistant pour mieux structurer vos décisions',Sparkles],
-                  ['Gestion multi-comptes','Vos comptes au même endroit',WalletCards],
-                  ['Export & suivi','Gardez une trace claire de vos données',Receipt]
-                ].map(([title,desc,Icon]: any) => <div key={title} className="flex items-center gap-3"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-emerald-300/20 bg-emerald-300/10 text-emerald-700"><Icon className="h-4 w-4" /></div><div><div className="text-sm font-bold text-white">{title}</div><div className="mt-0.5 text-xs text-slate-300/65">{desc}</div></div></div>)}
+                  ['Journal avancé',Activity],
+                  ['Statistiques détaillées',TrendingUp],
+                  ['IA Chloé',Sparkles]
+                ].map(([title,Icon]: any) => <div key={title} className="flex items-center gap-3"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700"><Icon className="h-4 w-4" /></div><div className="text-sm font-bold text-slate-800">{title}</div></div>)}
               </div>
-              <div className="relative mt-auto pt-8"><div className="rounded-2xl border border-emerald-300/20 bg-black/15 p-4 text-sm leading-6 text-emerald-50/85">« Un meilleur suivi. De meilleures décisions. De meilleurs résultats. »</div></div>
             </aside>
             <section className="min-w-0 bg-white">
             <div className="relative flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-5 sm:px-7 sm:py-6">
