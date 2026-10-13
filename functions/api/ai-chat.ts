@@ -1,5 +1,6 @@
 import { IAMTRADER_KNOWLEDGE } from './vyra-knowledge';
 import { VYRA_STYLE_INSTRUCTIONS } from './vyra-style';
+import { callGeminiUnified } from './common/gemini-client';
 
 interface Env {
   GEMINI_API_KEY?: string;
@@ -194,106 +195,31 @@ export async function onRequest(context: { request: Request; env: Env }) {
     parts: [{ text: message.content }],
   }));
 
-  const model = (context.env.GEMINI_MODEL || 'gemini-3.5-flash-lite').trim();
+  const configuredModel = (context.env.GEMINI_MODEL || '').trim();
+  const result = await callGeminiUnified(contents, {
+    apiKey,
+    preferredModel: configuredModel || undefined,
+    fallbackModels: ['gemini-2.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.8-flash'],
+    systemInstruction: `${SYSTEM_INSTRUCTIONS}\n\nBASE DE CONNAISSANCES IAMTRADER\n${IAMTRADER_KNOWLEDGE}`,
+    temperature: 0.3,
+    maxTokens: 1200,
+    timeoutMs: 6500,
+  });
 
-  let response: Response;
-
-  try {
-    response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
-      {
-        method: 'POST',
-        headers: {
-          'x-goog-api-key': apiKey,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          systemInstruction: {
-            parts: [{ text: `${SYSTEM_INSTRUCTIONS}\n\nBASE DE CONNAISSANCES IAMTRADER\n${IAMTRADER_KNOWLEDGE}` }],
-          },
-          contents,
-        }),
-      }
-    );
-  } catch (error) {
-    console.error('Gemini fetch failed:', error);
-
+  if (!result.success || !result.text) {
+    console.error('VYRA Gemini request failed:', { model: configuredModel || undefined, status: result.httpStatus });
     return json(
       {
         error: 'Le service IA n’a pas pu répondre pour le moment.',
         details: {
-          reason: 'fetch_failed',
-          model,
+          reason: result.error,
+          model: configuredModel || undefined,
+          httpStatus: result.httpStatus,
         },
       },
       502
     );
   }
 
-  const responseText = await response.text();
-
-  let data: unknown = {};
-
-  try {
-    data = responseText ? JSON.parse(responseText) : {};
-  } catch {
-    data = {};
-  }
-
-  if (!response.ok) {
-    const providerError =
-      typeof data === 'object' && data && 'error' in data
-        ? (data as {
-            error?: {
-              code?: unknown;
-              status?: unknown;
-              message?: unknown;
-            };
-          }).error
-        : undefined;
-
-    console.error('Gemini API error:', {
-      status: response.status,
-      model,
-      code: providerError?.code,
-      providerStatus: providerError?.status,
-      message: providerError?.message,
-      rawResponse: responseText.slice(0, 4000),
-    });
-
-    return json(
-      {
-        error: 'Le service IA n’a pas pu répondre pour le moment.',
-        details: {
-          httpStatus: response.status,
-          model,
-          code: providerError?.code,
-          status: providerError?.status,
-          message: providerError?.message,
-          rawResponse: responseText.slice(0, 4000),
-        },
-      },
-      502
-    );
-  }
-
-  const candidates = (data as {
-    candidates?: Array<{
-      content?: {
-        parts?: Array<{ text?: string }>;
-      };
-    }>;
-  }).candidates;
-
-  const outputText =
-    candidates?.[0]?.content?.parts
-      ?.map((part) => part.text)
-      .filter((text): text is string => typeof text === 'string')
-      .join('\n') || '';
-
-  if (!outputText.trim()) {
-    return json({ error: 'La réponse de l’assistant est vide.' }, 502);
-  }
-
-  return json({ reply: outputText.trim() });
+  return json({ reply: result.text.trim() });
 }
