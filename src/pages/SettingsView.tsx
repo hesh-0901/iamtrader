@@ -11,7 +11,7 @@ import { useToast } from '../components/common/Toast';
 import { TradingJournalSettings } from '../components/settings/TradingJournalSettings';
 import { PaymentHistory } from './PaymentHistory';
 import { calculateTraderRating, formatCurrency } from '../utils/calculations';
-import { confirmSimulatedPayment, createPayment, createSimulatedPayment, getPaymentStatus, getSasPayPaymentStatus, verifySasPayPayment, PaidPlan, PaymentDetails } from '../services/payments';
+import { confirmSimulatedPayment, createPayment, createSimulatedPayment, getSasPayPaymentStatus, verifySasPayPayment, PaidPlan, PaymentDetails } from '../services/payments';
 
 interface SettingsViewProps {
   userProfile: UserProfile | null;
@@ -323,6 +323,43 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
     void check();
     return () => { cancelled = true; if (timer !== undefined) window.clearTimeout(timer); };
   }, [paymentReference, paymentStatus, paymentMode]);
+
+  React.useEffect(() => {
+    if (!pendingPaymentReference) return;
+    let cancelled = false;
+    let attempts = 0;
+    let timer: number | undefined;
+    setPaymentGateway('saspay');
+    setPaymentMode('live');
+    setPaymentId(pendingPaymentReference);
+    setPaymentStatus('processing');
+    setPaymentMessage('Vérification du paiement auprès de SasPay…');
+    const checkPending = async () => {
+      attempts += 1;
+      try {
+        const result = await verifySasPayPayment(pendingPaymentReference);
+        if (cancelled) return;
+        if (result.payment?.plan === 'pro' || result.payment?.plan === 'community') setPaymentPlan(result.payment.plan);
+        if (result.status === 'paid') {
+          setPaymentStatus('paid');
+          setPaymentMessage('Paiement confirmé. Actualisation de votre abonnement…');
+          window.setTimeout(() => window.location.reload(), 1200);
+          return;
+        }
+        if (result.status === 'failed') {
+          setPaymentStatus('failed');
+          setPaymentMessage('Le paiement n’a pas été finalisé. Vous pouvez réessayer.');
+          return;
+        }
+      } catch (error: any) {
+        if (!cancelled) setPaymentMessage(error?.message || 'Vérification temporairement indisponible.');
+      }
+      if (!cancelled && attempts < 40) timer = window.setTimeout(checkPending, 3000);
+      else if (!cancelled) setPaymentMessage('Le paiement est toujours en attente. Revenez vérifier votre abonnement plus tard.');
+    };
+    void checkPending();
+    return () => { cancelled = true; if (timer !== undefined) window.clearTimeout(timer); };
+  }, [pendingPaymentReference]);
 
   const saveTraderProfile = async () => {
     if (!userProfile?.uid) return;
