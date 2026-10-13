@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { Plus, Trash2, Save, Settings2 } from 'lucide-react';
+import { Plus, Trash2, Settings2, CandlestickChart, Layers3, X, CheckCircle2 } from 'lucide-react';
 import { TradingInstrument, TradingSetup, UserProfile } from '../../types';
 import { updateUserSettings } from '../../services/firestore';
 import { useToast } from '../common/Toast';
@@ -8,8 +8,8 @@ interface TradingJournalSettingsProps {
   userProfile: UserProfile | null;
 }
 
-const inputClass = 'w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-[#08b77a] focus:ring-4 focus:ring-[#08b77a]/10';
-const labelClass = 'block mb-1.5 text-[11px] font-semibold text-slate-500';
+const inputClass = 'w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10';
+const labelClass = 'mb-1.5 block text-xs font-semibold text-slate-600';
 
 export function TradingJournalSettings({ userProfile }: TradingJournalSettingsProps) {
   const { showToast } = useToast();
@@ -87,55 +87,32 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
   };
 
   return (
-    <div className="space-y-5">
-      <div className="p-5 rounded-2xl card-premium">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="w-10 h-10 rounded-xl bg-[#e7faf3] text-[#008f63] flex items-center justify-center">
-            <Settings2 className="w-5 h-5" />
+    <div className="space-y-5 sm:space-y-6">
+      <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm"><div className="h-1.5 bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-100" /><div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6"><div className="flex items-center gap-3"><div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100"><Settings2 className="h-5 w-5" /></div><div><h3 className="text-lg font-black tracking-tight text-slate-950">Journal & calculs</h3><p className="mt-1 text-sm text-slate-500">Configurez les instruments et les setups utilisés dans votre journal.</p></div></div><div className="flex items-center gap-2 self-start rounded-full bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600"><CheckCircle2 className="h-4 w-4 text-emerald-600" /> Enregistrement automatique</div></div></section>
+      <div className="grid gap-5 xl:grid-cols-[1.15fr_.85fr]">
+        <section className="min-w-0 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-100 px-5 py-4 sm:px-6"><div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700"><CandlestickChart className="h-5 w-5" /></div><div><h4 className="text-base font-extrabold text-slate-950">Instruments</h4><p className="mt-0.5 text-xs text-slate-500">Valeurs utilisées pour calculer les résultats.</p></div><span className="ml-auto rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600">{instruments.length}</span></div></div>
+          <div className="space-y-4 p-5 sm:p-6"><div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <div><label className={labelClass}>Symbole *</label><input className={inputClass} value={instrument.symbol} onChange={e=>setInstrument(v=>({...v,symbol:e.target.value}))} placeholder="XAUUSD"/></div>
+            <div><label className={labelClass}>Nom *</label><input className={inputClass} value={instrument.name} onChange={e=>setInstrument(v=>({...v,name:e.target.value}))} placeholder="Gold"/></div>
+            <div><label className={labelClass}>Catégorie</label><select className={inputClass} value={instrument.category} onChange={e=>setInstrument(v=>({...v,category:e.target.value as TradingInstrument['category']}))}><option value="forex">Forex</option><option value="metal">Métal</option><option value="index">Indice</option><option value="futures">Futures</option><option value="crypto">Crypto</option><option value="stock">Action</option><option value="other">Autre</option></select></div>
+            <div><label className={labelClass}>Pas de prix *</label><input type="number" step="any" min="0" className={inputClass} value={instrument.priceStep} onChange={e=>setInstrument(v=>({...v,priceStep:e.target.value}))} placeholder="0.01"/></div>
+            <div><label className={labelClass}>Valeur par 1.00 *</label><input type="number" step="any" min="0" className={inputClass} value={instrument.valuePerPriceUnit} onChange={e=>setInstrument(v=>({...v,valuePerPriceUnit:e.target.value}))} placeholder="100"/></div>
+            <div><label className={labelClass}>Taille par défaut</label><input type="number" step="any" min="0" className={inputClass} value={instrument.defaultPositionSize} onChange={e=>setInstrument(v=>({...v,defaultPositionSize:e.target.value}))} placeholder="1"/></div>
           </div>
-          <div>
-            <h3 className="text-sm font-bold text-slate-900">Paramètres du journal</h3>
-            <p className="text-xs text-slate-500">Définissez vos instruments et vos setups. Ces données pilotent automatiquement les calculs du journal.</p>
+          <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-3.5 text-xs leading-5 text-emerald-900">« Valeur par 1.00 » correspond au gain ou à la perte pour un mouvement de 1.00 avec une unité de taille, dans la devise du compte.</div>
+          <button type="button" disabled={!canAddInstrument||saving} onClick={addInstrument} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"><Plus className="h-4 w-4"/> Ajouter l’instrument</button>
+          <div className="border-t border-slate-100 pt-4"><div className="mb-3 flex items-center justify-between"><h5 className="text-sm font-bold text-slate-900">Instruments configurés</h5><span className="text-xs text-slate-400">{instruments.length} au total</span></div>
+            {instruments.length ? <div className="space-y-2">{instruments.map(item=><div key={item.id} className="flex min-w-0 items-center justify-between gap-3 rounded-2xl border border-slate-200 px-3.5 py-3 transition hover:border-emerald-200"><div className="flex min-w-0 items-center gap-3"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-xs font-black text-slate-600">{item.symbol.slice(0,3)}</div><div className="min-w-0"><p className="truncate text-sm font-bold text-slate-900">{item.symbol}</p><p className="truncate text-xs text-slate-500">{item.name} · Valeur {item.valuePerPriceUnit}/1.00</p></div></div><button type="button" aria-label={`Supprimer ${item.symbol}`} disabled={saving} onClick={()=>removeInstrument(item.id)} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 disabled:opacity-40"><Trash2 className="h-4 w-4"/></button></div>)}</div>:<div className="rounded-2xl border border-dashed border-slate-200 px-4 py-8 text-center"><CandlestickChart className="mx-auto h-7 w-7 text-slate-300"/><p className="mt-2 text-sm font-semibold text-slate-700">Aucun instrument configuré</p><p className="mt-1 text-xs text-slate-500">Ajoutez votre premier instrument ci-dessus.</p></div>}
+          </div></div>
+        </section>
+        <section className="min-w-0 overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+          <div className="border-b border-slate-100 px-5 py-4 sm:px-6"><div className="flex items-center gap-3"><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-teal-50 text-teal-700"><Layers3 className="h-5 w-5"/></div><div><h4 className="text-base font-extrabold text-slate-950">Setups & stratégies</h4><p className="mt-0.5 text-xs text-slate-500">Vos configurations d’entrée habituelles.</p></div><span className="ml-auto rounded-full bg-slate-100 px-2.5 py-1 text-xs font-bold text-slate-600">{setups.length}</span></div></div>
+          <div className="p-5 sm:p-6"><label className={labelClass}>Nouveau setup</label><div className="flex gap-2"><input className={inputClass} value={newSetup} onChange={e=>setNewSetup(e.target.value)} placeholder="FVG, Order Block, MSS…" onKeyDown={e=>{if(e.key==='Enter'){e.preventDefault();void addSetup();}}}/><button type="button" aria-label="Ajouter le setup" disabled={!newSetup.trim()||saving} onClick={()=>void addSetup()} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-600 text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50"><Plus className="h-5 w-5"/></button></div>
+            <div className="mt-5">{setups.length?<div className="space-y-2">{setups.map(item=><div key={item.id} className="flex items-center justify-between gap-3 rounded-2xl border border-slate-200 px-3.5 py-3"><div className="flex min-w-0 items-center gap-2.5"><span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500"/><span className="truncate text-sm font-semibold text-slate-800">{item.name}</span></div><button type="button" aria-label={`Supprimer le setup ${item.name}`} disabled={saving} onClick={()=>void removeSetup(item.id)} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 transition hover:bg-rose-50 hover:text-rose-600 disabled:opacity-40"><X className="h-4 w-4"/></button></div>)}</div>:<div className="rounded-2xl border border-dashed border-slate-200 px-4 py-8 text-center"><Layers3 className="mx-auto h-7 w-7 text-slate-300"/><p className="mt-2 text-sm font-semibold text-slate-700">Aucun setup enregistré</p><p className="mt-1 text-xs text-slate-500">Ajoutez une stratégie pour la retrouver dans le journal.</p></div>}</div>
+          <div className="mt-5 rounded-2xl bg-slate-50 p-4"><p className="text-xs font-bold text-slate-700">À savoir</p><p className="mt-1 text-xs leading-5 text-slate-500">Les instruments et setups sont enregistrés dans votre compte et réutilisables dans le journal.</p></div>
           </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-          <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
-            <h4 className="text-xs font-bold text-slate-900 mb-3">Instruments</h4>
-            <div className="grid grid-cols-2 gap-3">
-              <div><label className={labelClass}>Symbole *</label><input className={inputClass} value={instrument.symbol} onChange={e => setInstrument(v => ({ ...v, symbol: e.target.value }))} placeholder="XAUUSD" /></div>
-              <div><label className={labelClass}>Nom *</label><input className={inputClass} value={instrument.name} onChange={e => setInstrument(v => ({ ...v, name: e.target.value }))} placeholder="Gold" /></div>
-              <div><label className={labelClass}>Catégorie</label><select className={inputClass} value={instrument.category} onChange={e => setInstrument(v => ({ ...v, category: e.target.value as TradingInstrument['category'] }))}><option value="forex">Forex</option><option value="metal">Métal</option><option value="index">Indice</option><option value="futures">Futures</option><option value="crypto">Crypto</option><option value="stock">Action</option><option value="other">Autre</option></select></div>
-              <div><label className={labelClass}>Pas de prix *</label><input type="number" step="any" min="0" className={inputClass} value={instrument.priceStep} onChange={e => setInstrument(v => ({ ...v, priceStep: e.target.value }))} placeholder="0.01" /></div>
-              <div><label className={labelClass}>Valeur par 1.00 *</label><input type="number" step="any" min="0" className={inputClass} value={instrument.valuePerPriceUnit} onChange={e => setInstrument(v => ({ ...v, valuePerPriceUnit: e.target.value }))} placeholder="100" /></div>
-              <div><label className={labelClass}>Taille par défaut</label><input type="number" step="any" min="0" className={inputClass} value={instrument.defaultPositionSize} onChange={e => setInstrument(v => ({ ...v, defaultPositionSize: e.target.value }))} placeholder="1" /></div>
-            </div>
-            <p className="text-[10px] text-slate-500 mt-3">« Valeur par 1.00 » = montant gagné/perdu pour un mouvement de 1.00 avec 1 unité de taille, dans la devise du compte.</p>
-            <button type="button" disabled={!canAddInstrument || saving} onClick={addInstrument} className="btn-primary mt-3 px-4 py-2 rounded-xl text-xs font-semibold inline-flex items-center gap-2 disabled:opacity-50"><Plus className="w-3.5 h-3.5" />Ajouter l'instrument</button>
-
-            <div className="mt-4 space-y-2">
-              {instruments.map(item => (
-                <div key={item.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5">
-                  <div><span className="text-xs font-bold text-slate-900">{item.symbol}</span><span className="ml-2 text-[10px] text-slate-500">{item.name} · {item.valuePerPriceUnit}/1.00</span></div>
-                  <button type="button" onClick={() => removeInstrument(item.id)} className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50"><Trash2 className="w-3.5 h-3.5" /></button>
-                </div>
-              ))}
-              {!instruments.length && <p className="text-[11px] text-slate-500 py-2">Aucun instrument configuré.</p>}
-            </div>
-          </div>
-
-          <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
-            <h4 className="text-xs font-bold text-slate-900 mb-3">Setup / Stratégies</h4>
-            <div className="flex gap-2">
-              <input className={inputClass} value={newSetup} onChange={e => setNewSetup(e.target.value)} placeholder="Liquidity Sweep, FVG, Order Block..." onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); void addSetup(); } }} />
-              <button type="button" disabled={!newSetup.trim() || saving} onClick={() => void addSetup()} className="btn-primary px-3 rounded-xl disabled:opacity-50"><Plus className="w-4 h-4" /></button>
-            </div>
-            <div className="mt-4 flex flex-wrap gap-2">
-              {setups.map(item => <div key={item.id} className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2"><span className="text-xs font-semibold text-slate-700">{item.name}</span><button type="button" onClick={() => void removeSetup(item.id)} className="text-rose-500"><Trash2 className="w-3 h-3" /></button></div>)}
-              {!setups.length && <p className="text-[11px] text-slate-500">Aucun setup configuré.</p>}
-            </div>
-          </div>
-        </div>
+        </section>
       </div>
     </div>
   );
