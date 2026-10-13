@@ -100,10 +100,15 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
       });
       const data = await response.json().catch(() => ({})) as {
         error?: string;
+        details?: { httpStatus?: number; model?: string; providerStatus?: string; providerMessage?: string; reason?: string };
         instrument?: { symbol: string; name: string; category: TradingInstrument['category']; priceStep: number; valuePerPriceUnit: number; defaultPositionSize: number };
         note?: string;
       };
-      if (!response.ok || !data.instrument) throw new Error(data.error || 'Chloé n’a pas pu compléter cet instrument.');
+      if (!response.ok || !data.instrument) {
+        const diagnostic = data.details?.providerMessage || data.details?.reason;
+        const context = [data.details?.model, data.details?.providerStatus, diagnostic].filter(Boolean).join(' — ');
+        throw new Error([data.error || 'Chloé n’a pas pu compléter cet instrument.', context].filter(Boolean).join(' '));
+      }
       setInstrument(current => ({
         ...current,
         ...data.instrument,
