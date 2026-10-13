@@ -1,3 +1,4 @@
+// Trigger a fresh production deployment after merging instrument suggestions.
 {
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "iamtrader",
