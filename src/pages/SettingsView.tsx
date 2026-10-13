@@ -108,7 +108,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
   const [paymentCountryCode, setPaymentCountryCode] = useState<string>(() => detectCountryCode());
   const [countrySearch, setCountrySearch] = useState('');
   const [isCountryListOpen, setIsCountryListOpen] = useState(false);
-  const [paymentProvider, setPaymentProvider] = useState('airtel_cd');
+  const [paymentProvider, setPaymentProvider] = useState(() => countryOptions.find(item => item.code === detectCountryCode())?.networks[0]?.value || 'vodacom_cd');
   const [paymentPayerName, setPaymentPayerName] = useState(userProfile?.displayName || [userProfile?.traderProfile?.firstName, userProfile?.traderProfile?.lastName].filter(Boolean).join(' ') || '');
   const [paymentId, setPaymentId] = useState<string | null>(null);
   const [paymentReference, setPaymentReference] = useState<string | null>(null);
