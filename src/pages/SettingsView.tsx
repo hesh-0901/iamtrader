@@ -11,7 +11,7 @@ import { useToast } from '../components/common/Toast';
 import { TradingJournalSettings } from '../components/settings/TradingJournalSettings';
 import { PaymentHistory } from './PaymentHistory';
 import { calculateTraderRating, formatCurrency } from '../utils/calculations';
-import { confirmSimulatedPayment, createPayment, createSimulatedPayment, getPaymentStatus, PaidPlan, PaymentDetails } from '../services/payments';
+import { confirmSimulatedPayment, createPayment, createSimulatedPayment, getPaymentStatus, verifySasPayPayment, PaidPlan, PaymentDetails } from '../services/payments';
 
 interface SettingsViewProps {
   userProfile: UserProfile | null;
@@ -19,6 +19,7 @@ interface SettingsViewProps {
   trades: Trade[];
   selectedAccountId: string;
   onRequestPlan: (plan: 'pro' | 'community') => void;
+  pendingPaymentReference?: string | null;
 }
 
 const starterLimit = 5;
@@ -49,7 +50,7 @@ const countryOptions = [
 ];
 
 
-export function SettingsView({ userProfile, accounts, trades, selectedAccountId, onRequestPlan }: SettingsViewProps) {
+export function SettingsView({ userProfile, accounts, trades, selectedAccountId, onRequestPlan, pendingPaymentReference }: SettingsViewProps) {
   const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<'profile' | 'certificates' | 'subscription' | 'security' | 'preferences' | 'journal' | 'history'>('subscription');
   const [displayName, setDisplayName] = useState(userProfile?.displayName || '');
@@ -282,7 +283,49 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
   };
 
   React.useEffect(() => {
-    if (!paymentId || paymentStatus !== 'processing' || paymentMode === 'simulation') return;
+    if (!pendingPaymentReference) return;
+    let cancelled = false;
+    let attempts = 0;
+    let timer: number | undefined;
+    setPaymentGateway('saspay');
+    setPaymentMode('live');
+    setPaymentId(pendingPaymentReference);
+    setPaymentStatus('processing');
+    setPaymentMessage('Vérification du paiement auprès de SasPay…');
+
+    const checkPayment = async () => {
+      attempts += 1;
+      try {
+        const result = await verifySasPayPayment(pendingPaymentReference);
+        if (cancelled) return;
+        if (result.payment?.plan === 'pro' || result.payment?.plan === 'community') setPaymentPlan(result.payment.plan);
+        if (result.status === 'paid') {
+          setPaymentStatus('paid');
+          setPaymentMessage('Paiement confirmé par SasPay. Actualisation de votre abonnement…');
+          window.setTimeout(() => window.location.reload(), 1400);
+          return;
+        }
+        if (result.status === 'failed') {
+          setPaymentStatus('failed');
+          setPaymentMessage('Le paiement n’a pas été finalisé. Vous pouvez réessayer.');
+          return;
+        }
+        setPaymentStatus('processing');
+        setPaymentMessage('Traitement en cours par votre opérateur. Nous vérifions encore le statut du paiement…');
+      } catch (error: any) {
+        if (cancelled) return;
+        setPaymentMessage(error?.message || 'Vérification temporairement indisponible. Nouvelle tentative en cours…');
+      }
+      if (!cancelled && attempts < 40) timer = window.setTimeout(checkPayment, 3000);
+      else if (!cancelled) setPaymentMessage('Le paiement est toujours en cours ou sa vérification est momentanément indisponible. Revenez vérifier votre abonnement plus tard.');
+    };
+
+    void checkPayment();
+    return () => { cancelled = true; if (timer !== undefined) window.clearTimeout(timer); };
+  }, [pendingPaymentReference]);
+
+  React.useEffect(() => {
+    if (pendingPaymentReference || !paymentId || paymentStatus !== 'processing' || paymentMode === 'simulation') return;
     let cancelled = false; let attempts = 0;
     const timer = window.setInterval(async () => {
       attempts += 1;
