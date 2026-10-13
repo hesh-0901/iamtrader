@@ -3,6 +3,7 @@ import { callGeminiUnified } from './common/gemini-client';
 interface Env {
   GEMINI_API_KEY?: string;
   GEMINI_MODEL?: string;
+  GEMINI_CHLOE_MODEL?: string;
 }
 
 type Message = { role: 'user' | 'assistant'; content: string };
@@ -130,18 +131,19 @@ export async function onRequest(context: { request: Request; env: Env }) {
     parts.push({ inlineData: { mimeType: file.mimeType, data: cleanData } });
   }
 
-  const configuredModel = (context.env.GEMINI_MODEL || '').trim();
+  const configuredModel = (context.env.GEMINI_CHLOE_MODEL || context.env.GEMINI_MODEL || '').trim();
+  const preferredModel = configuredModel || 'gemini-2.5-flash';
   const result = await callGeminiUnified(
     [{ role: 'user', parts }],
     {
       apiKey,
-      preferredModel: 'gemini-3.5-flash-lite',
-      fallbackModels: ['gemini-3.8-flash'],
+      preferredModel,
+      fallbackModels: ['gemini-2.5-flash'],
       systemInstruction: SYSTEM_INSTRUCTIONS,
       responseJson: true,
       temperature: 0.2,
       maxTokens: 1800,
-      timeoutMs: 6500,
+      timeoutMs: 12000,
     },
   );
 
