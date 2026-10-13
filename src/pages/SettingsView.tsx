@@ -709,7 +709,6 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                         <option value="Vodacom M-Pesa">Vodacom M-Pesa</option>
                         <option value="Airtel Money">Airtel Money</option>
                         <option value="Orange Money">Orange Money</option>
-                        <option value="Visa / Mastercard">Visa / Mastercard</option>
                       </select>
                     </div>
                   </div>
