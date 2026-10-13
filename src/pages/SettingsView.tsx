@@ -24,7 +24,7 @@ interface SettingsViewProps {
 
 const starterLimit = 5;
 
-const PAYMENT_FEE_RATE = 0.03;
+const PAYMENT_FEE_RATE = 0;
 const PAYMENT_PRICES = { pro: 9.99, community: 89.99 } as const;
 const CINETPAY_CDF_PRICES = { pro: 23335, community: 210196 } as const;
 
