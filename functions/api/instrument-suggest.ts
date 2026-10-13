@@ -64,9 +64,10 @@ Tous les nombres doivent être strictement positifs.`;
         headers: { 'x-goog-api-key': env.GEMINI_API_KEY.trim(), 'Content-Type': 'application/json' },
         body: JSON.stringify({
           contents: [{ role: 'user', parts: [{ text: prompt }] }],
-          generationConfig: { responseMimeType: 'application/json', maxOutputTokens: 400 },
+          generationConfig: { responseMimeType: 'application/json', maxOutputTokens: 250, temperature: 0.1 },
         }),
-        signal: AbortSignal.timeout(12000),
+        // Instrument suggestions may take longer during Gemini load; allow a reasonable response window.
+        signal: AbortSignal.timeout(25000),
       },
     );
     const raw = await response.text();
