@@ -789,16 +789,16 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
               .iam-payment-progress:after { content:""; position:absolute; inset:0; width:42%; background:linear-gradient(90deg,transparent,rgba(255,255,255,.85),transparent); animation:iamProgressShine 2s ease-in-out infinite }
               @media (prefers-reduced-motion: reduce) { .iam-checkout-brand:before,.iam-payment-enter,.iam-payment-ripple,.iam-payment-phone,.iam-payment-spinner,.iam-payment-progress:after { animation:none !important } }
             `}</style>
-            <aside className="iam-checkout-brand relative hidden overflow-hidden border-r border-emerald-200 bg-[radial-gradient(ellipse_at_10%_90%,rgba(16,185,129,.18),transparent_44%),linear-gradient(145deg,#f0faf5_0%,#e2f3e9_52%,#d2eadb_100%)] p-7 text-left lg:flex lg:flex-col lg:items-start">
-              
-              <div className="relative flex items-center"><img src="/brand/logo-iamtrader-full.png" alt="IAMTRADER" className="h-10 w-auto object-contain" /></div>
-              <div className="relative mt-8 w-full text-left"><span className="inline-flex rounded-full bg-emerald-200/80 px-3 py-1 text-[10px] font-extrabold uppercase tracking-[.16em] text-emerald-900">IAMTRADER Plus</span><h2 className="mt-4 max-w-xs text-3xl font-black leading-tight tracking-tight text-slate-900">Progressez avec de meilleurs outils.</h2><p className="mt-3 max-w-xs text-sm leading-6 text-slate-500">Un suivi clair de vos performances et de vos décisions.</p></div>
+            <aside className="iam-checkout-brand relative hidden overflow-hidden border-r border-emerald-900/40 bg-[radial-gradient(ellipse_at_10%_90%,rgba(0,220,170,.24),transparent_44%),linear-gradient(145deg,#032f2b_0%,#064e3b_52%,#047857_100%)] p-7 text-left text-white lg:flex lg:flex-col lg:items-start">
+              <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(167,243,208,.045)_1px,transparent_1px),linear-gradient(90deg,rgba(167,243,208,.045)_1px,transparent_1px)] bg-[size:28px_28px]" />
+              <div className="relative flex min-h-10 items-center rounded-lg bg-white/5 px-2 py-1 ring-1 ring-white/10"><img src="/brand/logo-iamtrader-full.png" alt="IAMTRADER" className="h-10 w-auto object-contain drop-shadow-sm" /></div>
+              <div className="relative mt-8 w-full text-left"><span className="inline-flex rounded-full border border-emerald-300/20 bg-emerald-400/15 px-3 py-1 text-[10px] font-extrabold uppercase tracking-[.16em] text-emerald-200">IAMTRADER Plus</span><h2 className="mt-4 max-w-xs text-3xl font-black leading-tight tracking-tight text-white">Progressez avec de meilleurs outils.</h2><p className="mt-3 max-w-xs text-sm leading-6 text-emerald-50/80">Un suivi clair de vos performances et de vos décisions.</p></div>
               <div className="relative mt-7 space-y-4">
                 {[
                   ['Journal avancé',Activity],
                   ['Statistiques détaillées',TrendingUp],
                   ['IA Chloé',Sparkles]
-                ].map(([title,Icon]: any) => <div key={title} className="flex items-center gap-3"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700"><Icon className="h-4 w-4" /></div><div className="text-sm font-bold text-slate-800">{title}</div></div>)}
+                ].map(([title,Icon]: any) => <div key={title} className="flex items-center gap-3"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-emerald-300/15 bg-emerald-400/15 text-emerald-200"><Icon className="h-4 w-4" /></div><div className="text-sm font-bold text-white">{title}</div></div>)}
               </div>
             </aside>
             <section className="min-w-0 bg-white">
