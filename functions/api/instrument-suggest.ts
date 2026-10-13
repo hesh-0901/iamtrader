@@ -66,6 +66,7 @@ Tous les nombres doivent être strictement positifs.`;
   let response: Response | undefined;
   let model = models[0];
   let lastError: unknown;
+  let lastProviderError: { status: number; model: string; body: string } | undefined;
 
   for (const candidate of models) {
     model = candidate;
@@ -73,7 +74,7 @@ Tous les nombres doivent être strictement positifs.`;
     const timer = setTimeout(() => controller.abort(), 9000);
     const startedAt = Date.now();
     try {
-      response = await fetch(
+      const attemptResponse = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(candidate)}:generateContent`,
         {
           method: 'POST',
@@ -87,12 +88,23 @@ Tous les nombres doivent être strictement positifs.`;
       );
       clearTimeout(timer);
       console.log('Instrument suggestion Gemini response:', {
-        model: candidate, status: response.status, durationMs: Date.now() - startedAt,
+        model: candidate, status: attemptResponse.status, durationMs: Date.now() - startedAt,
       });
+
+      if (attemptResponse.ok) {
+        response = attemptResponse;
+        break;
+      }
+
+      const errorBody = await attemptResponse.text();
+      lastProviderError = { status: attemptResponse.status, model: candidate, body: errorBody };
+      lastError = new Error(`Gemini HTTP ${attemptResponse.status} for model ${candidate}`);
+
       // Retry another model for model/access errors, rate limits, or temporary provider failures.
-      if (response.ok || ![400, 404, 429, 500, 502, 503, 504].includes(response.status)) break;
-      lastError = new Error(`Gemini HTTP ${response.status} for model ${candidate}`);
-      if (candidate === models[models.length - 1]) break;
+      if (![400, 404, 429, 500, 502, 503, 504].includes(attemptResponse.status)) {
+        response = new Response(errorBody, { status: attemptResponse.status, headers: attemptResponse.headers });
+        break;
+      }
     } catch (error) {
       clearTimeout(timer);
       lastError = error;
@@ -101,15 +113,15 @@ Tous les nombres doivent être strictement positifs.`;
         durationMs: Date.now() - startedAt,
         reason: error instanceof Error ? error.message : String(error),
       });
-      if (candidate === models[models.length - 1]) throw error;
     }
   }
 
-  if (!response) throw lastError instanceof Error ? lastError : new Error('Gemini n’a retourné aucune réponse.');
-  if (!response.ok && lastError instanceof Error) {
-    // Read the final provider response below so the caller receives the useful HTTP details.
+  if (!response && lastProviderError) {
+    model = lastProviderError.model;
+    response = new Response(lastProviderError.body, { status: lastProviderError.status });
   }
-    const raw = await response.text();
+  if (!response) throw lastError instanceof Error ? lastError : new Error('Gemini n’a retourné aucune réponse.');
+  const raw = await response.text();
     let data: any = {};
     try { data = raw ? JSON.parse(raw) : {}; } catch {}
     if (!response.ok) {
