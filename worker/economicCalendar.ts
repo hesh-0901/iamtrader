@@ -223,7 +223,7 @@ export async function handleEconomicCalendar(request: Request, env: CalendarEnv 
 
   const cacheKey = new Request(
     new URL(
-      `/api/economic-calendar?source=date-range-v13&from=${from}&to=${to}`,
+      `/api/economic-calendar?source=date-range-v14&from=${from}&to=${to}`,
       request.url,
     ).toString(),
     { method: 'GET' },
@@ -496,9 +496,20 @@ export async function handleEconomicCalendar(request: Request, env: CalendarEnv 
         const keyFor = (event: ReturnType<typeof normalizeEvent>) =>
           `${event.date}|${event.time}|${event.country.toUpperCase()}|${normalizeEventTitle(event.title)}`;
 
-        // Insert supplemental events first, then Forex Factory so FF wins duplicates.
+        // Keep Forex Factory's schedule/title as authoritative, but never let its
+        // blank value fields erase real values supplied by a supplemental provider.
         for (const event of dateRangeEvents) merged.set(keyFor(event), event);
-        for (const event of scheduledEvents) merged.set(keyFor(event), event);
+        for (const event of scheduledEvents) {
+          const key = keyFor(event);
+          const supplemental = merged.get(key);
+          merged.set(key, supplemental ? {
+            ...supplemental,
+            ...event,
+            actual: preserveOrEnrich(event.actual, supplemental.actual),
+            forecast: preserveOrEnrich(event.forecast, supplemental.forecast),
+            previous: preserveOrEnrich(event.previous, supplemental.previous),
+          } : event);
+        }
         scheduledEvents = Array.from(merged.values())
           .filter((event) => (!from || event.date >= from) && (!to || event.date <= to))
           .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
