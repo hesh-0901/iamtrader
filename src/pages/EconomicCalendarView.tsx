@@ -501,7 +501,7 @@ export function EconomicCalendarView() {
             Live
           </span>
         </div>
-        {calendarSource === 'financecalendar' && (
+        {calendarSource.toLowerCase().includes('financecalendar') && (
           <p className="text-[10px] text-slate-500 dark:text-slate-400">
             Données complémentaires : <a href="https://www.financecalendar.com/" target="_blank" rel="noreferrer" className="font-semibold underline underline-offset-2 hover:text-[#00a982]">Finance Calendar</a>
           </p>
