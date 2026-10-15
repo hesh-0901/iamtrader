@@ -1,5 +1,5 @@
 const SOURCE_URL = 'https://nfs.faireconomy.media/ff_calendar_thisweek.json';
-const ENRICH_URL = 'https://api.tradingeconomics.com/calendar/country/united%20states';
+const ENRICH_URL = 'https://api.tradingeconomics.com/calendar';
 
 type ForexFactoryEvent = {
   title?: string;
@@ -14,10 +14,11 @@ type ForexFactoryEvent = {
 type EnrichmentEvent = {
   Date?: string;
   Country?: string;
+  Currency?: string;
   Event?: string;
-  Actual?: string;
-  Forecast?: string;
-  Previous?: string;
+  Actual?: string | number | null;
+  Forecast?: string | number | null;
+  Previous?: string | number | null;
 };
 
 function json(data: unknown, status = 200, headers: HeadersInit = {}) {
@@ -82,65 +83,108 @@ function normalizeEventTitle(title: string) {
   return normalized;
 }
 
-function eventKey(title: string, country: string, date: string, time: string) {
-  return [
-    normalizeEventTitle(title),
-    country.toUpperCase(),
-    date,
-    time,
-  ].join('|');
+function normalizeCurrency(value: unknown) {
+  const country = String(value ?? '').trim().toUpperCase();
+  const aliases: Record<string, string> = {
+    'UNITED STATES': 'USD',
+    'UNITED STATES OF AMERICA': 'USD',
+    'US': 'USD',
+    'U.S.': 'USD',
+    'UNITED KINGDOM': 'GBP',
+    'GREAT BRITAIN': 'GBP',
+    'EURO ZONE': 'EUR',
+    'EUROZONE': 'EUR',
+    'EURO AREA': 'EUR',
+    'EUROPEAN UNION': 'EUR',
+    'JAPAN': 'JPY',
+    'CANADA': 'CAD',
+    'AUSTRALIA': 'AUD',
+    'NEW ZEALAND': 'NZD',
+    'SWITZERLAND': 'CHF',
+  };
+  return aliases[country] || country;
+}
+
+function eventKey(title: string, country: string, date: string) {
+  return [normalizeEventTitle(title), normalizeCurrency(country), date].join('|');
+}
+
+function optionalValue(value: unknown) {
+  const normalized = value == null ? '' : String(value).trim();
+  return ['', '-', '—', 'n/a', 'na'].includes(normalized.toLowerCase()) ? '' : normalized;
+}
+
+function preserveOrEnrich(existing: string, supplemental: unknown) {
+  return optionalValue(existing) || optionalValue(supplemental);
 }
 
 async function enrichActuals(events: ReturnType<typeof normalizeEvent>[], from: string, to: string) {
-  const countries = ['united states'];
-  const enriched = new Map<string, EnrichmentEvent>();
+  if (!events.length) return events;
 
-  for (const country of countries) {
-    try {
-      const url = new URL(ENRICH_URL);
-      url.searchParams.set('d1', from);
-      url.searchParams.set('d2', to);
-      url.searchParams.set('c', 'guest:guest');
-      url.searchParams.set('f', 'json');
+  const enriched = new Map<string, EnrichmentEvent[]>();
 
-      const response = await fetch(url.toString(), {
-        headers: {
-          Accept: 'application/json',
-          'User-Agent': 'IAMTRADER Economic Calendar/1.0',
-        },
-      });
+  try {
+    const url = new URL(ENRICH_URL);
+    url.searchParams.set('d1', from);
+    url.searchParams.set('d2', to);
+    url.searchParams.set('c', 'guest:guest');
+    url.searchParams.set('f', 'json');
 
-      if (!response.ok) continue;
+    const response = await fetch(url.toString(), {
+      headers: {
+        Accept: 'application/json',
+        'User-Agent': 'IAMTRADER Economic Calendar/1.0',
+      },
+      signal: AbortSignal.timeout(6000),
+    });
 
-      const payload = await response.json() as unknown;
-      if (!Array.isArray(payload)) continue;
-
-      for (const item of payload as EnrichmentEvent[]) {
-        const datetime = String(item.Date || '');
-        const date = normalizeDate(datetime);
-        const time = normalizeTime(datetime);
-        const title = String(item.Event || '').trim();
-
-        if (!date || !title) continue;
-
-        enriched.set(eventKey(title, 'USD', date, time), item);
-      }
-    } catch {
-      // The enrichment source is optional. Forex Factory remains authoritative for the schedule.
+    if (!response.ok) {
+      console.warn('[EconomicCalendar] Historical value enrichment HTTP', response.status);
+      return events;
     }
+
+    const payload = await response.json() as unknown;
+    if (!Array.isArray(payload)) return events;
+
+    for (const item of payload as EnrichmentEvent[]) {
+      const datetime = String(item.Date || '');
+      const date = normalizeDate(datetime);
+      const title = String(item.Event || '').trim();
+      const currency = normalizeCurrency(item.Currency || item.Country);
+
+      if (!date || !title || !currency) continue;
+
+      const key = eventKey(title, currency, date);
+      const candidates = enriched.get(key) || [];
+      candidates.push(item);
+      enriched.set(key, candidates);
+    }
+  } catch (error) {
+    console.warn(
+      '[EconomicCalendar] Historical value enrichment unavailable:',
+      error instanceof Error ? error.message : String(error),
+    );
+    return events;
   }
 
   return events.map((event) => {
-    if (event.country !== 'USD') return event;
+    const key = eventKey(event.title, event.country, event.date);
+    const candidates = enriched.get(key) || [];
+    if (!candidates.length) return event;
 
-    const match = enriched.get(eventKey(event.title, event.country, event.date, event.time));
+    // Prefer an exact time match. If the provider uses a different timezone or
+    // omits a time, only use the fallback when there is one unambiguous match.
+    const exactTime = candidates.find((candidate) =>
+      normalizeTime(String(candidate.Date || '')) === event.time && Boolean(event.time),
+    );
+    const match = exactTime || (candidates.length === 1 ? candidates[0] : undefined);
     if (!match) return event;
 
     return {
       ...event,
-      actual: event.actual || String(match.Actual ?? '').trim(),
-      forecast: event.forecast || String(match.Forecast ?? '').trim(),
-      previous: event.previous || String(match.Previous ?? '').trim(),
+      actual: preserveOrEnrich(event.actual, match.Actual),
+      forecast: preserveOrEnrich(event.forecast, match.Forecast),
+      previous: preserveOrEnrich(event.previous, match.Previous),
     };
   });
 }
@@ -170,7 +214,7 @@ export async function handleEconomicCalendar(request: Request, env: CalendarEnv 
 
   const cacheKey = new Request(
     new URL(
-      `/api/economic-calendar?source=date-range-v11&from=${from}&to=${to}`,
+      `/api/economic-calendar?source=date-range-v12&from=${from}&to=${to}`,
       request.url,
     ).toString(),
     { method: 'GET' },
@@ -448,7 +492,9 @@ export async function handleEconomicCalendar(request: Request, env: CalendarEnv 
     const inRequestedRange = (event: ReturnType<typeof normalizeEvent>) =>
       (!from || event.date >= from) && (!to || event.date <= to);
     const rangeScheduledEvents = scheduledEvents.filter(inRequestedRange);
-    const events = from && to && source === 'forex-factory'
+    // Historical values are supplemental and must be attempted for every provider,
+    // not only when Forex Factory supplied the schedule.
+    const events = from && to
       ? await enrichActuals(rangeScheduledEvents, from, to)
       : rangeScheduledEvents;
 
@@ -461,7 +507,7 @@ export async function handleEconomicCalendar(request: Request, env: CalendarEnv 
       source,
       diagnostics: source === 'calendar-providers-empty' ? providerDiagnostics : undefined,
       configuration: source === 'calendar-api-key-required' ? 'Configurez FINNHUB_API_KEY dans les secrets Cloudflare pour activer la source historique.' : undefined,
-      enrichment: source === 'forex-factory' ? 'trading-economics' : null,
+      enrichment: from && to ? 'trading-economics-optional' : null,
       fetchedAt: new Date().toISOString(),
     });
 
