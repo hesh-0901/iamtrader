@@ -358,13 +358,17 @@ export function EconomicCalendarView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const loadEvents = async (selectedDate = date) => {
-    setLoading(true);
-    setError(null);
+  const loadEvents = async (selectedDate = date, silent = false) => {
+    if (!silent) {
+      setLoading(true);
+      setError(null);
+    }
 
     try {
+      // Load a three-week window so navigating nearby dates does not require
+      // fetching only a narrow slice around each selected day.
       const response = await fetch(
-        `${API_BASE}?from=${addDays(selectedDate, -1)}&to=${addDays(selectedDate, 1)}&limit=500&calendarVersion=20261009b`,
+        `${API_BASE}?from=${addDays(selectedDate, -7)}&to=${addDays(selectedDate, 7)}&limit=500&calendarVersion=20261015a`,
         { headers: { Accept: 'application/json' }, cache: 'no-store' },
       );
 
@@ -383,16 +387,28 @@ export function EconomicCalendarView() {
             : [];
 
       setEvents(rawEvents.map(normalizeEvent));
+      setError(null);
     } catch (loadError: any) {
-      setEvents([]);
-      setError(loadError?.message || 'Impossible de charger le calendrier.');
+      // Keep the last successful data visible if a background refresh fails.
+      if (!silent) {
+        setEvents([]);
+        setError(loadError?.message || 'Impossible de charger le calendrier.');
+      }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
     void loadEvents(date);
+  }, [date]);
+
+  useEffect(() => {
+    const refreshId = window.setInterval(() => {
+      void loadEvents(date, true);
+    }, 60_000);
+
+    return () => window.clearInterval(refreshId);
   }, [date]);
 
   useEffect(() => {
