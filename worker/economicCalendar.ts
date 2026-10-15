@@ -25,7 +25,7 @@ function json(data: unknown, status = 200, headers: HeadersInit = {}) {
     status,
     headers: {
       'Content-Type': 'application/json; charset=utf-8',
-      'Cache-Control': 'public, max-age=60, s-maxage=600',
+      'Cache-Control': 'public, max-age=0, s-maxage=60',
       ...headers,
     },
   });
