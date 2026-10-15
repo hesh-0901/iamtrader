@@ -9,6 +9,7 @@ import { handlePaymentHistory } from './paymentHistory';
 import { handleAdminMutation } from './admin';
 import { handleInboundEmail } from './inboundEmail';
 import { handleEconomicCalendar } from './economicCalendar';
+import { refreshIamtraderEconomicCalendar } from './iamtraderEconomicCalendar';
 import { handleEconomicEventAnalysis } from './economicEventAnalysis';
 
 interface Env {
@@ -43,7 +44,10 @@ export default {
   },
 
   async scheduled(_controller: ScheduledController, env: EnvWithPayments, _ctx: ExecutionContext): Promise<void> {
-    await cleanupExpiredCloudinaryMedia(env);
+    await Promise.all([
+      cleanupExpiredCloudinaryMedia(env),
+      refreshIamtraderEconomicCalendar(env),
+    ]);
   },
 
   async fetch(request: Request, env: EnvWithPayments): Promise<Response> {
