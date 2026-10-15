@@ -436,7 +436,7 @@ export async function handleEconomicCalendar(request: Request, env: CalendarEnv 
         scheduledEvents = Array.from(merged.values())
           .filter((event) => (!from || event.date >= from) && (!to || event.date <= to))
           .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
-        source = 'forex-factory+supplemental';
+        source = dateRangeSource ? `forex-factory+${dateRangeSource}` : 'forex-factory+supplemental';
       } else {
         scheduledEvents = dateRangeEvents.length ? dateRangeEvents : scheduledEvents;
         source = dateRangeSource || (scheduledEvents.length ? 'forex-factory' : (env.FINNHUB_API_KEY ? 'calendar-providers-empty' : 'calendar-api-key-required'));
