@@ -110,7 +110,12 @@ function eventKey(title: string, country: string, date: string) {
 }
 
 function optionalValue(value: unknown) {
-  return value == null ? '' : String(value).trim();
+  const normalized = value == null ? '' : String(value).trim();
+  return ['', '-', '—', 'n/a', 'na'].includes(normalized.toLowerCase()) ? '' : normalized;
+}
+
+function preserveOrEnrich(existing: string, supplemental: unknown) {
+  return optionalValue(existing) || optionalValue(supplemental);
 }
 
 async function enrichActuals(events: ReturnType<typeof normalizeEvent>[], from: string, to: string) {
@@ -177,9 +182,9 @@ async function enrichActuals(events: ReturnType<typeof normalizeEvent>[], from: 
 
     return {
       ...event,
-      actual: event.actual || optionalValue(match.Actual),
-      forecast: event.forecast || optionalValue(match.Forecast),
-      previous: event.previous || optionalValue(match.Previous),
+      actual: preserveOrEnrich(event.actual, match.Actual),
+      forecast: preserveOrEnrich(event.forecast, match.Forecast),
+      previous: preserveOrEnrich(event.previous, match.Previous),
     };
   });
 }
