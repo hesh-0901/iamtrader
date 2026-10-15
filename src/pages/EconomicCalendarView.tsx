@@ -355,6 +355,7 @@ export function EconomicCalendarView() {
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [events, setEvents] = useState<EconomicEvent[]>([]);
+  const [calendarSource, setCalendarSource] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -376,8 +377,9 @@ export function EconomicCalendarView() {
         throw new Error(`HTTP ${response.status}`);
       }
 
-      const payload = await response.json() as ApiEvent[] | { events?: ApiEvent[]; data?: ApiEvent[] };
-      const payloadObject = payload as { events?: ApiEvent[]; data?: ApiEvent[] };
+      const payload = await response.json() as ApiEvent[] | { events?: ApiEvent[]; data?: ApiEvent[]; source?: string };
+      const payloadObject = payload as { events?: ApiEvent[]; data?: ApiEvent[]; source?: string };
+      setCalendarSource(Array.isArray(payload) ? '' : String(payloadObject.source || ''));
       const rawEvents: ApiEvent[] = Array.isArray(payload)
         ? payload
         : Array.isArray(payloadObject.events)
@@ -499,6 +501,11 @@ export function EconomicCalendarView() {
             Live
           </span>
         </div>
+        {calendarSource === 'financecalendar' && (
+          <p className="text-[10px] text-slate-500 dark:text-slate-400">
+            Données complémentaires : <a href="https://www.financecalendar.com/" target="_blank" rel="noreferrer" className="font-semibold underline underline-offset-2 hover:text-[#00a982]">Finance Calendar</a>
+          </p>
+        )}
 
         <div className="flex items-center gap-1.5">
           <button
