@@ -1,3 +1,6 @@
+import { getIamtraderEconomicCalendar, refreshIamtraderEconomicCalendar } from './iamtraderEconomicCalendar';
+import type { PaymentEnv } from './firebaseAdmin';
+
 const SOURCE_URL = 'https://nfs.faireconomy.media/ff_calendar_thisweek.json';
 const ENRICH_URL = 'https://api.tradingeconomics.com/calendar';
 
@@ -198,7 +201,7 @@ async function enrichActuals(events: ReturnType<typeof normalizeEvent>[], from: 
   });
 }
 
-type CalendarEnv = { FINNHUB_API_KEY?: string };
+type CalendarEnv = PaymentEnv & { FINNHUB_API_KEY?: string; GEMINI_API_KEY?: string; GEMINI_MODEL?: string };
 
 export async function handleEconomicCalendar(request: Request, env: CalendarEnv = {}): Promise<Response> {
   if (request.method === 'OPTIONS') {
@@ -220,6 +223,28 @@ export async function handleEconomicCalendar(request: Request, env: CalendarEnv 
   const requestUrl = new URL(request.url);
   const from = requestUrl.searchParams.get('from') || '';
   const to = requestUrl.searchParams.get('to') || '';
+
+  // IAMTRADER owns the canonical calendar. External calendar feeds are no longer
+  // used as the public schedule; the AI research engine builds verified events
+  // from official-source pages and persists them independently in Firestore.
+  let iamtraderEvents = await getIamtraderEconomicCalendar(env, from, to);
+  let refresh = { refreshed: false, reason: 'stored-calendar-available', count: iamtraderEvents.length };
+  if (iamtraderEvents.length === 0) {
+    refresh = await refreshIamtraderEconomicCalendar(env);
+    iamtraderEvents = await getIamtraderEconomicCalendar(env, from, to);
+  }
+  const ownCalendarResponse = json({
+    events: iamtraderEvents,
+    source: 'iamtrader-ai-calendar',
+    engine: 'iamtrader-ai-calendar-v1',
+    diagnostics: iamtraderEvents.length
+      ? ['Calendrier IAMTRADER: événements structurés à partir de sources officielles; valeurs non publiées laissées vides.']
+      : [`Calendrier IAMTRADER: aucun événement vérifié disponible (${refresh.reason}).`],
+    refresh: { attempted: refresh.refreshed, reason: refresh.reason, count: iamtraderEvents.length },
+    fetchedAt: new Date().toISOString(),
+  }, 200, 'no-store');
+  ownCalendarResponse.headers.set('X-IAMTRADER-Calendar-Source', 'iamtrader-ai-calendar');
+  return ownCalendarResponse;
 
   const cacheKey = new Request(
     new URL(
