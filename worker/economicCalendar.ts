@@ -32,9 +32,9 @@ function json(data: unknown, status = 200, headers: HeadersInit = {}) {
 }
 
 function normalizeImpact(value: unknown) {
-  const impact = String(value || '').trim().toLowerCase();
-  if (impact === 'high') return 'high';
-  if (impact === 'medium') return 'medium';
+  const impact = String(value ?? '').trim().toLowerCase();
+  if (impact === 'high' || impact === '3') return 'high';
+  if (impact === 'medium' || impact === '2') return 'medium';
   return 'low';
 }
 
@@ -436,16 +436,25 @@ export async function handleEconomicCalendar(request: Request, env: CalendarEnv 
         scheduledEvents = Array.from(merged.values())
           .filter((event) => (!from || event.date >= from) && (!to || event.date <= to))
           .sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
-        source = 'forex-factory+supplemental';
+        source = dateRangeSource ? `forex-factory+${dateRangeSource}` : 'forex-factory+supplemental';
       } else {
         scheduledEvents = dateRangeEvents.length ? dateRangeEvents : scheduledEvents;
         source = dateRangeSource || (scheduledEvents.length ? 'forex-factory' : (env.FINNHUB_API_KEY ? 'calendar-providers-empty' : 'calendar-api-key-required'));
       }
     }
 
+    // Never return events outside the requested date range, even when every
+    // date-aware provider fails and Forex Factory only has the current week.
+    const inRequestedRange = (event: ReturnType<typeof normalizeEvent>) =>
+      (!from || event.date >= from) && (!to || event.date <= to);
+    const rangeScheduledEvents = scheduledEvents.filter(inRequestedRange);
     const events = from && to && source === 'forex-factory'
-      ? await enrichActuals(scheduledEvents, from, to)
-      : scheduledEvents;
+      ? await enrichActuals(rangeScheduledEvents, from, to)
+      : rangeScheduledEvents;
+
+    if (from && to && events.length === 0 && source === 'forex-factory') {
+      source = env.FINNHUB_API_KEY ? 'calendar-providers-empty' : 'calendar-api-key-required';
+    }
 
     const response = json({
       events,
