@@ -135,6 +135,11 @@ service cloud.firestore {
       allow read, update, delete: if isAdmin();
     }
 
+    // Progression du pipeline économique : administration uniquement.
+    match /economicDataProgress/{progressId} {
+      allow read, write: if isAdmin();
+    }
+
     match /adminLogs/{logId} {
       allow read, create: if isAdmin();
       allow update, delete: if false;
