@@ -111,9 +111,15 @@ function normalizeEvent(raw: Record<string, unknown>, sources: OfficialSource[],
   const impactRaw = String(raw.impact || '').toLowerCase();
   const impact: CalendarEvent['impact'] = impactRaw === 'high' ? 'high' : impactRaw === 'medium' ? 'medium' : 'low';
   const slug = event.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 80);
-  const actual = String(raw.actual ?? '').trim();
-  const forecast = String(raw.forecast ?? '').trim();
-  const previous = String(raw.previous ?? '').trim();
+  // Never publish an AI-generated numeric value unless the cited source text
+  // contains that value verbatim. Missing or ambiguous values remain blank.
+  const sourceBackedValue = (value: unknown) => {
+    const candidate = String(value ?? '').trim();
+    return candidate && sourceEvidence.includes(candidate.toLowerCase()) ? candidate : '';
+  };
+  const actual = sourceBackedValue(raw.actual);
+  const forecast = sourceBackedValue(raw.forecast);
+  const previous = sourceBackedValue(raw.previous);
   const status: CalendarEvent['status'] = actual ? 'released' : time === '—' ? 'time-unconfirmed' : 'scheduled';
 
   return {
