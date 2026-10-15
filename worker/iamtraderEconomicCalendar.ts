@@ -84,7 +84,18 @@ function normalizeEvent(raw: Record<string, unknown>, sources: OfficialSource[],
   const source = sources.find(item => item.url === sourceUrl);
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date) || !event || !source) return null;
   const parsedDate = new Date(date + 'T00:00:00Z');
-  if (!Number.isFinite(parsedDate.getTime())) return null;
+  if (!Number.isFinite(parsedDate.getTime()) || parsedDate.toISOString().slice(0, 10) !== date) return null;
+  // Require date evidence in the exact official page used as the event citation.
+  // Gemini may organize source material, but it may not invent a release date.
+  const sourceEvidence = source.text.toLowerCase();
+  const dateFormats = [
+    date,
+    parsedDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' }).toLowerCase(),
+    parsedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }).toLowerCase(),
+    parsedDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).toLowerCase(),
+    parsedDate.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric', timeZone: 'UTC' }),
+  ];
+  if (!dateFormats.some(format => sourceEvidence.includes(format.toLowerCase()))) return null;
   const nowDate = new Date(now.slice(0, 10) + 'T00:00:00Z');
   const maxDate = new Date(nowDate);
   maxDate.setUTCDate(maxDate.getUTCDate() + 60);
