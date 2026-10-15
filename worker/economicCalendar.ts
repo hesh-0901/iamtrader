@@ -6,9 +6,18 @@ type ForexFactoryEvent = {
   country?: string;
   date?: string;
   impact?: string;
-  actual?: string;
-  forecast?: string;
-  previous?: string;
+  actual?: string | number | null;
+  Actual?: string | number | null;
+  result?: string | number | null;
+  actual_value?: string | number | null;
+  actualValue?: string | number | null;
+  forecast?: string | number | null;
+  Forecast?: string | number | null;
+  consensus?: string | number | null;
+  estimate?: string | number | null;
+  previous?: string | number | null;
+  Previous?: string | number | null;
+  prior?: string | number | null;
 };
 
 type EnrichmentEvent = {
@@ -60,9 +69,9 @@ function normalizeEvent(raw: ForexFactoryEvent, index: number) {
     time: normalizeTime(rawDate),
     datetime: rawDate,
     impact: normalizeImpact(raw.impact),
-    actual: String(raw.actual ?? '').trim(),
-    forecast: String(raw.forecast ?? '').trim(),
-    previous: String(raw.previous ?? '').trim(),
+    actual: optionalValue(raw.actual ?? raw.Actual ?? raw.result ?? raw.actual_value ?? raw.actualValue),
+    forecast: optionalValue(raw.forecast ?? raw.Forecast ?? raw.consensus ?? raw.estimate),
+    previous: optionalValue(raw.previous ?? raw.Previous ?? raw.prior),
   };
 }
 
@@ -412,9 +421,9 @@ export async function handleEconomicCalendar(request: Request, env: CalendarEnv 
                 time: normalizeTime(datetime),
                 datetime,
                 impact: normalizeImpact(impactValue),
-                actual: item.actual == null ? '' : String(item.actual),
-                forecast: item.estimate == null ? '' : String(item.estimate),
-                previous: item.prev == null ? '' : String(item.prev),
+                actual: optionalValue(item.actual ?? item.Actual ?? item.result ?? item.actual_value ?? item.actualValue),
+                forecast: optionalValue(item.estimate ?? item.consensus ?? item.forecast ?? item.Forecast),
+                previous: optionalValue(item.prev ?? item.previous ?? item.prior ?? item.Previous),
               };
             }).filter((event) => event.title && event.date && event.date >= from && event.date <= to);
             providerDiagnostics.push(`Finnhub events in requested range: ${dateRangeEvents.length}`);
@@ -466,9 +475,9 @@ export async function handleEconomicCalendar(request: Request, env: CalendarEnv 
                 time: normalizeTime(datetime) || String(item.time_et || item.time || ''),
                 datetime,
                 impact: normalizeImpact(impact),
-                actual: item.actual == null ? '' : String(item.actual),
-                forecast: item.consensus == null ? (item.forecast == null ? '' : String(item.forecast)) : String(item.consensus),
-                previous: item.prior == null ? (item.previous == null ? '' : String(item.previous)) : String(item.prior),
+                actual: optionalValue(item.actual ?? item.Actual ?? item.result ?? item.actual_value ?? item.actualValue ?? item.actuals),
+                forecast: optionalValue(item.consensus ?? item.forecast ?? item.Forecast ?? item.estimate ?? item.forecast_value ?? item.forecastValue),
+                previous: optionalValue(item.prior ?? item.previous ?? item.Previous ?? item.prior_value ?? item.previous_value),
                 url: String(item.url || ''),
               };
             }).filter(event => event.title && event.date && event.date >= from && event.date <= to);
