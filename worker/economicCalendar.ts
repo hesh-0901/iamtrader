@@ -214,7 +214,7 @@ export async function handleEconomicCalendar(request: Request, env: CalendarEnv 
 
   const cacheKey = new Request(
     new URL(
-      `/api/economic-calendar?source=date-range-v12&from=${from}&to=${to}`,
+      `/api/economic-calendar?source=date-range-v13&from=${from}&to=${to}`,
       request.url,
     ).toString(),
     { method: 'GET' },
@@ -233,6 +233,7 @@ export async function handleEconomicCalendar(request: Request, env: CalendarEnv 
     let scheduledEvents: ReturnType<typeof normalizeEvent>[] = [];
     let source = 'forex-factory';
     const providerDiagnostics: string[] = [];
+    let primarySourceStatus = 'not checked';
 
     try {
       const upstream = await fetch(SOURCE_URL, {
@@ -243,12 +244,24 @@ export async function handleEconomicCalendar(request: Request, env: CalendarEnv 
         signal: AbortSignal.timeout(8000),
       });
 
-      if (!upstream.ok) throw new Error(`Forex Factory HTTP ${upstream.status}`);
+      if (!upstream.ok) {
+        primarySourceStatus = `HTTP ${upstream.status}`;
+        throw new Error(`Forex Factory HTTP ${upstream.status}`);
+      }
+      primarySourceStatus = `HTTP ${upstream.status}`;
       const payload = await upstream.json() as unknown;
       const rawEvents = Array.isArray(payload) ? payload as ForexFactoryEvent[] : [];
       scheduledEvents = rawEvents.map(normalizeEvent).filter(event => event.title && event.date);
-      if (!scheduledEvents.length) throw new Error('Forex Factory returned no events');
+      if (!scheduledEvents.length) {
+        primarySourceStatus = `HTTP ${upstream.status}; no valid events`;
+        throw new Error('Forex Factory returned no events');
+      }
+      providerDiagnostics.push(`Forex Factory: ${primarySourceStatus}; ${scheduledEvents.length} events received`);
     } catch (primaryError) {
+      if (primarySourceStatus === 'not checked') {
+        primarySourceStatus = `fetch/parse error: ${primaryError instanceof Error ? primaryError.message : String(primaryError)}`;
+      }
+      providerDiagnostics.push(`Forex Factory: ${primarySourceStatus}`);
       console.warn('Forex Factory calendar unavailable; trying Trading Economics:', primaryError);
       // Trading Economics guest access may return HTTP 410. That must not abort
       // the handler: leave the schedule empty so the date-range Finnhub fallback runs.
@@ -505,7 +518,8 @@ export async function handleEconomicCalendar(request: Request, env: CalendarEnv 
     const response = json({
       events,
       source,
-      diagnostics: source === 'calendar-providers-empty' ? providerDiagnostics : undefined,
+      // Safe provider diagnostics make source fallback observable without exposing credentials.
+      diagnostics: providerDiagnostics.length ? providerDiagnostics : [`Forex Factory: ${primarySourceStatus}`],
       configuration: source === 'calendar-api-key-required' ? 'Configurez FINNHUB_API_KEY dans les secrets Cloudflare pour activer la source historique.' : undefined,
       enrichment: from && to ? 'trading-economics-optional' : null,
       fetchedAt: new Date().toISOString(),
