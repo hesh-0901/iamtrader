@@ -109,17 +109,19 @@ function addDays(value: string, amount: number) {
   return localIsoDate(date);
 }
 
-function getWeekDates(value: string) {
-  const date = new Date(`${value}T12:00:00`);
-  const day = date.getDay();
-  const monday = new Date(date);
-  monday.setDate(date.getDate() - (day === 0 ? 6 : day - 1));
+function getThreeWeekRange(value: string) {
+  const selected = new Date(`${value}T12:00:00`);
+  const day = selected.getDay();
+  const monday = new Date(selected);
+  monday.setDate(selected.getDate() - (day === 0 ? 6 : day - 1));
 
-  return Array.from({ length: 5 }, (_, index) => {
-    const current = new Date(monday);
-    current.setDate(monday.getDate() + index);
-    return localIsoDate(current);
-  });
+  const from = new Date(monday);
+  from.setDate(monday.getDate() - 7);
+
+  const to = new Date(monday);
+  to.setDate(monday.getDate() + 13);
+
+  return { from: localIsoDate(from), to: localIsoDate(to) };
 }
 
 function localDateTime(value: unknown, fallbackDate?: string, fallbackTime?: string) {
@@ -356,6 +358,7 @@ export function EconomicCalendarView() {
   const [analysisError, setAnalysisError] = useState<string | null>(null);
   const [events, setEvents] = useState<EconomicEvent[]>([]);
   const [calendarSource, setCalendarSource] = useState('');
+  const [calendarFetchedAt, setCalendarFetchedAt] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -366,10 +369,10 @@ export function EconomicCalendarView() {
     }
 
     try {
-      // Load a three-week window so navigating nearby dates does not require
-      // fetching only a narrow slice around each selected day.
+      // Load the previous, selected, and following calendar weeks (21 days).
+      const range = getThreeWeekRange(selectedDate);
       const response = await fetch(
-        `${API_BASE}?from=${addDays(selectedDate, -7)}&to=${addDays(selectedDate, 7)}&limit=500&calendarVersion=20261015a`,
+        `${API_BASE}?from=${range.from}&to=${range.to}&limit=500&calendarVersion=20261015b`,
         { headers: { Accept: 'application/json' }, cache: 'no-store' },
       );
 
@@ -377,9 +380,10 @@ export function EconomicCalendarView() {
         throw new Error(`HTTP ${response.status}`);
       }
 
-      const payload = await response.json() as ApiEvent[] | { events?: ApiEvent[]; data?: ApiEvent[]; source?: string };
-      const payloadObject = payload as { events?: ApiEvent[]; data?: ApiEvent[]; source?: string };
+      const payload = await response.json() as ApiEvent[] | { events?: ApiEvent[]; data?: ApiEvent[]; source?: string; fetchedAt?: string };
+      const payloadObject = payload as { events?: ApiEvent[]; data?: ApiEvent[]; source?: string; fetchedAt?: string };
       setCalendarSource(Array.isArray(payload) ? '' : String(payloadObject.source || ''));
+      setCalendarFetchedAt(Array.isArray(payload) || !payloadObject.fetchedAt ? null : payloadObject.fetchedAt);
       const rawEvents: ApiEvent[] = Array.isArray(payload)
         ? payload
         : Array.isArray(payloadObject.events)
@@ -498,14 +502,22 @@ export function EconomicCalendarView() {
           </h1>
           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[8px] font-black uppercase tracking-wider text-emerald-600 dark:bg-emerald-950/40 dark:text-emerald-400">
             <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
-            Live
+            Actualisation auto
           </span>
         </div>
-        {calendarSource.toLowerCase().includes('financecalendar') && (
-          <p className="text-[10px] text-slate-500 dark:text-slate-400">
-            Données complémentaires : <a href="https://www.financecalendar.com/" target="_blank" rel="noreferrer" className="font-semibold underline underline-offset-2 hover:text-[#00a982]">Finance Calendar</a>
-          </p>
-        )}
+        <div className="flex flex-col items-start gap-1 text-[10px] text-slate-500 dark:text-slate-400 lg:items-end">
+          {calendarFetchedAt && (
+            <span>
+              Données récupérées : {new Date(calendarFetchedAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'medium' })}
+              {calendarSource && ` · Source : ${calendarSource}`}
+            </span>
+          )}
+          {calendarSource.toLowerCase().includes('financecalendar') && (
+            <span>
+              Données complémentaires : <a href="https://www.financecalendar.com/" target="_blank" rel="noreferrer" className="font-semibold underline underline-offset-2 hover:text-[#00a982]">Finance Calendar</a>
+            </span>
+          )}
+        </div>
 
         <div className="flex items-center gap-1.5">
           <button

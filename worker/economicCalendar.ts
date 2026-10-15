@@ -170,7 +170,7 @@ export async function handleEconomicCalendar(request: Request, env: CalendarEnv 
 
   const cacheKey = new Request(
     new URL(
-      `/api/economic-calendar?source=date-range-v10&from=${from}&to=${to}`,
+      `/api/economic-calendar?source=date-range-v11&from=${from}&to=${to}`,
       request.url,
     ).toString(),
     { method: 'GET' },
