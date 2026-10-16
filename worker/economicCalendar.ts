@@ -163,7 +163,7 @@ function normalizeCurrency(value: unknown) {
   return aliases[country] || country;
 }
 
-function eventKey(title: string, country: string, date: string) {
+function sourceEventKey(title: string, country: string, date: string) {
   return [normalizeEventTitle(title), normalizeCurrency(country), date].join('|');
 }
 
@@ -212,7 +212,7 @@ async function enrichActuals(events: ReturnType<typeof normalizeEvent>[], from: 
 
       if (!date || !title || !currency) continue;
 
-      const key = eventKey(title, currency, date);
+      const key = sourceEventKey(title, currency, date);
       const candidates = enriched.get(key) || [];
       candidates.push(item);
       enriched.set(key, candidates);
@@ -226,7 +226,7 @@ async function enrichActuals(events: ReturnType<typeof normalizeEvent>[], from: 
   }
 
   return events.map((event) => {
-    const key = eventKey(event.title, event.country, event.date);
+    const key = sourceEventKey(event.title, event.country, event.date);
     const candidates = enriched.get(key) || [];
     if (!candidates.length) return event;
 
