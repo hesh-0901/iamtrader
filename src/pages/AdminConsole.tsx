@@ -384,19 +384,21 @@ export function AdminConsole() {
           {adminTab==='overview' && <section className="space-y-6">
             <div className="grid grid-cols-2 gap-3.5 md:grid-cols-3 xl:grid-cols-6">
               {[
-                ['Utilisateurs actifs', users.filter(u => u.status === 'active').length, 'bg-[#dff8f5] text-[#087f78]', '↗', 'border-[#c7eee8] bg-gradient-to-br from-white to-[#effcf9]'],
-                ['Revenu confirmé', '$ ' + overviewRevenue.toFixed(2), 'bg-[#e6efff] text-[#2858b8]', '$', 'border-[#d8e5fb] bg-gradient-to-br from-white to-[#f1f6ff]'],
-                ['Abonnements actifs', overviewPaidUsers.length, 'bg-[#eee8ff] text-[#6541b8]', '●', 'border-[#e4dafc] bg-gradient-to-br from-white to-[#f8f5ff]'],
-                ['Paiements à confirmer', overviewPendingPayments.length, 'bg-[#fff1d6] text-[#a45b00]', '!', 'border-[#f6dfb4] bg-gradient-to-br from-white to-[#fff9ec]'],
-                ['Tickets ouverts', overviewOpenTickets.length, 'bg-[#e1f3ff] text-[#176a9a]', '?', 'border-[#d0eaf9] bg-gradient-to-br from-white to-[#f1f9ff]'],
-                ['Échéances ≤ 5 jours', overviewExpiringUsers.length, 'bg-[#ffe8ed] text-[#b4234d]', '◷', 'border-[#f8d5df] bg-gradient-to-br from-white to-[#fff5f7]']
-              ].map(([label, value, tone, icon, cardTone]) => (
-                <div key={String(label)} className={'group relative overflow-hidden rounded-2xl border p-4 shadow-[0_4px_18px_rgba(15,35,55,0.045)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_14px_32px_rgba(15,35,55,0.09)] ' + String(cardTone).replace('border-[#c7eee8]','border-[#c7eee8]').replace('bg-gradient-to-br from-white to-[#effcf9]','bg-[#f0fbf8]').replace('bg-gradient-to-br from-white to-[#f1f6ff]','bg-[#f2f6ff]').replace('bg-gradient-to-br from-white to-[#f8f5ff]','bg-[#f8f5ff]').replace('bg-gradient-to-br from-white to-[#fff9ec]','bg-[#fff9ee]').replace('bg-gradient-to-br from-white to-[#f1f9ff]','bg-[#f2f9ff]').replace('bg-gradient-to-br from-white to-[#fff5f7]','bg-[#fff5f7]')}>
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">{String(label)}</span>
-                    <span className={'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-sm font-black ' + String(tone)}>{String(icon)}</span>
+                ['Utilisateurs actifs', users.filter(u => u.status === 'active').length, 'text-[#008f76]', 'border-[#b7eee3] bg-[#effcf9]', Users],
+                ['Revenu confirmé', '$ ' + overviewRevenue.toFixed(2), 'text-[#2860d8]', 'border-[#cbdcff] bg-[#f1f6ff]', CreditCard],
+                ['Abonnements actifs', overviewPaidUsers.length, 'text-[#7543df]', 'border-[#dfd0ff] bg-[#f8f4ff]', Sparkles],
+                ['Paiements à confirmer', overviewPendingPayments.length, 'text-[#c47708]', 'border-[#ffdfad] bg-[#fff8eb]', Clock3],
+                ['Tickets ouverts', overviewOpenTickets.length, 'text-[#087eb5]', 'border-[#bce7fb] bg-[#f0faff]', Mail],
+                ['Échéances ≤ 5 jours', overviewExpiringUsers.length, 'text-[#d33362]', 'border-[#ffc9d8] bg-[#fff3f6]', CalendarClock]
+              ].map(([label, value, accent, cardTone, Icon]) => (
+                <div key={String(label)} className={'group relative isolate overflow-hidden rounded-2xl border p-4 shadow-[0_5px_20px_rgba(15,35,55,0.055)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_16px_34px_rgba(15,35,55,0.11)] ' + String(cardTone)}>
+                  <Icon className={'pointer-events-none absolute -right-2 -top-2 h-20 w-20 opacity-[0.10] blur-[1.5px] transition duration-300 group-hover:scale-110 group-hover:opacity-[0.16] ' + String(accent)} strokeWidth={1.8} />
+                  <div className="relative flex min-h-[72px] flex-col items-start justify-between gap-3">
+                    <span className="text-[10px] font-extrabold uppercase tracking-[.11em] text-slate-500">{String(label)}</span>
+                    <span className={'flex h-11 w-11 items-center justify-center rounded-2xl bg-white shadow-sm ring-1 ring-black/[0.035] ' + String(accent)}><Icon className="h-6 w-6" strokeWidth={2.4} /></span>
                   </div>
-                  <b className="mt-3 block text-[1.7rem] font-bold tracking-tight text-[#10243b]">{String(value)}</b>
+                  <b className={'relative mt-4 block text-3xl font-extrabold tracking-[-0.04em] '+String(accent)}>{String(value)}</b>
+                  <div className={'mt-3 h-1 w-10 rounded-full opacity-80 '+String(accent).replace('text-','bg-')}></div>
                 </div>
               ))}
             </div>
