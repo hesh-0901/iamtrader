@@ -1,4 +1,4 @@
-import type { PaymentEnv } from './firebaseAdmin';
+import { firestoreQueryCollection, firestoreSet, type PaymentEnv } from './firebaseAdmin';
 
 const SOURCE_URL = 'https://nfs.faireconomy.media/ff_calendar_thisweek.json';
 const ENRICH_URL = 'https://api.tradingeconomics.com/calendar';
@@ -41,6 +41,53 @@ function json(data: unknown, status = 200, headers: HeadersInit = {}) {
       ...headers,
     },
   });
+}
+
+const PERSISTED_CALENDAR_COLLECTION = 'economicCalendarSnapshots';
+
+async function readPersistedCalendar(env: CalendarEnv, from: string, to: string): Promise<Array<Record<string, unknown>>> {
+  if (!env.FIREBASE_SERVICE_ACCOUNT_JSON) return [];
+  try {
+    const stored = await firestoreQueryCollection(env, PERSISTED_CALENDAR_COLLECTION, 500, 'date');
+    return stored.filter(event => {
+      const date = String(event.date || '');
+      return date && (!from || date >= from) && (!to || date <= to);
+    });
+  } catch (error) {
+    console.warn('[EconomicCalendar] Snapshot read failed:', error instanceof Error ? error.message : String(error));
+    return [];
+  }
+}
+
+function eventKey(event: Record<string, unknown>): string {
+  return [String(event.date || ''), String(event.time || ''), String(event.country || '').toUpperCase(), normalizeEventTitle(String(event.title || event.event || ''))].join('|');
+}
+
+async function persistCalendarEvents(env: CalendarEnv, events: Array<Record<string, unknown>>): Promise<void> {
+  if (!env.FIREBASE_SERVICE_ACCOUNT_JSON || !events.length) return;
+  for (const event of events) {
+    const id = String(event.id || eventKey(event)).replace(/[/.#?$\\[\\]]/g, '-').slice(0, 900);
+    await firestoreSet(env, PERSISTED_CALENDAR_COLLECTION + '/' + encodeURIComponent(id), {
+      ...event,
+      snapshotUpdatedAt: new Date().toISOString(),
+    });
+  }
+}
+
+function mergeStoredEvents(stored: Array<Record<string, unknown>>, fresh: Array<Record<string, unknown>>) {
+  const merged = new Map<string, Record<string, unknown>>();
+  for (const event of stored) merged.set(eventKey(event), event);
+  for (const event of fresh) {
+    const key = eventKey(event);
+    const old = merged.get(key);
+    merged.set(key, old ? {
+      ...old, ...event,
+      actual: preserveOrEnrich(String(event.actual || ''), String(old.actual || '')),
+      forecast: preserveOrEnrich(String(event.forecast || ''), String(old.forecast || '')),
+      previous: preserveOrEnrich(String(event.previous || ''), String(old.previous || '')),
+    } : event);
+  }
+  return Array.from(merged.values()).sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')) || String(a.time || '').localeCompare(String(b.time || '')));
 }
 
 function normalizeImpact(value: unknown) {
@@ -533,9 +580,11 @@ export async function handleEconomicCalendar(request: Request, env: CalendarEnv 
     const rangeScheduledEvents = scheduledEvents.filter(inRequestedRange);
     // Historical values are supplemental and must be attempted for every provider,
     // not only when Forex Factory supplied the schedule.
-    const events = from && to
+    const freshEvents = from && to
       ? await enrichActuals(rangeScheduledEvents, from, to)
       : rangeScheduledEvents;
+    const storedEvents = await readPersistedCalendar(env, from, to);
+    const events = mergeStoredEvents(storedEvents, freshEvents as unknown as Array<Record<string, unknown>>) as ReturnType<typeof normalizeEvent>[];
 
     if (from && to && events.length === 0 && source === 'forex-factory') {
       source = env.FINNHUB_API_KEY ? 'calendar-providers-empty' : 'calendar-api-key-required';
@@ -560,6 +609,11 @@ export async function handleEconomicCalendar(request: Request, env: CalendarEnv 
       return response;
     }
 
+    try {
+      await persistCalendarEvents(env, events as unknown as Array<Record<string, unknown>>);
+    } catch (persistError) {
+      console.warn('[EconomicCalendar] Snapshot persistence failed:', persistError instanceof Error ? persistError.message : String(persistError));
+    }
     await cache.put(cacheKey, response.clone());
     return response;
   } catch (error) {
@@ -570,6 +624,13 @@ export async function handleEconomicCalendar(request: Request, env: CalendarEnv 
       .replace(/(FINNHUB_API_KEY=)[^&\s]+/gi, '$1[REDACTED]')
       .slice(0, 300);
     console.error('Economic calendar upstream failed:', safeMessage);
+    const staleEvents = await readPersistedCalendar(env, from, to);
+    if (staleEvents.length) {
+      const staleResponse = json({ events: staleEvents, source: 'persisted-calendar-fallback', diagnostics: ['Les fournisseurs sont indisponibles; dernières données enregistrées affichées.', safeMessage], stale: true, fetchedAt: new Date().toISOString() });
+      staleResponse.headers.set('X-IAMTRADER-Calendar-Cache', 'FIRESTORE-FALLBACK');
+      staleResponse.headers.set('X-IAMTRADER-Calendar-Source', 'persisted-calendar-fallback');
+      return staleResponse;
+    }
     const statusMatch = message.match(/HTTP (\d{3})/i);
     return json({
       error: 'Le calendrier économique est temporairement indisponible.',
