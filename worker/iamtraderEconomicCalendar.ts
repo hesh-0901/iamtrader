@@ -30,6 +30,8 @@ const OFFICIAL_SOURCES = [
   { name: 'US Bureau of Labor Statistics', url: 'https://www.bls.gov/schedule/news_release/' },
   { name: 'US Bureau of Economic Analysis', url: 'https://www.bea.gov/news/schedule' },
   { name: 'US Census Bureau economic indicators', url: 'https://www.census.gov/economic-indicators/' },
+  { name: 'US Department of Labor weekly unemployment claims', url: 'https://www.dol.gov/ui/data.pdf' },
+  { name: 'Eurostat release calendar', url: 'https://ec.europa.eu/eurostat/news/release-calendar' },
   { name: 'Federal Reserve FOMC calendars', url: 'https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm' },
   { name: 'European Central Bank press calendar', url: 'https://www.ecb.europa.eu/press/calendars/html/index.en.html' },
   { name: 'Bank of England monetary policy dates', url: 'https://www.bankofengland.co.uk/monetary-policy-summary-and-minutes' },
@@ -191,7 +193,9 @@ async function generateCalendar(eventsFrom: OfficialSource[], env: CalendarEnv):
       'Impact is an editorial estimate based on typical market relevance, not a source fact. Use high/medium/low.',
       'currency must be a currency code if clear from the source; otherwise "—".',
       'Return JSON only in this schema: {"events":[{"date":"YYYY-MM-DD","time":"HH:mm or —","timezone":"IANA zone or source-local","currency":"USD or —","event":"name","category":"inflation|employment|growth|central-bank|trade|energy|other","impact":"high|medium|low","actual":"","forecast":"","previous":"","sourceName":"source name","sourceUrl":"exact supplied URL","aiSummary":"short factual description"}]}.',
-      'Include relevant upcoming scheduled releases and recent releases in the last 7 days only when their exact dates are visible in source text. Deduplicate events.',
+      'PRIORITY: extract every relevant event dated from today through the next 10 calendar days first. Do not skip nearer dates in favor of events later in the month. Then include events from days 11–60 if explicitly listed in the source text.',
+      'Return events sorted chronologically by date and then time. Include multiple events on the same day when supported by the sources; do not return only central-bank meetings or only a few headline events.',
+      'Include recent releases from the last 7 days only when their exact dates are visible in source text. Deduplicate events.',
     ].join('\n'),
   });
   if (!result.success || !result.text) {
