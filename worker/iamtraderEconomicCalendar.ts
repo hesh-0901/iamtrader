@@ -88,7 +88,7 @@ function normalizeEvent(raw: Record<string, unknown>, sources: OfficialSource[],
   if (!Number.isFinite(parsedDate.getTime()) || parsedDate.toISOString().slice(0, 10) !== date) return null;
   // Require date evidence in the exact official page used as the event citation.
   // Gemini may organize source material, but it may not invent a release date.
-  const sourceEvidence = source.text.toLowerCase().replace(/\\s+/g, ' ');
+  const sourceEvidence = source.text.toLowerCase().replace(/\s+/g, ' ');
   const monthLong = parsedDate.toLocaleDateString('en-US', { month: 'long', timeZone: 'UTC' }).toLowerCase();
   const monthShort = parsedDate.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' }).toLowerCase();
   const day = String(parsedDate.getUTCDate());
