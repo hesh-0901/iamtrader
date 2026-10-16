@@ -410,10 +410,11 @@ export function AdminConsole() {
                   </div>
                   <button onClick={() => setAdminTab('payments')} className="rounded-xl bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100">Voir les paiements</button>
                 </div>
-                <div className="mt-5 grid gap-3 md:grid-cols-3">
-                  <div className="rounded-xl bg-slate-50 p-4"><span className="text-xs font-black uppercase text-slate-400">CA confirmé</span><b className="mt-2 block text-xl font-black text-[#0b1f35]">$ {overviewRevenue.toFixed(2)}</b><span className="mt-1 block text-xs text-slate-400">{overviewConfirmedPayments.length} transaction(s)</span></div>
-                  <div className="rounded-xl bg-emerald-50 p-4"><span className="text-xs font-black uppercase text-emerald-700">Conversion payante</span><b className="mt-2 block text-xl font-black text-emerald-700">{users.length ? Math.round((overviewPaidUsers.length / users.length) * 100) : 0}%</b><span className="mt-1 block text-xs text-emerald-700">{overviewPaidUsers.length} utilisateurs payants</span></div>
-                  <div className="rounded-xl bg-amber-50 p-4"><span className="text-xs font-black uppercase text-amber-700">En attente</span><b className="mt-2 block text-xl font-black text-amber-800">{overviewPendingPayments.length}</b><span className="mt-1 block text-xs text-amber-700">à vérifier</span></div>
+                <div className="mt-5 rounded-xl bg-emerald-50/70 p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div><span className="text-xs font-bold text-emerald-800">Conversion payante</span><p className="mt-1 text-xs text-emerald-700">Part des utilisateurs avec un forfait payant</p></div>
+                    <b className="text-2xl font-black text-emerald-700">{users.length ? Math.round((overviewPaidUsers.length / users.length) * 100) : 0}%</b>
+                  </div>
                 </div>
                 <div className="mt-5 rounded-xl border border-slate-100 p-4">
                   <div className="mb-3 flex items-center justify-between"><span className="text-xs font-black uppercase tracking-wider text-slate-400">Répartition des abonnements</span><span className="text-xs font-bold text-slate-400">{overviewPaidUsers.length} actifs</span></div>
@@ -443,7 +444,7 @@ export function AdminConsole() {
               </section>
             </div>
 
-            <div className="grid gap-4 lg:grid-cols-3">
+            <div className="grid gap-4 lg:grid-cols-2">
               <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                 <div className="flex items-center justify-between"><div><h2 className="text-sm font-black text-[#0b1f35]">Activité récente</h2><p className="mt-1 text-sm text-slate-400">Derniers profils créés.</p></div><Users className="h-4 w-4 text-slate-400" /></div>
                 <div className="mt-3 divide-y divide-slate-100">
@@ -458,10 +459,7 @@ export function AdminConsole() {
                 <button onClick={() => setAdminTab('analytics')} className="mt-4 w-full rounded-xl border border-slate-200 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50">Explorer Analytics</button>
               </section>
 
-              <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                <div className="flex items-center justify-between"><div><h2 className="text-sm font-black text-[#0b1f35]">État de la plateforme</h2><p className="mt-1 text-sm text-slate-400">Indicateurs de surveillance.</p></div><ShieldCheck className="h-4 w-4 text-emerald-600" /></div>
-                <div className="mt-4 space-y-2"><div className="flex items-center justify-between rounded-xl bg-emerald-50 px-3 py-3"><span className="text-xs font-bold text-emerald-800">Services</span><b className="text-xs text-emerald-700">OPÉRATIONNELS</b></div><div className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-3"><span className="text-xs font-bold text-slate-600">Utilisateurs actifs</span><b className="text-sm">{users.filter(u => u.status === 'active').length}</b></div><div className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-3"><span className="text-xs font-bold text-slate-600">Expirés</span><b className="text-sm">{users.filter(u => { const d = remaining(u); return d !== null && d < 0; }).length}</b></div></div>
-              </section>
+
             </div>
           </section>}
 
