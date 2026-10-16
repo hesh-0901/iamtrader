@@ -176,7 +176,7 @@ async function generateCalendar(eventsFrom: OfficialSource[], env: CalendarEnv):
   }), {
     apiKey,
     preferredModel: env.GEMINI_MODEL || 'gemini-3.8-flash',
-    fallbackModels: ['gemini-2.5-flash'],
+    fallbackModels: ['gemini-3.6-flash', 'gemini-3.5-flash-lite'],
     temperature: 0.1,
     maxTokens: 7000,
     timeoutMs: 18000,
