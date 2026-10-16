@@ -1,4 +1,4 @@
-import { firestoreQueryCollection, firestoreSet, type PaymentEnv } from './firebaseAdmin';
+import { firestoreBatchSet, firestoreQueryCollection, type PaymentEnv } from './firebaseAdmin';
 
 const SOURCE_URL = 'https://nfs.faireconomy.media/ff_calendar_thisweek.json';
 const ENRICH_URL = 'https://api.tradingeconomics.com/calendar';
@@ -65,13 +65,16 @@ function persistedEventKey(event: Record<string, unknown>): string {
 
 async function persistCalendarEvents(env: CalendarEnv, events: Array<Record<string, unknown>>): Promise<void> {
   if (!env.FIREBASE_SERVICE_ACCOUNT_JSON || !events.length) return;
-  for (const event of events) {
+  // A single Firestore commit avoids one OAuth exchange and one HTTP request per event.
+  const updatedAt = new Date().toISOString();
+  const writes = events.slice(0, 450).map(event => {
     const id = encodeURIComponent(String(event.id || persistedEventKey(event))).slice(0, 900);
-    await firestoreSet(env, PERSISTED_CALENDAR_COLLECTION + '/' + encodeURIComponent(id), {
-      ...event,
-      snapshotUpdatedAt: new Date().toISOString(),
-    });
-  }
+    return {
+      path: PERSISTED_CALENDAR_COLLECTION + '/' + encodeURIComponent(id),
+      data: { ...event, snapshotUpdatedAt: updatedAt },
+    };
+  });
+  await firestoreBatchSet(env, writes);
 }
 
 function mergeStoredEvents(stored: Array<Record<string, unknown>>, fresh: Array<Record<string, unknown>>) {
