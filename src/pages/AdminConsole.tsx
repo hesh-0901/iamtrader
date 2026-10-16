@@ -368,7 +368,7 @@ export function AdminConsole() {
     <div className="min-h-full bg-[#f4f7fb] -m-4 lg:-m-6">
       <div className="mx-auto min-h-screen w-full max-w-[1800px] px-4 py-4 sm:px-6 lg:px-8 lg:py-7">
         <nav aria-label="Navigation de la console administrateur" className="mb-5 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
-          <div className="flex min-w-max gap-1.5">
+          <div className="flex w-max min-w-full gap-1.5">
             {([
               ['overview','Vue d’ensemble',Activity],['users','Utilisateurs',Users],['subscriptions','Abonnements',Clock3],['payments','Paiements',CreditCard],['support','Support',Mail],['analytics','Analytics',Activity],['audit','Journal d’audit',History]
             ] as const).map(([key,label,Icon])=><button key={key} onClick={()=>setAdminTab(key)} aria-current={adminTab===key?'page':undefined} className={'relative flex shrink-0 items-center gap-2.5 rounded-xl px-4 py-3 text-sm font-semibold transition-colors '+(adminTab===key?'bg-[#10243b] text-white shadow-sm':'text-slate-600 hover:bg-slate-50 hover:text-[#10243b]')}><Icon className={'h-4 w-4 shrink-0 '+(adminTab===key?'text-[#54dddd]':'text-slate-400')}/><span>{label}</span>{key==='support'&&contactMessages.filter(m=>m.status==='new').length>0&&<span className={'ml-1 rounded-full px-2 py-0.5 text-xs font-bold '+(adminTab===key?'bg-[#22c7c7] text-[#10243b]':'bg-teal-50 text-teal-700')}>{contactMessages.filter(m=>m.status==='new').length}</span>}</button>)}
