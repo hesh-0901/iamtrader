@@ -3,6 +3,7 @@ import { firestoreQueryCollection, firestoreSet, type PaymentEnv } from './fireb
 
 type CalendarEnv = PaymentEnv & { GEMINI_API_KEY?: string; GEMINI_MODEL?: string };
 type OfficialSource = { name: string; url: string; text: string };
+let lastGenerationDiagnostic = 'not-run';
 type CalendarEvent = {
   id: string;
   date: string;
@@ -160,7 +161,7 @@ function normalizeEvent(raw: Record<string, unknown>, sources: OfficialSource[],
 
 async function generateCalendar(eventsFrom: OfficialSource[], env: CalendarEnv): Promise<CalendarEvent[]> {
   const apiKey = env.GEMINI_API_KEY?.trim();
-  if (!apiKey || eventsFrom.length === 0) return [];
+  if (!apiKey || eventsFrom.length === 0) { lastGenerationDiagnostic = !apiKey ? 'missing-gemini-api-key' : 'no-readable-official-sources'; return []; }
   const today = new Date().toISOString().slice(0, 10);
   const sourcePack = eventsFrom.map(source => ({
     sourceName: source.name,
@@ -193,24 +194,28 @@ async function generateCalendar(eventsFrom: OfficialSource[], env: CalendarEnv):
     ].join('\n'),
   });
   if (!result.success || !result.text) {
-    console.warn('[IAMTRADERCalendar] AI generation unavailable', result.error || 'empty response');
+    lastGenerationDiagnostic = `gemini-error: ${String(result.error || 'empty-response').slice(0, 240)}`;
+    console.warn('[IAMTRADERCalendar] AI generation unavailable', lastGenerationDiagnostic);
     return [];
   }
   try {
     const parsed = JSON.parse(result.text) as { events?: Array<Record<string, unknown>> };
     const now = new Date().toISOString();
     const seen = new Set<string>();
-    return (Array.isArray(parsed.events) ? parsed.events : [])
-      .map(item => normalizeEvent(item, eventsFrom, now))
-      .filter((item): item is CalendarEvent => Boolean(item))
+    const rawEvents = Array.isArray(parsed.events) ? parsed.events : [];
+    const normalized = rawEvents.map(item => normalizeEvent(item, eventsFrom, now));
+    const verified = normalized.filter((item): item is CalendarEvent => Boolean(item));
+    lastGenerationDiagnostic = `gemini-ok; sources=${eventsFrom.length}; raw=${rawEvents.length}; accepted=${verified.length}; rejected=${rawEvents.length - verified.length}`;
+    return verified
       .filter(item => {
         const key = [item.date, item.currency, item.event.toLowerCase()].join('|');
         if (seen.has(key)) return false;
         seen.add(key);
         return true;
       });
-  } catch {
-    console.warn('[IAMTRADERCalendar] AI returned invalid calendar JSON');
+  } catch (error) {
+    lastGenerationDiagnostic = `gemini-invalid-json: ${error instanceof Error ? error.message : String(error)}`;
+    console.warn('[IAMTRADERCalendar] AI returned invalid calendar JSON', lastGenerationDiagnostic);
     return [];
   }
 }
@@ -231,9 +236,9 @@ export async function refreshIamtraderEconomicCalendar(env: CalendarEnv, force =
 
     const sources = (await Promise.all(OFFICIAL_SOURCES.map(readOfficialSource)))
       .filter((item): item is OfficialSource => Boolean(item));
-    if (!sources.length) return { refreshed: false, reason: 'official-sources-unavailable', count: 0 };
+    if (!sources.length) return { refreshed: false, reason: 'official-sources-unavailable', count: 0, diagnostic: 'All official source requests failed or returned too little text.' };
     const events = await generateCalendar(sources, env);
-    if (!events.length) return { refreshed: false, reason: 'no-verified-events-generated', count: 0 };
+    if (!events.length) return { refreshed: false, reason: 'no-verified-events-generated', count: 0, sourceCount: sources.length, diagnostic: lastGenerationDiagnostic };
 
     for (const event of events) {
       await firestoreSet(env, COLLECTION + '/' + encodeURIComponent(event.id), event as unknown as Record<string, unknown>);
@@ -249,7 +254,7 @@ export async function refreshIamtraderEconomicCalendar(env: CalendarEnv, force =
     return { refreshed: true, reason: 'ok', count: events.length, sourceCount: sources.length, updatedAt: now };
   } catch (error) {
     console.error('[IAMTRADERCalendar] Refresh failed', error instanceof Error ? error.message : String(error));
-    return { refreshed: false, reason: 'persistence-failed', count: 0 };
+    return { refreshed: false, reason: 'persistence-failed', count: 0, diagnostic: error instanceof Error ? error.message.slice(0, 240) : String(error).slice(0, 240) };
   }
 }
 
