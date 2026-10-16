@@ -68,9 +68,9 @@ async function persistCalendarEvents(env: CalendarEnv, events: Array<Record<stri
   // A single Firestore commit avoids one OAuth exchange and one HTTP request per event.
   const updatedAt = new Date().toISOString();
   const writes = events.slice(0, 450).map(event => {
-    const id = encodeURIComponent(String(event.id || persistedEventKey(event))).slice(0, 900);
+    const id = encodeURIComponent(persistedEventKey(event)).slice(0, 900);
     return {
-      path: PERSISTED_CALENDAR_COLLECTION + '/' + encodeURIComponent(id),
+      path: PERSISTED_CALENDAR_COLLECTION + '/' + id,
       data: { ...event, snapshotUpdatedAt: updatedAt },
     };
   });
@@ -279,7 +279,7 @@ export async function handleEconomicCalendar(request: Request, env: CalendarEnv 
 
   const cacheKey = new Request(
     new URL(
-      `/api/economic-calendar?source=ff-primary-enrichment-v15&from=${from}&to=${to}`,
+      `/api/economic-calendar?source=ff-primary-enrichment-v16&from=${from}&to=${to}`,
       request.url,
     ).toString(),
     { method: 'GET' },
@@ -293,6 +293,11 @@ export async function handleEconomicCalendar(request: Request, env: CalendarEnv 
     response.headers.set('X-IAMTRADER-Calendar-Cache', 'HIT');
     return response;
   }
+
+  // Load the durable snapshot before contacting external providers. If a later
+  // provider call exceeds the Worker subrequest budget, the catch path can still
+  // return this in-memory snapshot without making another Firestore request.
+  const storedEvents = await readPersistedCalendar(env, from, to);
 
   try {
     let scheduledEvents: ReturnType<typeof normalizeEvent>[] = [];
@@ -586,7 +591,6 @@ export async function handleEconomicCalendar(request: Request, env: CalendarEnv 
     const freshEvents = from && to
       ? await enrichActuals(rangeScheduledEvents, from, to)
       : rangeScheduledEvents;
-    const storedEvents = await readPersistedCalendar(env, from, to);
     const events = mergeStoredEvents(storedEvents, freshEvents as unknown as Array<Record<string, unknown>>) as ReturnType<typeof normalizeEvent>[];
 
     if (from && to && events.length === 0 && source === 'forex-factory') {
@@ -627,9 +631,8 @@ export async function handleEconomicCalendar(request: Request, env: CalendarEnv 
       .replace(/(FINNHUB_API_KEY=)[^&\s]+/gi, '$1[REDACTED]')
       .slice(0, 300);
     console.error('Economic calendar upstream failed:', safeMessage);
-    const staleEvents = await readPersistedCalendar(env, from, to);
-    if (staleEvents.length) {
-      const staleResponse = json({ events: staleEvents, source: 'persisted-calendar-fallback', diagnostics: ['Les fournisseurs sont indisponibles; dernières données enregistrées affichées.', safeMessage], stale: true, fetchedAt: new Date().toISOString() });
+    if (storedEvents.length) {
+      const staleResponse = json({ events: storedEvents, source: 'persisted-calendar-fallback', diagnostics: ['Les fournisseurs sont indisponibles; dernières données enregistrées affichées.', safeMessage], stale: true, fetchedAt: new Date().toISOString() });
       staleResponse.headers.set('X-IAMTRADER-Calendar-Cache', 'FIRESTORE-FALLBACK');
       staleResponse.headers.set('X-IAMTRADER-Calendar-Source', 'persisted-calendar-fallback');
       return staleResponse;
