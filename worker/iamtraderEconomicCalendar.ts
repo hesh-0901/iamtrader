@@ -108,10 +108,10 @@ function normalizeEvent(raw: Record<string, unknown>, sources: OfficialSource[],
   // Many official release calendars group dates under a year heading and show
   // only “October 16” in each row. Accept that format only when the same source
   // also explicitly contains the event year.
-  const monthDay = new RegExp(`\\\\b(?:${monthLong}|${monthShort})\\\\s+${day}(?:st|nd|rd|th)?(?:,?\\\\s+${year})?\\\\b`, 'i');
-  const dayMonth = new RegExp(`\\\\b${day}(?:st|nd|rd|th)?\\\\s+(?:${monthLong}|${monthShort})(?:,?\\\\s+${year})?\\\\b`, 'i');
+  const monthDay = [`${monthLong} ${day}`, `${monthShort} ${day}`, `${monthLong} ${day},`, `${monthShort} ${day},`];
+  const dayMonth = [`${day} ${monthLong}`, `${day} ${monthShort}`, `${day} ${monthLong},`, `${day} ${monthShort},`];
   const yearIsPresent = sourceEvidence.includes(year);
-  if (!explicitDate && !(yearIsPresent && (monthDay.test(sourceEvidence) || dayMonth.test(sourceEvidence)))) return null;
+  if (!explicitDate && !(yearIsPresent && [...monthDay, ...dayMonth].some(format => sourceEvidence.includes(format)))) return null;
   const nowDate = new Date(now.slice(0, 10) + 'T00:00:00Z');
   const maxDate = new Date(nowDate);
   maxDate.setUTCDate(maxDate.getUTCDate() + 60);
