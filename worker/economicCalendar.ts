@@ -59,14 +59,14 @@ async function readPersistedCalendar(env: CalendarEnv, from: string, to: string)
   }
 }
 
-function eventKey(event: Record<string, unknown>): string {
+function persistedEventKey(event: Record<string, unknown>): string {
   return [String(event.date || ''), String(event.time || ''), String(event.country || '').toUpperCase(), normalizeEventTitle(String(event.title || event.event || ''))].join('|');
 }
 
 async function persistCalendarEvents(env: CalendarEnv, events: Array<Record<string, unknown>>): Promise<void> {
   if (!env.FIREBASE_SERVICE_ACCOUNT_JSON || !events.length) return;
   for (const event of events) {
-    const id = encodeURIComponent(String(event.id || eventKey(event))).slice(0, 900);
+    const id = encodeURIComponent(String(event.id || persistedEventKey(event))).slice(0, 900);
     await firestoreSet(env, PERSISTED_CALENDAR_COLLECTION + '/' + encodeURIComponent(id), {
       ...event,
       snapshotUpdatedAt: new Date().toISOString(),
@@ -76,9 +76,9 @@ async function persistCalendarEvents(env: CalendarEnv, events: Array<Record<stri
 
 function mergeStoredEvents(stored: Array<Record<string, unknown>>, fresh: Array<Record<string, unknown>>) {
   const merged = new Map<string, Record<string, unknown>>();
-  for (const event of stored) merged.set(eventKey(event), event);
+  for (const event of stored) merged.set(persistedEventKey(event), event);
   for (const event of fresh) {
-    const key = eventKey(event);
+    const key = persistedEventKey(event);
     const old = merged.get(key);
     merged.set(key, old ? {
       ...old, ...event,
