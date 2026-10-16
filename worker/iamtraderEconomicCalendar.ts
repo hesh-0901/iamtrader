@@ -24,7 +24,7 @@ type CalendarEvent = {
 
 const COLLECTION = 'iamtraderEconomicCalendar';
 const META_PATH = 'iamtraderEconomicCalendarMeta/refresh';
-const MAX_SOURCE_CHARS = 9000;
+const MAX_SOURCE_CHARS = 40000;
 const OFFICIAL_SOURCES = [
   { name: 'US Bureau of Labor Statistics', url: 'https://www.bls.gov/schedule/news_release/' },
   { name: 'US Bureau of Economic Analysis', url: 'https://www.bea.gov/news/schedule' },
@@ -87,15 +87,31 @@ function normalizeEvent(raw: Record<string, unknown>, sources: OfficialSource[],
   if (!Number.isFinite(parsedDate.getTime()) || parsedDate.toISOString().slice(0, 10) !== date) return null;
   // Require date evidence in the exact official page used as the event citation.
   // Gemini may organize source material, but it may not invent a release date.
-  const sourceEvidence = source.text.toLowerCase();
+  const sourceEvidence = source.text.toLowerCase().replace(/\\s+/g, ' ');
+  const monthLong = parsedDate.toLocaleDateString('en-US', { month: 'long', timeZone: 'UTC' }).toLowerCase();
+  const monthShort = parsedDate.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' }).toLowerCase();
+  const day = String(parsedDate.getUTCDate());
+  const year = String(parsedDate.getUTCFullYear());
+  const monthNumber = String(parsedDate.getUTCMonth() + 1);
+  const paddedMonth = monthNumber.padStart(2, '0');
+  const paddedDay = day.padStart(2, '0');
   const dateFormats = [
     date,
-    parsedDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' }).toLowerCase(),
-    parsedDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' }).toLowerCase(),
-    parsedDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' }).toLowerCase(),
-    parsedDate.toLocaleDateString('en-US', { month: 'numeric', day: 'numeric', year: 'numeric', timeZone: 'UTC' }),
+    `${monthLong} ${day}, ${year}`,
+    `${monthShort} ${day}, ${year}`,
+    `${day} ${monthLong} ${year}`,
+    `${monthNumber}/${day}/${year}`,
+    `${paddedMonth}/${paddedDay}/${year}`,
+    `${year}-${paddedMonth}-${paddedDay}`,
   ];
-  if (!dateFormats.some(format => sourceEvidence.includes(format.toLowerCase()))) return null;
+  const explicitDate = dateFormats.some(format => sourceEvidence.includes(format.toLowerCase()));
+  // Many official release calendars group dates under a year heading and show
+  // only “October 16” in each row. Accept that format only when the same source
+  // also explicitly contains the event year.
+  const monthDay = new RegExp(`\\\\b(?:${monthLong}|${monthShort})\\\\s+${day}(?:st|nd|rd|th)?(?:,?\\\\s+${year})?\\\\b`, 'i');
+  const dayMonth = new RegExp(`\\\\b${day}(?:st|nd|rd|th)?\\\\s+(?:${monthLong}|${monthShort})(?:,?\\\\s+${year})?\\\\b`, 'i');
+  const yearIsPresent = sourceEvidence.includes(year);
+  if (!explicitDate && !(yearIsPresent && (monthDay.test(sourceEvidence) || dayMonth.test(sourceEvidence)))) return null;
   const nowDate = new Date(now.slice(0, 10) + 'T00:00:00Z');
   const maxDate = new Date(nowDate);
   maxDate.setUTCDate(maxDate.getUTCDate() + 60);
