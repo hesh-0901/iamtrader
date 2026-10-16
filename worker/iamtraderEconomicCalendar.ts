@@ -229,7 +229,12 @@ export async function refreshIamtraderEconomicCalendar(env: CalendarEnv, force =
       const meta = await firestoreQueryCollection(env, 'iamtraderEconomicCalendarMeta', 5, 'updatedAt');
       const last = meta.find(item => item.id === 'refresh');
       const lastUpdated = String(last?.updatedAt || '');
-      if (lastUpdated && Date.now() - new Date(lastUpdated).getTime() < 6 * 60 * 60 * 1000) {
+      const lastCount = Number(last?.count || 0);
+      const lastStatus = String(last?.status || '');
+      // A previous successful refresh with stored events is throttled for six hours.
+      // Empty/failed refreshes must not block retries, otherwise the calendar can
+      // remain empty for six hours after a temporary Gemini/source failure.
+      if (lastUpdated && lastCount > 0 && lastStatus === 'ok' && Date.now() - new Date(lastUpdated).getTime() < 6 * 60 * 60 * 1000) {
         return { refreshed: false, reason: 'recent-refresh', count: 0 };
       }
     }
