@@ -229,6 +229,26 @@ export async function firestoreDelete(env: PaymentEnv, path: string) {
   if (!response.ok && response.status !== 404) throw new Error(`Firestore DELETE failed: ${response.status}`);
 }
 
+export async function firestoreBatchSet(env: PaymentEnv, writes: Array<{ path: string; data: Record<string, unknown> }>) {
+  if (!writes.length) return;
+  if (writes.length > 500) throw new Error('Firestore batch exceeds 500 writes');
+  const token = await accessToken(env);
+  const response = await fetch(`${FIRESTORE_BASE}:commit`, {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      writes: writes.map(({ path, data }) => ({
+        update: {
+          name: `${FIRESTORE_BASE}/${path}`,
+          fields: firestoreFields(data)
+        }
+      }))
+    })
+  });
+  if (!response.ok) throw new Error(`Firestore BATCH SET failed: ${response.status}`);
+  return response.json();
+}
+
 export async function firestoreSet(env: PaymentEnv, path: string, data: Record<string, unknown>) {
   const token = await accessToken(env);
   const response = await fetch(`${FIRESTORE_BASE}/${path}`, {
