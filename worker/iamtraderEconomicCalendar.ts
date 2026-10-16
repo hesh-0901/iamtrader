@@ -180,7 +180,7 @@ async function generateCalendar(eventsFrom: OfficialSource[], env: CalendarEnv):
     preferredModel: env.GEMINI_MODEL || 'gemini-3.8-flash',
     fallbackModels: ['gemini-3.6-flash', 'gemini-3.5-flash-lite'],
     temperature: 0.1,
-    maxTokens: 7000,
+    maxTokens: 12000,
     timeoutMs: 18000,
     responseJson: true,
     systemInstruction: [
@@ -194,6 +194,7 @@ async function generateCalendar(eventsFrom: OfficialSource[], env: CalendarEnv):
       'currency must be a currency code if clear from the source; otherwise "—".',
       'Return JSON only in this schema: {"events":[{"date":"YYYY-MM-DD","time":"HH:mm or —","timezone":"IANA zone or source-local","currency":"USD or —","event":"name","category":"inflation|employment|growth|central-bank|trade|energy|other","impact":"high|medium|low","actual":"","forecast":"","previous":"","sourceName":"source name","sourceUrl":"exact supplied URL","aiSummary":"short factual description"}]}.',
       'PRIORITY: extract every relevant event dated from today through the next 10 calendar days first. Do not skip nearer dates in favor of events later in the month. Then include events from days 11–60 if explicitly listed in the source text.',
+      'Aim for a complete calendar, not a short highlights list: return all distinct dated economic releases visible in the supplied official sources, including medium- and low-impact items. Do not stop after the first 4–5 events. Prefer at least 15 events when the source material supports them; never invent events to reach a target.',
       'Return events sorted chronologically by date and then time. Include multiple events on the same day when supported by the sources; do not return only central-bank meetings or only a few headline events.',
       'Include recent releases from the last 7 days only when their exact dates are visible in source text. Deduplicate events.',
     ].join('\n'),
@@ -235,11 +236,13 @@ export async function refreshIamtraderEconomicCalendar(env: CalendarEnv, force =
       const lastUpdated = String(last?.updatedAt || '');
       const lastCount = Number(last?.count || 0);
       const lastStatus = String(last?.status || '');
-      // A previous successful refresh with stored events is throttled for six hours.
-      // Empty/failed refreshes must not block retries, otherwise the calendar can
-      // remain empty for six hours after a temporary Gemini/source failure.
-      if (lastUpdated && lastCount > 0 && lastStatus === 'ok' && Date.now() - new Date(lastUpdated).getTime() < 6 * 60 * 60 * 1000) {
-        return { refreshed: false, reason: 'recent-refresh', count: 0 };
+      // Only apply the long cooldown when the last refresh produced a reasonably
+      // complete calendar. Small partial calendars retry after 10 minutes.
+      const ageMs = lastUpdated ? Date.now() - new Date(lastUpdated).getTime() : Number.POSITIVE_INFINITY;
+      const completeCalendar = lastCount >= 15 && lastStatus === 'ok';
+      const cooldownMs = completeCalendar ? 6 * 60 * 60 * 1000 : 10 * 60 * 1000;
+      if (lastUpdated && lastCount > 0 && lastStatus === 'ok' && ageMs < cooldownMs) {
+        return { refreshed: false, reason: completeCalendar ? 'recent-refresh' : 'partial-calendar-retry-cooldown', count: 0 };
       }
     }
 
