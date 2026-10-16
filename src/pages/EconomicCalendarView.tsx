@@ -363,16 +363,33 @@ export function EconomicCalendarView() {
   const [error, setError] = useState<string | null>(null);
 
   const loadEvents = async (selectedDate = date, silent = false) => {
-    if (!silent) {
+    // Each visible 21-day range has its own browser snapshot. It remains usable
+    // when Cloudflare or an upstream calendar provider temporarily fails.
+    const range = getThreeWeekRange(selectedDate);
+    const storageKey = `iamtrader-economic-calendar:${range.from}:${range.to}:v1`;
+    let cachedEvents: EconomicEvent[] = [];
+    try {
+      const saved = window.localStorage.getItem(storageKey);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) cachedEvents = parsed as EconomicEvent[];
+      }
+    } catch {
+      // Storage can be disabled or full; the network request should still run.
+    }
+
+    if (cachedEvents.length) {
+      setEvents(cachedEvents);
+      setError(null);
+      if (!silent) setLoading(false);
+    } else if (!silent) {
       setLoading(true);
       setError(null);
     }
 
     try {
-      // Load the previous, selected, and following calendar weeks (21 days).
-      const range = getThreeWeekRange(selectedDate);
       const response = await fetch(
-        `${API_BASE}?from=${range.from}&to=${range.to}&limit=500&calendarVersion=20261015b`,
+        `${API_BASE}?from=${range.from}&to=${range.to}&limit=500&calendarVersion=20261016c`,
         { headers: { Accept: 'application/json' }, cache: 'no-store' },
       );
 
@@ -380,8 +397,12 @@ export function EconomicCalendarView() {
         throw new Error(`HTTP ${response.status}`);
       }
 
-      const payload = await response.json() as ApiEvent[] | { events?: ApiEvent[]; data?: ApiEvent[]; source?: string; fetchedAt?: string };
-      const payloadObject = payload as { events?: ApiEvent[]; data?: ApiEvent[]; source?: string; fetchedAt?: string };
+      const payload = await response.json() as ApiEvent[] | { events?: ApiEvent[]; data?: ApiEvent[]; source?: string; fetchedAt?: string; error?: string };
+      const payloadObject = payload as { events?: ApiEvent[]; data?: ApiEvent[]; source?: string; fetchedAt?: string; error?: string };
+      if (!Array.isArray(payload) && payloadObject.error) {
+        throw new Error(payloadObject.error);
+      }
+
       setCalendarSource(Array.isArray(payload) ? '' : String(payloadObject.source || ''));
       setCalendarFetchedAt(Array.isArray(payload) || !payloadObject.fetchedAt ? null : payloadObject.fetchedAt);
       const rawEvents: ApiEvent[] = Array.isArray(payload)
@@ -391,20 +412,49 @@ export function EconomicCalendarView() {
           : Array.isArray(payloadObject.data)
             ? payloadObject.data
             : [];
+      const freshEvents = rawEvents.map(normalizeEvent);
 
-      setEvents(rawEvents.map(normalizeEvent));
+      if (freshEvents.length) {
+        const merged = new Map<string, EconomicEvent>();
+        for (const event of cachedEvents) {
+          merged.set(`${event.date}|${event.time}|${event.currency}|${event.event.toLowerCase().trim()}`, event);
+        }
+        for (const event of freshEvents) {
+          const key = `${event.date}|${event.time}|${event.currency}|${event.event.toLowerCase().trim()}`;
+          const previous = merged.get(key);
+          merged.set(key, previous ? {
+            ...previous,
+            ...event,
+            actual: event.actual || previous.actual,
+            forecast: event.forecast || previous.forecast,
+            previous: event.previous || previous.previous,
+          } : event);
+        }
+        const stableEvents = Array.from(merged.values()).sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+        setEvents(stableEvents);
+        try {
+          window.localStorage.setItem(storageKey, JSON.stringify(stableEvents));
+        } catch {
+          // The calendar remains usable for this session if local storage is full.
+        }
+      } else if (!cachedEvents.length) {
+        setEvents([]);
+      }
+      // An empty/partial provider response must never erase a saved snapshot.
       setError(null);
     } catch (loadError: any) {
-      // Keep the last successful data visible if a background refresh fails.
-      if (!silent) {
+      // Never blank the calendar because a refresh failed. Keep this range's
+      // last successful snapshot; only show an error when no snapshot exists.
+      if (!cachedEvents.length && !silent) {
         setEvents([]);
         setError(loadError?.message || 'Impossible de charger le calendrier.');
+      } else {
+        setError(null);
       }
     } finally {
-      if (!silent) setLoading(false);
+      if (!silent && !cachedEvents.length) setLoading(false);
     }
   };
-
   useEffect(() => {
     void loadEvents(date);
   }, [date]);
