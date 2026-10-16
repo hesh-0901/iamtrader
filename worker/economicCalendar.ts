@@ -1,4 +1,3 @@
-import { getIamtraderEconomicCalendar, refreshIamtraderEconomicCalendar } from './iamtraderEconomicCalendar';
 import type { PaymentEnv } from './firebaseAdmin';
 
 const SOURCE_URL = 'https://nfs.faireconomy.media/ff_calendar_thisweek.json';
@@ -224,33 +223,13 @@ export async function handleEconomicCalendar(request: Request, env: CalendarEnv 
   const from = requestUrl.searchParams.get('from') || '';
   const to = requestUrl.searchParams.get('to') || '';
 
-  // IAMTRADER owns the canonical calendar. External calendar feeds are no longer
-  // used as the public schedule; the AI research engine builds verified events
-  // from official-source pages and persists them independently in Firestore.
-  let iamtraderEvents = await getIamtraderEconomicCalendar(env, from, to);
-  let refresh: { refreshed: boolean; reason: string; count: number; diagnostic?: string; sourceCount?: number } = { refreshed: false, reason: 'stored-calendar-available', count: iamtraderEvents.length };
-  let refreshAttempted = false;
-  if (iamtraderEvents.length === 0) {
-    refreshAttempted = true;
-    refresh = await refreshIamtraderEconomicCalendar(env);
-    iamtraderEvents = await getIamtraderEconomicCalendar(env, from, to);
-  }
-  const ownCalendarResponse = json({
-    events: iamtraderEvents,
-    source: 'iamtrader-ai-calendar',
-    engine: 'iamtrader-ai-calendar-v1',
-    diagnostics: iamtraderEvents.length
-      ? ['Calendrier IAMTRADER: événements structurés à partir de sources officielles; valeurs non publiées laissées vides.']
-      : [`Calendrier IAMTRADER: aucun événement vérifié disponible (${refresh.reason}).`, ...(refresh.diagnostic ? [`Détail: ${refresh.diagnostic}`] : [])],
-    refresh: { attempted: refreshAttempted, reason: refresh.reason, count: iamtraderEvents.length, ...(refresh.sourceCount !== undefined ? { sourceCount: refresh.sourceCount } : {}), ...(refresh.diagnostic ? { diagnostic: refresh.diagnostic } : {}) },
-    fetchedAt: new Date().toISOString(),
-  }, 200, 'no-store');
-  ownCalendarResponse.headers.set('X-IAMTRADER-Calendar-Source', 'iamtrader-ai-calendar');
-  return ownCalendarResponse;
+  // Forex Factory is the primary schedule. Other providers supplement missing
+  // events and verified Actual/Forecast/Previous values; deduplication and
+  // requested-date filtering happen below before the response is cached.
 
   const cacheKey = new Request(
     new URL(
-      `/api/economic-calendar?source=date-range-v14&from=${from}&to=${to}`,
+      `/api/economic-calendar?source=ff-primary-enrichment-v15&from=${from}&to=${to}`,
       request.url,
     ).toString(),
     { method: 'GET' },
