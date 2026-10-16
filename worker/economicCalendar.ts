@@ -66,7 +66,7 @@ function eventKey(event: Record<string, unknown>): string {
 async function persistCalendarEvents(env: CalendarEnv, events: Array<Record<string, unknown>>): Promise<void> {
   if (!env.FIREBASE_SERVICE_ACCOUNT_JSON || !events.length) return;
   for (const event of events) {
-    const id = String(event.id || eventKey(event)).replace(/[/.#?$\\[\\]]/g, '-').slice(0, 900);
+    const id = encodeURIComponent(String(event.id || eventKey(event))).slice(0, 900);
     await firestoreSet(env, PERSISTED_CALENDAR_COLLECTION + '/' + encodeURIComponent(id), {
       ...event,
       snapshotUpdatedAt: new Date().toISOString(),
