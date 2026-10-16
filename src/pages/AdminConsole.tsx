@@ -365,23 +365,35 @@ export function AdminConsole() {
   }
 
   return (
-    <div className="min-h-full bg-[#f5f8fb] -m-4 lg:-m-6">
-      <div className="mx-auto max-w-[1600px] px-4 py-4 lg:px-6">
-        <nav className="sticky top-2 z-30 mb-5 rounded-2xl border border-slate-200 bg-white/95 p-2 shadow-[0_8px_30px_rgba(11,31,53,.07)] backdrop-blur">
-          <div className="flex items-center gap-2 overflow-x-auto">
-            <div className="mr-2 hidden items-center gap-2 border-r border-slate-200 pr-4 md:flex"><div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#0b1f35] text-white"><ShieldCheck className="h-4 w-4"/></div><div><b className="block text-[11px] text-[#0b1f35]">IAMTRADER</b><span className="text-[8px] font-semibold text-slate-400">Administration</span></div></div>
-            {([
-              ['overview','Dashboard admin',Activity],['users','Utilisateurs',Users],['subscriptions','Abonnements',Clock3],['payments','Paiements',CreditCard],['support','Support',Mail],['analytics','Analytics',Activity],['audit','Audit',History]
-            ] as const).map(([key,label,Icon])=><button key={key} onClick={()=>setAdminTab(key)} className={'flex shrink-0 items-center gap-2 rounded-xl px-3 py-2.5 text-[9px] font-black transition '+(adminTab===key?'bg-[#0b1f35] text-white shadow-sm':'text-slate-500 hover:bg-slate-50 hover:text-slate-900')}><Icon className="h-3.5 w-3.5"/>{label}{key==='support'&&contactMessages.filter(m=>m.status==='new').length>0&&<span className="rounded-full bg-blue-100 px-1.5 py-0.5 text-[8px] text-blue-700">{contactMessages.filter(m=>m.status==='new').length}</span>}</button>)}
-            <div className="ml-auto hidden items-center gap-2 pl-2 md:flex"><span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1.5 text-[8px] font-black text-emerald-700"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500"/>LIVE</span><button onClick={load} disabled={loading} className="rounded-xl border border-slate-200 p-2 text-slate-500 hover:bg-slate-50"><RefreshCw className={'h-3.5 w-3.5 '+(loading?'animate-spin':'')}/></button></div>
+    <div className="min-h-full bg-[#f4f7fb] -m-4 lg:-m-6">
+      <div className="mx-auto flex min-h-screen w-full max-w-[1800px] flex-col lg:flex-row">
+        <aside className="z-30 flex w-full shrink-0 flex-col gap-4 border-b border-slate-200 bg-[#10243b] p-4 text-white shadow-[0_8px_30px_rgba(11,31,53,.08)] lg:sticky lg:top-0 lg:h-screen lg:w-64 lg:border-b-0 lg:border-r lg:border-slate-700/60 lg:p-5">
+          <div className="flex items-center justify-between gap-3 lg:justify-start">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#22c7c7] text-[#10243b]"><ShieldCheck className="h-5 w-5"/></div>
+              <div className="min-w-0"><b className="block text-sm font-black tracking-wide text-white">IAMTRADER</b><span className="mt-0.5 block text-xs font-medium text-slate-400">Administration</span></div>
+            </div>
+            <span className="inline-flex shrink-0 items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2.5 py-1.5 text-xs font-bold text-emerald-300 lg:hidden"><span className="h-2 w-2 rounded-full bg-emerald-400"/>LIVE</span>
           </div>
-        </nav>
+          <div className="hidden border-t border-slate-700/70 pt-4 text-xs font-bold uppercase tracking-[.16em] text-slate-500 lg:block">Espace administrateur</div>
+          <nav className="flex gap-1.5 overflow-x-auto pb-1 lg:flex-col lg:gap-1 lg:overflow-visible lg:pb-0">
+            {([
+              ['overview','Vue d’ensemble',Activity],['users','Utilisateurs',Users],['subscriptions','Abonnements',Clock3],['payments','Paiements',CreditCard],['support','Support',Mail],['analytics','Analytics',Activity],['audit','Journal d’audit',History]
+            ] as const).map(([key,label,Icon])=><button key={key} onClick={()=>setAdminTab(key)} className={'relative flex shrink-0 items-center gap-3 rounded-xl px-3.5 py-3 text-sm font-semibold transition-colors lg:w-full '+(adminTab===key?'bg-[#213a55] text-white shadow-sm before:absolute before:inset-y-2 before:left-0 before:w-1 before:rounded-full before:bg-[#22c7c7]':'text-slate-300 hover:bg-white/5 hover:text-white')}><Icon className={'h-4 w-4 shrink-0 '+(adminTab===key?'text-[#54dddd]':'text-slate-400')}/><span>{label}</span>{key==='support'&&contactMessages.filter(m=>m.status==='new').length>0&&<span className="ml-auto rounded-full bg-[#22c7c7] px-2 py-0.5 text-xs font-bold text-[#10243b]">{contactMessages.filter(m=>m.status==='new').length}</span>}</button>)}
+          </nav>
+          <div className="hidden flex-1 lg:block"/>
+          <div className="flex items-center justify-between gap-3 border-t border-slate-700/70 pt-3">
+            <div className="hidden min-w-0 lg:block"><div className="text-xs font-semibold text-slate-300">Console sécurisée</div><div className="mt-1 text-xs text-slate-500">IAMTRADER Admin</div></div>
+            <button onClick={load} disabled={loading} className="inline-flex items-center gap-2 rounded-xl border border-slate-600/70 px-3 py-2.5 text-xs font-semibold text-slate-200 transition hover:bg-white/5 disabled:opacity-50"><RefreshCw className={'h-4 w-4 '+(loading?'animate-spin':'')}/><span>Actualiser</span></button>
+          </div>
+        </aside>
+        <div className="min-w-0 flex-1 px-4 py-4 sm:px-6 lg:px-8 lg:py-7">
 
         <main className="space-y-4">
           <header className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div><div className="text-[8px] font-black uppercase tracking-[.18em] text-emerald-600">Administration / {adminTab}</div><h1 className="mt-1 text-2xl font-black tracking-tight text-[#0b1f35]">{adminTab==='overview'?'Dashboard admin':adminTab==='users'?'Utilisateurs':adminTab==='subscriptions'?'Abonnements':adminTab==='payments'?'Paiements':adminTab==='support'?'Support':adminTab==='analytics'?'Analytics':'Journal d’audit'}</h1><p className="mt-1 text-[11px] text-slate-400">{adminTab==='subscriptions'?'Suivi commercial des abonnements, répartition des plans et paiements à confirmer.':adminTab==='analytics'?'Lecture comportementale et performance des utilisateurs.':'Pilotage opérationnel de la plateforme IAMTRADER.'}</p></div>
-              <button onClick={load} disabled={loading} className="inline-flex w-fit items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-[9px] font-bold text-slate-600 hover:bg-slate-50"><RefreshCw className={'h-3.5 w-3.5 '+(loading?'animate-spin':'')}/>Actualiser</button>
+              <div><div className="text-xs font-black uppercase tracking-[.18em] text-emerald-600">Administration / {adminTab}</div><h1 className="mt-1 text-2xl font-black tracking-tight text-[#0b1f35]">{adminTab==='overview'?'Dashboard admin':adminTab==='users'?'Utilisateurs':adminTab==='subscriptions'?'Abonnements':adminTab==='payments'?'Paiements':adminTab==='support'?'Support':adminTab==='analytics'?'Analytics':'Journal d’audit'}</h1><p className="mt-1 text-sm text-slate-400">{adminTab==='subscriptions'?'Suivi commercial des abonnements, répartition des plans et paiements à confirmer.':adminTab==='analytics'?'Lecture comportementale et performance des utilisateurs.':'Pilotage opérationnel de la plateforme IAMTRADER.'}</p></div>
+              <button onClick={load} disabled={loading} className="inline-flex w-fit items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50"><RefreshCw className={'h-3.5 w-3.5 '+(loading?'animate-spin':'')}/>Actualiser</button>
             </div>
           </header>
 
@@ -410,7 +422,7 @@ export function AdminConsole() {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <h2 className="text-sm font-black text-[#0b1f35]">Revenus & activité commerciale</h2>
-                    <p className="mt-1 text-[10px] text-slate-400">Lecture rapide des paiements et de la croissance des abonnements.</p>
+                    <p className="mt-1 text-sm text-slate-400">Lecture rapide des paiements et de la croissance des abonnements.</p>
                   </div>
                   <button onClick={() => setAdminTab('payments')} className="rounded-xl bg-slate-50 px-3 py-2 text-[9px] font-bold text-slate-600 hover:bg-slate-100">Voir les paiements</button>
                 </div>
@@ -827,6 +839,7 @@ export function AdminConsole() {
           </div>}
           {error && <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">{error}</div>}
         </main>
+        </div>
       </div>
     </div>
   );
