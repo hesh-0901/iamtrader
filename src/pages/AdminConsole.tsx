@@ -365,24 +365,24 @@ export function AdminConsole() {
   }
 
   return (
-    <div className="min-h-full bg-[#f3f7fa] -m-4 lg:-m-6">
-      <div className="mx-auto min-h-screen w-full max-w-[1480px] px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
-        <nav aria-label="Navigation de la console administrateur" className="mb-6 overflow-x-auto rounded-2xl border border-white bg-white p-1.5 shadow-sm">
+    <div className="relative min-h-full overflow-hidden bg-[#f5f8fc] -m-4 lg:-m-6"><div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[radial-gradient(ellipse_at_top_right,rgba(20,184,166,0.12),transparent_55%),radial-gradient(ellipse_at_top_left,rgba(59,130,246,0.07),transparent_45%)]" />
+      <div className="relative mx-auto min-h-screen w-full max-w-[1480px] px-4 py-5 sm:px-6 lg:px-8 lg:py-8">
+        <nav aria-label="Navigation de la console administrateur" className="mb-7 overflow-x-auto rounded-2xl border border-slate-200/70 bg-white/80 p-1.5 shadow-[0_8px_30px_rgba(15,35,55,0.045)] backdrop-blur-xl">
           <div className="flex w-max min-w-full gap-1">
             {([
               ['overview','Vue d’ensemble',Activity],['users','Utilisateurs',Users],['subscriptions','Abonnements',Clock3],['payments','Paiements',CreditCard],['support','Support',Mail],['analytics','Analytics',Activity],['audit','Journal d’audit',History]
-            ] as const).map(([key,label,Icon])=><button key={key} onClick={()=>setAdminTab(key)} aria-current={adminTab===key?'page':undefined} className={'relative flex shrink-0 items-center gap-2 rounded-lg px-3.5 py-2.5 text-[13px] font-semibold transition-colors '+(adminTab===key?'bg-[#e5faf5] text-[#008f76]':'text-slate-600 hover:bg-slate-50 hover:text-[#10243b]')}><Icon className={'h-4 w-4 shrink-0 '+(adminTab===key?'text-[#00a98f]':'text-slate-400')}/><span>{label}</span>{key==='support'&&contactMessages.filter(m=>m.status==='new').length>0&&<span className={'ml-1 rounded-full px-2 py-0.5 text-xs font-bold '+(adminTab===key?'bg-[#22c7c7] text-[#10243b]':'bg-teal-50 text-teal-700')}>{contactMessages.filter(m=>m.status==='new').length}</span>}</button>)}
+            ] as const).map(([key,label,Icon])=><button key={key} onClick={()=>setAdminTab(key)} aria-current={adminTab===key?'page':undefined} className={'relative flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-[13px] font-semibold transition-all duration-200 '+(adminTab===key?'bg-[#10243b] text-white shadow-[0_4px_12px_rgba(16,36,59,0.18)]':'text-slate-500 hover:bg-slate-100/80 hover:text-[#10243b]')}><Icon className={'h-4 w-4 shrink-0 '+(adminTab===key?'text-[#55e1c3]':'text-slate-400')}/><span>{label}</span>{key==='support'&&contactMessages.filter(m=>m.status==='new').length>0&&<span className={'ml-1 rounded-full px-2 py-0.5 text-xs font-bold '+(adminTab===key?'bg-[#22c7c7] text-[#10243b]':'bg-teal-50 text-teal-700')}>{contactMessages.filter(m=>m.status==='new').length}</span>}</button>)}
           </div>
         </nav>        <main className="space-y-5">
-          <header className="border-b border-slate-200 pb-4">
+          <header className="mb-6 flex flex-col gap-4 border-b border-slate-200/80 pb-6 md:flex-row md:items-end md:justify-between">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div><div className="mb-2 inline-flex rounded-md bg-emerald-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700">Console administrateur</div><h1 className="text-3xl font-bold tracking-tight text-[#10243b]">{adminTab==='overview'?'Dashboard admin':adminTab==='users'?'Utilisateurs':adminTab==='subscriptions'?'Abonnements':adminTab==='payments'?'Paiements':adminTab==='support'?'Support':adminTab==='analytics'?'Analytics':'Journal d’audit'}</h1><p className="mt-1 text-sm text-slate-400">{adminTab==='subscriptions'?'Suivi commercial des abonnements, répartition des plans et paiements à confirmer.':adminTab==='analytics'?'Lecture comportementale et performance des utilisateurs.':'Pilotage opérationnel de la plateforme IAMTRADER.'}</p></div>
-              <button onClick={load} disabled={loading} className="inline-flex w-fit items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50"><RefreshCw className={'h-3.5 w-3.5 '+(loading?'animate-spin':'')}/>Actualiser</button>
+              <div><div className="mb-2 inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-white/90 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.16em] text-emerald-700 shadow-sm">Console administrateur</div><h1 className="text-3xl font-bold tracking-[-0.045em] text-[#10243b] sm:text-4xl">{adminTab==='overview'?'Dashboard admin':adminTab==='users'?'Utilisateurs':adminTab==='subscriptions'?'Abonnements':adminTab==='payments'?'Paiements':adminTab==='support'?'Support':adminTab==='analytics'?'Analytics':'Journal d’audit'}</h1><p className="mt-1 text-sm text-slate-400">{adminTab==='subscriptions'?'Suivi commercial des abonnements, répartition des plans et paiements à confirmer.':adminTab==='analytics'?'Lecture comportementale et performance des utilisateurs.':'Pilotage opérationnel de la plateforme IAMTRADER.'}</p></div>
+              <button onClick={load} disabled={loading} className="inline-flex w-fit items-center gap-2 rounded-xl border border-slate-200/80 bg-white/90 px-4 py-2.5 text-xs font-semibold text-slate-600 shadow-sm transition-all hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md"><RefreshCw className={'h-3.5 w-3.5 '+(loading?'animate-spin':'')}/>Actualiser</button>
             </div>
           </header>
 
-          {adminTab==='overview' && <section className="space-y-4">
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+          {adminTab==='overview' && <section className="space-y-6">
+            <div className="grid grid-cols-2 gap-3.5 md:grid-cols-3 xl:grid-cols-6">
               {[
                 ['Utilisateurs actifs', users.filter(u => u.status === 'active').length, 'bg-[#dff8f5] text-[#087f78]', '↗', 'border-[#c7eee8] bg-gradient-to-br from-white to-[#effcf9]'],
                 ['Revenu confirmé', '$ ' + overviewRevenue.toFixed(2), 'bg-[#e6efff] text-[#2858b8]', '$', 'border-[#d8e5fb] bg-gradient-to-br from-white to-[#f1f6ff]'],
@@ -391,7 +391,7 @@ export function AdminConsole() {
                 ['Tickets ouverts', overviewOpenTickets.length, 'bg-[#e1f3ff] text-[#176a9a]', '?', 'border-[#d0eaf9] bg-gradient-to-br from-white to-[#f1f9ff]'],
                 ['Échéances ≤ 5 jours', overviewExpiringUsers.length, 'bg-[#ffe8ed] text-[#b4234d]', '◷', 'border-[#f8d5df] bg-gradient-to-br from-white to-[#fff5f7]']
               ].map(([label, value, tone, icon, cardTone]) => (
-                <div key={String(label)} className={'rounded-2xl border border-white p-4 shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ' + String(cardTone)}>
+                <div key={String(label)} className={'group relative overflow-hidden rounded-2xl border p-4 shadow-[0_4px_18px_rgba(15,35,55,0.045)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_14px_32px_rgba(15,35,55,0.09)] ' + String(cardTone).replace('border-[#c7eee8]','border-[#c7eee8]').replace('bg-gradient-to-br from-white to-[#effcf9]','bg-[#f0fbf8]').replace('bg-gradient-to-br from-white to-[#f1f6ff]','bg-[#f2f6ff]').replace('bg-gradient-to-br from-white to-[#f8f5ff]','bg-[#f8f5ff]').replace('bg-gradient-to-br from-white to-[#fff9ec]','bg-[#fff9ee]').replace('bg-gradient-to-br from-white to-[#f1f9ff]','bg-[#f2f9ff]').replace('bg-gradient-to-br from-white to-[#fff5f7]','bg-[#fff5f7]')}>
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">{String(label)}</span>
                     <span className={'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-sm font-black ' + String(tone)}>{String(icon)}</span>
@@ -401,8 +401,8 @@ export function AdminConsole() {
               ))}
             </div>
 
-            <div className="grid gap-4 xl:grid-cols-[1.55fr_.8fr]">
-              <section className="rounded-2xl border border-white bg-white p-5 shadow-sm">
+            <div className="grid gap-5 xl:grid-cols-[1.45fr_.85fr]">
+              <section className="rounded-2xl border border-slate-200/70 bg-white/95 p-6 shadow-[0_8px_30px_rgba(15,35,55,0.045)]">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <h2 className="text-sm font-black text-[#0b1f35]">Revenus & activité commerciale</h2>
@@ -426,7 +426,7 @@ export function AdminConsole() {
                 </div>
               </section>
 
-              <section className="rounded-2xl bg-gradient-to-br from-[#10243b] via-[#132e49] to-[#17485a] p-5 text-white shadow-lg">
+              <section className="rounded-2xl bg-gradient-to-br from-[#0c2037] via-[#123653] to-[#12645f] p-6 text-white shadow-[0_18px_44px_rgba(16,36,59,0.20)]">
                 <div className="flex items-start justify-between"><div><div className="text-xs font-black uppercase tracking-[.18em] text-emerald-300">Centre opérationnel</div><h2 className="mt-2 text-lg font-black">À traiter maintenant</h2><p className="mt-1 text-sm text-slate-300">Les éléments qui nécessitent une intervention.</p></div><Activity className="h-5 w-5 text-emerald-300" /></div>
                 <div className="mt-5 space-y-2">
                   {[
@@ -444,8 +444,8 @@ export function AdminConsole() {
               </section>
             </div>
 
-            <div className="grid gap-4 lg:grid-cols-2">
-              <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="grid gap-5 lg:grid-cols-2">
+              <section className="rounded-2xl border border-slate-200/70 bg-white p-6 shadow-[0_8px_30px_rgba(15,35,55,0.045)]">
                 <div className="flex items-center justify-between"><div><h2 className="text-sm font-black text-[#0b1f35]">Activité récente</h2><p className="mt-1 text-sm text-slate-400">Derniers profils créés.</p></div><Users className="h-4 w-4 text-slate-400" /></div>
                 <div className="mt-3 divide-y divide-slate-100">
                   {overviewRecentUsers.map(u => <div key={u.uid} className="flex items-center justify-between gap-3 py-3"><div className="min-w-0"><b className="block truncate text-sm text-slate-800">{u.displayName || u.email}</b><span className="text-xs text-slate-400">{fmt(u.createdAt)}</span></div><span className={'shrink-0 rounded-full px-2 py-1 text-xs font-black ' + (u.plan === 'free' ? 'bg-slate-100 text-slate-500' : 'bg-emerald-50 text-emerald-700')}>{planLabel(u.plan)}</span></div>)}
