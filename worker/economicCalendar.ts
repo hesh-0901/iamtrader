@@ -228,8 +228,10 @@ export async function handleEconomicCalendar(request: Request, env: CalendarEnv 
   // used as the public schedule; the AI research engine builds verified events
   // from official-source pages and persists them independently in Firestore.
   let iamtraderEvents = await getIamtraderEconomicCalendar(env, from, to);
-  let refresh = { refreshed: false, reason: 'stored-calendar-available', count: iamtraderEvents.length };
+  let refresh: { refreshed: boolean; reason: string; count: number; diagnostic?: string; sourceCount?: number } = { refreshed: false, reason: 'stored-calendar-available', count: iamtraderEvents.length };
+  let refreshAttempted = false;
   if (iamtraderEvents.length === 0) {
+    refreshAttempted = true;
     refresh = await refreshIamtraderEconomicCalendar(env);
     iamtraderEvents = await getIamtraderEconomicCalendar(env, from, to);
   }
@@ -239,8 +241,8 @@ export async function handleEconomicCalendar(request: Request, env: CalendarEnv 
     engine: 'iamtrader-ai-calendar-v1',
     diagnostics: iamtraderEvents.length
       ? ['Calendrier IAMTRADER: événements structurés à partir de sources officielles; valeurs non publiées laissées vides.']
-      : [`Calendrier IAMTRADER: aucun événement vérifié disponible (${refresh.reason}).`],
-    refresh: { attempted: refresh.refreshed, reason: refresh.reason, count: iamtraderEvents.length },
+      : [`Calendrier IAMTRADER: aucun événement vérifié disponible (${refresh.reason}).`, ...(refresh.diagnostic ? [`Détail: ${refresh.diagnostic}`] : [])],
+    refresh: { attempted: refreshAttempted, reason: refresh.reason, count: iamtraderEvents.length, ...(refresh.sourceCount !== undefined ? { sourceCount: refresh.sourceCount } : {}), ...(refresh.diagnostic ? { diagnostic: refresh.diagnostic } : {}) },
     fetchedAt: new Date().toISOString(),
   }, 200, 'no-store');
   ownCalendarResponse.headers.set('X-IAMTRADER-Calendar-Source', 'iamtrader-ai-calendar');
