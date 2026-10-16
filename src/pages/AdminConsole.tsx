@@ -367,16 +367,16 @@ export function AdminConsole() {
   return (
     <div className="min-h-full bg-[#f4f7fb] -m-4 lg:-m-6">
       <div className="mx-auto min-h-screen w-full max-w-[1480px] px-4 py-4 sm:px-6 lg:px-8 lg:py-6">
-        <nav aria-label="Navigation de la console administrateur" className="mb-5 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
-          <div className="flex w-max min-w-full gap-1.5">
+        <nav aria-label="Navigation de la console administrateur" className="mb-5 overflow-x-auto rounded-xl border border-slate-200 bg-white p-1.5">
+          <div className="flex w-max min-w-full gap-1">
             {([
               ['overview','Vue d’ensemble',Activity],['users','Utilisateurs',Users],['subscriptions','Abonnements',Clock3],['payments','Paiements',CreditCard],['support','Support',Mail],['analytics','Analytics',Activity],['audit','Journal d’audit',History]
-            ] as const).map(([key,label,Icon])=><button key={key} onClick={()=>setAdminTab(key)} aria-current={adminTab===key?'page':undefined} className={'relative flex shrink-0 items-center gap-2.5 rounded-xl px-4 py-3 text-sm font-semibold transition-colors '+(adminTab===key?'bg-[#10243b] text-white shadow-sm':'text-slate-600 hover:bg-slate-50 hover:text-[#10243b]')}><Icon className={'h-4 w-4 shrink-0 '+(adminTab===key?'text-[#54dddd]':'text-slate-400')}/><span>{label}</span>{key==='support'&&contactMessages.filter(m=>m.status==='new').length>0&&<span className={'ml-1 rounded-full px-2 py-0.5 text-xs font-bold '+(adminTab===key?'bg-[#22c7c7] text-[#10243b]':'bg-teal-50 text-teal-700')}>{contactMessages.filter(m=>m.status==='new').length}</span>}</button>)}
+            ] as const).map(([key,label,Icon])=><button key={key} onClick={()=>setAdminTab(key)} aria-current={adminTab===key?'page':undefined} className={'relative flex shrink-0 items-center gap-2 rounded-lg px-3.5 py-2.5 text-[13px] font-semibold transition-colors '+(adminTab===key?'bg-[#e5faf5] text-[#008f76]':'text-slate-600 hover:bg-slate-50 hover:text-[#10243b]')}><Icon className={'h-4 w-4 shrink-0 '+(adminTab===key?'text-[#00a98f]':'text-slate-400')}/><span>{label}</span>{key==='support'&&contactMessages.filter(m=>m.status==='new').length>0&&<span className={'ml-1 rounded-full px-2 py-0.5 text-xs font-bold '+(adminTab===key?'bg-[#22c7c7] text-[#10243b]':'bg-teal-50 text-teal-700')}>{contactMessages.filter(m=>m.status==='new').length}</span>}</button>)}
           </div>
-        </nav>        <main className="space-y-4">
-          <header className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+        </nav>        <main className="space-y-5">
+          <header className="border-b border-slate-200 pb-4">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div><div className="text-xs font-black uppercase tracking-[.18em] text-emerald-600">Administration / {adminTab}</div><h1 className="mt-1 text-2xl font-black tracking-tight text-[#0b1f35]">{adminTab==='overview'?'Dashboard admin':adminTab==='users'?'Utilisateurs':adminTab==='subscriptions'?'Abonnements':adminTab==='payments'?'Paiements':adminTab==='support'?'Support':adminTab==='analytics'?'Analytics':'Journal d’audit'}</h1><p className="mt-1 text-sm text-slate-400">{adminTab==='subscriptions'?'Suivi commercial des abonnements, répartition des plans et paiements à confirmer.':adminTab==='analytics'?'Lecture comportementale et performance des utilisateurs.':'Pilotage opérationnel de la plateforme IAMTRADER.'}</p></div>
+              <div><div className="mb-2 inline-flex rounded-md bg-emerald-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700">Console administrateur</div><h1 className="text-2xl font-bold tracking-tight text-[#0b1f35]">{adminTab==='overview'?'Dashboard admin':adminTab==='users'?'Utilisateurs':adminTab==='subscriptions'?'Abonnements':adminTab==='payments'?'Paiements':adminTab==='support'?'Support':adminTab==='analytics'?'Analytics':'Journal d’audit'}</h1><p className="mt-1 text-sm text-slate-400">{adminTab==='subscriptions'?'Suivi commercial des abonnements, répartition des plans et paiements à confirmer.':adminTab==='analytics'?'Lecture comportementale et performance des utilisateurs.':'Pilotage opérationnel de la plateforme IAMTRADER.'}</p></div>
               <button onClick={load} disabled={loading} className="inline-flex w-fit items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-xs font-bold text-slate-600 hover:bg-slate-50"><RefreshCw className={'h-3.5 w-3.5 '+(loading?'animate-spin':'')}/>Actualiser</button>
             </div>
           </header>
@@ -391,7 +391,7 @@ export function AdminConsole() {
                 ['Tickets ouverts', overviewOpenTickets.length, 'bg-[#e1f3ff] text-[#176a9a]', '?', 'border-[#d0eaf9] bg-gradient-to-br from-white to-[#f1f9ff]'],
                 ['Échéances ≤ 5 jours', overviewExpiringUsers.length, 'bg-[#ffe8ed] text-[#b4234d]', '◷', 'border-[#f8d5df] bg-gradient-to-br from-white to-[#fff5f7]']
               ].map(([label, value, tone, icon, cardTone]) => (
-                <div key={String(label)} className={'rounded-xl border p-3.5 shadow-sm transition-shadow hover:shadow-md ' + String(cardTone)}>
+                <div key={String(label)} className={'rounded-lg border p-3 ' + String(cardTone)}>
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">{String(label)}</span>
                     <span className={'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-sm font-black ' + String(tone)}>{String(icon)}</span>
@@ -402,7 +402,7 @@ export function AdminConsole() {
             </div>
 
             <div className="grid gap-4 xl:grid-cols-[1.55fr_.8fr]">
-              <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+              <section className="rounded-xl border border-slate-200 bg-white p-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <h2 className="text-sm font-black text-[#0b1f35]">Revenus & activité commerciale</h2>
@@ -410,13 +410,13 @@ export function AdminConsole() {
                   </div>
                   <button onClick={() => setAdminTab('payments')} className="rounded-xl bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100">Voir les paiements</button>
                 </div>
-                <div className="mt-5 rounded-xl bg-emerald-50/70 p-4">
+                <div className="mt-4 border-b border-slate-100 pb-4">
                   <div className="flex items-center justify-between gap-3">
                     <div><span className="text-xs font-bold text-emerald-800">Conversion payante</span><p className="mt-1 text-xs text-emerald-700">Part des utilisateurs avec un forfait payant</p></div>
                     <b className="text-2xl font-black text-emerald-700">{users.length ? Math.round((overviewPaidUsers.length / users.length) * 100) : 0}%</b>
                   </div>
                 </div>
-                <div className="mt-5 rounded-xl border border-slate-100 p-4">
+                <div className="mt-4">
                   <div className="mb-3 flex items-center justify-between"><span className="text-xs font-black uppercase tracking-wider text-slate-400">Répartition des abonnements</span><span className="text-xs font-bold text-slate-400">{overviewPaidUsers.length} actifs</span></div>
                   <div className="flex h-3 overflow-hidden rounded-full bg-slate-100">
                     <div className="bg-blue-600" style={{width: overviewPaidUsers.length ? ((users.filter(u => u.plan === 'pro').length / overviewPaidUsers.length) * 100) + '%' : '0%'}} />
@@ -426,7 +426,7 @@ export function AdminConsole() {
                 </div>
               </section>
 
-              <section className="rounded-2xl bg-[#0b1f35] p-5 text-white shadow-sm">
+              <section className="rounded-xl bg-[#0b1f35] p-4 text-white">
                 <div className="flex items-start justify-between"><div><div className="text-xs font-black uppercase tracking-[.18em] text-emerald-300">Centre opérationnel</div><h2 className="mt-2 text-lg font-black">À traiter maintenant</h2><p className="mt-1 text-sm text-slate-300">Les éléments qui nécessitent une intervention.</p></div><Activity className="h-5 w-5 text-emerald-300" /></div>
                 <div className="mt-5 space-y-2">
                   {[
