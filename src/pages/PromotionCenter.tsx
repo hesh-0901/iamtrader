@@ -9,7 +9,7 @@ type Promotion = {
   id: string; kind: PromoKind; code?: string; name: string; active: boolean;
   discountType: 'percent' | 'fixed'; discountValue: number; plans: Plan[];
   startsAt: string; endsAt: string; createdAt?: string; maxUses?: number | null; uses?: number;
-  creatorName?: string; newSubscriptions?: number; renewals?: number;
+  creatorName?: string; newSubscriptions?: number; renewals?: number; imageDataUrl?: string;
 };
 const PLAN_PRICES: Record<Plan, number> = { pro: 9.99, community: 89.99 };
 const money = (value: number) => '$' + value.toFixed(2);
@@ -38,6 +38,7 @@ export function PromotionCenter() {
   const [endsAt, setEndsAt] = useState(() => localDateTime(new Date(Date.now() + 7 * 86400000).toISOString()));
   const [maxUses, setMaxUses] = useState('');
   const [seasonId, setSeasonId] = useState('');
+  const [imageDataUrl, setImageDataUrl] = useState('');
   const [editing, setEditing] = useState<Promotion | null>(null);
 
   async function request<T = any>(action: string, data?: Record<string, unknown>): Promise<T> {
@@ -64,13 +65,13 @@ export function PromotionCenter() {
   function openCreate() {
     setEditing(null); setName(''); setPlans(['pro']); setDiscount('10'); setMaxUses('');
     setStartsAt(localDateTime(new Date().toISOString())); setEndsAt(localDateTime(new Date(Date.now() + 7 * 86400000).toISOString()));
-    setPrefix('IAM'); setCode(makeCode('IAM')); setConfirmedCode(''); setSeasonId(''); setModal(true);
+    setPrefix('IAM'); setCode(makeCode('IAM')); setConfirmedCode(''); setSeasonId(''); setImageDataUrl(''); setModal(true);
   }
   function regenerate(nextPrefix = prefix) { setPrefix(nextPrefix); setCode(makeCode(nextPrefix)); setConfirmedCode(''); }
   function openEdit(item: Promotion) {
     setEditing(item); setName(item.name); setPlans(item.plans); setDiscount(String(item.discountValue));
     setStartsAt(localDateTime(item.startsAt)); setEndsAt(localDateTime(item.endsAt)); setMaxUses(item.maxUses ? String(item.maxUses) : '');
-    setPrefix(item.code?.split('-')[0] || 'IAM'); setCode(item.code || ''); setConfirmedCode(item.code || ''); setSeasonId(item.id); setModal(true);
+    setPrefix(item.code?.split('-')[0] || 'IAM'); setCode(item.code || ''); setConfirmedCode(item.code || ''); setSeasonId(item.id); setImageDataUrl(item.imageDataUrl || ''); setModal(true);
   }
   const amountFor = (plan: Plan) => {
     const base = PLAN_PRICES[plan]; const amount = Number(discount);
@@ -88,7 +89,9 @@ export function PromotionCenter() {
         id: editing?.id || seasonId || undefined, kind: tab, name: name.trim(), code: tab === 'code' ? code : undefined,
         discountType: 'percent', discountValue: Number(discount), plans,
         startsAt: new Date(startsAt).toISOString(), endsAt: new Date(endsAt).toISOString(),
-        maxUses: maxUses.trim() ? Number(maxUses) : null, active: editing?.active ?? true
+        maxUses: maxUses.trim() ? Number(maxUses) : null, active: editing?.active ?? true,
+        ...(tab === 'seasonal' ? { imageDataUrl: imageDataUrl || null } : {}),
+        editing: Boolean(editing)
       };
       await request('save-promotion', payload);
       showToast(tab === 'code' ? 'Code promo enregistré.' : 'Discount enregistré.', 'success');
@@ -114,7 +117,7 @@ export function PromotionCenter() {
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="flex flex-col gap-3 border-b border-slate-100 p-4 sm:flex-row sm:items-center sm:justify-between"><div><h3 className="font-extrabold text-[#10243b]">{tab === 'code' ? 'Répertoire des codes promo' : 'Répertoire des discounts'}</h3><p className="mt-1 text-xs text-slate-500">{visible.length} offre(s) enregistrée(s)</p></div><div className="relative"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"/><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Rechercher…" className="w-full rounded-xl border border-slate-200 py-2.5 pl-9 pr-3 text-sm outline-none focus:border-emerald-400 sm:w-64"/></div></div>
       <div className="overflow-x-auto"><table className="w-full min-w-[1150px] text-left text-xs"><thead className="bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500"><tr>{['#','Date','Début de l’offre','Fin de l’offre',tab === 'code' ? 'Code' : 'Campagne','Utilisateur créateur','Prix','Prix avec offre','Nouveaux abonnements','Réabonnements','Actions'].map(label=><th key={label} className="whitespace-nowrap px-4 py-3 font-extrabold">{label}</th>)}</tr></thead><tbody className="divide-y divide-slate-100">
-        {loading ? <tr><td colSpan={11} className="p-10 text-center text-slate-400"><Loader2 className="mx-auto h-5 w-5 animate-spin"/>Chargement…</td></tr> : visible.map((item,index) => { const plan = item.plans[0] || 'pro'; const amount = PLAN_PRICES[plan]; const final = item.discountType === 'percent' ? amount * (1 - item.discountValue / 100) : Math.max(0, amount - item.discountValue); return <tr key={item.id} className="hover:bg-slate-50/70"><td className="px-4 py-4 font-bold text-slate-400">{index+1}</td><td className="whitespace-nowrap px-4 py-4 text-slate-600">{new Date(item.createdAt || item.startsAt).toLocaleDateString('fr-FR')}</td><td className="whitespace-nowrap px-4 py-4 text-slate-600">{new Date(item.startsAt).toLocaleString('fr-FR')}</td><td className="whitespace-nowrap px-4 py-4 text-slate-600">{new Date(item.endsAt).toLocaleString('fr-FR')}</td><td className="px-4 py-4">{item.code ? <button onClick={() => { void navigator.clipboard.writeText(item.code!); showToast('Code copié.', 'success'); }} className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-2.5 py-1.5 font-mono font-black text-blue-700">{item.code}<Copy className="h-3 w-3"/></button> : <span className="font-bold text-slate-800">{item.name}</span>}</td><td className="px-4 py-4 text-slate-600">{item.creatorName || '—'}</td><td className="px-4 py-4 font-semibold text-slate-500">{money(amount)}{item.plans.length > 1 ? '+' : ''}</td><td className="px-4 py-4 font-black text-emerald-700">{money(Math.max(0, final))}{item.plans.length > 1 ? '+' : ''}</td><td className="px-4 py-4 text-center font-bold">{item.newSubscriptions || 0}</td><td className="px-4 py-4 text-center font-bold">{item.renewals || 0}</td><td className="px-4 py-4"><div className="flex gap-2"><button onClick={() => openEdit(item)} className="rounded-lg border border-slate-200 px-2.5 py-1.5 font-bold text-slate-600 hover:bg-slate-50">Modifier</button><button onClick={() => void remove(item)} className="rounded-lg border border-rose-100 p-1.5 text-rose-600 hover:bg-rose-50" title="Supprimer"><Trash2 className="h-3.5 w-3.5"/></button></div></td></tr>; })}
+        {loading ? <tr><td colSpan={11} className="p-10 text-center text-slate-400"><Loader2 className="mx-auto h-5 w-5 animate-spin"/>Chargement…</td></tr> : visible.map((item,index) => { const plan = item.plans[0] || 'pro'; const amount = PLAN_PRICES[plan]; const final = item.discountType === 'percent' ? amount * (1 - item.discountValue / 100) : Math.max(0, amount - item.discountValue); return <tr key={item.id} className="hover:bg-slate-50/70"><td className="px-4 py-4 font-bold text-slate-400">{index+1}</td><td className="whitespace-nowrap px-4 py-4 text-slate-600">{new Date(item.createdAt || item.startsAt).toLocaleDateString('fr-FR')}</td><td className="whitespace-nowrap px-4 py-4 text-slate-600">{new Date(item.startsAt).toLocaleString('fr-FR')}</td><td className="whitespace-nowrap px-4 py-4 text-slate-600">{new Date(item.endsAt).toLocaleString('fr-FR')}</td><td className="px-4 py-4">{item.code ? <button onClick={() => { void navigator.clipboard.writeText(item.code!); showToast('Code copié.', 'success'); }} className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-2.5 py-1.5 font-mono font-black text-blue-700">{item.code}<Copy className="h-3 w-3"/></button> : <span className="inline-flex items-center gap-2 font-bold text-slate-800">{item.imageDataUrl && <img src={item.imageDataUrl} alt="Visuel de campagne" className="h-8 w-16 rounded object-cover"/>}{item.name}</span>}</td><td className="px-4 py-4 text-slate-600">{item.creatorName || '—'}</td><td className="px-4 py-4 font-semibold text-slate-500">{money(amount)}{item.plans.length > 1 ? '+' : ''}</td><td className="px-4 py-4 font-black text-emerald-700">{money(Math.max(0, final))}{item.plans.length > 1 ? '+' : ''}</td><td className="px-4 py-4 text-center font-bold">{item.newSubscriptions || 0}</td><td className="px-4 py-4 text-center font-bold">{item.renewals || 0}</td><td className="px-4 py-4"><div className="flex gap-2"><button onClick={() => openEdit(item)} className="rounded-lg border border-slate-200 px-2.5 py-1.5 font-bold text-slate-600 hover:bg-slate-50">Modifier</button><button onClick={() => void remove(item)} className="rounded-lg border border-rose-100 p-1.5 text-rose-600 hover:bg-rose-50" title="Supprimer"><Trash2 className="h-3.5 w-3.5"/></button></div></td></tr>; })}
         {!loading && !visible.length && <tr><td colSpan={11} className="p-12 text-center text-sm text-slate-400">Aucune offre dans cet onglet.</td></tr>}
       </tbody></table></div>
     </div>
@@ -128,6 +131,29 @@ export function PromotionCenter() {
           <label className="block text-xs font-bold text-slate-600">Pourcentage de réduction (%)<input type="number" min="0.01" max="100" step="0.01" value={discount} onChange={event => setDiscount(event.target.value)} className="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm outline-none focus:border-emerald-400"/></label>
           <div className="grid gap-2 sm:grid-cols-2">{plans.map(plan => { const amount=amountFor(plan); return <div key={plan} className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-3"><div className="text-xs font-bold text-slate-500">{plan === 'pro' ? 'Plus' : 'Community'}</div><div className="mt-1 flex items-center gap-2 text-sm"><span className="text-slate-400 line-through">{money(amount.base)}</span><span className="font-black text-emerald-700">{money(amount.final)}</span><span className="ml-auto rounded-md bg-emerald-100 px-2 py-1 text-xs font-black text-emerald-800">−{money(amount.reduction)}</span></div></div>; })}</div>
           <div className="grid gap-3 sm:grid-cols-2"><label className="block text-xs font-bold text-slate-600">Début de l’offre (date et heure)<input type="datetime-local" value={startsAt} onChange={event => setStartsAt(event.target.value)} className="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"/></label><label className="block text-xs font-bold text-slate-600">Fin de l’offre (date et heure)<input type="datetime-local" value={endsAt} onChange={event => setEndsAt(event.target.value)} className="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"/></label></div>
+          {tab === 'seasonal' && <div className="rounded-xl border border-dashed border-slate-300 p-4">
+            <label className="block text-xs font-extrabold text-slate-700">Image de la campagne <span className="font-normal text-slate-400">(facultative)</span></label>
+            <p className="mt-1 text-xs text-slate-500">Format recommandé : 1200 × 400 px (ratio 3:1), JPG, PNG ou WebP, 450 Ko maximum.</p>
+            <input type="file" accept="image/jpeg,image/png,image/webp" className="mt-3 block w-full text-sm text-slate-600 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-xs file:font-bold" onChange={async event => {
+              const file = event.target.files?.[0];
+              if (!file) return;
+              if (!['image/jpeg','image/png','image/webp'].includes(file.type)) { showToast('Utilisez une image JPG, PNG ou WebP.', 'error'); event.target.value = ''; return; }
+              if (file.size > 450 * 1024) { showToast('L’image doit peser 450 Ko maximum.', 'error'); event.target.value = ''; return; }
+              try {
+                const dimensions = await new Promise<{width:number;height:number}>((resolve,reject) => {
+                  const url = URL.createObjectURL(file); const img = new Image();
+                  img.onload = () => { resolve({width:img.naturalWidth,height:img.naturalHeight}); URL.revokeObjectURL(url); };
+                  img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Image illisible.')); }; img.src = url;
+                });
+                if (Math.abs(dimensions.width / dimensions.height - 3) > 0.03) { showToast('L’image doit être au format horizontal 3:1, idéalement 1200 × 400 px.', 'error'); event.target.value = ''; return; }
+                const reader = new FileReader();
+                reader.onload = () => setImageDataUrl(String(reader.result || ''));
+                reader.onerror = () => showToast('Lecture de l’image impossible.', 'error');
+                reader.readAsDataURL(file);
+              } catch { showToast('Impossible de lire cette image.', 'error'); event.target.value = ''; }
+            }}/>
+            {imageDataUrl && <div className="mt-3"><img src={imageDataUrl} alt="Aperçu de la bannière" className="max-h-36 w-full rounded-lg border border-slate-200 object-cover"/><button type="button" onClick={() => setImageDataUrl('')} className="mt-2 text-xs font-bold text-rose-600">Retirer l’image</button></div>}
+          </div>}
           <label className="block text-xs font-bold text-slate-600">Nombre maximal d’utilisations <span className="font-normal text-slate-400">(facultatif)</span><input type="number" min="1" step="1" value={maxUses} onChange={event => setMaxUses(event.target.value)} placeholder="Illimité si vide" className="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"/></label>
         </div>
         <div className="flex flex-col-reverse gap-2 border-t border-slate-100 bg-slate-50/70 p-5 sm:flex-row sm:justify-end"><button onClick={() => setModal(false)} disabled={busy} className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-600">Annuler</button><button onClick={() => void save()} disabled={busy} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#10243b] px-5 py-2.5 text-sm font-bold text-white disabled:opacity-50">{busy ? <Loader2 className="h-4 w-4 animate-spin"/> : <Check className="h-4 w-4"/>}{busy ? 'Enregistrement…' : 'Enregistrer l’offre'}</button></div>
