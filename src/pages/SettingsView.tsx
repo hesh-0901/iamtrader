@@ -10,6 +10,7 @@ import { AvatarStudio } from '../components/settings/AvatarStudio';
 import { useToast } from '../components/common/Toast';
 import { TradingJournalSettings } from '../components/settings/TradingJournalSettings';
 import { PaymentHistory } from './PaymentHistory';
+import { PromotionBanners } from '../components/promotions/PromotionBanners';
 import { calculateTraderRating, formatCurrency } from '../utils/calculations';
 import { createPayment, getSasPayPaymentStatus, verifySasPayPayment, PaidPlan, PaymentDetails } from '../services/payments';
 
@@ -104,6 +105,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
   const [paymentPlan, setPaymentPlan] = useState<PaidPlan | null>(null);
   const [paymentGateway, setPaymentGateway] = useState<'cinetpay' | 'saspay'>('saspay');
   const [paymentPhone, setPaymentPhone] = useState('');
+  const [promoCode, setPromoCode] = useState('');
   const [paymentCountryCode, setPaymentCountryCode] = useState<string>(() => detectCountryCode());
   const [countrySearch, setCountrySearch] = useState('');
   const [isCountryListOpen, setIsCountryListOpen] = useState(false);
@@ -284,7 +286,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
     const nationalDigits = digits.startsWith(dialDigits) ? digits.slice(dialDigits.length) : digits;
     setPaymentCountryCode(initialCountry.code);
     setPaymentPhone(nationalDigits.replace(/^0+/, '').slice(0, initialCountry.phoneLength));
-    setPaymentPlan(plan); setPaymentGateway('saspay');
+    setPaymentPlan(plan); setPromoCode(''); setPaymentGateway('saspay');
     setPaymentProvider(initialCountry.networks[0]?.value || '');
     setPaymentUrl(null); setPaymentPayerName('');
     setPaymentId(null); setPaymentReference(null); setPaymentStatus('idle'); setPaymentMessage('');
@@ -300,7 +302,8 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
         countryCode: paymentCountryCode,
         paymentMethod: 'mobile_money',
         paymentProvider,
-        payerName: paymentPayerName.trim()
+        payerName: paymentPayerName.trim(),
+        promoCode: promoCode.trim().toUpperCase() || undefined
       };
       const payment = await createPayment(paymentPlan, details);
       setPaymentId(payment.id);
@@ -739,6 +742,12 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
               <button onClick={() => setPaymentPlan(null)} className="shrink-0 rounded-xl border border-slate-200 bg-white p-2.5 text-slate-500 transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700" aria-label="Fermer"><X className="h-4 w-4" /></button>
             </div>
             <div className="space-y-5 p-5 sm:p-7 lg:p-8">
+              <PromotionBanners placement="ticker" />
+              <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 p-3">
+                <label htmlFor="payment-promo-code" className="mb-1.5 block text-xs font-extrabold text-emerald-900">Code promo</label>
+                <div className="flex gap-2"><input id="payment-promo-code" value={promoCode} onChange={event => setPromoCode(event.target.value.toUpperCase().replace(/\\s/g,''))} placeholder="Ex. IAM-XXXXX" autoComplete="off" className="min-w-0 flex-1 rounded-lg border border-emerald-200 bg-white px-3 py-2.5 text-sm font-mono font-bold text-slate-900 outline-none focus:border-emerald-500"/><button type="button" onClick={() => setPromoCode(value => value.trim().toUpperCase())} className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-bold text-white">Appliquer</button></div>
+                <p className="mt-1.5 text-[11px] text-slate-500">Le serveur vérifiera le code et la meilleure offre disponible avant le paiement.</p>
+              </div>
               {paymentStatus === 'processing' && paymentGateway === 'saspay' && paymentUrl ? (
                 <div className="grid gap-5 lg:grid-cols-[0.8fr_1.2fr]">
                   <section className="rounded-2xl bg-slate-50 p-5 ring-1 ring-slate-200">
