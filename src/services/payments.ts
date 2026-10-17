@@ -88,36 +88,6 @@ export async function getPaymentStatus(id: string) {
   };
 }
 
-export async function createSimulatedPayment(plan: PaidPlan, details: PaymentDetails): Promise<PaymentInitResult> {
-  const user = auth.currentUser;
-  if (!user) throw new Error('Vous devez être connecté.');
-  const idToken = await user.getIdToken();
-  const idempotencyKey = crypto.randomUUID().replace(/-/g, '') + crypto.randomUUID().replace(/-/g, '');
-  const response = await fetch('/api/payments/simulate', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
-    body: JSON.stringify({ plan, ...details, idempotencyKey })
-  });
-  const data = await response.json() as PaymentResponse;
-  if (!response.ok || !data.success) throw new Error(data.message || 'Impossible de créer la simulation.');
-  return data.payment as PaymentInitResult;
-}
-
-export async function confirmSimulatedPayment(id: string) {
-  const user = auth.currentUser;
-  if (!user) throw new Error('Vous devez être connecté.');
-  const idToken = await user.getIdToken();
-  const response = await fetch('/api/payments/simulate/confirm', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
-    body: JSON.stringify({ id })
-  });
-  const data = await response.json() as PaymentResponse;
-  if (!response.ok || !data.success) throw new Error(data.message || 'Impossible de confirmer la simulation.');
-  return data.payment as PaymentInitResult & { paidAt?: string };
-}
-
-
 export async function syncSubscriptionStatus() {
   const user = auth.currentUser;
   if (!user) throw new Error('Vous devez être connecté.');
