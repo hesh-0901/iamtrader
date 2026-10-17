@@ -24,6 +24,12 @@ export interface PaymentHistoryItem {
   activationExpiresAt?: string | null;
   paymentProvider?: string | null;
   paymentMethod?: string | null;
+  provider?: string | null;
+  originalAmount?: number;
+  discountAmount?: number;
+  promoCode?: string | null;
+  promotionName?: string | null;
+  providerTransactionId?: string | null;
 }
 
 export async function getPaymentHistory(): Promise<PaymentHistoryItem[]> {
