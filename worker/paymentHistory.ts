@@ -65,8 +65,14 @@ export async function handlePaymentHistory(request: Request, env: PaymentEnv) {
         subscriptionAction: payment.subscriptionAction || 'initial',
         activationStartAt: payment.activationStartAt || null,
         activationExpiresAt: payment.activationExpiresAt || null,
-        paymentProvider: payment.paymentProvider || null,
-        paymentMethod: payment.paymentMethod || null
+        paymentProvider: payment.paymentProvider || payment.provider || null,
+        provider: payment.provider || null,
+        paymentMethod: payment.paymentMethod || null,
+        originalAmount: Number(payment.originalAmount ?? payment.baseAmount ?? 0),
+        discountAmount: Number(payment.discountAmount || 0),
+        promoCode: payment.promoCode || null,
+        promotionName: payment.promotionName || null,
+        providerTransactionId: payment.providerTransactionId || payment.providerPaymentId || null
       }))
     });
   } catch (error) {
