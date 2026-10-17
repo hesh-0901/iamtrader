@@ -82,14 +82,14 @@ function traderFullName(profile: Record<string, unknown>) {
     .join(' ');
 }
 
-function paymentReference(paymentId: string) {
+function paymentReference(paymentId: string, createdAt?: string) {
+  const year = (createdAt ? new Date(createdAt) : new Date()).getUTCFullYear().toString().slice(-2);
   const code = paymentId.slice(-8).toUpperCase();
-  return `IMAT-${code.slice(0, 4)} ${code.slice(4)}`;
+  return `IM-${year}-${code}`;
 }
 
 function invoiceNumber(paymentId: string, createdAt: string) {
-  const year = new Date(createdAt).getUTCFullYear().toString().slice(-2);
-  return `INV-${year}-${paymentId.slice(-8).toUpperCase()}`;
+  return `FAC-${paymentReference(paymentId, createdAt)}`;
 }
 
 
