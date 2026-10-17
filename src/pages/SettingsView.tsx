@@ -770,6 +770,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                   ['IA Chloé',Sparkles]
                 ].map(([title,Icon]: any) => <div key={title} className="flex items-center gap-3"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-emerald-300/15 bg-emerald-400/15 text-emerald-200"><Icon className="h-4 w-4" /></div><div className="text-sm font-bold text-white">{title}</div></div>)}
               </div>
+              <div className="relative mt-auto w-full border-t border-emerald-100/10 pt-4"><PromotionBanners placement="ticker" /></div>
             </aside>
             <section className="min-w-0 bg-white">
             <div className="relative flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-5 sm:px-7 sm:py-6">
@@ -777,7 +778,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
               <button onClick={() => setPaymentPlan(null)} className="shrink-0 rounded-xl border border-slate-200 bg-white p-2.5 text-slate-500 transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700" aria-label="Fermer"><X className="h-4 w-4" /></button>
             </div>
             <div className="space-y-5 p-5 sm:p-7 lg:p-8">
-<PromotionBanners placement="ticker" />
+
               {isPromoModalOpen && paymentStatus === 'idle' && (
                 <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/45 px-4 py-6 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="promo-code-modal-title">
                   <div className="w-full max-w-md rounded-2xl border border-emerald-100 bg-white p-5 shadow-2xl sm:p-6">
