@@ -415,6 +415,7 @@ export async function handlePaymentRequest(request: Request, env: CinetPayEnv) {
       paymentMethod?: string;
       paymentProvider?: string;
       payerName?: string;
+      promoCode?: string;
     };
     const planKey = body.plan;
     const plan = planKey ? PLANS[planKey] : undefined;
