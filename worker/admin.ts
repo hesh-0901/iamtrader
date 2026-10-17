@@ -95,7 +95,7 @@ export async function handleAdminMutation(request: Request, env: AdminEnv) {
       const id = kind === 'code' ? rawCode : String(data.id || crypto.randomUUID()).replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64);
       if (!id) return json({ error: 'Identifiant de promotion invalide.' }, 400);
       const existing = await firestoreGet(env, 'promotions/' + encodeURIComponent(id));
-      if (kind === 'code' && existing) return json({ error: 'Ce code existe déjà. Générez-en un autre.' }, 409);
+      if (kind === 'code' && existing && String(existing.id || id) !== id) return json({ error: 'Ce code existe déjà. Générez-en un autre.' }, 409);
       const maxUses = data.maxUses === '' || data.maxUses === null || data.maxUses === undefined ? null : Number(data.maxUses);
       if (maxUses !== null && (!Number.isInteger(maxUses) || maxUses < 1)) return json({ error: 'La limite d’utilisation doit être un entier positif.' }, 400);
       const record = {
