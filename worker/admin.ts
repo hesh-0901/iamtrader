@@ -104,7 +104,7 @@ export async function handleAdminMutation(request: Request, env: AdminEnv) {
       const maxUses = data.maxUses === '' || data.maxUses === null || data.maxUses === undefined ? null : Number(data.maxUses);
       if (maxUses !== null && (!Number.isInteger(maxUses) || maxUses < 1)) return json({ error: 'La limite d’utilisation doit être un entier positif.' }, 400);
       const record = {
-        id, kind, ...(kind === 'code' ? { code: rawCode } : {}), ...(kind === 'seasonal' && imageDataUrl ? { imageDataUrl } : kind === 'seasonal' && existing?.imageDataUrl ? { imageDataUrl: existing.imageDataUrl } : {}), name, active: data.active !== false,
+        id, kind, ...(kind === 'code' ? { code: rawCode } : {}), ...(kind === 'seasonal' && imageDataUrl ? { imageDataUrl } : kind === 'seasonal' && data.imageDataUrl === null ? {} : kind === 'seasonal' && existing?.imageDataUrl ? { imageDataUrl: existing.imageDataUrl } : {}), name, active: data.active !== false,
         discountType, discountValue, plans, startsAt: new Date(startMs).toISOString(), endsAt: new Date(endMs).toISOString(),
         maxUses, uses: Number(existing?.uses || 0), createdAt: String(existing?.createdAt || new Date().toISOString()),
         updatedAt: new Date().toISOString(), createdBy: String(existing?.createdBy || identity.uid)
