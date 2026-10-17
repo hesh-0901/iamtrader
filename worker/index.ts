@@ -2,7 +2,7 @@ import { onRequest as handleAiChat } from '../functions/api/ai-chat';
 import { onRequest as handleChloeChat } from '../functions/api/chloe-chat';
 import { onRequest as handleInstrumentSuggest } from '../functions/api/instrument-suggest';
 import { onRequestPost as handleContactReply } from '../functions/api/contact-reply';
-import { handlePaymentRequest, handlePaymentCallback, handleCinetPayNotification, handleSasPayWebhook, handleSasPayVerifyRequest, handleSasPayStatusRequest, handleSimulatedPaymentRequest, handleSimulatedPaymentConfirm } from './payments';
+import { handlePaymentRequest, handlePaymentCallback, handleCinetPayNotification, handleSasPayWebhook, handleSasPayVerifyRequest, handleSasPayStatusRequest } from './payments';
 import type { PaymentEnv } from './firebaseAdmin';
 import { handleSubscriptionStatus } from './subscriptionStatus';
 import { handlePaymentHistory } from './paymentHistory';
@@ -75,14 +75,6 @@ export default {
 
     if (url.pathname === '/api/contact-reply') {
       return handleContactReply({ request, env });
-    }
-
-    if (url.pathname === '/api/payments/simulate') {
-      return handleSimulatedPaymentRequest(request, env);
-    }
-
-    if (url.pathname === '/api/payments/simulate/confirm') {
-      return handleSimulatedPaymentConfirm(request, env);
     }
 
     if (url.pathname === '/api/subscription/status') {
