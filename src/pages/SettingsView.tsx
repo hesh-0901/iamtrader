@@ -366,7 +366,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
         if (result.status === 'paid') {
           setPaymentStatus('paid');
           setPaymentMessage('Paiement confirmé. Actualisation de votre abonnement…');
-          window.setTimeout(() => window.location.reload(), 1200);
+          // The profile subscription updates the active plan without a full-page reload.
           return;
         }
         if (result.status === 'failed') {
