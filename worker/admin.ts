@@ -97,14 +97,15 @@ export async function handleAdminMutation(request: Request, env: AdminEnv) {
       const existing = await firestoreGet(env, 'promotions/' + encodeURIComponent(id));
       if (kind === 'code' && existing && data.editing !== true) return json({ error: 'Ce code existe déjà. Générez-en un autre.' }, 409);
       if (kind === 'code' && data.editing === true && !existing) return json({ error: 'Le code à modifier est introuvable.' }, 404);
-      const imageDataUrl = kind === 'seasonal' && typeof data.imageDataUrl === 'string' ? data.imageDataUrl : ''; 
-      if (imageDataUrl && (!/^data:image\/(jpeg|png|webp);base64,/.test(imageDataUrl) || imageDataUrl.length > 650000)) {
-        return json({ error: 'Image invalide ou trop volumineuse. Utilisez JPG, PNG ou WebP de 450 Ko maximum.' }, 400);
+      const imageUrl = kind === 'seasonal' && typeof data.imageUrl === 'string' ? data.imageUrl : '';
+      const imagePublicId = kind === 'seasonal' && typeof data.imagePublicId === 'string' ? data.imagePublicId : '';
+      if (imageUrl && (!imageUrl.startsWith('https://res.cloudinary.com/ocgef9bk/') || !imagePublicId.startsWith('iamtrader/promotions/'))) {
+        return json({ error: 'Référence Cloudinary invalide.' }, 400);
       }
       const maxUses = data.maxUses === '' || data.maxUses === null || data.maxUses === undefined ? null : Number(data.maxUses);
       if (maxUses !== null && (!Number.isInteger(maxUses) || maxUses < 1)) return json({ error: 'La limite d’utilisation doit être un entier positif.' }, 400);
       const record = {
-        id, kind, ...(kind === 'code' ? { code: rawCode } : {}), ...(kind === 'seasonal' && imageDataUrl ? { imageDataUrl } : kind === 'seasonal' && data.imageDataUrl === null ? {} : kind === 'seasonal' && existing?.imageDataUrl ? { imageDataUrl: existing.imageDataUrl } : {}), name, active: data.active !== false,
+        id, kind, ...(kind === 'code' ? { code: rawCode } : {}), ...(kind === 'seasonal' && imageUrl && imagePublicId ? { imageUrl, imagePublicId } : kind === 'seasonal' && data.imageUrl === null ? {} : kind === 'seasonal' && existing?.imageUrl ? { imageUrl: existing.imageUrl, imagePublicId: existing.imagePublicId } : {}), name, active: data.active !== false,
         discountType, discountValue, plans, startsAt: new Date(startMs).toISOString(), endsAt: new Date(endMs).toISOString(),
         maxUses, uses: Number(existing?.uses || 0), createdAt: String(existing?.createdAt || new Date().toISOString()),
         updatedAt: new Date().toISOString(), createdBy: String(existing?.createdBy || identity.uid)
