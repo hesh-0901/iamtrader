@@ -330,7 +330,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
         if (result.status === 'SUCCESS') {
           setPaymentStatus('paid');
           setPaymentMessage('Paiement confirmé. Votre abonnement est activé.');
-          window.setTimeout(() => window.location.reload(), 1200);
+          // The profile subscription updates the active plan without a full-page reload.
           return;
         }
         if (['FAILED', 'FAILURE', 'CANCELLED', 'CANCELED', 'EXPIRED'].includes(result.status)) {
