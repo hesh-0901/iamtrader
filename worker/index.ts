@@ -3,6 +3,7 @@ import { onRequest as handleChloeChat } from '../functions/api/chloe-chat';
 import { onRequest as handleInstrumentSuggest } from '../functions/api/instrument-suggest';
 import { onRequestPost as handleContactReply } from '../functions/api/contact-reply';
 import { handlePaymentRequest, handlePaymentCallback, handleCinetPayNotification, handleSasPayWebhook, handleSasPayVerifyRequest, handleSasPayStatusRequest } from './payments';
+import { resolvePromotion } from './promotions';
 import type { PaymentEnv } from './firebaseAdmin';
 import { firestoreQueryCollection, firestorePatch } from './firebaseAdmin';
 import { handleSubscriptionStatus } from './subscriptionStatus';
@@ -85,6 +86,22 @@ export default {
 
     if (url.pathname === '/api/payments/history') {
       return handlePaymentHistory(request, env);
+    }
+
+    if (url.pathname === '/api/promotions/quote') {
+      if (request.method !== 'POST') return new Response('Method not allowed', { status: 405 });
+      try {
+        const body = await request.json() as { plan?: string; code?: string };
+        const plan = body.plan === 'community' ? 'community' : body.plan === 'pro' ? 'pro' : null;
+        if (!plan) return new Response(JSON.stringify({ success: false, message: 'Forfait invalide.' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+        const baseAmount = plan === 'pro' ? 9.99 : 89.99;
+        const result = await resolvePromotion(env, plan, baseAmount, String(body.code || '').trim());
+        if (!result.applied) return new Response(JSON.stringify({ success: false, message: result.message || 'Aucune réduction applicable.' }), { status: 400, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
+        return new Response(JSON.stringify({ success: true, promotion: result.applied }), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
+      } catch (error) {
+        console.error('Promotion quote failed:', error);
+        return new Response(JSON.stringify({ success: false, message: 'Impossible de vérifier cette promotion pour le moment.' }), { status: 500, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
+      }
     }
 
     if (url.pathname === '/api/promotions/active') {
