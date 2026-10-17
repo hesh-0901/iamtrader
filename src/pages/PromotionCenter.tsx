@@ -9,7 +9,7 @@ type Promotion = {
   id: string; kind: PromoKind; code?: string; name: string; active: boolean;
   discountType: 'percent' | 'fixed'; discountValue: number; plans: Plan[];
   startsAt: string; endsAt: string; createdAt?: string; maxUses?: number | null; uses?: number;
-  creatorName?: string; newSubscriptions?: number; renewals?: number; imageDataUrl?: string;
+  creatorName?: string; newSubscriptions?: number; renewals?: number; imageUrl?: string; imagePublicId?: string;
 };
 const PLAN_PRICES: Record<Plan, number> = { pro: 9.99, community: 89.99 };
 const money = (value: number) => '$' + value.toFixed(2);
@@ -38,7 +38,8 @@ export function PromotionCenter() {
   const [endsAt, setEndsAt] = useState(() => localDateTime(new Date(Date.now() + 7 * 86400000).toISOString()));
   const [maxUses, setMaxUses] = useState('');
   const [seasonId, setSeasonId] = useState('');
-  const [imageDataUrl, setImageDataUrl] = useState('');
+  const [imageUrl, setImageUrl] = useState('');
+  const [imagePublicId, setImagePublicId] = useState('');
   const [editing, setEditing] = useState<Promotion | null>(null);
 
   async function request<T = any>(action: string, data?: Record<string, unknown>): Promise<T> {
@@ -65,13 +66,13 @@ export function PromotionCenter() {
   function openCreate() {
     setEditing(null); setName(''); setPlans(['pro']); setDiscount('10'); setMaxUses('');
     setStartsAt(localDateTime(new Date().toISOString())); setEndsAt(localDateTime(new Date(Date.now() + 7 * 86400000).toISOString()));
-    setPrefix('IAM'); setCode(makeCode('IAM')); setConfirmedCode(''); setSeasonId(''); setImageDataUrl(''); setModal(true);
+    setPrefix('IAM'); setCode(makeCode('IAM')); setConfirmedCode(''); setSeasonId(''); setImageUrl(''); setImagePublicId(''); setModal(true);
   }
   function regenerate(nextPrefix = prefix) { setPrefix(nextPrefix); setCode(makeCode(nextPrefix)); setConfirmedCode(''); }
   function openEdit(item: Promotion) {
     setEditing(item); setName(item.name); setPlans(item.plans); setDiscount(String(item.discountValue));
     setStartsAt(localDateTime(item.startsAt)); setEndsAt(localDateTime(item.endsAt)); setMaxUses(item.maxUses ? String(item.maxUses) : '');
-    setPrefix(item.code?.split('-')[0] || 'IAM'); setCode(item.code || ''); setConfirmedCode(item.code || ''); setSeasonId(item.id); setImageDataUrl(item.imageDataUrl || ''); setModal(true);
+    setPrefix(item.code?.split('-')[0] || 'IAM'); setCode(item.code || ''); setConfirmedCode(item.code || ''); setSeasonId(item.id); setImageUrl(item.imageUrl || ''); setImagePublicId(item.imagePublicId || ''); setModal(true);
   }
   const amountFor = (plan: Plan) => {
     const base = PLAN_PRICES[plan]; const amount = Number(discount);
@@ -90,7 +91,7 @@ export function PromotionCenter() {
         discountType: 'percent', discountValue: Number(discount), plans,
         startsAt: new Date(startsAt).toISOString(), endsAt: new Date(endsAt).toISOString(),
         maxUses: maxUses.trim() ? Number(maxUses) : null, active: editing?.active ?? true,
-        ...(tab === 'seasonal' ? { imageDataUrl: imageDataUrl || null } : {}),
+        ...(tab === 'seasonal' ? { imageUrl: imageUrl || null, imagePublicId: imagePublicId || null } : {}),
         editing: Boolean(editing)
       };
       await request('save-promotion', payload);
@@ -117,7 +118,7 @@ export function PromotionCenter() {
     <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="flex flex-col gap-3 border-b border-slate-100 p-4 sm:flex-row sm:items-center sm:justify-between"><div><h3 className="font-extrabold text-[#10243b]">{tab === 'code' ? 'Répertoire des codes promo' : 'Répertoire des discounts'}</h3><p className="mt-1 text-xs text-slate-500">{visible.length} offre(s) enregistrée(s)</p></div><div className="relative"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"/><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Rechercher…" className="w-full rounded-xl border border-slate-200 py-2.5 pl-9 pr-3 text-sm outline-none focus:border-emerald-400 sm:w-64"/></div></div>
       <div className="overflow-x-auto"><table className="w-full min-w-[1150px] text-left text-xs"><thead className="bg-slate-50 text-[10px] uppercase tracking-wider text-slate-500"><tr>{['#','Date','Début','Fin',tab === 'code' ? 'Code' : 'Campagne','Créateur','Prix','Réduc. %','Prix réduit','Nouv. abonn.','Réabonn.','Actions'].map(label=><th key={label} className="whitespace-nowrap px-4 py-3 font-extrabold">{label}</th>)}</tr></thead><tbody className="divide-y divide-slate-100">
-        {loading ? <tr><td colSpan={12} className="p-10 text-center text-slate-400"><Loader2 className="mx-auto h-5 w-5 animate-spin"/>Chargement…</td></tr> : visible.map((item,index) => { const plan = item.plans[0] || 'pro'; const amount = PLAN_PRICES[plan]; const final = item.discountType === 'percent' ? amount * (1 - item.discountValue / 100) : Math.max(0, amount - item.discountValue); return <tr key={item.id} className="hover:bg-slate-50/70"><td className="px-4 py-4 font-bold text-slate-400">{index+1}</td><td className="whitespace-nowrap px-4 py-4 text-slate-600">{new Date(item.createdAt || item.startsAt).toLocaleDateString('fr-FR')}</td><td className="whitespace-nowrap px-4 py-4 text-slate-600">{new Date(item.startsAt).toLocaleString('fr-FR')}</td><td className="whitespace-nowrap px-4 py-4 text-slate-600">{new Date(item.endsAt).toLocaleString('fr-FR')}</td><td className="px-4 py-4">{item.code ? <button onClick={() => { void navigator.clipboard.writeText(item.code!); showToast('Code copié.', 'success'); }} className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-2.5 py-1.5 font-mono font-black text-blue-700">{item.code}<Copy className="h-3 w-3"/></button> : <span className="inline-flex items-center gap-2 font-bold text-slate-800">{item.imageDataUrl && <img src={item.imageDataUrl} alt="Visuel de campagne" className="h-8 w-16 rounded object-cover"/>}{item.name}</span>}</td><td className="px-4 py-4 text-slate-600">{item.creatorName || '—'}</td><td className="px-4 py-4 font-semibold text-slate-500">{money(amount)}{item.plans.length > 1 ? '+' : ''}</td><td className="px-4 py-4 text-center font-extrabold text-emerald-700">{item.discountType === 'percent' ? `${item.discountValue}%` : `${amount > 0 ? Math.round((Math.min(amount, item.discountValue) / amount) * 100) : 0}%`}</td><td className="px-4 py-4 font-black text-emerald-700">{money(Math.max(0, final))}{item.plans.length > 1 ? '+' : ''}</td><td className="px-4 py-4 text-center font-bold">{item.newSubscriptions || 0}</td><td className="px-4 py-4 text-center font-bold">{item.renewals || 0}</td><td className="px-4 py-4"><div className="flex gap-2"><button onClick={() => openEdit(item)} className="rounded-lg border border-slate-200 px-2.5 py-1.5 font-bold text-slate-600 hover:bg-slate-50">Modifier</button><button onClick={() => void remove(item)} className="rounded-lg border border-rose-100 p-1.5 text-rose-600 hover:bg-rose-50" title="Supprimer"><Trash2 className="h-3.5 w-3.5"/></button></div></td></tr>; })}
+        {loading ? <tr><td colSpan={12} className="p-10 text-center text-slate-400"><Loader2 className="mx-auto h-5 w-5 animate-spin"/>Chargement…</td></tr> : visible.map((item,index) => { const plan = item.plans[0] || 'pro'; const amount = PLAN_PRICES[plan]; const final = item.discountType === 'percent' ? amount * (1 - item.discountValue / 100) : Math.max(0, amount - item.discountValue); return <tr key={item.id} className="hover:bg-slate-50/70"><td className="px-4 py-4 font-bold text-slate-400">{index+1}</td><td className="whitespace-nowrap px-4 py-4 text-slate-600">{new Date(item.createdAt || item.startsAt).toLocaleDateString('fr-FR')}</td><td className="whitespace-nowrap px-4 py-4 text-slate-600">{new Date(item.startsAt).toLocaleString('fr-FR')}</td><td className="whitespace-nowrap px-4 py-4 text-slate-600">{new Date(item.endsAt).toLocaleString('fr-FR')}</td><td className="px-4 py-4">{item.code ? <button onClick={() => { void navigator.clipboard.writeText(item.code!); showToast('Code copié.', 'success'); }} className="inline-flex items-center gap-1 rounded-lg bg-blue-50 px-2.5 py-1.5 font-mono font-black text-blue-700">{item.code}<Copy className="h-3 w-3"/></button> : <span className="inline-flex items-center gap-2 font-bold text-slate-800">{item.imageUrl && <img src={item.imageUrl} alt="Visuel de campagne" className="h-8 w-16 rounded object-cover"/>}{item.name}</span>}</td><td className="px-4 py-4 text-slate-600">{item.creatorName || '—'}</td><td className="px-4 py-4 font-semibold text-slate-500">{money(amount)}{item.plans.length > 1 ? '+' : ''}</td><td className="px-4 py-4 text-center font-extrabold text-emerald-700">{item.discountType === 'percent' ? `${item.discountValue}%` : `${amount > 0 ? Math.round((Math.min(amount, item.discountValue) / amount) * 100) : 0}%`}</td><td className="px-4 py-4 font-black text-emerald-700">{money(Math.max(0, final))}{item.plans.length > 1 ? '+' : ''}</td><td className="px-4 py-4 text-center font-bold">{item.newSubscriptions || 0}</td><td className="px-4 py-4 text-center font-bold">{item.renewals || 0}</td><td className="px-4 py-4"><div className="flex gap-2"><button onClick={() => openEdit(item)} className="rounded-lg border border-slate-200 px-2.5 py-1.5 font-bold text-slate-600 hover:bg-slate-50">Modifier</button><button onClick={() => void remove(item)} className="rounded-lg border border-rose-100 p-1.5 text-rose-600 hover:bg-rose-50" title="Supprimer"><Trash2 className="h-3.5 w-3.5"/></button></div></td></tr>; })}
         {!loading && !visible.length && <tr><td colSpan={12} className="p-12 text-center text-sm text-slate-400">Aucune offre dans cet onglet.</td></tr>}
       </tbody></table></div>
     </div>
@@ -146,13 +147,19 @@ export function PromotionCenter() {
                   img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('Image illisible.')); }; img.src = url;
                 });
                 if (Math.abs(dimensions.width / dimensions.height - 3) > 0.03) { showToast('L’image doit être au format horizontal 3:1, idéalement 1200 × 400 px.', 'error'); event.target.value = ''; return; }
-                const reader = new FileReader();
-                reader.onload = () => setImageDataUrl(String(reader.result || ''));
-                reader.onerror = () => showToast('Lecture de l’image impossible.', 'error');
-                reader.readAsDataURL(file);
-              } catch { showToast('Impossible de lire cette image.', 'error'); event.target.value = ''; }
+                setBusy(true);
+                const form = new FormData();
+                form.append('file', file, file.name);
+                form.append('upload_preset', 'piptalk_media');
+                form.append('folder', 'iamtrader/promotions/' + (editing?.id || seasonId || crypto.randomUUID()));
+                const response = await fetch('https://api.cloudinary.com/v1_1/ocgef9bk/auto/upload', { method: 'POST', body: form });
+                const uploaded = await response.json() as { secure_url?: string; public_id?: string; error?: { message?: string } };
+                if (!response.ok || !uploaded.secure_url || !uploaded.public_id) throw new Error(uploaded.error?.message || 'Échec du téléversement Cloudinary. Vérifiez le preset piptalk_media.');
+                setImageUrl(uploaded.secure_url); setImagePublicId(uploaded.public_id);
+              } catch (error: any) { showToast(error?.message || 'Impossible de téléverser l’image.', 'error'); event.target.value = ''; }
+              finally { setBusy(false); }
             }}/>
-            {imageDataUrl && <div className="mt-3"><img src={imageDataUrl} alt="Aperçu de la bannière" className="max-h-36 w-full rounded-lg border border-slate-200 object-cover"/><button type="button" onClick={() => setImageDataUrl('')} className="mt-2 text-xs font-bold text-rose-600">Retirer l’image</button></div>}
+            {imageUrl && <div className="mt-3"><img src={imageUrl} alt="Aperçu de la bannière" className="max-h-36 w-full rounded-lg border border-slate-200 object-cover"/><button type="button" onClick={() => { setImageUrl(''); setImagePublicId(''); }} className="mt-2 text-xs font-bold text-rose-600">Retirer l’image</button></div>}
           </div>}
           <label className="block text-xs font-bold text-slate-600">Nombre maximal d’utilisations <span className="font-normal text-slate-400">(facultatif)</span><input type="number" min="1" step="1" value={maxUses} onChange={event => setMaxUses(event.target.value)} placeholder="Illimité si vide" className="mt-1.5 w-full rounded-lg border border-slate-200 px-3 py-2.5 text-sm"/></label>
         </div>
