@@ -1,5 +1,6 @@
 import { firestoreCreate, firestoreGet, firestorePatch, PaymentEnv, verifyFirebaseIdToken } from './firebaseAdmin';
 import { decideSubscription, subscriptionFields, SubscriptionAction } from './subscription';
+import { resolvePromotion, type AppliedPromotion } from './promotions';
 
 
 const PLANS = {
@@ -204,10 +205,12 @@ async function createSasPayCheckout(
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ success: false, message: 'Une adresse e-mail valide est nécessaire pour créer le paiement.' }, 400);
   const paymentId = randomId(), reference = 'IMAT-' + paymentId.toUpperCase(), now = new Date().toISOString();
   const amount = amounts.total, currency = 'USD', e164Phone = phone;
+  const promotion = body._promotion as AppliedPromotion | null | undefined;
   await firestoreCreate(env, 'payments', paymentId, {
     id: paymentId, uid: user.uid, email, displayName: profile.displayName || email, fullName: traderFullName(profile),
     countryCode, network, plan: planKey, planName: plan.name, amount, amountUsd: amount, baseAmount: amounts.baseAmount,
     paymentFee: amounts.fee, paymentFeeRate: PAYMENT_FEE_RATE, currency, phone: e164Phone, payerName,
+    ...(promotion ? { originalAmount: promotion.baseAmount, discountAmount: promotion.discountAmount, promotionId: promotion.promotionId, promotionKind: promotion.promotionKind, promotionName: promotion.promotionName, promoCode: promotion.promoCode } : {}),
     paymentMethod: 'mobile_money', paymentProvider: 'SasPay Softpay', provider: 'SASPAY',
     subscriptionAction: decision.action, currentPlanAtPurchase: decision.currentPlan,
     activationStartAt: decision.start.toISOString(), activationExpiresAt: decision.expires.toISOString(),
@@ -417,7 +420,8 @@ export async function handlePaymentRequest(request: Request, env: CinetPayEnv) {
     const plan = planKey ? PLANS[planKey] : undefined;
     const countryCode = String(body.countryCode || 'CD').toUpperCase();
     const phone = normalizePhone(body.phone, countryCode);
-    const amounts = plan ? calculatePaymentAmounts(plan.amount) : undefined;
+    const baseAmounts = plan ? calculatePaymentAmounts(plan.amount) : undefined;
+    let amounts = baseAmounts;
     const countryConfig = SASPAY_COUNTRIES[countryCode as keyof typeof SASPAY_COUNTRIES];
     const isSasPay = Boolean(countryConfig && Object.prototype.hasOwnProperty.call(countryConfig.networks, String(body.paymentProvider || '')));
 
@@ -452,6 +456,19 @@ export async function handlePaymentRequest(request: Request, env: CinetPayEnv) {
 
     const payerName = String(body.payerName || profile.displayName || user.email || 'Client IAMTRADER').trim();
     if (!amounts) return json({ success: false, message: 'Données de paiement invalides.' }, 400);
+    let appliedPromotion: AppliedPromotion | null = null;
+    try {
+      const resolved = await resolvePromotion(env, planKey, amounts.total, String(body.promoCode || ''));
+      if (resolved.message) return json({ success: false, message: resolved.message }, 400);
+      appliedPromotion = resolved.applied;
+      if (appliedPromotion) {
+        amounts = { ...amounts, total: appliedPromotion.finalAmount };
+        (body as any)._promotion = appliedPromotion;
+      }
+    } catch (promotionError) {
+      console.error('Promotion resolution failed:', promotionError);
+      return json({ success: false, message: 'Impossible de vérifier les promotions. Réessayez dans quelques instants.' }, 503);
+    }
     if (isSasPay) {
       return await createSasPayCheckout(request, env, user, body, profile, planKey, plan, phone, amounts, decision, payerName);
     }
@@ -459,7 +476,8 @@ export async function handlePaymentRequest(request: Request, env: CinetPayEnv) {
       return json({ success: false, message: 'Ce pays est disponible avec SasPay Mobile Money. Sélectionnez un réseau SasPay valide.' }, 400);
     }
 
-    const chargedAmount = cinetPayAmount(env, planKey);
+    const configuredChargedAmount = cinetPayAmount(env, planKey);
+    const chargedAmount = appliedPromotion && baseAmounts ? Math.max(1, Math.round(configuredChargedAmount * (amounts.total / baseAmounts.total))) : configuredChargedAmount;
     const currency = cinetPayCurrency(env.CINETPAY_COUNTRY || 'CD');
     const paymentId = randomId();
     const now = new Date().toISOString();
@@ -475,7 +493,8 @@ export async function handlePaymentRequest(request: Request, env: CinetPayEnv) {
       planName: plan.name,
       amount: chargedAmount,
       amountUsd: amounts.total,
-      baseAmount: amounts.baseAmount,
+      baseAmount: baseAmounts?.baseAmount ?? amounts.baseAmount,
+      ...(appliedPromotion ? { originalAmount: appliedPromotion.baseAmount, discountAmount: appliedPromotion.discountAmount, promotionId: appliedPromotion.promotionId, promotionKind: appliedPromotion.promotionKind, promotionName: appliedPromotion.promotionName, promoCode: appliedPromotion.promoCode } : {}),
       paymentFee: amounts.fee,
       paymentFeeRate: PAYMENT_FEE_RATE,
       currency,
