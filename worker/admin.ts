@@ -54,6 +54,77 @@ export async function handleAdminMutation(request: Request, env: AdminEnv) {
 
     if (!body?.action) return json({ error: 'Action administrative manquante.' }, 400);
 
+
+    if (body.action === 'get-promotions') {
+      const promotions = await firestoreQueryCollection(env, 'promotions', 200, 'createdAt');
+      const payments = await firestoreQueryCollection(env, 'payments', 500, 'createdAt');
+      const users = await firestoreQueryCollection(env, 'users', 500, 'createdAt');
+      const userByUid = new Map(users.map(user => [String(user.uid || user.id || ''), user]));
+      const enriched = promotions.map(promotion => {
+        const id = String(promotion.id || '');
+        const related = payments.filter(payment => String(payment.promotionId || '') === id && payment.status === 'paid');
+        const newSubscriptions = related.filter(payment => String(payment.subscriptionAction || '') === 'initial').length;
+        const renewals = related.filter(payment => ['renewal', 'upgrade'].includes(String(payment.subscriptionAction || ''))).length;
+        const creator = userByUid.get(String(promotion.createdBy || ''));
+        return { ...promotion, creatorName: String(creator?.displayName || creator?.email || promotion.createdBy || '—'), newSubscriptions, renewals };
+      });
+      return json({ success: true, promotions: enriched });
+    }
+
+    if (body.action === 'save-promotion') {
+      const data = body.data as Record<string, any> | undefined;
+      if (!data) return json({ error: 'Données de promotion manquantes.' }, 400);
+      const kind = data.kind === 'seasonal' ? 'seasonal' : data.kind === 'code' ? 'code' : null;
+      const name = String(data.name || '').trim().slice(0, 100);
+      const discountType = data.discountType === 'fixed' ? 'fixed' : data.discountType === 'percent' ? 'percent' : null;
+      const discountValue = Number(data.discountValue);
+      const plans = Array.isArray(data.plans) ? data.plans.filter((plan: unknown) => plan === 'pro' || plan === 'community') : [];
+      const startsAt = String(data.startsAt || '');
+      const endsAt = String(data.endsAt || '');
+      const startMs = new Date(startsAt).getTime();
+      const endMs = new Date(endsAt).getTime();
+      if (!kind || !name || !discountType || !Number.isFinite(discountValue) || discountValue <= 0 ||
+          (discountType === 'percent' && discountValue > 100) || !plans.length ||
+          !Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) {
+        return json({ error: 'Promotion invalide : vérifiez le nom, la réduction, les forfaits et les dates.' }, 400);
+      }
+      const rawCode = String(data.code || '').trim().toUpperCase();
+      if (kind === 'code' && !/^(IAM|XAU|FX)-[A-Z0-9]{4,10}$/.test(rawCode)) {
+        return json({ error: 'Le code promo doit commencer par IAM-, XAU- ou FX- et contenir un suffixe aléatoire.' }, 400);
+      }
+      const id = kind === 'code' ? rawCode : String(data.id || crypto.randomUUID()).replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 64);
+      if (!id) return json({ error: 'Identifiant de promotion invalide.' }, 400);
+      const existing = await firestoreGet(env, 'promotions/' + encodeURIComponent(id));
+      if (kind === 'code' && existing) return json({ error: 'Ce code existe déjà. Générez-en un autre.' }, 409);
+      const maxUses = data.maxUses === '' || data.maxUses === null || data.maxUses === undefined ? null : Number(data.maxUses);
+      if (maxUses !== null && (!Number.isInteger(maxUses) || maxUses < 1)) return json({ error: 'La limite d’utilisation doit être un entier positif.' }, 400);
+      const record = {
+        id, kind, ...(kind === 'code' ? { code: rawCode } : {}), name, active: data.active !== false,
+        discountType, discountValue, plans, startsAt: new Date(startMs).toISOString(), endsAt: new Date(endMs).toISOString(),
+        maxUses, uses: Number(existing?.uses || 0), createdAt: String(existing?.createdAt || new Date().toISOString()),
+        updatedAt: new Date().toISOString(), createdBy: String(existing?.createdBy || identity.uid)
+      };
+      await firestoreSet(env, 'promotions/' + encodeURIComponent(id), record);
+      await firestoreSet(env, 'adminLogs/' + encodeURIComponent(crypto.randomUUID()), {
+        action: 'promotion-saved', promotionId: id, adminUid: identity.uid, createdAt: new Date().toISOString()
+      });
+      return json({ success: true, promotion: record });
+    }
+
+    if (body.action === 'delete-promotion') {
+      const promotionId = String(body.data?.id || '').trim();
+      if (!promotionId) return json({ error: 'Promotion introuvable.' }, 400);
+      const related = await firestoreQueryCollection(env, 'payments', 500, 'createdAt');
+      if (related.some(payment => String(payment.promotionId || '') === promotionId && payment.status === 'paid')) {
+        return json({ error: 'Cette offre possède déjà des paiements confirmés. Désactivez-la plutôt que de la supprimer.' }, 409);
+      }
+      await firestoreDelete(env, 'promotions/' + encodeURIComponent(promotionId));
+      await firestoreSet(env, 'adminLogs/' + encodeURIComponent(crypto.randomUUID()), {
+        action: 'promotion-deleted', promotionId, adminUid: identity.uid, createdAt: new Date().toISOString()
+      });
+      return json({ success: true });
+    }
+
     if (body.action === 'get-payments') {
       const payments = await firestoreQueryCollection(env, 'payments', 250, 'createdAt');
       return json({ success: true, payments: payments.map(payment => normalizePayment(payment)) });
