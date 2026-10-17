@@ -4,6 +4,7 @@ import { onRequest as handleInstrumentSuggest } from '../functions/api/instrumen
 import { onRequestPost as handleContactReply } from '../functions/api/contact-reply';
 import { handlePaymentRequest, handlePaymentCallback, handleCinetPayNotification, handleSasPayWebhook, handleSasPayVerifyRequest, handleSasPayStatusRequest } from './payments';
 import type { PaymentEnv } from './firebaseAdmin';
+import { firestoreQueryCollection, firestorePatch } from './firebaseAdmin';
 import { handleSubscriptionStatus } from './subscriptionStatus';
 import { handlePaymentHistory } from './paymentHistory';
 import { handleAdminMutation } from './admin';
@@ -47,6 +48,7 @@ export default {
     await Promise.all([
       cleanupExpiredCloudinaryMedia(env),
       refreshIamtraderEconomicCalendar(env),
+      cleanupExpiredPromotions(env),
     ]);
   },
 
@@ -157,5 +159,49 @@ async function cleanupExpiredCloudinaryMedia(env: EnvWithPayments): Promise<void
       cursor = data.next_cursor || '';
       pages += 1;
     } while (cursor && pages < 10);
+  }
+}
+
+/** Delete Cloudinary campaign banners once their promotion has expired. */
+async function cleanupExpiredPromotions(env: EnvWithPayments): Promise<void> {
+  const cloud = env.CLOUDINARY_CLOUD_NAME || 'ocgef9bk';
+  const key = env.CLOUDINARY_API_KEY;
+  const secret = env.CLOUDINARY_API_SECRET;
+  if (!key || !secret) {
+    console.error('Promotion image cleanup skipped: Cloudinary API credentials are missing.');
+    return;
+  }
+  const now = Date.now();
+  let promotions: Array<Record<string, any>> = [];
+  try {
+    promotions = await firestoreQueryCollection(env, 'promotions', 500, 'endsAt');
+  } catch (error) {
+    console.error('Could not load promotions for image cleanup:', error);
+    return;
+  }
+  const authHeader = 'Basic ' + btoa(key + ':' + secret);
+  for (const promotion of promotions) {
+    if (!promotion.imagePublicId || !promotion.endsAt || new Date(promotion.endsAt).getTime() >= now) continue;
+    const publicId = String(promotion.imagePublicId);
+    if (!publicId.startsWith('iamtrader/promotions/')) continue;
+    try {
+      const response = await fetch('https://api.cloudinary.com/v1_1/' + cloud + '/image/destroy', {
+        method: 'POST',
+        headers: { Authorization: authHeader, 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ public_id: publicId, invalidate: 'true' })
+      });
+      if (!response.ok) {
+        console.error('Expired promotion image deletion failed:', publicId, response.status);
+        continue;
+      }
+      const result = await response.json() as { result?: string };
+      if (result.result === 'ok' || result.result === 'not found') {
+        await firestorePatch(env, 'promotions/' + encodeURIComponent(String(promotion.id)), {
+          imageUrl: null, imagePublicId: null, imageDeletedAt: new Date().toISOString()
+        }, ['imageUrl', 'imagePublicId', 'imageDeletedAt']);
+      }
+    } catch (error) {
+      console.error('Expired promotion image cleanup failed:', publicId, error);
+    }
   }
 }
