@@ -8,7 +8,7 @@ type Plan = 'pro' | 'community';
 type Promotion = {
   id: string; kind: PromoKind; code?: string; name: string; active: boolean;
   discountType: 'percent' | 'fixed'; discountValue: number; plans: Plan[];
-  startsAt: string; endsAt: string; maxUses?: number | null; uses?: number;
+  startsAt: string; endsAt: string; createdAt?: string; maxUses?: number | null; uses?: number;
   creatorName?: string; newSubscriptions?: number; renewals?: number;
 };
 const PLAN_PRICES: Record<Plan, number> = { pro: 9.99, community: 89.99 };
