@@ -3,7 +3,7 @@ import { UserProfile, SubscriptionPlan, TradingAccount, Trade } from '../types';
 import { PlanBadge } from '../components/common/Badge';
 import {
   User, Shield, CreditCard, Sliders, Lock, Mail, Check, ArrowRight,
-  Activity, CalendarDays, Clock3, WalletCards, Sparkles, ChevronRight, Phone, X, Crown, Target, Coins, TrendingUp, Star, Receipt
+  Activity, CalendarDays, Clock3, WalletCards, Sparkles, ChevronRight, Phone, X, Crown, Target, Coins, TrendingUp, Star, Receipt, Tag
 } from 'lucide-react';
 import { resetUserPassword, updateTraderProfile } from '../services/auth';
 import { AvatarStudio } from '../components/settings/AvatarStudio';
@@ -106,6 +106,10 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
   const [paymentGateway, setPaymentGateway] = useState<'cinetpay' | 'saspay'>('saspay');
   const [paymentPhone, setPaymentPhone] = useState('');
   const [promoCode, setPromoCode] = useState('');
+  const [isPromoModalOpen, setIsPromoModalOpen] = useState(false);
+  const [promoQuote, setPromoQuote] = useState<{ baseAmount: number; discountAmount: number; finalAmount: number; promotionName: string; promoCode: string | null } | null>(null);
+  const [isPromoApplying, setIsPromoApplying] = useState(false);
+  const [promoMessage, setPromoMessage] = useState('');
   const [paymentCountryCode, setPaymentCountryCode] = useState<string>(() => detectCountryCode());
   const [countrySearch, setCountrySearch] = useState('');
   const [isCountryListOpen, setIsCountryListOpen] = useState(false);
@@ -286,11 +290,42 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
     const nationalDigits = digits.startsWith(dialDigits) ? digits.slice(dialDigits.length) : digits;
     setPaymentCountryCode(initialCountry.code);
     setPaymentPhone(nationalDigits.replace(/^0+/, '').slice(0, initialCountry.phoneLength));
-    setPaymentPlan(plan); setPromoCode(''); setPaymentGateway('saspay');
+    setPaymentPlan(plan); setPromoCode(''); setPromoQuote(null); setPromoMessage(''); setIsPromoModalOpen(false); setPaymentGateway('saspay');
     setPaymentProvider(initialCountry.networks[0]?.value || '');
     setPaymentUrl(null); setPaymentPayerName('');
     setPaymentId(null); setPaymentReference(null); setPaymentStatus('idle'); setPaymentMessage('');
     setPaymentAction(null); setPaymentActivationStart(null); setPaymentActivationExpires(null);
+  };
+
+  const applyPromoCode = async () => {
+    if (!paymentPlan || !promoCode.trim()) {
+      setPromoMessage('Saisissez un code promo.');
+      return;
+    }
+    setIsPromoApplying(true);
+    setPromoMessage('');
+    try {
+      const response = await fetch('/api/promotions/quote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: paymentPlan, code: promoCode.trim().toUpperCase() })
+      });
+      const result = await response.json() as { success?: boolean; message?: string; promotion?: { baseAmount: number; discountAmount: number; finalAmount: number; promotionName: string; promoCode: string | null } };
+      if (!response.ok || !result.success || !result.promotion) {
+        setPromoQuote(null);
+        setPromoMessage(result.message || 'Ce code promo ne peut pas être appliqué.');
+        return;
+      }
+      setPromoQuote(result.promotion);
+      setPromoCode(result.promotion.promoCode || promoCode.trim().toUpperCase());
+      setPromoMessage('Code appliqué. Le montant a été recalculé par le serveur.');
+      setIsPromoModalOpen(false);
+    } catch {
+      setPromoQuote(null);
+      setPromoMessage('Impossible de vérifier le code. Réessayez.');
+    } finally {
+      setIsPromoApplying(false);
+    }
   };
 
   const submitPayment = async () => {
@@ -742,12 +777,18 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
               <button onClick={() => setPaymentPlan(null)} className="shrink-0 rounded-xl border border-slate-200 bg-white p-2.5 text-slate-500 transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700" aria-label="Fermer"><X className="h-4 w-4" /></button>
             </div>
             <div className="space-y-5 p-5 sm:p-7 lg:p-8">
-              <PromotionBanners placement="ticker" />
-              <div className="rounded-xl border border-emerald-100 bg-emerald-50/60 p-3">
-                <label htmlFor="payment-promo-code" className="mb-1.5 block text-xs font-extrabold text-emerald-900">Code promo</label>
-                <div className="flex gap-2"><input id="payment-promo-code" value={promoCode} onChange={event => setPromoCode(event.target.value.toUpperCase().replace(/\\s/g,''))} placeholder="Ex. IAM-XXXXX" autoComplete="off" className="min-w-0 flex-1 rounded-lg border border-emerald-200 bg-white px-3 py-2.5 text-sm font-mono font-bold text-slate-900 outline-none focus:border-emerald-500"/><button type="button" onClick={() => setPromoCode(value => value.trim().toUpperCase())} className="rounded-lg bg-emerald-700 px-3 py-2 text-xs font-bold text-white">Appliquer</button></div>
-                <p className="mt-1.5 text-[11px] text-slate-500">Le serveur vérifiera le code et la meilleure offre disponible avant le paiement.</p>
-              </div>
+<PromotionBanners placement="ticker" />
+              {isPromoModalOpen && paymentStatus === 'idle' && (
+                <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/45 px-4 py-6 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="promo-code-modal-title">
+                  <div className="w-full max-w-md rounded-2xl border border-emerald-100 bg-white p-5 shadow-2xl sm:p-6">
+                    <div className="flex items-start justify-between gap-3"><div><div className="text-[10px] font-extrabold uppercase tracking-[.16em] text-emerald-700">Avantage abonnement</div><h3 id="promo-code-modal-title" className="mt-1 text-lg font-black text-slate-950">Appliquer un code promo</h3><p className="mt-1 text-xs leading-5 text-slate-500">Le serveur vérifie le code et recalcule le prix avant le paiement.</p></div><button type="button" onClick={() => setIsPromoModalOpen(false)} aria-label="Fermer" className="rounded-lg p-2 text-slate-400 hover:bg-slate-100"><X className="h-4 w-4" /></button></div>
+                    <label htmlFor="payment-promo-code" className="mt-5 mb-1.5 block text-xs font-bold text-slate-700">Code promo</label>
+                    <input id="payment-promo-code" value={promoCode} onChange={event => { setPromoCode(event.target.value.toUpperCase().replace(/\\s/g,'')); setPromoQuote(null); setPromoMessage(''); }} placeholder="Ex. IAM-XXXXX" autoComplete="off" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-mono font-bold text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100" />
+                    {promoMessage && <p className={`mt-2 text-xs font-semibold ${promoQuote ? 'text-emerald-700' : 'text-rose-600'}`}>{promoMessage}</p>}
+                    <div className="mt-5 flex gap-2"><button type="button" onClick={() => setIsPromoModalOpen(false)} className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-xs font-bold text-slate-600 hover:bg-slate-50">Annuler</button><button type="button" onClick={() => void applyPromoCode()} disabled={isPromoApplying || !promoCode.trim()} className="flex-1 rounded-xl bg-emerald-600 px-4 py-3 text-xs font-extrabold text-white hover:bg-emerald-700 disabled:opacity-50">{isPromoApplying ? 'Vérification…' : 'Appliquer'}</button></div>
+                  </div>
+                </div>
+              )}
               {paymentStatus === 'processing' && paymentGateway === 'saspay' && paymentUrl ? (
                 <div className="grid gap-5 lg:grid-cols-[0.8fr_1.2fr]">
                   <section className="rounded-2xl bg-slate-50 p-5 ring-1 ring-slate-200">
@@ -773,13 +814,14 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                   </div>
                   <div className="shrink-0 text-right">
                     <div className="text-[10px] font-semibold text-slate-400">Total à payer</div>
-                    <div className="mt-1 text-xl font-black tracking-tight text-slate-950">{paymentGateway === 'saspay' ? `${getPaymentAmounts(paymentPlan).total.toFixed(2)} USD` : `${getPaymentAmounts(paymentPlan).cdfTotal.toLocaleString('fr-FR')} CDF`}</div>
+                    <div className="mt-1 text-xl font-black tracking-tight text-slate-950">{paymentGateway === 'saspay' ? `${(promoQuote?.finalAmount ?? getPaymentAmounts(paymentPlan).total).toFixed(2)} USD` : `${getPaymentAmounts(paymentPlan).cdfTotal.toLocaleString('fr-FR')} CDF`}</div>
                   </div>
                 </div>
+                {promoQuote && paymentStatus === 'idle' && <div className="flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-xs"><div><div className="font-bold text-emerald-800">{promoQuote.promotionName || 'Promotion appliquée'}</div><div className="mt-0.5 text-emerald-700">Prix initial : <span className="line-through">${promoQuote.baseAmount.toFixed(2)}</span> · Réduction : −${promoQuote.discountAmount.toFixed(2)}</div></div><button type="button" onClick={() => { setPromoQuote(null); setPromoCode(''); setPromoMessage(''); }} className="shrink-0 font-bold text-emerald-800 underline">Retirer</button></div>}
                 {(
                   <div className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 sm:p-5">
                     <div className="relative">
-                      <label className="mb-1.5 block text-xs font-bold text-slate-700">Pays de paiement</label>
+                      <div className="mb-1.5 flex items-center justify-between gap-3"><label className="block text-xs font-bold text-slate-700">Pays de paiement</label><button type="button" onClick={() => { setPromoMessage(''); setIsPromoModalOpen(true); }} className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold text-emerald-700 transition hover:bg-emerald-50 hover:text-emerald-800"><Tag className="h-3.5 w-3.5" /> Code promo {promoQuote && <Check className="h-3.5 w-3.5" />}</button></div>
                       <button type="button" onClick={() => setIsCountryListOpen(open => !open)} className="flex w-full items-center gap-3 rounded-xl border border-emerald-200 bg-white px-3 py-3 text-left transition hover:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100">
                         <img src={`https://flagcdn.com/w40/${paymentCountryCode.toLowerCase()}.png`} alt={paymentCountryCode} className="h-5 w-7 shrink-0 rounded-sm object-cover shadow-sm" onError={event => { event.currentTarget.style.display = 'none'; }} />
                         <span className="min-w-0 flex-1"><span className="mr-2 text-xs font-black text-emerald-300">{paymentCountryCode}</span><span className="text-sm font-semibold text-slate-800">{countryOptions.find(item => item.code === paymentCountryCode)?.name || 'Sélectionner un pays'}</span><span className="mt-0.5 block text-[10px] text-sky-700">{`Indicatif ${countryOptions.find(item => item.code === paymentCountryCode)?.dialCode || ''} · Mobile Money`}</span></span>
