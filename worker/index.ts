@@ -87,6 +87,38 @@ export default {
       return handlePaymentHistory(request, env);
     }
 
+    if (url.pathname === '/api/promotions/active') {
+      if (request.method !== 'GET') return new Response('Method not allowed', { status: 405 });
+      try {
+        const now = Date.now();
+        const promotions = await firestoreQueryCollection(env, 'promotions', 500, 'endsAt');
+        const active = promotions.filter(item => item.active === true &&
+          Number.isFinite(new Date(String(item.startsAt || '')).getTime()) &&
+          Number.isFinite(new Date(String(item.endsAt || '')).getTime()) &&
+          new Date(String(item.startsAt)).getTime() <= now &&
+          new Date(String(item.endsAt)).getTime() >= now &&
+          Array.isArray(item.plans) && item.plans.length > 0
+        ).map(item => ({
+          id: String(item.id || ''),
+          kind: item.kind === 'seasonal' ? 'seasonal' : 'code',
+          code: item.kind === 'code' ? String(item.code || '') : '',
+          name: String(item.name || ''),
+          discountType: item.discountType === 'fixed' ? 'fixed' : 'percent',
+          discountValue: Number(item.discountValue || 0),
+          plans: item.plans,
+          startsAt: String(item.startsAt || ''),
+          endsAt: String(item.endsAt || ''),
+          imageUrl: typeof item.imageUrl === 'string' ? item.imageUrl : ''
+        }));
+        return new Response(JSON.stringify({ success: true, promotions: active }), {
+          headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'public, max-age=60' }
+        });
+      } catch (error) {
+        console.error('Active promotions fetch failed:', error);
+        return new Response(JSON.stringify({ success: false, promotions: [] }), { status: 500, headers: { 'Content-Type': 'application/json' } });
+      }
+    }
+
     if (url.pathname === '/api/admin/mutation') {
       return handleAdminMutation(request, env);
     }
