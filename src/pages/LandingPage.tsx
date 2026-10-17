@@ -25,6 +25,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { addContactMessage } from '../services/firestore';
+import { PromotionBanners } from '../components/promotions/PromotionBanners';
 
 interface LandingPageProps {
   onOpenAuth: (mode: 'login' | 'register') => void;
@@ -381,6 +382,7 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
       </header>
 
       <main>
+        <PromotionBanners placement="hero" onCopy={() => {}} />
         <section className="relative overflow-hidden px-6 sm:px-12 pt-16 sm:pt-20 pb-24 max-w-7xl mx-auto w-full text-center">
           <div className="absolute inset-x-0 -top-20 h-[520px] bg-[radial-gradient(circle_at_50%_20%,rgba(0,199,150,0.18),transparent_48%),radial-gradient(circle_at_85%_35%,rgba(47,107,255,0.08),transparent_32%)] pointer-events-none" />
           <div className="relative">
