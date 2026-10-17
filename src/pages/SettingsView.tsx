@@ -11,7 +11,7 @@ import { useToast } from '../components/common/Toast';
 import { TradingJournalSettings } from '../components/settings/TradingJournalSettings';
 import { PaymentHistory } from './PaymentHistory';
 import { calculateTraderRating, formatCurrency } from '../utils/calculations';
-import { confirmSimulatedPayment, createPayment, createSimulatedPayment, getSasPayPaymentStatus, verifySasPayPayment, PaidPlan, PaymentDetails } from '../services/payments';
+import { createPayment, getSasPayPaymentStatus, verifySasPayPayment, PaidPlan, PaymentDetails } from '../services/payments';
 
 interface SettingsViewProps {
   userProfile: UserProfile | null;
@@ -102,7 +102,6 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
   const [theme, setTheme] = useState<'light'>('light');
   const [dashboardMode, setDashboardMode] = useState<'standard' | 'focus' | 'analysis' | 'compact'>(() => (localStorage.getItem('iamtrader-dashboard-mode') as any) || 'standard');
   const [paymentPlan, setPaymentPlan] = useState<PaidPlan | null>(null);
-  const [paymentMode, setPaymentMode] = useState<'simulation' | 'live'>('live');
   const [paymentGateway, setPaymentGateway] = useState<'cinetpay' | 'saspay'>('saspay');
   const [paymentPhone, setPaymentPhone] = useState('');
   const [paymentCountryCode, setPaymentCountryCode] = useState<string>(() => detectCountryCode());
@@ -285,7 +284,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
     const nationalDigits = digits.startsWith(dialDigits) ? digits.slice(dialDigits.length) : digits;
     setPaymentCountryCode(initialCountry.code);
     setPaymentPhone(nationalDigits.replace(/^0+/, '').slice(0, initialCountry.phoneLength));
-    setPaymentPlan(plan); setPaymentMode('live'); setPaymentGateway('saspay');
+    setPaymentPlan(plan); setPaymentGateway('saspay');
     setPaymentProvider(initialCountry.networks[0]?.value || '');
     setPaymentUrl(null); setPaymentPayerName('');
     setPaymentId(null); setPaymentReference(null); setPaymentStatus('idle'); setPaymentMessage('');
@@ -303,9 +302,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
         paymentProvider,
         payerName: paymentPayerName.trim()
       };
-      const payment = paymentMode === 'simulation'
-        ? await createSimulatedPayment(paymentPlan, details)
-        : await createPayment(paymentPlan, details);
+      const payment = await createPayment(paymentPlan, details);
       setPaymentId(payment.id);
       setPaymentReference(payment.reference || null);
       setPaymentUrl(null);
@@ -320,21 +317,8 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
     } finally { setIsPaymentLoading(false); }
   };
 
-  const confirmSimulation = async () => {
-    if (!paymentId) return;
-    setIsPaymentLoading(true); setPaymentMessage('');
-    try {
-      await confirmSimulatedPayment(paymentId);
-      setPaymentStatus('paid');
-      setPaymentMessage('Paiement confirmé. La transaction a été enregistrée côté administration et votre abonnement est activé.');
-    } catch (error: any) {
-      setPaymentStatus('failed');
-      setPaymentMessage(error?.message || 'Impossible de confirmer la simulation.');
-    } finally { setIsPaymentLoading(false); }
-  };
-
   React.useEffect(() => {
-    if (!paymentReference || paymentStatus !== 'processing' || paymentMode === 'simulation') return;
+    if (!paymentReference || paymentStatus !== 'processing') return;
     let cancelled = false;
     let attempts = 0;
     let timer: number | undefined;
@@ -362,7 +346,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
     };
     void check();
     return () => { cancelled = true; if (timer !== undefined) window.clearTimeout(timer); };
-  }, [paymentReference, paymentStatus, paymentMode]);
+  }, [paymentReference, paymentStatus]);
 
   React.useEffect(() => {
     if (!pendingPaymentReference) return;
@@ -370,7 +354,6 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
     let attempts = 0;
     let timer: number | undefined;
     setPaymentGateway('saspay');
-    setPaymentMode('live');
     setPaymentId(pendingPaymentReference);
     setPaymentStatus('processing');
     setPaymentMessage('Vérification du paiement auprès de SasPay…');
@@ -784,7 +767,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                     <div className="mt-1 text-xl font-black tracking-tight text-slate-950">{paymentGateway === 'saspay' ? `${getPaymentAmounts(paymentPlan).total.toFixed(2)} USD` : `${getPaymentAmounts(paymentPlan).cdfTotal.toLocaleString('fr-FR')} CDF`}</div>
                   </div>
                 </div>
-                {paymentMode === 'live' && (
+                {(
                   <div className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 sm:p-5">
                     <div className="relative">
                       <label className="mb-1.5 block text-xs font-bold text-slate-700">Pays de paiement</label>
@@ -817,7 +800,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                   </div>
                 )}
                 <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-xs leading-5 text-emerald-800"><Shield className="mr-2 inline h-4 w-4" />Paiement sécurisé intégré à IAMTRADER. Une demande de confirmation sera envoyée par votre opérateur. L’abonnement ne sera activé qu’après confirmation serveur.</div>
-                <button onClick={submitPayment} disabled={isPaymentLoading || (paymentGateway === 'saspay' && paymentMode === 'live' && (!paymentPhone.trim() || !paymentProvider))} className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-400 px-4 py-3.5 text-sm font-extrabold text-white shadow-[0_10px_30px_rgba(0,199,150,.18)] transition hover:-translate-y-0.5 hover:shadow-[0_14px_36px_rgba(0,199,150,.25)] focus:outline-none focus:ring-4 focus:ring-emerald-400/20 disabled:cursor-not-allowed disabled:opacity-40">{isPaymentLoading ? 'Envoi de la demande…' : 'Continuer vers le paiement'}</button>
+                <button onClick={submitPayment} disabled={isPaymentLoading || (paymentGateway === 'saspay' && (!paymentPhone.trim() || !paymentProvider))} className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-400 px-4 py-3.5 text-sm font-extrabold text-white shadow-[0_10px_30px_rgba(0,199,150,.18)] transition hover:-translate-y-0.5 hover:shadow-[0_14px_36px_rgba(0,199,150,.25)] focus:outline-none focus:ring-4 focus:ring-emerald-400/20 disabled:cursor-not-allowed disabled:opacity-40">{isPaymentLoading ? 'Envoi de la demande…' : 'Continuer vers le paiement'}</button>
               </>)}
               {paymentStatus === 'processing' && !(paymentGateway === 'saspay' && paymentUrl) && (<div className="iam-payment-enter space-y-5 py-2">
                 <div className="grid items-center gap-5 md:grid-cols-[0.78fr_1.22fr] md:gap-8">
@@ -861,7 +844,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                     <div><div className="text-[10px] font-medium text-slate-500">Expiration</div><div className="mt-1 text-xs font-bold text-slate-800">{formatDate(paymentActivationExpires || undefined)}</div></div>
                   </div>
                 </div>}
-                {paymentMode === 'simulation' ? <button onClick={confirmSimulation} disabled={isPaymentLoading} className="w-full rounded-xl bg-emerald-600 px-4 py-3 text-xs font-bold text-white transition hover:bg-emerald-700 disabled:opacity-50">{isPaymentLoading ? 'Confirmation serveur…' : 'Simuler la validation du paiement'}</button> : <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3.5 text-left"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700"><svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/></svg></div><div><div className="text-xs font-extrabold text-amber-800">Validez la demande Mobile Money sur votre téléphone</div><p className="mt-1 text-xs leading-5 text-amber-700">Une notification vient d’être envoyée. Ouvrez-la et confirmez le paiement avant de fermer cette fenêtre.</p></div></div>}
+                <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3.5 text-left"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700"><svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/></svg></div><div><div className="text-xs font-extrabold text-amber-800">Validez la demande Mobile Money sur votre téléphone</div><p className="mt-1 text-xs leading-5 text-amber-700">Une notification vient d’être envoyée. Ouvrez-la et confirmez le paiement avant de fermer cette fenêtre.</p></div></div>}
               </div>)}{paymentStatus === 'paid' && (<div className="py-6 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-600"><Check className="h-7 w-7" /></div><h4 className="mt-4 text-base font-black text-slate-950">Paiement confirmé</h4><p className="mt-2 text-xs text-slate-500">{paymentMessage}</p><div className="mt-4 rounded-xl bg-emerald-50 px-3 py-2 text-[10px] font-semibold text-emerald-700">Référence : {paymentId}</div></div>)}
               {paymentStatus === 'failed' && (<div className="space-y-4 py-3 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-rose-50 text-rose-600">!</div><h4 className="text-base font-black text-slate-950">Paiement non finalisé</h4><p className="text-xs leading-5 text-slate-500">{paymentMessage}</p><button onClick={() => setPaymentStatus('idle')} className="w-full rounded-xl bg-slate-950 px-4 py-3 text-xs font-bold text-white">Réessayer</button></div>)}
             </div>
