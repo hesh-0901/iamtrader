@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Activity, Sparkles, CalendarClock, AlertTriangle, BellRing, Check, CheckCircle2, ChevronLeft, Eye, ChevronRight, Clock3, CreditCard, Edit3, History, Mail, ReceiptText, RefreshCw, Search, Send, ShieldCheck, Trash2, UserCheck, UserX, Users, X, XCircle, Copy, Paperclip, Smile, MoreVertical, Info, Plus, Filter, PenLine } from 'lucide-react';
 import { AdminLog, PaymentRecord, SubscriptionPlan, UserProfile, UserStatus, TradingAccount, Trade } from '../types';
-import { getAdminLogs, getAllAccounts, getAllTrades, getAllUsers, subscribeAllUsers, subscribeContactMessages } from '../services/firestore';
+import { getAdminLogs, getAllAccounts, getAllTrades, getAllUsers, subscribeAllUsers, subscribeAllPayments, subscribeContactMessages } from '../services/firestore';
 import { adminAddLog, adminDeleteContact, adminGetPayments, adminUpdateContact, adminUpdatePayment, adminUpdateUser } from '../services/adminConsole';
 import { useToast } from '../components/common/Toast';
 import { auth } from '../firebase/config';
@@ -197,18 +197,24 @@ export function AdminConsole() {
   useEffect(() => {
     let unsubscribeUsers: (() => void) | undefined;
     let unsubscribeContacts: (() => void) | undefined;
+    let unsubscribePayments: (() => void) | undefined;
     let paymentTimer: number | undefined;
 
     const unsubscribeAuth = auth.onAuthStateChanged((user) => {
       unsubscribeUsers?.();
       unsubscribeContacts?.();
+      unsubscribePayments?.();
       unsubscribeUsers = undefined;
       unsubscribeContacts = undefined;
+      unsubscribePayments = undefined;
 
       if (!user) return;
 
       load();
-      paymentTimer = window.setInterval(refreshPayments, 15000);
+      unsubscribePayments = subscribeAllPayments((nextPayments, realtimeError) => {
+        if (realtimeError) return;
+        setPayments(nextPayments);
+      });
       unsubscribeUsers = subscribeAllUsers((nextUsers, realtimeError) => {
         if (realtimeError) return;
         setUsers(nextUsers);
@@ -220,7 +226,6 @@ export function AdminConsole() {
     });
 
     return () => {
-      if (paymentTimer) window.clearInterval(paymentTimer);
       unsubscribeUsers?.();
       unsubscribeContacts?.();
       unsubscribeAuth();
@@ -537,7 +542,7 @@ export function AdminConsole() {
                         <td className="whitespace-nowrap px-4 py-3"><span className={'rounded-full px-2.5 py-1 text-xs font-black '+rowTone}>{rowStatus}</span></td>
                         <td className="px-4 py-3"><div className="flex items-center gap-1.5">
                           <button onClick={()=>setSelectedPayment(p)} title="Voir les détails" className="inline-flex h-8 items-center gap-1 rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-black text-slate-600 hover:bg-slate-50"><Eye className="h-3 w-3"/>Détails</button>
-                          <button disabled={paymentActionBusy||p.status==='paid'} onClick={async()=>{setPaymentActionBusy(true);try{await adminUpdatePayment(p.id,{status:'paid',paidAt:new Date().toISOString(),confirmedAt:new Date().toISOString()});await refreshPayments();showToast('Paiement validé.');}catch(e:any){showToast(e?.message||'Validation impossible.');}finally{setPaymentActionBusy(false);}}} title="Valider" className="inline-flex h-8 items-center justify-center rounded-lg bg-emerald-600 px-2 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-30"><Check className="h-3 w-3"/></button>
+                          
                           <button disabled={paymentActionBusy} onClick={async()=>{setPaymentActionBusy(true);try{await adminUpdatePayment(p.id,{status:'invalidated',invalidatedAt:new Date().toISOString()});await refreshPayments();showToast('Paiement invalidé.');}catch(e:any){showToast(e?.message||'Invalidation impossible.');}finally{setPaymentActionBusy(false);}}} title="Invalider" className="inline-flex h-8 items-center justify-center rounded-lg border border-rose-200 bg-rose-50 px-2 text-xs font-black text-rose-700 disabled:opacity-50"><XCircle className="h-3 w-3"/></button>
                           <button disabled={paymentActionBusy} onClick={async()=>{setPaymentActionBusy(true);try{await adminUpdatePayment(p.id,{status:'cancelled',cancelledAt:new Date().toISOString()});await refreshPayments();showToast('Paiement annulé.');}catch(e:any){showToast(e?.message||'Annulation impossible.');}finally{setPaymentActionBusy(false);}}} title="Annuler" className="inline-flex h-8 items-center justify-center rounded-lg border border-slate-200 px-2 text-xs font-black text-slate-600 hover:bg-slate-50 disabled:opacity-50"><X className="h-3 w-3"/></button>
                         </div></td>
@@ -630,7 +635,7 @@ export function AdminConsole() {
                   <div className="mt-6 flex flex-col gap-3 border-t border-slate-200 pt-5 sm:flex-row sm:items-center sm:justify-between">
                     <div className="min-w-0 text-xs text-slate-400"><b className="text-slate-600">ID transaction :</b> <span className="break-all">{p.id || '—'}</span></div>
                     {<div className="flex flex-wrap justify-end gap-2">
-                      <button disabled={paymentActionBusy} onClick={async()=>{setPaymentActionBusy(true);try{await adminUpdatePayment(p.id,{status:'paid',paidAt:new Date().toISOString(),confirmedAt:new Date().toISOString()});await refreshPayments();setSelectedPayment(null);showToast('Paiement validé.');}catch(e:any){showToast(e?.message||'Action impossible.');}finally{setPaymentActionBusy(false);}}} className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-black text-white disabled:opacity-50"><Check className="h-3.5 w-3.5"/>Valider</button>
+                      
                       <button disabled={paymentActionBusy} onClick={async()=>{setPaymentActionBusy(true);try{await adminUpdatePayment(p.id,{status:'invalidated',invalidatedAt:new Date().toISOString()});await refreshPayments();setSelectedPayment(null);showToast('Paiement invalidé.');}catch(e:any){showToast(e?.message||'Action impossible.');}finally{setPaymentActionBusy(false);}}} className="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs font-black text-rose-700 disabled:opacity-50"><XCircle className="h-3.5 w-3.5"/>Invalider</button>
                       <button disabled={paymentActionBusy} onClick={async()=>{setPaymentActionBusy(true);try{await adminUpdatePayment(p.id,{status:'cancelled',cancelledAt:new Date().toISOString()});await refreshPayments();setSelectedPayment(null);showToast('Paiement annulé.');}catch(e:any){showToast(e?.message||'Action impossible.');}finally{setPaymentActionBusy(false);}}} className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-black text-slate-600 disabled:opacity-50">Annuler</button>
                     </div>}
