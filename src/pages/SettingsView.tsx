@@ -281,6 +281,24 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
     localStorage.setItem('iamtrader-dashboard-mode', mode);
   };
 
+  const loadAutomaticPromotion = async (plan: PaidPlan) => {
+    try {
+      const response = await fetch('/api/promotions/quote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan })
+      });
+      if (!response.ok) return;
+      const result = await response.json() as { success?: boolean; promotion?: { baseAmount: number; discountAmount: number; finalAmount: number; promotionName: string; promoCode: string | null } };
+      if (result.success && result.promotion && result.promotion.discountAmount > 0) {
+        setPromoQuote(result.promotion);
+        setPromoMessage('Une offre active a été appliquée automatiquement.');
+      }
+    } catch {
+      // Do not block checkout if no public promotion quote is available.
+    }
+  };
+
   const startPayment = (plan: PaidPlan) => {
     const savedPhone = (userProfile?.traderProfile?.whatsapp || '').trim();
     const digits = savedPhone.replace(/[^0-9]/g, '');
@@ -290,7 +308,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
     const nationalDigits = digits.startsWith(dialDigits) ? digits.slice(dialDigits.length) : digits;
     setPaymentCountryCode(initialCountry.code);
     setPaymentPhone(nationalDigits.replace(/^0+/, '').slice(0, initialCountry.phoneLength));
-    setPaymentPlan(plan); setPromoCode(''); setPromoQuote(null); setPromoMessage(''); setIsPromoModalOpen(false); setPaymentGateway('saspay');
+    setPaymentPlan(plan); setPromoCode(''); setPromoQuote(null); setPromoMessage(''); setIsPromoModalOpen(false); setPaymentGateway('saspay'); void loadAutomaticPromotion(plan);
     setPaymentProvider(initialCountry.networks[0]?.value || '');
     setPaymentUrl(null); setPaymentPayerName('');
     setPaymentId(null); setPaymentReference(null); setPaymentStatus('idle'); setPaymentMessage('');
@@ -818,7 +836,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                     <div className="mt-1 text-xl font-black tracking-tight text-slate-950">{paymentGateway === 'saspay' ? `${(promoQuote?.finalAmount ?? getPaymentAmounts(paymentPlan).total).toFixed(2)} USD` : `${getPaymentAmounts(paymentPlan).cdfTotal.toLocaleString('fr-FR')} CDF`}</div>
                   </div>
                 </div>
-                {promoQuote && paymentStatus === 'idle' && <div className="flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-xs"><div><div className="font-bold text-emerald-800">{promoQuote.promotionName || 'Promotion appliquée'}</div><div className="mt-0.5 text-emerald-700">Prix initial : <span className="line-through">${promoQuote.baseAmount.toFixed(2)}</span> · Réduction : −${promoQuote.discountAmount.toFixed(2)}</div></div><button type="button" onClick={() => { setPromoQuote(null); setPromoCode(''); setPromoMessage(''); }} className="shrink-0 font-bold text-emerald-800 underline">Retirer</button></div>}
+                {promoQuote && paymentStatus === 'idle' && <div className="flex items-center justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-xs"><div className="min-w-0"><div className="font-bold text-emerald-800">{promoQuote.promotionName || 'Promotion appliquée'}</div><div className="mt-0.5 text-emerald-700">Prix initial : <span className="line-through">${promoQuote.baseAmount.toFixed(2)}</span> · <strong>−${promoQuote.discountAmount.toFixed(2)} de réduction</strong></div><div className="mt-1 font-extrabold text-emerald-800">Nouveau prix : ${promoQuote.finalAmount.toFixed(2)} USD</div></div><button type="button" onClick={() => { setPromoQuote(null); setPromoCode(''); setPromoMessage(''); }} className="shrink-0 font-bold text-emerald-800 underline">Retirer</button></div>}
                 {(
                   <div className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 sm:p-5">
                     <div className="relative">
