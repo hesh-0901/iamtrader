@@ -134,16 +134,14 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
   const traderRating = useMemo(() => calculateTraderRating(trades), [trades]);
 
   React.useEffect(() => {
-    const handleInstallPrompt = (event: Event) => {
-      event.preventDefault();
-      setInstallPrompt(event);
-    };
+    const syncInstallPrompt = () => setInstallPrompt(window.__iamtraderInstallPrompt || null);
     const handleInstalled = () => setInstallPrompt(null);
-    window.addEventListener('beforeinstallprompt', handleInstallPrompt);
-    window.addEventListener('appinstalled', handleInstalled);
+    syncInstallPrompt();
+    window.addEventListener('iamtrader:install-available', syncInstallPrompt);
+    window.addEventListener('iamtrader:installed', handleInstalled);
     return () => {
-      window.removeEventListener('beforeinstallprompt', handleInstallPrompt);
-      window.removeEventListener('appinstalled', handleInstalled);
+      window.removeEventListener('iamtrader:install-available', syncInstallPrompt);
+      window.removeEventListener('iamtrader:installed', handleInstalled);
     };
   }, []);
 
@@ -157,14 +155,27 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
   }, [userProfile?.uid, activeTab]);
 
   const handleInstallApp = async () => {
-    if (!installPrompt) {
-      showToast('Pour installer IAMTRADER, ouvrez le menu du navigateur puis choisissez « Installer IAMTRADER » ou « Ajouter à l’écran d’accueil ».', 'info');
+    const promptEvent = installPrompt || window.__iamtraderInstallPrompt;
+    if (promptEvent) {
+      try {
+        await promptEvent.prompt();
+        const choice = await promptEvent.userChoice;
+        if (choice?.outcome === 'accepted') showToast('IAMTRADER est en cours d’installation.', 'success');
+        else showToast('Installation non confirmée. Vous pourrez réessayer.', 'info');
+      } catch (error) {
+        showToast('Le navigateur n’a pas pu ouvrir l’installation. Réessayez depuis ce bouton.', 'error');
+      } finally {
+        window.__iamtraderInstallPrompt = undefined;
+        setInstallPrompt(null);
+      }
       return;
     }
-    await installPrompt.prompt();
-    const choice = await installPrompt.userChoice;
-    if (choice?.outcome === 'accepted') showToast('Installation IAMTRADER lancée.', 'success');
-    setInstallPrompt(null);
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (navigator as any).standalone === true;
+    if (isStandalone) {
+      showToast('IAMTRADER est déjà installé sur cet appareil.', 'success');
+      return;
+    }
+    showToast('L’installation directe n’est pas proposée par ce navigateur pour le moment. Essayez à nouveau dans un navigateur compatible.', 'info');
   };
 
   const handleLogoutCurrentDevice = async () => {
@@ -813,7 +824,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
             <div className="grid gap-3 lg:grid-cols-2">
               <article className="rounded-xl border border-slate-200 bg-[#f8fbfd] p-4">
                 <div className="flex items-start gap-3"><span className="rounded-xl bg-emerald-50 p-2.5 text-emerald-700"><Download className="h-5 w-5" /></span><div className="min-w-0 flex-1"><h4 className="text-sm font-bold text-slate-900">Télécharger l’application</h4><p className="mt-1 text-xs leading-5 text-slate-500">Installez IAMTRADER sur cet appareil pour y accéder depuis votre écran d’accueil.</p></div></div>
-                <button type="button" onClick={handleInstallApp} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3.5 py-2.5 text-xs font-bold text-white hover:bg-emerald-700"><Smartphone className="h-4 w-4" />{installPrompt ? 'Installer IAMTRADER' : 'Instructions d’installation'}</button>
+                <button type="button" onClick={handleInstallApp} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-600 px-3.5 py-2.5 text-xs font-bold text-white hover:bg-emerald-700"><Smartphone className="h-4 w-4" />{installPrompt ? 'Installer IAMTRADER' : 'Installer IAMTRADER'}</button>
               </article>
               <article className="rounded-xl border border-slate-200 bg-[#f8fbfd] p-4">
                 <div className="flex items-start gap-3"><span className="rounded-xl bg-blue-50 p-2.5 text-blue-700"><Mail className="h-5 w-5" /></span><div><h4 className="text-sm font-bold text-slate-900">Réinitialisation du mot de passe</h4><p className="mt-1 text-xs leading-5 text-slate-500">Un lien sécurisé sera transmis à {userProfile?.email}.</p></div></div>
