@@ -216,6 +216,29 @@ export function CourseSpace() {
                     </span>
                     <span className={'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-all ' + (isExpanded ? styles.bar + ' text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200')}><ChevronDown className={'h-4 w-4 transition-transform ' + (isExpanded ? 'rotate-180' : '')} /></span>
                   </button>
+                  {isExpanded && (
+                    <div className="grid gap-6 border-t border-slate-100 bg-slate-50/70 px-4 py-5 sm:grid-cols-[minmax(0,1fr)_220px] sm:px-6">
+                      <div>
+                        <p className="mb-3 text-[10px] font-bold uppercase tracking-[.15em] text-slate-400">Contenu du module</p>
+                        <ol className="space-y-3">
+                          {module.lessons.map((lesson, index) => (
+                            <li key={lesson} className="flex items-start gap-3 text-sm leading-5 text-slate-600">
+                              <span className="mt-0.5 w-5 shrink-0 font-mono text-[10px] text-slate-400">{String(index + 1).padStart(2, '0')}</span>
+                              <span>{lesson}</span>
+                            </li>
+                          ))}
+                        </ol>
+                      </div>
+                      <div className="self-start border-l-2 border-slate-200 pl-4">
+                        <p className={'text-[10px] font-bold uppercase tracking-[.14em] ' + styles.text}>Compétence visée</p>
+                        <p className="mt-2 text-sm leading-6 text-slate-600">{module.outcome}</p>
+                        <div className="mt-4 flex items-center gap-2 text-[10px] font-medium text-slate-400"><PlayCircle className="h-3.5 w-3.5" /> Leçons à développer</div>
+                      </div>
+                    </div>
+                  )}
+                </article>
+              );
+            })}
           </div>
         </div>
       </section>
