@@ -20,6 +20,10 @@ export const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getA
 // current user while Firestore listeners and writes are being initialized.
 export const auth = getAuth(app);
 
+// Compatibility for existing auth flows: getAuth() manages browser persistence itself.
+// This resolved promise preserves existing callers without invoking setPersistence() again.
+export const authPersistenceReady = Promise.resolve();
+
 // Automatically select the appropriate Firestore transport for this browser/network.
 export const db = initializeFirestore(app, {
   experimentalAutoDetectLongPolling: true
