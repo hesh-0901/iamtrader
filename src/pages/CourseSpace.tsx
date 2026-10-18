@@ -9,7 +9,7 @@ type CourseModule = {
 };
 
 type CourseClass = {
-  id: 'TRC-1' | 'TRC-2' | 'TRC-3';
+  id: 'IAM_1' | 'IAM_2' | 'IAM_3';
   name: string;
   subtitle: string;
   period: string;
@@ -21,7 +21,7 @@ type CourseClass = {
 
 const courseClasses: CourseClass[] = [
   {
-    id: 'TRC-1',
+    id: 'IAM_1',
     name: 'INITIATE',
     subtitle: 'Les fondations du trader',
     period: 'Mois 1–2',
@@ -37,7 +37,7 @@ const courseClasses: CourseClass[] = [
     ],
   },
   {
-    id: 'TRC-2',
+    id: 'IAM_2',
     name: 'STRATEGIST',
     subtitle: 'La maîtrise du marché',
     period: 'Mois 3–4',
@@ -53,7 +53,7 @@ const courseClasses: CourseClass[] = [
     ],
   },
   {
-    id: 'TRC-3',
+    id: 'IAM_3',
     name: 'PRO TRADER',
     subtitle: 'Performance et discipline',
     period: 'Mois 5–6',
@@ -77,7 +77,7 @@ const accentStyles = {
 };
 
 export function CourseSpace() {
-  const [selectedClass, setSelectedClass] = useState<CourseClass['id']>('TRC-1');
+  const [selectedClass, setSelectedClass] = useState<CourseClass['id']>('IAM_1');
   const [expandedModules, setExpandedModules] = useState<number[]>([1]);
   const activeClass = courseClasses.find(course => course.id === selectedClass) ?? courseClasses[0];
   const styles = accentStyles[activeClass.accent];
@@ -97,7 +97,7 @@ export function CourseSpace() {
       <header className="space-y-5">
         <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-[.2em] text-slate-400">
           <GraduationCap className="h-4 w-4 text-emerald-600" />
-          <span>IAMTRADER Academy</span>
+          <span>IAMTRADER ACADEMY</span>
           <span className="text-slate-300">/</span>
           <span>Parcours pédagogique</span>
         </div>
@@ -185,18 +185,21 @@ export function CourseSpace() {
             {activeClass.modules.map(module => {
               const isExpanded = expandedModules.includes(module.number);
               return (
-                <article key={module.number} className="border-b border-slate-200 last:border-b-0">
+                <article key={module.number} className="border-b border-slate-100 py-1 last:border-b-0">
                   <button type="button" onClick={() => toggleModule(module.number)} aria-expanded={isExpanded}
-                    className="group flex w-full items-center gap-4 py-4 text-left sm:py-5">
-                    <span className={'w-8 shrink-0 font-mono text-xs ' + (isExpanded ? styles.text : 'text-slate-400')}>{String(module.number).padStart(2, '0')}</span>
+                    className={'group relative flex w-full items-center gap-4 rounded-xl px-3 py-4 text-left transition-all sm:gap-5 sm:px-4 sm:py-5 ' + (isExpanded ? 'mb-2 bg-[#F3F8F6] shadow-[inset_3px_0_0_0_currentColor] ' + styles.text : 'hover:bg-slate-50')}>
+                    <span className={'flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border font-mono text-sm font-semibold transition-colors ' + (isExpanded ? styles.soft + ' ' + styles.border + ' ' + styles.text : 'border-slate-200 bg-white text-slate-500 group-hover:border-slate-300 group-hover:text-slate-800')}>{String(module.number).padStart(2, '0')}</span>
                     <span className="min-w-0 flex-1">
-                      <span className={'block text-sm font-semibold tracking-tight ' + (isExpanded ? 'text-[#0A192F]' : 'text-slate-700 group-hover:text-[#0A192F]')}>{module.title}</span>
-                      <span className="mt-1 block text-xs text-slate-400">{module.lessons.length} leçons prévues</span>
+                      <span className={'block text-[14px] font-semibold leading-5 tracking-[-.01em] sm:text-[15px] ' + (isExpanded ? 'text-[#0A192F]' : 'text-slate-700 group-hover:text-[#0A192F]')}>{module.title}</span>
+                      <span className="mt-1.5 flex flex-wrap items-center gap-2">
+                        <span className={'inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold ' + (isExpanded ? styles.soft + ' ' + styles.text : 'bg-slate-100 text-slate-500')}>{module.lessons.length} leçons</span>
+                        {isExpanded && <span className="text-[10px] font-medium uppercase tracking-[.1em] text-slate-400">Module ouvert</span>}
+                      </span>
                     </span>
-                    <span className={'flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors ' + (isExpanded ? styles.soft + ' ' + styles.text : 'text-slate-400 group-hover:bg-slate-100')}><ChevronDown className={'h-4 w-4 transition-transform ' + (isExpanded ? 'rotate-180' : '')} /></span>
+                    <span className={'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-all ' + (isExpanded ? styles.bar + ' text-white shadow-sm' : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200')}><ChevronDown className={'h-4 w-4 transition-transform ' + (isExpanded ? 'rotate-180' : '')} /></span>
                   </button>
                   {isExpanded && (
-                    <div className="grid gap-6 pb-6 pl-12 pr-2 sm:grid-cols-[minmax(0,1fr)_220px] sm:pl-12">
+                    <div className="grid gap-6 pb-6 pl-3 pr-2 sm:grid-cols-[minmax(0,1fr)_220px] sm:pl-[4.75rem]">
                       <div>
                         <p className="mb-3 text-[10px] font-bold uppercase tracking-[.15em] text-slate-400">Contenu du module</p>
                         <ol className="space-y-3">
