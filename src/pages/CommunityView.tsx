@@ -4,6 +4,7 @@ import { EconomicCalendarView } from './EconomicCalendarView';
 import { ChatView } from './ChatView';
 import { UserProfile } from '../types';
 import { CourseSpace } from './CourseSpace';
+import { AnalysisAdminPanel } from './AnalysisAdminPanel';
 
 type CommunityTab = 'chat' | 'calendar' | 'courses' | 'analysis' | 'sentiment' | 'economic-data';
 
@@ -45,7 +46,9 @@ export function CommunityView({ userProfile }: { userProfile: UserProfile | null
       {activeTab === 'chat' && <ChatView userProfile={userProfile} />}
       {activeTab === 'courses' && <CourseSpace isAdmin={isAdmin} />}
       {activeTab === 'analysis' && (
-        <Placeholder title="Analyse" icon={BarChart3} text="Les analyses de marché et idées de trading seront regroupées ici." />
+        isAdmin
+          ? <AnalysisAdminPanel />
+          : <Placeholder title="Analyses XAUUSD" icon={BarChart3} text="Les analyses quotidiennes de l’or publiées par l’administration apparaîtront ici." />
       )}
       {activeTab === 'sentiment' && (
         <Placeholder title="Trader Sentiment" icon={Activity} text="Le sentiment des traders et les indicateurs de positionnement seront disponibles ici." />
