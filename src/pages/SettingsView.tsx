@@ -175,7 +175,20 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
       showToast('IAMTRADER est déjà installé sur cet appareil.', 'success');
       return;
     }
-    showToast('L’installation directe n’est pas proposée par ce navigateur pour le moment. Essayez à nouveau dans un navigateur compatible.', 'info');
+    const ua = navigator.userAgent;
+    const isIOS = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+    const isAndroid = /Android/i.test(ua);
+    const isEdge = /Edg\//i.test(ua);
+    const isChrome = /Chrome\//i.test(ua) && !isEdge;
+    if (isIOS) {
+      showToast('Sur iPhone/iPad : ouvrez Partager dans Safari, puis choisissez « Sur l’écran d’accueil ».', 'info');
+    } else if (isAndroid) {
+      showToast('Sur Android : ouvrez IAMTRADER dans Chrome, touchez ⋮, puis « Installer l’application » ou « Ajouter à l’écran d’accueil ».', 'info');
+    } else if (isEdge || isChrome) {
+      showToast('Dans Edge/Chrome, ouvrez le menu du navigateur et choisissez « Installer IAMTRADER » ou recherchez l’icône d’installation dans la barre d’adresse.', 'info');
+    } else {
+      showToast('Pour installer IAMTRADER, ouvrez le site dans Chrome ou Edge sur ordinateur, Chrome sur Android, ou Safari sur iPhone/iPad.', 'info');
+    }
   };
 
   const handleLogoutCurrentDevice = async () => {
