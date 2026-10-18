@@ -148,7 +148,24 @@ export function AnalysisAdminPanel({ isAdmin = true }: { isAdmin?: boolean }) {
       setSuccess(editingId ? 'Analyse mise à jour.' : form.status === 'published' ? 'Analyse publiée.' : 'Brouillon enregistré.');
       setModalOpen(false); setEditingId(null); setForm(blank);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Enregistrement impossible. Vérifiez les règles Firestore.');
+      const firebaseError = err as { code?: string; message?: string; name?: string };
+      console.error('[dailyAnalyses] Firestore write failed', {
+        code: firebaseError?.code ?? 'unknown',
+        message: firebaseError?.message ?? String(err),
+        operation: editingId ? 'update' : 'create',
+        uid: auth.currentUser?.uid ?? null,
+        projectId: 'iamtrader'
+      });
+      const code = firebaseError?.code ?? '';
+      setError(
+        code === 'permission-denied'
+          ? 'Firestore a refusé l’écriture. Vérifiez que les règles sont publiées et que votre compte possède le rôle admin.'
+          : code === 'unauthenticated'
+            ? 'Votre session Firebase n’est plus authentifiée. Reconnectez-vous puis réessayez.'
+            : code === 'unavailable' || code === 'deadline-exceeded'
+              ? 'Firestore ne répond pas correctement. Vérifiez la connexion réseau et les bloqueurs du navigateur.'
+              : `Échec Firestore (${code || firebaseError?.name || 'erreur inconnue'}) : ${firebaseError?.message ?? String(err)}`
+      );
     } finally { setSaving(false); }
   };
 
