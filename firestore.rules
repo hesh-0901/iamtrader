@@ -147,6 +147,20 @@ service cloud.firestore {
       allow read, update, delete: if isAdmin();
     }
 
+    // Analyses quotidiennes XAUUSD : lecture aux utilisateurs connectés, gestion admin uniquement.
+    match /dailyAnalyses/{analysisId} {
+      allow read: if isAuthenticated() && (isAdmin() || resource.data.status == 'published');
+      allow create: if isAdmin()
+        && request.resource.data.asset == 'XAUUSD'
+        && request.resource.data.createdBy == request.auth.uid
+        && request.resource.data.status in ['draft', 'published', 'closed'];
+      allow update: if isAdmin()
+        && request.resource.data.asset == 'XAUUSD'
+        && request.resource.data.createdBy == resource.data.createdBy
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['asset', 'tradingViewUrl', 'direction', 'entryPrice', 'stopLoss', 'takeProfit', 'setup', 'notes', 'status', 'updatedAt', 'updatedBy']);
+      allow delete: if isAdmin();
+    }
+
     // Progression du pipeline économique : administration uniquement.
     match /economicDataProgress/{progressId} {
       allow read, write: if isAdmin();
