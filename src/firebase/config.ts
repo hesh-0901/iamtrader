@@ -13,7 +13,6 @@ export const firebaseConfig = {
   measurementId: "G-2Z3EDNZPX5"
 };
 
-// Initialize the app once.
 export const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 export const auth = getAuth(app);
 
@@ -22,9 +21,8 @@ export const authPersistenceReady = setPersistence(auth, browserLocalPersistence
   throw error;
 });
 
-// Force long polling to avoid Firestore WebChannel requests being blocked by
-// some browser privacy protections, extensions, proxies, or network filters.
-// This must be the first Firestore initialization for this app.
+// Let the SDK detect when long polling is needed instead of forcing it for every
+// connection. This setting must be applied before any Firestore instance is used.
 export const db = initializeFirestore(app, {
-  experimentalForceLongPolling: true
+  experimentalAutoDetectLongPolling: true
 });
