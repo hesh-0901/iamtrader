@@ -31,40 +31,57 @@ function getDeviceName(): string {
 }
 
 export function watchDeviceSession(uid: string, onRevoked: () => void): () => void {
-  const sessionId = getDeviceSessionId();
-  const sessionRef = doc(db, 'users', uid, 'sessions', sessionId);
-  const now = new Date().toISOString();
-  void getDoc(sessionRef).then(snapshot => {
-    if (snapshot.exists()) {
-      if (snapshot.data().revoked === true) {
-        localStorage.removeItem(DEVICE_SESSION_KEY);
-        onRevoked();
-        return;
-      }
-      return updateDoc(sessionRef, { lastSeenAt: now });
-    }
-    return setDoc(sessionRef, {
-      deviceName: getDeviceName(),
-      userAgent: navigator.userAgent.slice(0, 300),
-      createdAt: now,
-      lastSeenAt: now,
-      revoked: false,
-    });
-  }).catch(error => {
-    console.warn('Device session registration notice:', error);
-  });
-  const unsubscribe = onSnapshot(sessionRef, snapshot => {
+  let unsubscribe = () => undefined;
+  let heartbeat: number | undefined;
+  let cancelled = false;
+
+  const initialize = async () => {
+    let sessionId = getDeviceSessionId();
+    let sessionRef = doc(db, 'users', uid, 'sessions', sessionId);
+    let snapshot = await getDoc(sessionRef);
+
+    // A revoked device can sign in again; give the new authenticated session a fresh device-session ID.
     if (snapshot.exists() && snapshot.data().revoked === true) {
       localStorage.removeItem(DEVICE_SESSION_KEY);
-      onRevoked();
+      sessionId = getDeviceSessionId();
+      sessionRef = doc(db, 'users', uid, 'sessions', sessionId);
+      snapshot = await getDoc(sessionRef);
     }
-  }, error => console.warn('Device session monitoring notice:', error));
-  const heartbeat = window.setInterval(() => {
-    void updateDoc(sessionRef, { lastSeenAt: new Date().toISOString() }).catch(() => undefined);
-  }, 60_000);
+
+    const now = new Date().toISOString();
+    if (snapshot.exists()) {
+      await updateDoc(sessionRef, { lastSeenAt: now });
+    } else {
+      await setDoc(sessionRef, {
+        deviceName: getDeviceName(),
+        userAgent: navigator.userAgent.slice(0, 300),
+        createdAt: now,
+        lastSeenAt: now,
+        revoked: false,
+      });
+    }
+    if (cancelled) return;
+
+    unsubscribe = onSnapshot(sessionRef, currentSnapshot => {
+      if (currentSnapshot.exists() && currentSnapshot.data().revoked === true) {
+        localStorage.removeItem(DEVICE_SESSION_KEY);
+        onRevoked();
+      }
+    }, error => console.warn('Device session monitoring notice:', error));
+
+    heartbeat = window.setInterval(() => {
+      void updateDoc(sessionRef, { lastSeenAt: new Date().toISOString() }).catch(() => undefined);
+    }, 60_000);
+  };
+
+  void initialize().catch(error => {
+    console.warn('Device session registration notice:', error);
+  });
+
   return () => {
+    cancelled = true;
     unsubscribe();
-    window.clearInterval(heartbeat);
+    if (heartbeat !== undefined) window.clearInterval(heartbeat);
   };
 }
 
