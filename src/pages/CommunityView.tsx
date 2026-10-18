@@ -3,6 +3,7 @@ import { MessageCircle, CalendarDays, BookOpen, BarChart3, Activity, Database, B
 import { EconomicCalendarView } from './EconomicCalendarView';
 import { ChatView } from './ChatView';
 import { UserProfile } from '../types';
+import { CourseSpace } from './CourseSpace';
 
 type CommunityTab = 'chat' | 'calendar' | 'courses' | 'analysis' | 'sentiment' | 'economic-data';
 
@@ -42,9 +43,7 @@ export function CommunityView({ userProfile }: { userProfile: UserProfile | null
       {activeTab === 'calendar' && <EconomicCalendarView />}
 
       {activeTab === 'chat' && <ChatView userProfile={userProfile} />}
-      {activeTab === 'courses' && (
-        <Placeholder title="Cours" icon={BookOpen} text="Les cours et ressources pédagogiques seront regroupés ici." />
-      )}
+      {activeTab === 'courses' && <CourseSpace />}
       {activeTab === 'analysis' && (
         <Placeholder title="Analyse" icon={BarChart3} text="Les analyses de marché et idées de trading seront regroupées ici." />
       )}
