@@ -84,3 +84,15 @@ export async function revokeDeviceSession(uid: string, sessionId: string): Promi
     revokedAt: new Date().toISOString(),
   });
 }
+
+export async function endCurrentDeviceSession(uid: string): Promise<void> {
+  const sessionId = getDeviceSessionId();
+  try {
+    await updateDoc(doc(db, 'users', uid, 'sessions', sessionId), {
+      revoked: true,
+      revokedAt: new Date().toISOString(),
+    });
+  } finally {
+    localStorage.removeItem(DEVICE_SESSION_KEY);
+  }
+}
