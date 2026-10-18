@@ -13,13 +13,12 @@ export const firebaseConfig = {
   measurementId: "G-2Z3EDNZPX5"
 };
 
-// Initialize Firebase safely
+// Complete local persistence initialization before auth listeners or sign-in.
 export const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 export const auth = getAuth(app);
-
-// Keep the Firebase session across normal page refreshes and browser restarts.
-void setPersistence(auth, browserLocalPersistence).catch((error) => {
-  console.warn("Firebase auth persistence notice:", error);
+export const authPersistenceReady = setPersistence(auth, browserLocalPersistence).catch((error) => {
+  console.error("Firebase local auth persistence could not be initialized:", error);
+  throw error;
 });
 
 export const db = getFirestore(app);
