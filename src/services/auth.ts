@@ -8,10 +8,11 @@ import {
   updateProfile
 } from 'firebase/auth';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
-import { auth, db } from '../firebase/config';
+import { auth, authPersistenceReady, db } from '../firebase/config';
 import { UserProfile, UserRole } from '../types';
 
 export async function loginWithEmail(email: string, pass: string): Promise<User> {
+  await authPersistenceReady;
   const cred = await signInWithEmailAndPassword(auth, email, pass);
   return cred.user;
 }
