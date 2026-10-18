@@ -21,7 +21,7 @@ function escapeHtml(value: string) {
   return value.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char] || char));
 }
 
-function printInvoice(item: PaymentHistoryItem, number: number) {
+function printInvoice(item: PaymentHistoryItem, number: number, onInvoiceReady: (html: string) => void) {
   const plan = escapeHtml(item.planName || (item.plan === 'pro' ? 'Plus' : 'Community'));
   const invoice = escapeHtml(item.invoiceNumber || ('INV-' + String(number).padStart(4, '0')));
   const buyerEmail = escapeHtml(item.buyerEmail || '—');
@@ -60,7 +60,7 @@ function printInvoice(item: PaymentHistoryItem, number: number) {
     '<footer class="footer"><div><strong>IAMTRADER</strong><br>' + (isPaid ? 'Justificatif de paiement confirmé.' : 'Document informatif de transaction, non valable comme preuve de paiement.') + '</div><div style="text-align:right"><strong>Facture ' + invoice + '</strong><br>Montants issus de la transaction enregistrée.</div></footer>' +
     '</main><div class="no-print toolbar" role="toolbar" aria-label="Actions de facture"><button onclick="window.print()" title="Imprimer" aria-label="Imprimer" class="icon-btn print-btn"><span aria-hidden="true">🖨</span></button><button onclick="saveInvoice()" title="Enregistrer la facture" aria-label="Enregistrer la facture" class="icon-btn save-btn"><span aria-hidden="true">↓</span></button></div><script>function saveInvoice(){const clone=document.documentElement.cloneNode(true);clone.querySelectorAll(".no-print").forEach(function(el){el.remove()});const blob=new Blob(["<!doctype html>\\n"+clone.outerHTML],{type:"text/html;charset=utf-8"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=document.title.replace(/[^a-zA-Z0-9_-]+/g,"-")+".html";document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url)},1000)}</script><style>.toolbar{position:fixed;top:18px;right:18px;display:flex;gap:6px;padding:5px;border:1px solid rgba(16,24,40,.08);border-radius:10px;background:rgba(255,255,255,.88);backdrop-filter:blur(10px);box-shadow:0 6px 22px rgba(16,24,40,.08)}.icon-btn{width:32px;height:32px;border:0;border-radius:7px;background:transparent;color:#667085;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;cursor:pointer}.icon-btn:hover{background:#f2f4f7;color:#071a2d}.print-btn span{font-size:14px}.save-btn span{font-size:18px;line-height:1;transform:translateY(-1px)}</style></body></html>';
 
-  setInvoiceHtml(html);
+  onInvoiceReady(html);
 }
 function status(item: PaymentHistoryItem) {
   if (item.status === 'paid') return { label: 'Payé', cls: 'bg-emerald-50 text-emerald-700 border-emerald-100', icon: CheckCircle2 };
@@ -134,7 +134,7 @@ export function PaymentHistory() {
                   <div className="mt-2 text-[10px] text-slate-500">{item.subscriptionAction === 'renewal' ? 'Renouvellement' : item.subscriptionAction === 'upgrade' ? 'Upgrade programmé' : 'Nouvelle souscription'} · Activation {date(item.activationStartAt)} → {date(item.activationExpiresAt)}</div>
                 </div>
                 <div className="text-[10px] text-slate-500 sm:text-right"><div>Abonnement <b className="text-slate-700">{money(item.baseAmount, item.currency)}</b></div><div className="mt-1">Frais 3 % <b className="text-slate-700">+{money(item.paymentFee, item.currency)}</b></div></div>
-                <div className="flex items-end justify-between gap-3 sm:justify-end"><div className="text-left sm:text-right"><div className="text-lg font-black text-slate-950">{money(item.amount, item.currency)}</div><div className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Total payé</div></div><button type="button" onClick={() => printInvoice(item, (page - 1) * pageSize + index + 1)} title="Générer la facture" aria-label="Générer la facture" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-[#b7eadf] hover:bg-[#f0fbf8] hover:text-[#008f70]"><ReceiptText className="h-4 w-4" /></button></div>
+                <div className="flex items-end justify-between gap-3 sm:justify-end"><div className="text-left sm:text-right"><div className="text-lg font-black text-slate-950">{money(item.amount, item.currency)}</div><div className="text-[9px] font-bold uppercase tracking-wider text-slate-400">Total payé</div></div><button type="button" onClick={() => printInvoice(item, (page - 1) * pageSize + index + 1, setInvoiceHtml)} title="Générer la facture" aria-label="Générer la facture" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-[#b7eadf] hover:bg-[#f0fbf8] hover:text-[#008f70]"><ReceiptText className="h-4 w-4" /></button></div>
               </div>;
             })}
           </div>}
