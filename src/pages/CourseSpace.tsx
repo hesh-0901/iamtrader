@@ -93,114 +93,139 @@ export function CourseSpace() {
   };
 
   return (
-    <div className="space-y-6">
-      <section className="relative overflow-hidden rounded-3xl bg-[#0A192F] p-6 text-white shadow-sm sm:p-8">
-        <div className="pointer-events-none absolute -right-12 -top-16 h-56 w-56 rounded-full border-[32px] border-white/5" />
-        <div className="pointer-events-none absolute -bottom-24 right-28 h-48 w-48 rounded-full bg-emerald-400/10 blur-2xl" />
-        <div className="relative">
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.16em] text-emerald-200">
-            <GraduationCap className="h-3.5 w-3.5" /> IAMTRADER ACADEMY
-          </div>
-          <h2 className="mt-4 text-2xl font-black tracking-tight sm:text-3xl">Votre parcours de formation</h2>
-          <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-300">Six mois pour construire vos fondations, structurer votre analyse et apprendre à évaluer votre méthode de trading.</p>
-          <div className="mt-6 flex flex-wrap gap-3 text-xs font-semibold">
-            <span className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2"><Clock3 className="h-4 w-4 text-emerald-300" /> 6 mois</span>
-            <span className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2"><BookOpen className="h-4 w-4 text-emerald-300" /> 3 classes</span>
-            <span className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2"><Target className="h-4 w-4 text-emerald-300" /> 15 modules</span>
-          </div>
+    <div className="mx-auto w-full max-w-5xl space-y-8 pb-8">
+      <header className="space-y-5">
+        <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold uppercase tracking-[.2em] text-slate-400">
+          <GraduationCap className="h-4 w-4 text-emerald-600" />
+          <span>IAMTRADER Academy</span>
+          <span className="text-slate-300">/</span>
+          <span>Parcours pédagogique</span>
         </div>
-      </section>
-
-      <section className="grid gap-3 md:grid-cols-3" aria-label="Classes de formation">
-        {courseClasses.map(course => {
-          const courseStyles = accentStyles[course.accent];
-          const isSelected = selectedClass === course.id;
-          return (
-            <button key={course.id} type="button" onClick={() => chooseClass(course.id)} aria-pressed={isSelected}
-              className={'rounded-2xl border bg-white p-4 text-left shadow-sm transition-all hover:-translate-y-0.5 hover:shadow-md ' + (isSelected ? courseStyles.selected : 'border-slate-200')}>
-              <div className="flex items-center justify-between gap-2">
-                <span className={'rounded-lg px-2.5 py-1.5 text-xs font-black ' + courseStyles.soft + ' ' + courseStyles.text}>{course.id}</span>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{course.period}</span>
-              </div>
-              <h3 className="mt-4 text-lg font-black text-[#0b1f35]">{course.name}</h3>
-              <p className="mt-1 text-xs font-semibold text-slate-500">{course.subtitle}</p>
-              <p className="mt-3 text-sm leading-6 text-slate-600">{course.description}</p>
-              <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3 text-xs">
-                <span className="font-semibold text-slate-500">{course.modules.length} modules</span>
-                <span className={'font-bold ' + courseStyles.text}>{isSelected ? 'Classe sélectionnée' : 'Voir le programme'}</span>
-              </div>
-            </button>
-          );
-        })}
-      </section>
-
-      <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <div className={'inline-flex rounded-lg px-3 py-1.5 text-xs font-black ' + styles.soft + ' ' + styles.text}>{activeClass.id} · {activeClass.period}</div>
-            <h3 className="mt-3 text-2xl font-black tracking-tight text-[#0b1f35]">{activeClass.name}</h3>
-            <p className="mt-1 text-sm font-semibold text-slate-500">{activeClass.subtitle}</p>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">{activeClass.description}</p>
+        <div className="flex flex-col justify-between gap-5 border-b border-slate-200 pb-6 sm:flex-row sm:items-end">
+          <div className="max-w-2xl">
+            <h1 className="text-3xl font-semibold tracking-[-.045em] text-[#0A192F] sm:text-4xl">Devenir un trader structuré.</h1>
+            <p className="mt-3 max-w-xl text-sm leading-6 text-slate-500">Un parcours progressif en trois classes, de la compréhension des marchés à l’évaluation rigoureuse de votre propre méthode.</p>
           </div>
-          <div className={'flex shrink-0 items-center gap-2 rounded-xl border px-3 py-2 text-xs font-bold ' + styles.border + ' ' + styles.soft + ' ' + styles.text}>
-            <BookOpen className="h-4 w-4" /> {activeClass.modules.length} modules
-          </div>
-        </div>
-
-        <div className={'mt-5 rounded-2xl border p-4 ' + styles.border + ' ' + styles.soft}>
-          <div className="flex items-start gap-3">
-            <Target className={'mt-0.5 h-5 w-5 shrink-0 ' + styles.text} />
+          <div className="flex shrink-0 items-center gap-5 pb-1">
             <div>
-              <p className={'text-[10px] font-black uppercase tracking-wider ' + styles.text}>Objectif de la classe</p>
-              <p className="mt-1 text-sm leading-6 text-slate-700">{activeClass.outcome}</p>
+              <p className="text-2xl font-semibold tracking-tight text-[#0A192F]">06<span className="ml-1 text-sm font-medium text-slate-400">mois</span></p>
+              <p className="mt-1 text-[10px] font-semibold uppercase tracking-[.14em] text-slate-400">Parcours complet</p>
+            </div>
+            <div className="h-10 w-px bg-slate-200" />
+            <div>
+              <p className="text-2xl font-semibold tracking-tight text-[#0A192F]">15</p>
+              <p className="mt-1 text-[10px] font-semibold uppercase tracking-[.14em] text-slate-400">Modules</p>
             </div>
           </div>
         </div>
+      </header>
 
-        <div className="mt-6 space-y-3">
-          {activeClass.modules.map(module => {
-            const isExpanded = expandedModules.includes(module.number);
+      <section aria-label="Sélection de la classe" className="space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-xs font-semibold text-slate-500">Votre parcours <span className="mx-1 text-slate-300">/</span> <span className="text-[#0A192F]">{activeClass.id}</span></p>
+          <span className="text-[10px] font-semibold uppercase tracking-[.15em] text-slate-400">Sélectionner une classe</span>
+        </div>
+        <div className="grid grid-cols-1 gap-1 border-y border-slate-200 py-1 sm:grid-cols-3">
+          {courseClasses.map((course, index) => {
+            const courseStyles = accentStyles[course.accent];
+            const isSelected = selectedClass === course.id;
             return (
-              <article key={module.number} className="overflow-hidden rounded-2xl border border-slate-200">
-                <button type="button" onClick={() => toggleModule(module.number)} aria-expanded={isExpanded}
-                  className="flex w-full items-center gap-3 p-4 text-left transition-colors hover:bg-slate-50 sm:p-5">
-                  <span className={'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-xs font-black ' + styles.soft + ' ' + styles.text}>{String(module.number).padStart(2, '0')}</span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-extrabold text-[#0b1f35] sm:text-base">{module.title}</span>
-                    <span className="mt-1 block text-xs text-slate-500">{module.lessons.length} leçons prévues</span>
+              <button key={course.id} type="button" onClick={() => chooseClass(course.id)} aria-pressed={isSelected}
+                className={'group relative flex min-h-[94px] items-start gap-3 rounded-lg px-3 py-4 text-left transition-colors sm:px-4 ' + (isSelected ? 'bg-[#F1F7F5]' : 'hover:bg-slate-50')}>
+                <span className={'mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[10px] font-bold ' + (isSelected ? courseStyles.soft + ' ' + courseStyles.text : 'bg-slate-100 text-slate-500')}>{String(index + 1).padStart(2, '0')}</span>
+                <span className="min-w-0 flex-1">
+                  <span className="flex flex-wrap items-center gap-2">
+                    <span className={'text-[10px] font-bold uppercase tracking-[.12em] ' + (isSelected ? courseStyles.text : 'text-slate-400')}>{course.id}</span>
+                    <span className="text-[10px] text-slate-400">{course.period}</span>
                   </span>
-                  <ChevronDown className={'h-5 w-5 shrink-0 text-slate-400 transition-transform ' + (isExpanded ? 'rotate-180' : '')} />
-                </button>
-                {isExpanded && (
-                  <div className="border-t border-slate-100 bg-white p-4 sm:p-5">
-                    <p className="mb-3 text-[10px] font-black uppercase tracking-wider text-slate-400">Plan du module</p>
-                    <ol className="space-y-2.5">
-                      {module.lessons.map((lesson, index) => (
-                        <li key={lesson} className="flex items-start gap-2.5 text-sm leading-5 text-slate-600">
-                          <span className={'mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full ' + styles.soft + ' ' + styles.text}><CheckCircle2 className="h-3.5 w-3.5" /></span>
-                          <span>{lesson}</span>
-                        </li>
-                      ))}
-                    </ol>
-                    <div className="mt-5 rounded-xl bg-slate-50 p-3.5">
-                      <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Compétence visée</p>
-                      <p className="mt-1 text-sm leading-6 text-slate-700">{module.outcome}</p>
-                    </div>
-                    <div className="mt-4 flex items-center gap-2 text-xs font-semibold text-slate-400">
-                      <PlayCircle className="h-4 w-4" /> Plan pédagogique · Les leçons seront développées progressivement
-                    </div>
-                  </div>
-                )}
-              </article>
+                  <span className="mt-1 block text-sm font-semibold tracking-tight text-[#0A192F]">{course.name}</span>
+                  <span className="mt-1 block text-xs text-slate-500">{course.subtitle}</span>
+                </span>
+                {isSelected && <span className={'absolute bottom-0 left-3 right-3 h-0.5 rounded-full sm:left-4 sm:right-4 ' + courseStyles.bar} />}
+              </button>
             );
           })}
         </div>
       </section>
 
-      <div className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm leading-6 text-slate-600">
-        <LockKeyhole className="mt-0.5 h-5 w-5 shrink-0 text-slate-400" />
-        <p>Le programme est organisé en trois classes progressives. Les modules affichent ici leur plan pédagogique ; les vidéos, supports de cours, exercices notés et le suivi de progression pourront être ajoutés à mesure qu’ils seront préparés.</p>
-      </div>
+      <section className="space-y-6">
+        <div className="grid gap-5 border-b border-slate-200 pb-6 md:grid-cols-[minmax(0,1fr)_220px] md:items-end">
+          <div>
+            <div className={'mb-3 inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.16em] ' + styles.text}>
+              <span className={'h-1.5 w-1.5 rounded-full ' + styles.bar} />
+              Classe sélectionnée · {activeClass.period}
+            </div>
+            <h2 className="text-2xl font-semibold tracking-[-.035em] text-[#0A192F] sm:text-3xl">{activeClass.name}</h2>
+            <p className="mt-1 text-sm font-medium text-slate-500">{activeClass.subtitle}</p>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">{activeClass.description}</p>
+          </div>
+          <div className="flex items-center gap-3 md:justify-end">
+            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 text-slate-600"><BookOpen className="h-5 w-5" /></div>
+            <div>
+              <p className="text-xl font-semibold tracking-tight text-[#0A192F]">{activeClass.modules.length}<span className="ml-1 text-xs font-medium text-slate-400">modules</span></p>
+              <p className="mt-1 text-[10px] uppercase tracking-[.12em] text-slate-400">Programme de la classe</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid gap-2 sm:grid-cols-[150px_minmax(0,1fr)] sm:gap-8">
+          <aside className="space-y-2 sm:pt-2">
+            <p className="text-[10px] font-bold uppercase tracking-[.16em] text-slate-400">Objectif pédagogique</p>
+            <div className={'h-0.5 w-10 ' + styles.bar} />
+          </aside>
+          <p className="max-w-3xl text-sm leading-6 text-slate-600">{activeClass.outcome}</p>
+        </div>
+
+        <div>
+          <div className="mb-2 flex items-center justify-between border-b border-slate-200 pb-3">
+            <h3 className="text-sm font-semibold text-[#0A192F]">Programme détaillé</h3>
+            <span className="text-[10px] font-medium text-slate-400">{activeClass.modules.length} modules · {activeClass.modules.reduce((total, module) => total + module.lessons.length, 0)} leçons prévues</span>
+          </div>
+          <div>
+            {activeClass.modules.map(module => {
+              const isExpanded = expandedModules.includes(module.number);
+              return (
+                <article key={module.number} className="border-b border-slate-200 last:border-b-0">
+                  <button type="button" onClick={() => toggleModule(module.number)} aria-expanded={isExpanded}
+                    className="group flex w-full items-center gap-4 py-4 text-left sm:py-5">
+                    <span className={'w-8 shrink-0 font-mono text-xs ' + (isExpanded ? styles.text : 'text-slate-400')}>{String(module.number).padStart(2, '0')}</span>
+                    <span className="min-w-0 flex-1">
+                      <span className={'block text-sm font-semibold tracking-tight ' + (isExpanded ? 'text-[#0A192F]' : 'text-slate-700 group-hover:text-[#0A192F]')}>{module.title}</span>
+                      <span className="mt-1 block text-xs text-slate-400">{module.lessons.length} leçons prévues</span>
+                    </span>
+                    <span className={'flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors ' + (isExpanded ? styles.soft + ' ' + styles.text : 'text-slate-400 group-hover:bg-slate-100')}><ChevronDown className={'h-4 w-4 transition-transform ' + (isExpanded ? 'rotate-180' : '')} /></span>
+                  </button>
+                  {isExpanded && (
+                    <div className="grid gap-6 pb-6 pl-12 pr-2 sm:grid-cols-[minmax(0,1fr)_220px] sm:pl-12">
+                      <div>
+                        <p className="mb-3 text-[10px] font-bold uppercase tracking-[.15em] text-slate-400">Contenu du module</p>
+                        <ol className="space-y-3">
+                          {module.lessons.map((lesson, index) => (
+                            <li key={lesson} className="flex items-start gap-3 text-sm leading-5 text-slate-600">
+                              <span className="mt-0.5 w-5 shrink-0 font-mono text-[10px] text-slate-400">{String(index + 1).padStart(2, '0')}</span>
+                              <span>{lesson}</span>
+                            </li>
+                          ))}
+                        </ol>
+                      </div>
+                      <div className="self-start border-l-2 border-slate-200 pl-4">
+                        <p className={'text-[10px] font-bold uppercase tracking-[.14em] ' + styles.text}>Compétence visée</p>
+                        <p className="mt-2 text-sm leading-6 text-slate-600">{module.outcome}</p>
+                        <div className="mt-4 flex items-center gap-2 text-[10px] font-medium text-slate-400"><PlayCircle className="h-3.5 w-3.5" /> Leçons à développer</div>
+                      </div>
+                    </div>
+                  )}
+                </article>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      <footer className="flex items-start gap-3 border-t border-slate-200 pt-4 text-xs leading-5 text-slate-500">
+        <LockKeyhole className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+        <p>Le programme pédagogique est structuré. Les supports, vidéos, exercices et validations seront ajoutés au fur et à mesure de leur préparation.</p>
+      </footer>
     </div>
   );
 }
