@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BookOpen, CheckCircle2, ChevronDown, Clock3, GraduationCap, LockKeyhole, PlayCircle, Target } from 'lucide-react';
+import { BookOpen, CheckCircle2, ChevronDown, Clock3, GraduationCap, LockKeyhole, PlayCircle, Target, LayoutDashboard, FileText } from 'lucide-react';
 
 type CourseModule = {
   number: number;
@@ -122,26 +122,29 @@ export function CourseSpace() {
 
       <section aria-label="Sélection de la classe" className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-xs font-semibold text-slate-500">Votre parcours <span className="mx-1 text-slate-300">/</span> <span className="text-[#0A192F]">{activeClass.id}</span></p>
-          <span className="text-[10px] font-semibold uppercase tracking-[.15em] text-slate-400">Sélectionner une classe</span>
+          <p className="text-xs font-semibold text-slate-500">MON APPRENTISSAGE <span className="mx-1 text-slate-300">/</span> <span className="text-[#0A192F]">{activeClass.id}</span></p>
+          <span className="text-[10px] font-semibold uppercase tracking-[.15em] text-slate-400">3 niveaux · 6 mois</span>
         </div>
-        <div className="grid grid-cols-1 gap-1 border-y border-slate-200 py-1 sm:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
           {courseClasses.map((course, index) => {
             const courseStyles = accentStyles[course.accent];
             const isSelected = selectedClass === course.id;
+            const moduleCount = course.modules.length;
             return (
               <button key={course.id} type="button" onClick={() => chooseClass(course.id)} aria-pressed={isSelected}
-                className={'group relative flex min-h-[94px] items-start gap-3 rounded-lg px-3 py-4 text-left transition-colors sm:px-4 ' + (isSelected ? 'bg-[#F1F7F5]' : 'hover:bg-slate-50')}>
-                <span className={'mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-[10px] font-bold ' + (isSelected ? courseStyles.soft + ' ' + courseStyles.text : 'bg-slate-100 text-slate-500')}>{String(index + 1).padStart(2, '0')}</span>
-                <span className="min-w-0 flex-1">
-                  <span className="flex flex-wrap items-center gap-2">
-                    <span className={'text-[10px] font-bold uppercase tracking-[.12em] ' + (isSelected ? courseStyles.text : 'text-slate-400')}>{course.id}</span>
-                    <span className="text-[10px] text-slate-400">{course.period}</span>
-                  </span>
-                  <span className="mt-1 block text-sm font-semibold tracking-tight text-[#0A192F]">{course.name}</span>
-                  <span className="mt-1 block text-xs text-slate-500">{course.subtitle}</span>
+                className={'group relative flex min-h-[154px] flex-col overflow-hidden rounded-xl border p-4 text-left transition-all duration-200 ' + (isSelected ? 'border-slate-300 bg-white shadow-[0_5px_18px_rgba(15,23,42,0.08)] ring-1 ring-slate-200' : 'border-slate-200 bg-white hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md')}>
+                <span className={'absolute inset-x-0 top-0 h-1 ' + courseStyles.bar} />
+                <span className="flex w-full items-center justify-between gap-2 pt-1">
+                  <span className={'inline-flex items-center rounded-md px-2 py-1 text-[10px] font-bold tracking-[.08em] ' + courseStyles.soft + ' ' + courseStyles.text}>{course.id}</span>
+                  <span className="text-[10px] font-medium text-slate-400">{course.period}</span>
                 </span>
-                {isSelected && <span className={'absolute bottom-0 left-3 right-3 h-0.5 rounded-full sm:left-4 sm:right-4 ' + courseStyles.bar} />}
+                <span className="mt-3 block text-base font-semibold tracking-tight text-[#0A192F]">{course.name}</span>
+                <span className="mt-1 block text-xs leading-5 text-slate-500">{course.subtitle}</span>
+                <span className="mt-auto flex items-center justify-between gap-2 pt-4">
+                  <span className="text-[10px] font-medium text-slate-400">{moduleCount} modules au programme</span>
+                  <span className={'flex h-6 w-6 items-center justify-center rounded-full transition-colors ' + (isSelected ? courseStyles.soft + ' ' + courseStyles.text : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200')}><ChevronDown className={'h-3.5 w-3.5 -rotate-90'} /></span>
+                </span>
+                {isSelected && <span className={'absolute bottom-0 left-4 right-4 h-[3px] rounded-t ' + courseStyles.bar} />}
               </button>
             );
           })}
@@ -177,17 +180,20 @@ export function CourseSpace() {
         </div>
 
         <div>
-          <div className="mb-2 flex items-center justify-between border-b border-slate-200 pb-3">
-            <h3 className="text-sm font-semibold text-[#0A192F]">Programme détaillé</h3>
-            <span className="text-[10px] font-medium text-slate-400">{activeClass.modules.length} modules · {activeClass.modules.reduce((total, module) => total + module.lessons.length, 0)} leçons prévues</span>
+          <div className="mb-4 flex flex-wrap items-end justify-between gap-3 border-b border-slate-200 pb-3">
+            <div>
+              <p className="mb-1 text-[10px] font-bold uppercase tracking-[.15em] text-slate-400">Votre programme</p>
+              <h3 className="text-lg font-semibold tracking-tight text-[#0A192F]">Modules de {activeClass.id}</h3>
+            </div>
+            <span className="text-xs font-medium text-slate-500">{activeClass.modules.length} modules <span className="mx-1 text-slate-300">·</span> {activeClass.modules.reduce((total, module) => total + module.lessons.length, 0)} leçons</span>
           </div>
-          <div>
+          <div className="space-y-2">
             {activeClass.modules.map(module => {
               const isExpanded = expandedModules.includes(module.number);
               return (
-                <article key={module.number} className="border-b border-slate-100 py-1 last:border-b-0">
+                <article key={module.number} className="overflow-hidden rounded-xl border border-slate-200 bg-white transition-shadow hover:shadow-sm">
                   <button type="button" onClick={() => toggleModule(module.number)} aria-expanded={isExpanded}
-                    className={'group relative flex w-full items-center gap-4 rounded-xl px-3 py-4 text-left transition-all sm:gap-5 sm:px-4 sm:py-5 ' + (isExpanded ? 'mb-2 bg-[#F3F8F6] shadow-[inset_3px_0_0_0_currentColor] ' + styles.text : 'hover:bg-slate-50')}>
+                    className={'group relative flex w-full items-center gap-4 px-3 py-4 text-left transition-all sm:gap-5 sm:px-4 sm:py-5 ' + (isExpanded ? 'bg-[#F3F8F6] ' + styles.text : 'bg-white hover:bg-slate-50')}>
                     <span className={'flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border font-mono text-sm font-semibold transition-colors ' + (isExpanded ? styles.soft + ' ' + styles.border + ' ' + styles.text : 'border-slate-200 bg-white text-slate-500 group-hover:border-slate-300 group-hover:text-slate-800')}>{String(module.number).padStart(2, '0')}</span>
                     <span className="min-w-0 flex-1">
                       <span className={'block text-[14px] font-semibold leading-5 tracking-[-.01em] sm:text-[15px] ' + (isExpanded ? 'text-[#0A192F]' : 'text-slate-700 group-hover:text-[#0A192F]')}>{module.title}</span>
@@ -199,7 +205,7 @@ export function CourseSpace() {
                     <span className={'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-all ' + (isExpanded ? styles.bar + ' text-white shadow-sm' : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200')}><ChevronDown className={'h-4 w-4 transition-transform ' + (isExpanded ? 'rotate-180' : '')} /></span>
                   </button>
                   {isExpanded && (
-                    <div className="grid gap-6 pb-6 pl-3 pr-2 sm:grid-cols-[minmax(0,1fr)_220px] sm:pl-[4.75rem]">
+                    <div className="grid gap-6 border-t border-slate-100 bg-slate-50/70 px-4 py-5 sm:grid-cols-[minmax(0,1fr)_220px] sm:px-6">
                       <div>
                         <p className="mb-3 text-[10px] font-bold uppercase tracking-[.15em] text-slate-400">Contenu du module</p>
                         <ol className="space-y-3">
