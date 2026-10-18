@@ -146,7 +146,8 @@ export function AnalysisAdminPanel({ isAdmin = true }: { isAdmin?: boolean }) {
       if (editingId) await updateDoc(doc(db, 'dailyAnalyses', editingId), payload);
       else await addDoc(collection(db, 'dailyAnalyses'), { ...payload, createdAt: serverTimestamp(), createdBy: auth.currentUser.uid });
       setSuccess(editingId ? 'Analyse mise à jour.' : form.status === 'published' ? 'Analyse publiée.' : 'Brouillon enregistré.');
-      setModalOpen(false); setEditingId(null); setForm(blank);
+      // Garder la fenêtre ouverte : seule la croix permet de la fermer.
+      setEditingId(null);
     } catch (err) {
       const firebaseError = err as { code?: string; message?: string; name?: string };
       console.error('[dailyAnalyses] Firestore write failed', {
@@ -225,7 +226,7 @@ export function AnalysisAdminPanel({ isAdmin = true }: { isAdmin?: boolean }) {
         </div>
       </article>)}</div>}
 
-    {modalOpen && <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/55 p-3 backdrop-blur-sm sm:p-5" onMouseDown={event => { if (event.target === event.currentTarget && !saving) setModalOpen(false); }}>
+    {modalOpen && <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/55 p-3 backdrop-blur-sm sm:p-5">
       <section role="dialog" aria-modal="true" aria-labelledby="analysis-modal-title" className="flex max-h-[94vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
         <header className="flex items-center justify-between border-b border-slate-100 bg-white px-6 py-4"><div><h3 id="analysis-modal-title" className="text-base font-black text-[#0b1f35]">{editingId ? 'Modifier l’analyse' : 'Ajouter une analyse'}</h3><p className="mt-1 text-xs text-slate-500">XAUUSD · Gold</p></div><button type="button" onClick={() => !saving && setModalOpen(false)} aria-label="Fermer" className="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100"><X className="h-5 w-5" /></button></header>
         <div className="border-b border-slate-200 bg-white px-4 py-4 sm:px-6">
@@ -290,7 +291,7 @@ export function AnalysisAdminPanel({ isAdmin = true }: { isAdmin?: boolean }) {
           </div>}
           {error && <p role="alert" className="rounded-lg bg-rose-50 px-3 py-2 text-xs leading-5 text-rose-700">{error}</p>}
           <footer className="flex shrink-0 items-center justify-between gap-3 border-t border-slate-200 bg-white px-4 py-3 sm:px-6">
-            <button type="button" onClick={() => activeStep > 0 ? setActiveStep(activeStep - 1) : setModalOpen(false)} disabled={saving} className="min-h-10 rounded-xl px-3 text-sm font-bold text-slate-500 hover:bg-slate-50">{activeStep === 0 ? 'Annuler' : '← Précédent'}</button>
+            {activeStep > 0 ? <button type="button" onClick={() => setActiveStep(activeStep - 1)} disabled={saving} className="min-h-10 rounded-xl px-3 text-sm font-bold text-slate-500 hover:bg-slate-50">← Précédent</button> : <span className="px-3 text-xs text-slate-400">Fermez avec la croix ×</span>}
             {activeStep < 3 ? <button type="button" onClick={() => {
               setError('');
               if (activeStep === 0 && (!validTradingViewUrl(form.tradingViewUrl) || !form.setup.trim())) { setError(!validTradingViewUrl(form.tradingViewUrl) ? 'Ajoutez un lien TradingView valide avant de continuer.' : 'Indiquez le nom du setup avant de continuer.'); return; }
