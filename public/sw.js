@@ -1,12 +1,14 @@
 /* IAMTRADER PWA service worker.
- * Intentionally does not cache authenticated pages, API responses, or trading data.
- * Updates are detected by the browser; application data always comes from the network.
+ * Keep requests network-only: never cache authenticated pages, API responses, or trading data.
+ * The fetch listener preserves network defaults while satisfying browsers that check for one.
  */
 self.addEventListener('install', () => {
-  // Activate the new worker without introducing a stale offline app shell.
   self.skipWaiting();
 });
 
 self.addEventListener('activate', event => {
   event.waitUntil(self.clients.claim());
 });
+
+// Do not call respondWith(): the browser handles every request normally from the network.
+self.addEventListener('fetch', () => {});
