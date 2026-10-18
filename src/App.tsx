@@ -27,7 +27,7 @@ import { TradeDetailModal } from './components/journal/TradeDetailModal';
 import { AccountModal } from './components/accounts/AccountModal';
 import { AuthModal } from './components/auth/AuthModal';
 import { ShieldAlert, LogOut, Loader2, Menu } from 'lucide-react';
-import { syncSubscriptionStatus } from './services/payments';
+import { syncSubscriptionStatus } from './services/payments';\nimport { watchDeviceSession } from './services/deviceSessions';
 
 function MainAppContent() {
   const { showToast } = useToast();
@@ -113,7 +113,7 @@ function MainAppContent() {
     return () => unsubscribe();
   }, []);
 
-  // 2. Data Subscriptions for Authenticated User
+  // Keep a device session registered and immediately sign out if its access is revoked.\n  useEffect(() => {\n    if (!currentUser) return;\n    return watchDeviceSession(currentUser.uid, () => { void logoutUser().catch(error => console.warn('Revoked device sign-out notice:', error)); });\n  }, [currentUser]);\n\n  // 2. Data Subscriptions for Authenticated User
   useEffect(() => {
     if (!currentUser) return;
 
