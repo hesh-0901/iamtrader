@@ -76,9 +76,9 @@ const accentStyles = {
   violet: { soft: 'bg-violet-50', text: 'text-violet-700', border: 'border-violet-200', bar: 'bg-violet-600', selected: 'border-violet-500 ring-2 ring-violet-100' },
 };
 
-export function CourseSpace() {
+export function CourseSpace({ isAdmin = false }: { isAdmin?: boolean }) {
   const [selectedClass, setSelectedClass] = useState<CourseClass['id']>('IAM_1');
-  const [expandedModules, setExpandedModules] = useState<number[]>([1]);
+  const [expandedModule, setExpandedModule] = useState<number | null>(1);
   const activeClass = courseClasses.find(course => course.id === selectedClass) ?? courseClasses[0];
   const styles = accentStyles[activeClass.accent];
   const activeClassIndex = courseClasses.findIndex(course => course.id === selectedClass);
@@ -90,11 +90,11 @@ export function CourseSpace() {
   const chooseClass = (id: CourseClass['id']) => {
     setSelectedClass(id);
     const next = courseClasses.find(course => course.id === id);
-    setExpandedModules(next ? [next.modules[0].number] : []);
+    setExpandedModule(next ? next.modules[0].number : null);
   };
 
   const toggleModule = (number: number) => {
-    setExpandedModules(current => current.includes(number) ? current.filter(item => item !== number) : [...current, number]);
+    setExpandedModule(current => current === number ? null : number);
   };
 
   return (
@@ -177,7 +177,7 @@ export function CourseSpace() {
         </div>
       </section>
       <section className="space-y-6">
-        <div className="grid gap-5 border-b border-slate-200 pb-6 md:grid-cols-[minmax(0,1fr)_220px] md:items-end">
+        <div className={"grid gap-5 rounded-2xl border p-5 pb-6 md:grid-cols-[minmax(0,1fr)_220px] md:items-end " + styles.soft + " " + styles.border}>
           <div>
             <div className={'mb-3 inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.16em] ' + styles.text}>
               <span className={'h-1.5 w-1.5 rounded-full ' + styles.bar} />
@@ -196,7 +196,7 @@ export function CourseSpace() {
           </div>
         </div>
 
-        <div className="grid gap-2 sm:grid-cols-[150px_minmax(0,1fr)] sm:gap-8">
+        <div className={"grid gap-2 rounded-xl p-4 sm:grid-cols-[150px_minmax(0,1fr)] sm:gap-8 " + styles.soft}>
           <aside className="space-y-2 sm:pt-2">
             <p className="text-[10px] font-bold uppercase tracking-[.16em] text-slate-400">Objectif pédagogique</p>
             <div className={'h-0.5 w-10 ' + styles.bar} />
@@ -205,31 +205,32 @@ export function CourseSpace() {
         </div>
 
         <div>
-          <div className="mb-4 flex flex-wrap items-end justify-between gap-3 border-b border-slate-200 pb-3">
+          <div className={"mb-4 flex flex-wrap items-end justify-between gap-3 rounded-xl p-4 " + styles.soft}>
             <div>
-              <p className="mb-1 text-[10px] font-bold uppercase tracking-[.15em] text-slate-400">Votre programme</p>
+              <p className={"mb-1 text-[10px] font-bold uppercase tracking-[.15em] " + styles.text}>Votre programme</p>
               <h3 className="text-lg font-semibold tracking-tight text-[#0A192F]">Modules de {activeClass.id}</h3>
             </div>
             <span className="text-xs font-medium text-slate-500">{activeClass.modules.length} modules <span className="mx-1 text-slate-300">·</span> {activeClass.modules.reduce((total, module) => total + module.lessons.length, 0)} leçons</span>
           </div>
           <div className="space-y-2">
-            {activeClass.modules.map(module => {
-              const isExpanded = expandedModules.includes(module.number);
+            {activeClass.modules.map((module, moduleIndex) => {
+              const isExpanded = expandedModule === module.number;
+              const isLocked = !isAdmin && (activeClass.id !== 'IAM_1' || moduleIndex > 0);
               return (
-                <article key={module.number} className={'overflow-hidden rounded-xl border transition-colors ' + (isExpanded ? 'border-slate-300 bg-white shadow-sm' : 'border-slate-200 bg-white hover:border-slate-300')}>
-                  <button type="button" onClick={() => toggleModule(module.number)} aria-expanded={isExpanded}
+                <article key={module.number} className={'overflow-hidden rounded-xl border transition-colors ' + (isLocked ? 'border-slate-200 bg-slate-100/80 opacity-75' : isExpanded ? 'border-slate-300 bg-white shadow-sm' : 'border-slate-200 bg-white hover:border-slate-300')}>
+                  <button type="button" onClick={() => !isLocked && toggleModule(module.number)} aria-expanded={isExpanded} aria-disabled={isLocked} disabled={isLocked}
                     className={'group flex w-full items-center gap-4 px-4 py-4 text-left transition-colors sm:gap-5 sm:px-5 ' + (isExpanded ? 'bg-[#F3F8F6]' : 'hover:bg-slate-50')}>
                     <span className={'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border font-mono text-sm font-semibold ' + (isExpanded ? styles.soft + ' ' + styles.border + ' ' + styles.text : 'border-slate-200 bg-white text-slate-500 group-hover:border-slate-300')}>{String(module.number).padStart(2, '0')}</span>
                     <span className="min-w-0 flex-1">
                       <span className="block text-sm font-semibold leading-5 tracking-tight text-[#0A192F] sm:text-[15px]">{module.title}</span>
                       <span className="mt-1.5 flex flex-wrap items-center gap-2">
                         <span className={'inline-flex rounded-md px-2 py-1 text-[10px] font-semibold ' + (isExpanded ? styles.soft + ' ' + styles.text : 'bg-slate-100 text-slate-500')}>{module.lessons.length} leçons</span>
-                        <span className="text-[10px] text-slate-400">{isExpanded ? 'Contenu affiché' : 'Explorer le module'}</span>
+                        <span className="text-[10px] text-slate-400">{isLocked ? 'Verrouillé · terminez le module précédent' : isExpanded ? 'Contenu affiché' : 'Explorer le module'}</span>
                       </span>
                     </span>
-                    <span className={'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-all ' + (isExpanded ? styles.bar + ' text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200')}><ChevronDown className={'h-4 w-4 transition-transform ' + (isExpanded ? 'rotate-180' : '')} /></span>
+                    <span className={'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-all ' + (isExpanded ? styles.bar + ' text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200')}>{isLocked ? <LockKeyhole className="h-4 w-4" /> : <ChevronDown className={'h-4 w-4 transition-transform ' + (isExpanded ? 'rotate-180' : '')} />}</span>
                   </button>
-                  {isExpanded && (
+                  {isExpanded && !isLocked && (
                     <div className="grid gap-6 border-t border-slate-100 bg-slate-50/70 px-4 py-5 sm:grid-cols-[minmax(0,1fr)_220px] sm:px-6">
                       <div>
                         <p className="mb-3 text-[10px] font-bold uppercase tracking-[.15em] text-slate-400">Contenu du module</p>
