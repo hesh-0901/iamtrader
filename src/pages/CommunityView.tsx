@@ -46,9 +46,7 @@ export function CommunityView({ userProfile }: { userProfile: UserProfile | null
       {activeTab === 'chat' && <ChatView userProfile={userProfile} />}
       {activeTab === 'courses' && <CourseSpace isAdmin={isAdmin} />}
       {activeTab === 'analysis' && (
-        isAdmin
-          ? <AnalysisAdminPanel />
-          : <Placeholder title="Analyses XAUUSD" icon={BarChart3} text="Les analyses quotidiennes de l’or publiées par l’administration apparaîtront ici." />
+        <AnalysisAdminPanel isAdmin={isAdmin} />
       )}
       {activeTab === 'sentiment' && (
         <Placeholder title="Trader Sentiment" icon={Activity} text="Le sentiment des traders et les indicateurs de positionnement seront disponibles ici." />
