@@ -190,23 +190,25 @@ export function AnalysisAdminPanel({ isAdmin = true }: { isAdmin?: boolean }) {
     {loading ? <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">Chargement des analyses…</div>
       : items.length === 0 ? <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center"><p className="font-bold text-[#0b1f35]">{isAdmin ? 'Aucune analyse ajoutée' : 'Aucune analyse publiée'}</p><p className="mt-2 text-sm text-slate-500">{isAdmin ? 'Utilisez le bouton + pour ajouter la première analyse.' : 'Les prochaines analyses publiées apparaîtront ici.'}</p></div>
       : <div className="grid grid-cols-1 gap-5">{items.map(item => <article key={item.id} className="group w-full overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_8px_28px_rgba(15,23,42,0.045)] transition-shadow hover:shadow-[0_12px_34px_rgba(15,23,42,0.08)]">
-        <div className="relative overflow-hidden border-b border-slate-200/80 bg-gradient-to-br from-[#0b1f35] via-[#102b45] to-[#123b4a] px-5 py-5 text-white sm:px-7 sm:py-6">
-          <div className="absolute inset-y-0 left-0 w-1 bg-[#00c49a]" />
-          <div className="flex items-start justify-between gap-4">
+        <div className="relative overflow-hidden border-b border-slate-200 bg-white px-5 py-5 sm:px-7 sm:py-6">
+          <div className="absolute inset-y-0 left-0 w-1 bg-[#00a982]" />
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[10px] font-black uppercase tracking-[0.22em] text-emerald-300">IAMTRADER <span className="mx-1 text-white/35">/</span> Analyse de marché</span>
-                <span className={'rounded-full border px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-[0.12em] ' + (item.status === 'published' ? 'border-emerald-300/25 bg-emerald-300/10 text-emerald-200' : item.status === 'closed' ? 'border-white/15 bg-white/5 text-slate-300' : 'border-amber-300/25 bg-amber-300/10 text-amber-200')}>{item.status === 'published' ? 'Publié' : item.status === 'closed' ? 'Clôturé' : 'Brouillon'}</span>
+                <span className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-[#008f72]">IAMTRADER <span className="mx-1 text-slate-300">/</span> Analyse de marché</span>
+                <span className={'rounded-full px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-[0.1em] ' + (item.status === 'published' ? 'bg-emerald-50 text-emerald-700' : item.status === 'closed' ? 'bg-slate-100 text-slate-500' : 'bg-amber-50 text-amber-700')}>{item.status === 'published' ? 'Publié' : item.status === 'closed' ? 'Clôturé' : 'Brouillon'}</span>
               </div>
-              <div className="mt-3 flex flex-wrap items-end gap-x-3 gap-y-2">
-                <span className="text-xs font-black uppercase tracking-[0.2em] text-white/55">XAUUSD</span>
-                <span className="mb-1 h-5 w-px bg-white/20" />
-                <h3 className="text-2xl font-black leading-none tracking-tight sm:text-3xl">{item.setup || 'Analyse du marché'}</h3>
-                <span className={'mb-0.5 rounded-md border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] ' + (item.setupGrade === 'A+' ? 'border-emerald-300/30 bg-emerald-300/15 text-emerald-200' : item.setupGrade === 'A' ? 'border-emerald-300/20 bg-emerald-300/10 text-emerald-100' : item.setupGrade === 'B' ? 'border-sky-300/25 bg-sky-300/10 text-sky-200' : item.setupGrade === 'C' ? 'border-amber-300/25 bg-amber-300/10 text-amber-200' : 'border-rose-300/25 bg-rose-300/10 text-rose-200')}>Qualité {item.setupGrade || '—'}</span>
+              <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+                <h3 className="text-4xl font-black leading-none tracking-tight text-[#0b1f35] sm:text-5xl">XAUUSD</h3>
+                <span className="hidden h-9 w-px bg-slate-200 sm:block" />
+                <div className="min-w-0">
+                  <p className="text-base font-extrabold text-[#0b1f35] sm:text-lg">{item.setup || 'Analyse du marché'}</p>
+                  <span className={'mt-1 inline-flex rounded-md px-2 py-1 text-[10px] font-extrabold uppercase tracking-[0.1em] ' + (item.setupGrade === 'A+' ? 'bg-emerald-100 text-emerald-800' : item.setupGrade === 'A' ? 'bg-emerald-50 text-emerald-700' : item.setupGrade === 'B' ? 'bg-sky-50 text-sky-700' : item.setupGrade === 'C' ? 'bg-amber-50 text-amber-700' : 'bg-rose-50 text-rose-700')}>Qualité {item.setupGrade || '—'}</span>
+                </div>
               </div>
-              <p className="mt-3 text-xs font-medium text-slate-300/80"><span className="mr-2 text-white/35">PUBLIÉ LE</span>{formatDate(item.createdAt)}</p>
+              <p className="mt-3 text-xs font-medium text-slate-500"><span className="mr-2 font-bold uppercase tracking-wider text-slate-400">Publié le</span>{formatDate(item.createdAt)}</p>
             </div>
-            <span className={'shrink-0 rounded-xl border px-3 py-2 text-xs font-black tracking-[0.14em] shadow-sm ' + (item.direction === 'BUY' ? 'border-emerald-300/30 bg-emerald-300/10 text-emerald-200' : 'border-rose-300/30 bg-rose-300/10 text-rose-200')}>{item.direction === 'BUY' ? 'BUY' : 'SELL'} <span className="ml-1 text-[9px] font-bold opacity-70">SCÉNARIO</span></span>
+            <span className={'inline-flex shrink-0 items-center justify-center gap-2 self-start rounded-xl border-2 px-4 py-3 text-base font-black tracking-[0.12em] sm:self-center sm:px-5 sm:py-4 sm:text-lg ' + (item.direction === 'BUY' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-rose-200 bg-rose-50 text-rose-800')}>{item.direction === 'BUY' ? <><span aria-hidden="true">↑</span> BUY</> : <><span aria-hidden="true">↓</span> SELL</>}<span className="text-[10px] font-bold tracking-[0.08em] opacity-75">SCÉNARIO</span></span>
           </div>
         </div>
         <div className="mx-4 mt-2 overflow-hidden rounded-xl border border-slate-200/80 bg-slate-50 sm:mx-6">
