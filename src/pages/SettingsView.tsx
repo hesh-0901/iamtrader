@@ -3,7 +3,7 @@ import { UserProfile, SubscriptionPlan, TradingAccount, Trade } from '../types';
 import { PlanBadge } from '../components/common/Badge';
 import {
   User, Shield, CreditCard, Sliders, Lock, Mail, Check, ArrowRight,
-  Activity, CalendarDays, Clock3, WalletCards, Sparkles, ChevronRight, Phone, X, Crown, Target, Coins, TrendingUp, Star, Receipt, Tag
+  Activity, CalendarDays, Clock3, WalletCards, Sparkles, ChevronRight, Phone, X, Crown, Target, Coins, TrendingUp, Star, Receipt, Tag, Download, Smartphone, Monitor, LogOut
 } from 'lucide-react';
 import { resetUserPassword, updateTraderProfile, logoutUser } from '../services/auth';
 import { subscribeDeviceSessions, revokeDeviceSession, getDeviceSessionId, DeviceSession } from '../services/deviceSessions';
@@ -130,8 +130,63 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
   const [devicesLoading, setDevicesLoading] = useState(true);
   const [revokingDeviceId, setRevokingDeviceId] = useState<string | null>(null);
   const currentDeviceSessionId = getDeviceSessionId();
+  const [installPrompt, setInstallPrompt] = useState<any>(null);
+  const [deviceSessions, setDeviceSessions] = useState<DeviceSession[]>([]);
+  const [devicesLoading, setDevicesLoading] = useState(true);
+  const [revokingDeviceId, setRevokingDeviceId] = useState<string | null>(null);
+  const currentDeviceSessionId = getDeviceSessionId();
 
   const traderRating = useMemo(() => calculateTraderRating(trades), [trades]);
+
+  React.useEffect(() => {
+    const handleInstallPrompt = (event: Event) => {
+      event.preventDefault();
+      setInstallPrompt(event);
+    };
+    const handleInstalled = () => setInstallPrompt(null);
+    window.addEventListener('beforeinstallprompt', handleInstallPrompt);
+    window.addEventListener('appinstalled', handleInstalled);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleInstallPrompt);
+      window.removeEventListener('appinstalled', handleInstalled);
+    };
+  }, []);
+
+  React.useEffect(() => {
+    if (!userProfile?.uid || activeTab !== 'security') return;
+    setDevicesLoading(true);
+    return subscribeDeviceSessions(userProfile.uid, sessions => {
+      setDeviceSessions(sessions);
+      setDevicesLoading(false);
+    });
+  }, [userProfile?.uid, activeTab]);
+
+  const handleInstallApp = async () => {
+    if (!installPrompt) {
+      showToast('Pour installer IAMTRADER, ouvrez le menu du navigateur puis choisissez « Installer IAMTRADER » ou « Ajouter à l’écran d’accueil ».', 'info');
+      return;
+    }
+    await installPrompt.prompt();
+    const choice = await installPrompt.userChoice;
+    if (choice?.outcome === 'accepted') showToast('Installation IAMTRADER lancée.', 'success');
+    setInstallPrompt(null);
+  };
+
+  const handleRevokeDevice = async (session: DeviceSession) => {
+    if (!userProfile?.uid || revokingDeviceId) return;
+    const isCurrent = session.id === currentDeviceSessionId;
+    if (!window.confirm(isCurrent ? 'Déconnecter cet appareil ?' : 'Révoquer l’accès de cet appareil ? Il sera déconnecté dès qu’il recevra la révocation.' )) return;
+    setRevokingDeviceId(session.id);
+    try {
+      await revokeDeviceSession(userProfile.uid, session.id);
+      if (isCurrent) await logoutUser();
+      else showToast('Accès de l’appareil révoqué.', 'success');
+    } catch (error: any) {
+      showToast(error?.message || 'Impossible de révoquer cet appareil.', 'error');
+    } finally {
+      setRevokingDeviceId(null);
+    }
+  };
 
   React.useEffect(() => {
     const handleInstallPrompt = (event: Event) => {
