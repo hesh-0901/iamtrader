@@ -224,14 +224,73 @@ function MainAppContent() {
   };
 
   const logoutConfirmation = isLogoutConfirmOpen ? (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !isLoggingOut) setIsLogoutConfirmOpen(false); }}>
-      <section role="dialog" aria-modal="true" aria-labelledby="logout-confirm-title" aria-describedby="logout-confirm-description" className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl sm:p-6">
-        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-50 text-rose-600"><LogOut className="h-5 w-5" /></div>
-        <h2 id="logout-confirm-title" className="mt-4 text-center text-lg font-bold text-slate-900">Confirmer la déconnexion</h2>
-        <p id="logout-confirm-description" className="mt-2 text-center text-sm leading-6 text-slate-500">Voulez-vous vraiment vous déconnecter de votre compte IAMTRADER sur cet appareil ?</p>
-        <div className="mt-6 grid grid-cols-2 gap-3">
-          <button type="button" disabled={isLoggingOut} onClick={() => setIsLogoutConfirmOpen(false)} className="min-h-11 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50">Annuler</button>
-          <button type="button" disabled={isLoggingOut} onClick={() => void confirmLogout()} className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-rose-600 px-3 py-2.5 text-sm font-bold text-white transition-colors hover:bg-rose-700 disabled:cursor-wait disabled:opacity-60">{isLoggingOut && <Loader2 className="h-4 w-4 animate-spin" />}{isLoggingOut ? 'Déconnexion…' : 'Oui, me déconnecter'}</button>
+    <div
+      className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-[#071426]/65 p-4 backdrop-blur-md"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget && !isLoggingOut) setIsLogoutConfirmOpen(false);
+      }}
+    >
+      <section
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="logout-confirm-title"
+        aria-describedby="logout-confirm-description"
+        className="relative w-full max-w-[410px] overflow-hidden rounded-[28px] border border-white/70 bg-white shadow-[0_28px_90px_rgba(3,15,30,0.32)]"
+      >
+        <div className="h-1.5 w-full bg-gradient-to-r from-[#0b1f35] via-[#00a982] to-[#5be2be]" />
+        <div className="p-6 sm:p-8">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border border-rose-100 bg-rose-50 text-rose-600 shadow-sm shadow-rose-900/5">
+              <LogOut className="h-6 w-6" strokeWidth={2.1} />
+            </div>
+            <button
+              type="button"
+              disabled={isLoggingOut}
+              onClick={() => setIsLogoutConfirmOpen(false)}
+              aria-label="Fermer"
+              className="flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
+            >
+              <span aria-hidden="true" className="text-2xl font-light leading-none">×</span>
+            </button>
+          </div>
+
+          <p className="mt-6 text-[10px] font-extrabold uppercase tracking-[0.2em] text-rose-600">Fin de session</p>
+          <h2 id="logout-confirm-title" className="mt-2 text-2xl font-extrabold tracking-tight text-[#0b1f35] sm:text-[28px]">
+            Se déconnecter ?
+          </h2>
+          <p id="logout-confirm-description" className="mt-3 text-sm leading-6 text-slate-500">
+            Voulez-vous vraiment quitter votre espace IAMTRADER sur cet appareil ?
+          </p>
+
+          <div className="mt-5 flex items-start gap-3 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3.5">
+            <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[#e4f8f1] text-[#078663]">
+              <ShieldAlert className="h-3.5 w-3.5" />
+            </span>
+            <p className="text-xs leading-5 text-slate-600">
+              Votre compte et vos données restent enregistrés. Vous devrez vous reconnecter pour accéder à votre espace.
+            </p>
+          </div>
+
+          <div className="mt-7 grid grid-cols-1 gap-2.5 sm:grid-cols-2">
+            <button
+              type="button"
+              disabled={isLoggingOut}
+              onClick={() => setIsLogoutConfirmOpen(false)}
+              className="order-2 min-h-12 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-bold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:opacity-50 sm:order-1"
+            >
+              Rester connecté
+            </button>
+            <button
+              type="button"
+              disabled={isLoggingOut}
+              onClick={() => void confirmLogout()}
+              className="order-1 flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#0b1f35] px-4 py-3 text-sm font-bold text-white shadow-lg shadow-[#0b1f35]/15 transition hover:bg-[#153452] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#0b1f35]/15 disabled:cursor-wait disabled:opacity-60 sm:order-2"
+            >
+              {isLoggingOut && <Loader2 className="h-4 w-4 animate-spin" />}
+              {isLoggingOut ? 'Déconnexion…' : <><LogOut className="h-4 w-4" /> Confirmer la sortie</>}
+            </button>
+          </div>
         </div>
       </section>
     </div>
