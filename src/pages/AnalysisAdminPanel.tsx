@@ -38,22 +38,26 @@ function tradingViewSnapshotImageUrl(value: string) {
 }
 function formatNotes(value: string) {
   const inline = (text: string, key: string): React.ReactNode[] => {
-    const parts = text.split(/(\\*\\*[^*]+\\*\\*|\\*[^*]+\\*|__[^_]+__|_[^_]+_|`[^`]+`)/g);
+    const parts = text.split(/(\*\*[^*]+\*\*|\*[^*]+\*|__[^_]+__|_[^_]+_)/g);
     return parts.map((part, index) => {
-      if (part.startsWith('**') && part.endsWith('**')) return <strong key={key + index}>{part.slice(2, -2)}</strong>;
-      if ((part.startsWith('*') && part.endsWith('*')) || (part.startsWith('_') && part.endsWith('_'))) return <em key={key + index}>{part.slice(1, -1)}</em>;
-      if (part.startsWith('`') && part.endsWith('`')) return <code key={key + index} className="rounded bg-slate-100 px-1 py-0.5 text-[0.92em]">{part.slice(1, -1)}</code>;
+      if (part.startsWith('**') && part.endsWith('**')) return <strong key={key + index} className="font-extrabold text-[#0b1f35]">{part.slice(2, -2)}</strong>;
+      if ((part.startsWith('*') && part.endsWith('*')) || (part.startsWith('_') && part.endsWith('_'))) return <em key={key + index} className="italic text-slate-700">{part.slice(1, -1)}</em>;
       return part;
     });
   };
-  return <div className="space-y-2 text-sm leading-6 text-slate-600">
-    {value.split(/\\n/).map((line, index) => {
+  return <div className="space-y-4 text-sm leading-7 text-slate-600 sm:text-[15px]">
+    {value.split(/\r?\n/).map((line, index) => {
       const trimmed = line.trim();
       if (!trimmed) return <div key={index} className="h-1" />;
-      if (/^#{1,3}\\s/.test(trimmed)) return <h4 key={index} className="pt-1 text-sm font-extrabold text-[#0b1f35]">{inline(trimmed.replace(/^#{1,3}\\s/, ''), 'h' + index)}</h4>;
-      if (/^[-*]\\s/.test(trimmed)) return <div key={index} className="flex gap-2"><span className="text-emerald-600">•</span><span>{inline(trimmed.slice(2), 'l' + index)}</span></div>;
-      if (/^\\d+[.)]\\s/.test(trimmed)) return <div key={index} className="flex gap-2"><span className="font-bold text-slate-400">{trimmed.match(/^\\d+[.)]/)?.[0]}</span><span>{inline(trimmed.replace(/^\\d+[.)]\\s/, ''), 'n' + index)}</span></div>;
-      return <p key={index}>{inline(trimmed, 'p' + index)}</p>;
+      if (/^#{1,3}\s/.test(trimmed)) {
+        const level = trimmed.match(/^#+/)?.[0].length ?? 1;
+        const heading = trimmed.replace(/^#{1,3}\s+/, '');
+        return <h4 key={index} className={level === 1 ? "mt-2 border-b border-slate-100 pb-2 text-base font-black tracking-tight text-[#0b1f35] sm:text-lg" : "pt-1 text-sm font-extrabold text-[#008f72]"}>{inline(heading, 'h' + index)}</h4>;
+      }
+      if (/^[-*]\s/.test(trimmed)) return <div key={index} className="flex items-start gap-3 pl-1"><span className="mt-[11px] h-1.5 w-1.5 shrink-0 rounded-full bg-[#00a982]" /><div className="min-w-0 flex-1">{inline(trimmed.slice(2), 'l' + index)}</div></div>;
+      if (/^\d+[.)]\s/.test(trimmed)) return <div key={index} className="flex items-start gap-3 pl-1"><span className="flex h-6 min-w-6 shrink-0 items-center justify-center rounded-md bg-emerald-50 px-1.5 text-[11px] font-extrabold text-[#008f72]">{trimmed.match(/^\d+[.)]/)?.[0].replace(/[.)]/g, '')}</span><div className="min-w-0 flex-1">{inline(trimmed.replace(/^\d+[.)]\s+/, ''), 'n' + index)}</div></div>;
+      if (trimmed.startsWith('&gt; ')) return <blockquote key={index} className="rounded-r-lg border-l-2 border-[#00a982] bg-emerald-50/60 px-4 py-3 font-medium text-[#0b1f35]">{inline(trimmed.slice(5), 'q' + index)}</blockquote>;
+      return <p key={index} className="whitespace-normal">{inline(trimmed, 'p' + index)}</p>;
     })}
   </div>;
 }
