@@ -130,11 +130,6 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
   const [devicesLoading, setDevicesLoading] = useState(true);
   const [revokingDeviceId, setRevokingDeviceId] = useState<string | null>(null);
   const currentDeviceSessionId = getDeviceSessionId();
-  const [installPrompt, setInstallPrompt] = useState<any>(null);
-  const [deviceSessions, setDeviceSessions] = useState<DeviceSession[]>([]);
-  const [devicesLoading, setDevicesLoading] = useState(true);
-  const [revokingDeviceId, setRevokingDeviceId] = useState<string | null>(null);
-  const currentDeviceSessionId = getDeviceSessionId();
 
   const traderRating = useMemo(() => calculateTraderRating(trades), [trades]);
 
@@ -187,26 +182,6 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
       setRevokingDeviceId(null);
     }
   };
-
-  React.useEffect(() => {
-    const handleInstallPrompt = (event: Event) => {
-      event.preventDefault();
-      setInstallPrompt(event);
-    };
-    window.addEventListener('beforeinstallprompt', handleInstallPrompt);
-    window.addEventListener('appinstalled', () => setInstallPrompt(null));
-    return () => window.removeEventListener('beforeinstallprompt', handleInstallPrompt);
-  }, []);
-
-  React.useEffect(() => {
-    if (!userProfile?.uid || activeTab !== 'security') return;
-    setDevicesLoading(true);
-    const unsubscribe = subscribeDeviceSessions(userProfile.uid, sessions => {
-      setDeviceSessions(sessions);
-      setDevicesLoading(false);
-    });
-    return unsubscribe;
-  }, [userProfile?.uid, activeTab]);
 
   const handleInstallApp = async () => {
     if (!installPrompt) {
