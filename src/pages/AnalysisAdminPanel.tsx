@@ -45,14 +45,14 @@ function formatNotes(value: string) {
       return part;
     });
   };
-  return <div className="space-y-5 text-sm leading-5 text-slate-600 sm:text-[15px] sm:leading-5">
+  return <div className="space-y-3 text-sm leading-[1.25rem] text-slate-600 sm:text-[15px] sm:leading-[1.3rem]">
     {value.split(/\r?\n/).map((line, index) => {
       const trimmed = line.trim();
-      if (!trimmed) return <div key={index} className="h-2" />;
+      if (!trimmed) return <div key={index} className="h-1" />;
       if (/^#{1,3}\s/.test(trimmed)) {
         const level = trimmed.match(/^#+/)?.[0].length ?? 1;
         const heading = trimmed.replace(/^#{1,3}\s+/, '');
-        return <h4 key={index} className={level === 1 ? "mt-3 border-b border-slate-100 pb-2 text-base font-black leading-6 tracking-tight text-[#0b1f35] sm:text-lg sm:leading-6" : "mt-3 text-sm font-extrabold leading-5 text-[#008f72]"}>{inline(heading, 'h' + index)}</h4>;
+        return <h4 key={index} className={level === 1 ? "mt-4 border-b border-slate-100 pb-2 text-base font-black leading-5 tracking-tight text-[#0b1f35] sm:text-lg sm:leading-5" : "mt-3 text-sm font-extrabold leading-5 text-[#008f72]"}>{inline(heading, 'h' + index)}</h4>;
       }
       if (/^[-*]\s/.test(trimmed)) return <div key={index} className="flex items-start gap-3 pl-1"><span className="mt-[11px] h-1.5 w-1.5 shrink-0 rounded-full bg-[#00a982]" /><div className="min-w-0 flex-1">{inline(trimmed.slice(2), 'l' + index)}</div></div>;
       if (/^\d+[.)]\s/.test(trimmed)) return <div key={index} className="flex items-start gap-3 pl-1"><span className="flex h-6 min-w-6 shrink-0 items-center justify-center rounded-md bg-emerald-50 px-1.5 text-[11px] font-extrabold text-[#008f72]">{trimmed.match(/^\d+[.)]/)?.[0].replace(/[.)]/g, '')}</span><div className="min-w-0 flex-1">{inline(trimmed.replace(/^\d+[.)]\s+/, ''), 'n' + index)}</div></div>;
