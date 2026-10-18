@@ -72,7 +72,9 @@ export async function handlePaymentHistory(request: Request, env: PaymentEnv) {
         discountAmount: Number(payment.discountAmount || 0),
         promoCode: payment.promoCode || null,
         promotionName: payment.promotionName || null,
-        providerTransactionId: payment.providerTransactionId || payment.providerPaymentId || payment.saspayTransactionId || payment.cinetpayTransactionId || null,\n        saspayTransactionId: payment.saspayTransactionId || null,\n        cinetpayTransactionId: payment.cinetpayTransactionId || null
+        providerTransactionId: payment.providerTransactionId || payment.providerPaymentId || payment.saspayTransactionId || payment.cinetpayTransactionId || null,
+        saspayTransactionId: payment.saspayTransactionId || null,
+        cinetpayTransactionId: payment.cinetpayTransactionId || null
       }))
     });
   } catch (error) {
