@@ -181,9 +181,9 @@ export function AnalysisAdminPanel({ isAdmin = true }: { isAdmin?: boolean }) {
         </div>
         <section className="px-4 pt-4 sm:px-6"><div className="mb-3 flex items-center gap-2"><span className="h-4 w-1 rounded-full bg-[#00a982]" /><h4 className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Plan de trading</h4></div><div className="grid grid-cols-3 gap-2 sm:gap-3">
           <MiniLevel label="PE · Entrée" value={item.entryPrice} /><MiniLevel label="SL · Risque" value={item.stopLoss} /><MiniLevel label="TP · Objectif" value={item.takeProfit} /></div></section>
-        {(item.dailyBias || item.htfBias || item.entryBias || item.marketPhase || item.htf || item.ltf || item.session || item.liquidityTarget || item.poi || item.confirmation || item.invalidation) && <div className="mx-4 mt-4 rounded-xl border border-slate-100 bg-slate-50 p-4">
-          <h4 className="mb-3 text-xs font-black uppercase tracking-wider text-slate-500">Contexte de marché</h4>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+        {(item.dailyBias || item.htfBias || item.entryBias || item.marketPhase || item.htf || item.ltf || item.session || item.liquidityTarget || item.poi || item.confirmation || item.invalidation) && <section className="mx-4 mt-5 rounded-xl border border-slate-200/80 bg-gradient-to-br from-slate-50 to-white p-4 sm:mx-6 sm:p-5">
+          <div className="mb-4 flex items-center gap-2"><span className="h-4 w-1 rounded-full bg-indigo-400" /><h4 className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Contexte du marché</h4></div>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-3 lg:grid-cols-4">
             <InfoItem label="Biais Daily" value={item.dailyBias} />
             <InfoItem label="Biais HTF" value={item.htfBias} />
             <InfoItem label="Biais d’entrée" value={item.entryBias} />
@@ -196,8 +196,8 @@ export function AnalysisAdminPanel({ isAdmin = true }: { isAdmin?: boolean }) {
             <InfoItem label="Confirmation" value={item.confirmation} />
             <InfoItem label="Invalidation" value={item.invalidation} />
           </div>
-        </div>}
-        {item.notes && <div className="px-5 py-4">{formatNotes(item.notes)}</div>}
+        </section>}
+        {item.notes && <section className="mx-4 mt-4 rounded-xl border border-slate-200/80 bg-white p-4 sm:mx-6 sm:p-5"><div className="mb-3 flex items-center gap-2"><span className="h-4 w-1 rounded-full bg-amber-400" /><h4 className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Analyse & scénario</h4></div>{formatNotes(item.notes)}</section>}
         <div className="mt-5 flex items-center gap-2 border-t border-slate-100 bg-slate-50/70 px-4 py-3 sm:px-6">
           <a href={item.tradingViewUrl} target="_blank" rel="noreferrer" className="inline-flex min-h-8 items-center gap-1.5 rounded-lg px-2.5 text-[11px] font-bold text-slate-500 hover:bg-slate-50"><ExternalLink className="h-3.5 w-3.5" /> Ouvrir le graphique</a>
           {isAdmin && <div className="ml-auto flex items-center gap-1">
