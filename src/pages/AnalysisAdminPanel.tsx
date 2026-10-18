@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { addDoc, collection, deleteDoc, doc, onSnapshot, orderBy, query, serverTimestamp, updateDoc, where } from 'firebase/firestore';
-import { Plus, Pencil, X, ExternalLink, Save, LoaderCircle, Trash2, Bold, Italic, Heading2, List, ListOrdered, Quote, Minus } from 'lucide-react';
+import { Plus, Pencil, X, ExternalLink, Save, LoaderCircle, Trash2, Bold, Italic, Heading2, List, ListOrdered, Quote, Minus, TrendingUp, Activity, Compass, Layers3, Clock3, Target, Crosshair, ShieldCheck, CheckCircle2, Gauge } from 'lucide-react';
 import { auth, db } from '../firebase/config';
 
 type Status = 'draft' | 'published' | 'closed';
@@ -218,22 +218,28 @@ export function AnalysisAdminPanel({ isAdmin = true }: { isAdmin?: boolean }) {
         <div className="mx-4 mt-2 overflow-hidden rounded-xl border border-slate-200/80 bg-slate-50 sm:mx-6">
           {validTradingViewUrl(item.tradingViewUrl) && tradingViewSnapshotImageUrl(item.tradingViewUrl) ? <div className="bg-white"><img src={tradingViewSnapshotImageUrl(item.tradingViewUrl)} alt={'Capture TradingView XAUUSD — ' + item.setup} loading="lazy" className="mx-auto block h-auto max-h-[620px] w-full max-w-[1100px] object-contain" /><p className="border-t border-slate-100 bg-white px-4 py-2 text-center text-[10px] font-medium tracking-wide text-slate-400">TRADINGVIEW SNAPSHOT</p></div> : <div className="flex h-44 items-center justify-center text-sm text-slate-400">Lien de capture TradingView invalide</div>}
         </div>
-        <section className="px-4 pt-4 sm:px-6"><div className="mb-3 flex items-center gap-2"><span className="h-4 w-1 rounded-full bg-[#00a982]" /><h4 className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Plan de trading</h4></div><div className="grid grid-cols-3 gap-2 sm:gap-3">
-          <MiniLevel label="PE · Entrée" value={item.entryPrice} /><MiniLevel label="SL · Risque" value={item.stopLoss} /><MiniLevel label="TP · Objectif" value={item.takeProfit} /></div></section>
-        {(item.dailyBias || item.htfBias || item.entryBias || item.marketPhase || item.htf || item.ltf || item.session || item.liquidityTarget || item.poi || item.confirmation || item.invalidation) && <section className="mx-4 mt-5 rounded-xl border border-slate-200/80 bg-gradient-to-br from-slate-50 to-white p-4 sm:mx-6 sm:p-5">
-          <div className="mb-4 flex items-center gap-2"><span className="h-4 w-1 rounded-full bg-indigo-400" /><h4 className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Contexte du marché</h4></div>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-5 sm:grid-cols-3 lg:grid-cols-4">
-            <InfoItem label="Biais Daily" value={item.dailyBias} />
-            <InfoItem label="Biais HTF" value={item.htfBias} />
-            <InfoItem label="Biais d’entrée" value={item.entryBias} />
-            <InfoItem label="HTF" value={item.htf} />
-            <InfoItem label="LTF" value={item.ltf} />
-            <InfoItem label="Phase du marché" value={item.marketPhase} />
-            <InfoItem label="Session" value={item.session} />
-            <InfoItem label="Liquidité ciblée" value={item.liquidityTarget} />
-            <InfoItem label="Zone d’intérêt (POI)" value={item.poi} />
-            <InfoItem label="Confirmation" value={item.confirmation} />
-            <InfoItem label="Invalidation" value={item.invalidation} />
+        <section className="px-4 pt-5 sm:px-6">
+          <div className="mb-3 flex items-center gap-2"><span className="h-5 w-1 rounded-full bg-[#00a982]" /><div><h4 className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-600">Plan de trading</h4><p className="mt-0.5 text-[10px] text-slate-400">Niveaux clés du scénario</p></div></div>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
+            <MiniLevel label="PE · Entrée" value={item.entryPrice} kind="entry" />
+            <MiniLevel label="SL · Risque" value={item.stopLoss} kind="risk" />
+            <MiniLevel label="TP · Objectif" value={item.takeProfit} kind="target" />
+          </div>
+        </section>
+        {(item.dailyBias || item.htfBias || item.entryBias || item.marketPhase || item.htf || item.ltf || item.session || item.liquidityTarget || item.poi || item.confirmation || item.invalidation) && <section className="mx-4 mt-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_4px_18px_rgba(11,31,53,0.035)] sm:mx-6 sm:p-5">
+          <div className="mb-4 flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-50 text-violet-600"><Activity className="h-4 w-4" /></span><div><h4 className="text-xs font-black uppercase tracking-[0.14em] text-[#0b1f35]">Contexte du marché</h4><p className="mt-0.5 text-[11px] text-slate-400">Lecture multi-timeframe et exécution</p></div></div>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            <InfoItem label="Biais Daily" value={item.dailyBias} icon={TrendingUp} tone="emerald" />
+            <InfoItem label="Biais HTF" value={item.htfBias} icon={Compass} tone="blue" />
+            <InfoItem label="Biais d’entrée" value={item.entryBias} icon={Crosshair} tone="violet" />
+            <InfoItem label="HTF" value={item.htf} icon={Layers3} tone="slate" />
+            <InfoItem label="LTF" value={item.ltf} icon={Activity} tone="slate" />
+            <InfoItem label="Phase du marché" value={item.marketPhase} icon={Gauge} tone="amber" />
+            <InfoItem label="Session" value={item.session} icon={Clock3} tone="blue" />
+            <InfoItem label="Liquidité ciblée" value={item.liquidityTarget} icon={Target} tone="emerald" />
+            <InfoItem label="Zone d’intérêt (POI)" value={item.poi} icon={Crosshair} tone="violet" />
+            <InfoItem label="Confirmation" value={item.confirmation} icon={CheckCircle2} tone="emerald" />
+            <InfoItem label="Invalidation" value={item.invalidation} icon={ShieldCheck} tone="rose" />
           </div>
         </section>}
         {item.notes && <section className="mx-4 mt-4 rounded-xl border border-slate-200/80 bg-white p-4 sm:mx-6 sm:p-5"><div className="mb-3 flex items-center gap-2"><span className="h-4 w-1 rounded-full bg-amber-400" /><h4 className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Analyse & scénario</h4></div>{formatNotes(item.notes)}</section>}
@@ -326,9 +332,13 @@ export function AnalysisAdminPanel({ isAdmin = true }: { isAdmin?: boolean }) {
   </div>;
 }
 
-function InfoItem({ label, value }: { label: string; value?: string }) {
+function InfoItem({ label, value, icon: Icon, tone = 'slate' }: { label: string; value?: string; icon: React.ElementType; tone?: 'emerald' | 'blue' | 'violet' | 'slate' | 'amber' | 'rose' }) {
   if (!value) return null;
-  return <div><p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">{label}</p><p className="mt-1 text-xs font-bold text-slate-700">{value}</p></div>;
+  const tones = { emerald: 'bg-emerald-50 text-emerald-700', blue: 'bg-sky-50 text-sky-700', violet: 'bg-violet-50 text-violet-700', slate: 'bg-slate-100 text-slate-600', amber: 'bg-amber-50 text-amber-700', rose: 'bg-rose-50 text-rose-700' };
+  return <div className="flex min-w-0 items-center gap-3 rounded-xl border border-slate-100 bg-gradient-to-br from-white to-slate-50/80 p-3 transition-colors hover:border-slate-200">
+    <span className={'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ' + tones[tone]}><Icon className="h-4 w-4" strokeWidth={2} /></span>
+    <div className="min-w-0"><p className="text-[9px] font-extrabold uppercase tracking-[0.12em] text-slate-400">{label}</p><p className="mt-1 break-words text-xs font-extrabold text-[#0b1f35]">{value}</p></div>
+  </div>;
 }
 function TextField({ id, label, value, onChange, placeholder }: { id: string; label: string; value: string; onChange: (value: string) => void; placeholder: string }) {
   return <div><label htmlFor={id} className="mb-1.5 block text-xs font-bold text-slate-600">{label}</label><input id={id} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} className="min-h-10 w-full rounded-xl border border-slate-200 px-3 text-sm" /></div>;
@@ -339,6 +349,16 @@ function SelectField({ id, label, value, onChange, options }: { id: string; labe
 function PriceField({ id, label, value, onChange }: { id: string; label: string; value: string; onChange: (value: string) => void }) {
   return <div><label htmlFor={id} className="mb-1.5 block text-xs font-bold text-slate-600">{label}</label><input id={id} type="number" inputMode="decimal" step="0.01" min="0.01" required value={value} onChange={e => onChange(e.target.value)} placeholder="4350.00" className="min-h-10 w-full min-w-0 rounded-xl border border-slate-200 px-2.5 text-sm tabular-nums" /></div>;
 }
-function MiniLevel({ label, value }: { label: string; value: number }) {
-  return <div className="rounded-lg bg-slate-50 p-2.5"><p className="text-[9px] font-black uppercase tracking-wider text-slate-400">{label}</p><p className="mt-1.5 text-sm font-black tabular-nums text-[#0b1f35]">{Number(value).toFixed(2)}</p></div>;
+function MiniLevel({ label, value, kind }: { label: string; value: number; kind: 'entry' | 'risk' | 'target' }) {
+  const styles = {
+    entry: { icon: Crosshair, wrap: 'border-sky-100 bg-sky-50/60', badge: 'bg-sky-100 text-sky-700', label: 'text-sky-700', bar: 'bg-sky-400' },
+    risk: { icon: ShieldCheck, wrap: 'border-rose-100 bg-rose-50/50', badge: 'bg-rose-100 text-rose-700', label: 'text-rose-700', bar: 'bg-rose-400' },
+    target: { icon: Target, wrap: 'border-emerald-100 bg-emerald-50/60', badge: 'bg-emerald-100 text-emerald-700', label: 'text-emerald-700', bar: 'bg-[#00a982]' },
+  };
+  const style = styles[kind]; const Icon = style.icon;
+  return <div className={'relative overflow-hidden rounded-xl border p-3 ' + style.wrap}>
+    <div className={'absolute inset-y-0 left-0 w-1 ' + style.bar} />
+    <div className="flex items-center justify-between gap-3 pl-1"><div className="flex items-center gap-2"><span className={'flex h-8 w-8 items-center justify-center rounded-lg ' + style.badge}><Icon className="h-4 w-4" /></span><p className={'text-[9px] font-black uppercase tracking-[0.13em] ' + style.label}>{label}</p></div><span className="text-[9px] font-bold uppercase tracking-wider text-slate-400">{kind === 'entry' ? 'Entry' : kind === 'risk' ? 'Risk' : 'Target'}</span></div>
+    <p className="mt-2 pl-1 text-lg font-black tabular-nums tracking-tight text-[#0b1f35]">{Number(value).toFixed(2)}</p>
+  </div>;
 }
