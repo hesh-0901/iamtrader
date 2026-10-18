@@ -57,8 +57,8 @@ const courseClasses: CourseClass[] = [
   },
   {
     id: 'IAM_3',
-    code: 'IAM_PRO_TRADER',
-    name: 'PRO TRADER',
+    code: 'IAM_TRADER',
+    name: 'TRADER',
     subtitle: 'Performance et discipline',
     period: 'Mois 5–6',
     description: 'Formaliser un système personnel, le tester sur historique et apprendre à interpréter ses résultats et sa discipline.',
