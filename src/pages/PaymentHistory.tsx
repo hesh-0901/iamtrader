@@ -34,7 +34,8 @@ function printInvoice(item: PaymentHistoryItem, number: number) {
   const issuedAt = dateTime(item.createdAt);
   const paidAt = dateTime(item.paidAt || item.createdAt);
   const isPaid = item.status === 'paid';
-  const documentTitle = isPaid ? 'FACTURE' : 'ÉTAT DE TRANSACTION';\n  const invoiceStatus = isPaid ? 'Paiement confirmé' : item.status === 'processing' || item.status === 'initiated' ? 'Paiement en attente' : item.status === 'cancelled' ? 'Paiement annulé' : item.status === 'invalidated' ? 'Paiement invalidé' : 'Paiement échoué';
+  const documentTitle = isPaid ? 'FACTURE' : 'ÉTAT DE TRANSACTION';
+  const invoiceStatus = isPaid ? 'Paiement confirmé' : item.status === 'processing' || item.status === 'initiated' ? 'Paiement en attente' : item.status === 'cancelled' ? 'Paiement annulé' : item.status === 'invalidated' ? 'Paiement invalidé' : 'Paiement échoué';
   const invoiceAction = item.status === 'paid' ? 'Transaction réglée' : item.status === 'cancelled' ? 'Transaction annulée' : item.status === 'invalidated' ? 'Transaction invalidée' : item.status === 'processing' || item.status === 'initiated' ? 'Transaction en attente' : 'Transaction échouée';
   const invoiceBadge = item.status === 'paid' ? 'PAYÉ' : item.status === 'cancelled' ? 'ANNULÉ' : item.status === 'invalidated' ? 'INVALIDÉ' : item.status === 'processing' || item.status === 'initiated' ? 'EN ATTENTE' : 'ÉCHEC';
   const action = item.subscriptionAction === 'renewal' ? 'Renouvellement' : item.subscriptionAction === 'upgrade' ? 'Upgrade programmé' : 'Nouvelle souscription';
