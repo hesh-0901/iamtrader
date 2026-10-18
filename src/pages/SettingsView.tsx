@@ -6,7 +6,7 @@ import {
   Activity, CalendarDays, Clock3, WalletCards, Sparkles, ChevronRight, Phone, X, Crown, Target, Coins, TrendingUp, Star, Receipt, Tag, Download, Smartphone, Monitor, LogOut
 } from 'lucide-react';
 import { resetUserPassword, updateTraderProfile, logoutUser } from '../services/auth';
-import { subscribeDeviceSessions, revokeDeviceSession, getDeviceSessionId, DeviceSession } from '../services/deviceSessions';
+import { subscribeDeviceSessions, revokeDeviceSession, getDeviceSessionId, endCurrentDeviceSession, DeviceSession } from '../services/deviceSessions';
 import { AvatarStudio } from '../components/settings/AvatarStudio';
 import { useToast } from '../components/common/Toast';
 import { TradingJournalSettings } from '../components/settings/TradingJournalSettings';
@@ -165,6 +165,20 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
     const choice = await installPrompt.userChoice;
     if (choice?.outcome === 'accepted') showToast('Installation IAMTRADER lancée.', 'success');
     setInstallPrompt(null);
+  };
+
+  const handleLogoutCurrentDevice = async () => {
+    try {
+      if (userProfile?.uid) await endCurrentDeviceSession(userProfile.uid);
+    } catch (error) {
+      console.warn('Device session end notice:', error);
+    }
+    try {
+      await logoutUser();
+      showToast('Vous avez été déconnecté.', 'info');
+    } catch (error: any) {
+      showToast(error?.message || 'Déconnexion impossible.', 'error');
+    }
   };
 
   const handleRevokeDevice = async (session: DeviceSession) => {
@@ -807,7 +821,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
               </article>
               <article className="rounded-xl border border-slate-200 bg-[#f8fbfd] p-4">
                 <div className="flex items-start gap-3"><span className="rounded-xl bg-slate-100 p-2.5 text-slate-700"><LogOut className="h-5 w-5" /></span><div><h4 className="text-sm font-bold text-slate-900">Déconnexion</h4><p className="mt-1 text-xs leading-5 text-slate-500">Fermez votre session IAMTRADER sur cet appareil.</p></div></div>
-                <button type="button" onClick={() => void logoutUser().then(() => showToast('Vous avez été déconnecté.', 'info')).catch(error => showToast(error?.message || 'Déconnexion impossible.', 'error'))} className="mt-4 inline-flex items-center gap-2 rounded-lg border border-rose-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-rose-700 hover:bg-rose-50"><LogOut className="h-4 w-4" />Se déconnecter</button>
+                <button type="button" onClick={() => void handleLogoutCurrentDevice()} className="mt-4 inline-flex items-center gap-2 rounded-lg border border-rose-200 bg-white px-3.5 py-2.5 text-xs font-semibold text-rose-700 hover:bg-rose-50"><LogOut className="h-4 w-4" />Se déconnecter</button>
               </article>
               <article className="rounded-xl border border-slate-200 bg-[#f8fbfd] p-4">
                 <div className="flex items-start gap-3"><span className="rounded-xl bg-emerald-50 p-2.5 text-emerald-700"><Shield className="h-5 w-5" /></span><div><h4 className="text-sm font-bold text-slate-900">Données privées</h4><p className="mt-1 text-xs leading-5 text-slate-500">Vos données de trading restent isolées dans votre espace Firestore.</p></div></div>
