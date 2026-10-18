@@ -140,9 +140,9 @@ export function CourseSpace() {
         <div className="overflow-hidden rounded-2xl">
           <div key={activeClass.id} className="animate-[class-slide-in_320ms_ease-out]">
             <button type="button" onClick={() => chooseClass(activeClass.id)} aria-pressed="true"
-              className="group relative flex min-h-[250px] w-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-[0_10px_30px_rgba(15,23,42,0.09)] transition hover:shadow-[0_16px_40px_rgba(15,23,42,0.14)] sm:min-h-[250px] sm:flex-row">
+              className="group relative flex min-h-[250px] w-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-[0_10px_30px_rgba(15,23,42,0.09)] transition hover:shadow-[0_16px_40px_rgba(15,23,42,0.14)] sm:min-h-[340px] sm:flex-row">
               <span className="absolute inset-x-0 top-0 z-10 h-1"><span className={'block h-full w-full ' + accentStyles[activeClass.accent].bar} /></span>
-              <span className="relative block h-[190px] w-full shrink-0 overflow-hidden sm:h-auto sm:min-h-[250px] sm:w-[42%]">
+              <span className="relative block h-[250px] w-full shrink-0 overflow-hidden sm:h-auto sm:min-h-[340px] sm:w-[54%]">
                 <img
                   src={activeClass.id === 'IAM_1' ? 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=1200&q=85' : activeClass.id === 'IAM_2' ? 'https://images.unsplash.com/photo-1642790106117-e829e14a795f?auto=format&fit=crop&w=1200&q=85' : 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1200&q=85'}
                   alt={'Image illustrative de la classe ' + activeClass.name}
@@ -153,12 +153,12 @@ export function CourseSpace() {
                 <span className="absolute left-5 top-5 rounded-full border border-white/25 bg-black/20 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[.2em] text-white backdrop-blur-sm">IAMTRADER ACADEMY</span>
                 <span className="absolute bottom-5 left-5 right-5">
                   <span className="block text-[10px] font-semibold uppercase tracking-[.18em] text-white/70">Parcours de trading · {activeClass.period}</span>
-                  <span className="mt-1 block text-3xl font-semibold tracking-tight text-white">{activeClass.id}</span>
+                  <span className="mt-1 block text-4xl font-black tracking-[-.04em] text-white drop-shadow-lg sm:text-5xl">{activeClass.id}</span>
                 </span>
               </span>
-              <span className="flex min-w-0 flex-1 flex-col justify-center p-5 sm:p-8">
+              <span className="flex min-w-0 flex-1 flex-col justify-center p-6 sm:p-9">
                 <span className={'inline-flex w-fit items-center rounded-md px-2.5 py-1 text-[10px] font-bold tracking-[.08em] ' + accentStyles[activeClass.accent].soft + ' ' + accentStyles[activeClass.accent].text}>{activeClass.period}</span>
-                <span className="mt-4 block text-2xl font-semibold tracking-[-.035em] text-[#0A192F] sm:text-3xl">{activeClass.name}</span>
+                <span className="mt-4 block text-4xl font-black uppercase leading-[0.95] tracking-[-.055em] text-[#0A192F] sm:text-5xl lg:text-6xl">{activeClass.name}</span>
                 <span className="mt-1 block text-sm font-medium text-slate-500">{activeClass.subtitle}</span>
                 <span className="mt-3 block max-w-xl text-sm leading-6 text-slate-600">{activeClass.description}</span>
                 <span className="mt-5 flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
