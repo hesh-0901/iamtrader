@@ -35,7 +35,7 @@ service cloud.firestore {
       allow read, write: if isAdmin();
     }
 
-    // PipTalk conversations. Community Hub is a fixed system group for all signed-in users.
+    // Device sessions are owned by each user and can be revoked from account security settings.\n    match /users/{userId}/sessions/{sessionId} {\n      allow read, list: if isOwner(userId);\n      allow create: if isOwner(userId)\n        && request.resource.data.keys().hasOnly(['deviceName', 'userAgent', 'createdAt', 'lastSeenAt', 'revoked'])\n        && request.resource.data.revoked == false;\n      allow update: if isOwner(userId)\n        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastSeenAt', 'revoked', 'revokedAt'])\n        && (request.resource.data.revoked == resource.data.revoked || request.resource.data.revoked == true);\n      allow delete: if isOwner(userId);\n    }\n\n    // PipTalk conversations. Community Hub is a fixed system group for all signed-in users.
     match /conversations/{conversationId} {
       function isConversationMember() {
         return isAuthenticated() && request.auth.uid in resource.data.members;
