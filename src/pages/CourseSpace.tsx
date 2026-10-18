@@ -142,7 +142,7 @@ export function CourseSpace() {
             <button type="button" onClick={() => chooseClass(activeClass.id)} aria-pressed="true"
               className="group relative flex min-h-[250px] w-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-[0_10px_30px_rgba(15,23,42,0.09)] transition hover:shadow-[0_16px_40px_rgba(15,23,42,0.14)] sm:min-h-[460px] sm:flex-row">
               <span className="absolute inset-x-0 top-0 z-10 h-1"><span className={'block h-full w-full ' + accentStyles[activeClass.accent].bar} /></span>
-              <span className="relative block h-[320px] w-full shrink-0 overflow-hidden sm:h-auto sm:min-h-[460px] sm:w-[62%]">
+              <span className="relative block h-[320px] w-full shrink-0 overflow-hidden sm:h-[440px] lg:h-[500px]">
                 <img
                   src={activeClass.id === 'IAM_1' ? 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=1200&q=85' : activeClass.id === 'IAM_2' ? 'https://images.unsplash.com/photo-1642790106117-e829e14a795f?auto=format&fit=crop&w=1200&q=85' : 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1200&q=85'}
                   alt={'Image illustrative de la classe ' + activeClass.name}
@@ -156,7 +156,7 @@ export function CourseSpace() {
                   <span className="mt-1 block text-5xl font-black tracking-[-.05em] text-white drop-shadow-lg sm:text-6xl lg:text-7xl">{activeClass.id}</span>
                 </span>
               </span>
-              <span className="flex min-w-0 flex-1 flex-col justify-center p-7 sm:p-10 lg:p-12">
+              <span className="flex min-w-0 flex-1 flex-col justify-center p-6 sm:p-9 lg:p-10">
                 <span className={'inline-flex w-fit items-center rounded-md px-2.5 py-1 text-[10px] font-bold tracking-[.08em] ' + accentStyles[activeClass.accent].soft + ' ' + accentStyles[activeClass.accent].text}>{activeClass.period}</span>
                 <span className="mt-4 block text-5xl font-black uppercase leading-[0.9] tracking-[-.06em] text-[#0A192F] sm:text-6xl lg:text-7xl">{activeClass.name}</span>
                 <span className="mt-1 block text-sm font-medium text-slate-500">{activeClass.subtitle}</span>
