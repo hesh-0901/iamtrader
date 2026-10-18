@@ -209,7 +209,7 @@ export function CourseSpace({ isAdmin = false }: { isAdmin?: boolean }) {
                         <span className="text-[10px] text-slate-400">{isLocked ? 'Verrouillé · terminez le module précédent' : isExpanded ? 'Contenu affiché' : 'Explorer le module'}</span>
                       </span>
                     </span>
-                    <span className={'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-all ' + (isExpanded ? styles.bar + ' text-white' : 'bg-white/20 text-white group-hover:bg-white/30')}>{isLocked ? <LockKeyhole className="h-4 w-4" /> : <ChevronDown className={'h-4 w-4 transition-transform ' + (isExpanded ? 'rotate-180' : '')} />}</span>
+                    <span className={'flex h-7 w-7 shrink-0 items-center justify-center rounded-full transition-all ' + (isLocked ? 'bg-slate-200 text-slate-500' : isExpanded ? styles.bar + ' text-white' : styles.soft + ' ' + styles.text)}>{isLocked ? <LockKeyhole className="h-3.5 w-3.5" /> : <ChevronDown className={'h-3.5 w-3.5 transition-transform ' + (isExpanded ? 'rotate-180' : '')} />}</span>
                   </button>
                   {isExpanded && !isLocked && (
                     <div className="grid gap-6 border-t border-slate-100 bg-slate-50/70 px-4 py-5 sm:grid-cols-[minmax(0,1fr)_220px] sm:px-6">
