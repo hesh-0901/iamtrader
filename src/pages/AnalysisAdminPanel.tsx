@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { addDoc, collection, deleteDoc, doc, onSnapshot, orderBy, query, serverTimestamp, updateDoc } from 'firebase/firestore';
-import { ExternalLink, Pencil, Plus, Save, ShieldCheck, Trash2, XAUUSD, AlertCircle, Clock3 } from 'lucide-react';
+import { ExternalLink, Pencil, Plus, Save, ShieldCheck, Trash2, AlertCircle, Clock3 } from 'lucide-react';
 import { auth, db } from '../firebase/config';
 
 type AnalysisStatus = 'draft' | 'published' | 'closed';
