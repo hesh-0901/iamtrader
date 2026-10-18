@@ -29,7 +29,7 @@ export interface PaymentHistoryItem {
   discountAmount?: number;
   promoCode?: string | null;
   promotionName?: string | null;
-  providerTransactionId?: string | null;
+  providerTransactionId?: string | null;\n  saspayTransactionId?: string | null;\n  cinetpayTransactionId?: string | null;
 }
 
 export async function getPaymentHistory(): Promise<PaymentHistoryItem[]> {
