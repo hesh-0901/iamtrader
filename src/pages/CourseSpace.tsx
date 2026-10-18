@@ -10,6 +10,7 @@ type CourseModule = {
 
 type CourseClass = {
   id: 'IAM_1' | 'IAM_2' | 'IAM_3';
+  code: 'IAM_INITIATE' | 'IAM_STRATEGIST' | 'IAM_PRO_TRADER';
   name: string;
   subtitle: string;
   period: string;
@@ -22,6 +23,7 @@ type CourseClass = {
 const courseClasses: CourseClass[] = [
   {
     id: 'IAM_1',
+    code: 'IAM_INITIATE',
     name: 'INITIATE',
     subtitle: 'Les fondations du trader',
     period: 'Mois 1–2',
@@ -38,6 +40,7 @@ const courseClasses: CourseClass[] = [
   },
   {
     id: 'IAM_2',
+    code: 'IAM_STRATEGIST',
     name: 'STRATEGIST',
     subtitle: 'La maîtrise du marché',
     period: 'Mois 3–4',
@@ -54,6 +57,7 @@ const courseClasses: CourseClass[] = [
   },
   {
     id: 'IAM_3',
+    code: 'IAM_PRO_TRADER',
     name: 'PRO TRADER',
     subtitle: 'Performance et discipline',
     period: 'Mois 5–6',
@@ -128,7 +132,7 @@ export function CourseSpace({ isAdmin = false }: { isAdmin?: boolean }) {
       <section aria-label="Sélection de la classe" className="space-y-4">
         <style>{`@keyframes class-slide-in { from { opacity: 0.65; transform: translateX(28px); } to { opacity: 1; transform: translateX(0); } }`}</style>
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-xs font-semibold text-slate-500">MON APPRENTISSAGE <span className="mx-1 text-slate-300">/</span> <span className="text-[#0A192F]">{activeClass.id}</span></p>
+          <p className="text-xs font-semibold text-slate-500">MON APPRENTISSAGE <span className="mx-1 text-slate-300">/</span> <span className="text-[#0A192F]">{activeClass.code}</span></p>
           <div className="flex items-center gap-3">
             <span className="text-[10px] font-semibold uppercase tracking-[.15em] text-slate-400">Classe {activeClassIndex + 1} sur {courseClasses.length}</span>
             <div className="flex gap-1.5">
@@ -153,7 +157,7 @@ export function CourseSpace({ isAdmin = false }: { isAdmin?: boolean }) {
                 <span className="absolute left-5 top-5 rounded-full border border-white/25 bg-black/20 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[.2em] text-white backdrop-blur-sm">IAMTRADER ACADEMY</span>
                 <span className="absolute bottom-5 left-5 right-5">
                   <span className="block text-[10px] font-semibold uppercase tracking-[.18em] text-white/70">Parcours de trading · {activeClass.period}</span>
-                  <span className="mt-1 block text-5xl font-black tracking-[-.05em] text-white drop-shadow-lg sm:text-6xl lg:text-7xl">{activeClass.id}</span>
+                  <span className="mt-1 block text-5xl font-black tracking-[-.05em] text-white drop-shadow-lg sm:text-6xl lg:text-7xl">{activeClass.code}</span>
                 </span>
               </span>
               <span className="flex min-w-0 flex-1 flex-col justify-center p-6 text-white sm:p-9 lg:p-10">
@@ -189,7 +193,7 @@ export function CourseSpace({ isAdmin = false }: { isAdmin?: boolean }) {
           <div className="mb-4 flex flex-wrap items-end justify-between gap-3 rounded-xl p-4">
             <div>
               <p className={"mb-1 text-[10px] font-bold uppercase tracking-[.15em] " + styles.text}>Votre programme</p>
-              <h3 className="text-lg font-semibold tracking-tight text-[#0A192F]">Modules de {activeClass.id}</h3>
+              <h3 className="text-lg font-semibold tracking-tight text-[#0A192F]">Modules de {activeClass.code}</h3>
             </div>
             <span className="text-xs font-medium text-slate-500">{activeClass.modules.length} modules <span className="mx-1 text-slate-300">·</span> {activeClass.modules.reduce((total, module) => total + module.lessons.length, 0)} leçons</span>
           </div>
