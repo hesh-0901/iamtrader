@@ -89,11 +89,11 @@ export function Navbar({ userProfile, accounts, selectedAccountId, onSelectAccou
           </span>
           <button
             onClick={onLogout}
-            className="hidden sm:block p-1.5 text-[#8494a5] hover:text-[#f04f63] hover:bg-[#fff1f3] rounded-lg transition-colors cursor-pointer"
+            className="flex h-9 w-9 shrink-0 items-center justify-center p-1.5 text-[#8494a5] hover:text-[#f04f63] hover:bg-[#fff1f3] rounded-lg transition-colors cursor-pointer"
             title="Se déconnecter"
             aria-label="Se déconnecter"
           >
-            <LogOut className="w-3.5 h-3.5" />
+            <LogOut className="w-4 h-4" />
           </button>
         </div>
       </div>
