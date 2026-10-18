@@ -1,6 +1,6 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth, setPersistence, browserLocalPersistence } from "firebase/auth";
-import { getFirestore } from "firebase/firestore";
+import { initializeFirestore } from "firebase/firestore";
 
 // Existing production Firebase Configuration
 export const firebaseConfig = {
@@ -13,12 +13,18 @@ export const firebaseConfig = {
   measurementId: "G-2Z3EDNZPX5"
 };
 
-// Complete local persistence initialization before auth listeners or sign-in.
+// Initialize the app once.
 export const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 export const auth = getAuth(app);
+
 export const authPersistenceReady = setPersistence(auth, browserLocalPersistence).catch((error) => {
-  console.error("Firebase local auth persistence could not be initialized:", error);
+  console.error("[Firebase Auth] Local persistence initialization failed:", error);
   throw error;
 });
 
-export const db = getFirestore(app);
+// Force long polling to avoid Firestore WebChannel requests being blocked by
+// some browser privacy protections, extensions, proxies, or network filters.
+// This must be the first Firestore initialization for this app.
+export const db = initializeFirestore(app, {
+  experimentalForceLongPolling: true
+});
