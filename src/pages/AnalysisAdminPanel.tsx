@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { addDoc, collection, deleteDoc, doc, onSnapshot, orderBy, query, serverTimestamp, updateDoc } from 'firebase/firestore';
+import { addDoc, collection, deleteDoc, doc, onSnapshot, orderBy, query, serverTimestamp, updateDoc, where } from 'firebase/firestore';
 import { Plus, Pencil, X, ExternalLink, Save, LoaderCircle, Trash2 } from 'lucide-react';
 import { auth, db } from '../firebase/config';
 
@@ -20,7 +20,7 @@ function validTradingViewUrl(value: string) {
   try { const url = new URL(value); return url.protocol === 'https:' && (url.hostname === 'tradingview.com' || url.hostname.endsWith('.tradingview.com')); }
   catch { return false; }
 }
-function formatDate(value: Analysis['createdAt']) {
+function dateKey(value: Analysis['createdAt']) {\n  if (value && typeof value === 'object' && typeof value.toDate === 'function') return value.toDate().toLocaleDateString('en-CA');\n  if (typeof value === 'string') return new Date(value).toLocaleDateString('en-CA');\n  return '';\n}\nfunction formatDate(value: Analysis['createdAt']) {
   if (value && typeof value === 'object' && typeof value.toDate === 'function') return value.toDate().toLocaleString('fr-FR');
   if (typeof value === 'string') return new Date(value).toLocaleString('fr-FR');
   return 'Date indisponible';
@@ -37,7 +37,7 @@ export function AnalysisAdminPanel({ isAdmin = true }: { isAdmin?: boolean }) {
   const [success, setSuccess] = useState('');
 
   useEffect(() => {
-    const q = query(collection(db, 'dailyAnalyses'), orderBy('createdAt', 'desc'));
+    const q = isAdmin\n      ? query(collection(db, 'dailyAnalyses'), orderBy('createdAt', 'desc'))\n      : query(collection(db, 'dailyAnalyses'), where('status', '==', 'published'), orderBy('createdAt', 'desc'));
     return onSnapshot(q, snapshot => {
       const all = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Analysis));
       setItems(isAdmin ? all : all.filter(a => a.status === 'published'));
@@ -51,7 +51,7 @@ export function AnalysisAdminPanel({ isAdmin = true }: { isAdmin?: boolean }) {
 
   const todayCount = useMemo(() => {
     const today = new Date().toLocaleDateString('en-CA');
-    return items.filter(a => a.status === 'published' && a.createdAt && formatDate(a.createdAt).startsWith(today)).length;
+    return items.filter(a => a.status === 'published' && a.createdAt && dateKey(a.createdAt) === today).length;
   }, [items]);
 
   const openCreate = () => { setForm(blank); setEditingId(null); setError(''); setSuccess(''); setModalOpen(true); };
