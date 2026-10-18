@@ -22,9 +22,6 @@ function escapeHtml(value: string) {
 }
 
 function printInvoice(item: PaymentHistoryItem, number: number) {
-  const popup = window.open('', '_blank', 'width=900,height=1100');
-  if (!popup) return;
-
   const plan = escapeHtml(item.planName || (item.plan === 'pro' ? 'Plus' : 'Community'));
   const invoice = escapeHtml(item.invoiceNumber || ('INV-' + String(number).padStart(4, '0')));
   const buyerEmail = escapeHtml(item.buyerEmail || '—');
@@ -63,8 +60,7 @@ function printInvoice(item: PaymentHistoryItem, number: number) {
     '<footer class="footer"><div><strong>IAMTRADER</strong><br>' + (isPaid ? 'Justificatif de paiement confirmé.' : 'Document informatif de transaction, non valable comme preuve de paiement.') + '</div><div style="text-align:right"><strong>Facture ' + invoice + '</strong><br>Montants issus de la transaction enregistrée.</div></footer>' +
     '</main><div class="no-print toolbar" role="toolbar" aria-label="Actions de facture"><button onclick="window.print()" title="Imprimer" aria-label="Imprimer" class="icon-btn print-btn"><span aria-hidden="true">🖨</span></button><button onclick="saveInvoice()" title="Enregistrer la facture" aria-label="Enregistrer la facture" class="icon-btn save-btn"><span aria-hidden="true">↓</span></button></div><script>function saveInvoice(){const clone=document.documentElement.cloneNode(true);clone.querySelectorAll(".no-print").forEach(function(el){el.remove()});const blob=new Blob(["<!doctype html>\\n"+clone.outerHTML],{type:"text/html;charset=utf-8"});const url=URL.createObjectURL(blob);const a=document.createElement("a");a.href=url;a.download=document.title.replace(/[^a-zA-Z0-9_-]+/g,"-")+".html";document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url)},1000)}</script><style>.toolbar{position:fixed;top:18px;right:18px;display:flex;gap:6px;padding:5px;border:1px solid rgba(16,24,40,.08);border-radius:10px;background:rgba(255,255,255,.88);backdrop-filter:blur(10px);box-shadow:0 6px 22px rgba(16,24,40,.08)}.icon-btn{width:32px;height:32px;border:0;border-radius:7px;background:transparent;color:#667085;display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:800;cursor:pointer}.icon-btn:hover{background:#f2f4f7;color:#071a2d}.print-btn span{font-size:14px}.save-btn span{font-size:18px;line-height:1;transform:translateY(-1px)}</style></body></html>';
 
-  popup.document.write(html);
-  popup.document.close();
+  setInvoiceHtml(html);
 }
 function status(item: PaymentHistoryItem) {
   if (item.status === 'paid') return { label: 'Payé', cls: 'bg-emerald-50 text-emerald-700 border-emerald-100', icon: CheckCircle2 };
@@ -79,6 +75,7 @@ export function PaymentHistory() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [page, setPage] = useState(1);
+  const [invoiceHtml, setInvoiceHtml] = useState('');
   const pageSize = 10;
 
   const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
@@ -142,6 +139,19 @@ export function PaymentHistory() {
             })}
           </div>}
       </section>
+
+      {invoiceHtml && <div className="fixed inset-0 z-[110] flex items-center justify-center bg-[#071a2d]/75 p-2 backdrop-blur-sm sm:p-5" role="dialog" aria-modal="true" aria-label="Aperçu de la facture" onClick={() => setInvoiceHtml('')}>
+        <section className="flex h-[96vh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl" onClick={event => event.stopPropagation()}>
+          <header className="flex shrink-0 items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3 sm:px-6">
+            <div><h2 className="text-sm font-black text-[#10243b]">Aperçu de la facture</h2><p className="mt-0.5 text-xs text-slate-500">Facture IAMTRADER · affichage interne</p></div>
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={() => { const frame = document.getElementById('iamtrader-customer-invoice-frame') as HTMLIFrameElement | null; frame?.contentWindow?.print(); }} className="rounded-xl bg-[#00a982] px-3 py-2 text-xs font-black text-white hover:bg-emerald-700">Imprimer / PDF</button>
+              <button type="button" onClick={() => setInvoiceHtml('')} aria-label="Fermer l’aperçu de la facture" className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50"><XCircle className="h-4 w-4"/></button>
+            </div>
+          </header>
+          <iframe id="iamtrader-customer-invoice-frame" title="Facture client IAMTRADER" srcDoc={invoiceHtml} className="min-h-0 w-full flex-1 bg-slate-100" />
+        </section>
+      </div>}
     </div>
   );
 }
