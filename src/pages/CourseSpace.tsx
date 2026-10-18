@@ -71,9 +71,9 @@ const courseClasses: CourseClass[] = [
 ];
 
 const accentStyles = {
-  blue: { soft: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', bar: 'bg-blue-600', selected: 'border-blue-500 ring-2 ring-blue-100' },
-  green: { soft: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', bar: 'bg-emerald-600', selected: 'border-emerald-500 ring-2 ring-emerald-100' },
-  violet: { soft: 'bg-violet-50', text: 'text-violet-700', border: 'border-violet-200', bar: 'bg-violet-600', selected: 'border-violet-500 ring-2 ring-violet-100' },
+  blue: { soft: 'bg-blue-50', text: 'text-blue-700', border: 'border-blue-200', panel: 'bg-blue-600', bar: 'bg-blue-600', selected: 'border-blue-500 ring-2 ring-blue-100' },
+  green: { soft: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-emerald-200', panel: 'bg-emerald-600', bar: 'bg-emerald-600', selected: 'border-emerald-500 ring-2 ring-emerald-100' },
+  violet: { soft: 'bg-violet-50', text: 'text-violet-700', border: 'border-violet-200', panel: 'bg-violet-600', bar: 'bg-violet-600', selected: 'border-violet-500 ring-2 ring-violet-100' },
 };
 
 export function CourseSpace({ isAdmin = false }: { isAdmin?: boolean }) {
@@ -177,40 +177,21 @@ export function CourseSpace({ isAdmin = false }: { isAdmin?: boolean }) {
         </div>
       </section>
       <section className="space-y-6">
-        <div className={"grid gap-5 rounded-2xl border p-5 pb-6 md:grid-cols-[minmax(0,1fr)_220px] md:items-end " + styles.soft + " " + styles.border}>
-          <div>
-            <div className={'mb-3 inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.16em] ' + styles.text}>
-              <span className={'h-1.5 w-1.5 rounded-full ' + styles.bar} />
-              Classe sélectionnée · {activeClass.period}
-            </div>
-            <h2 className="text-2xl font-semibold tracking-[-.035em] text-[#0A192F] sm:text-3xl">{activeClass.name}</h2>
-            <p className="mt-1 text-sm font-medium text-slate-500">{activeClass.subtitle}</p>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">{activeClass.description}</p>
-          </div>
-          <div className="flex items-center gap-3 md:justify-end">
-            <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-slate-100 text-slate-600"><BookOpen className="h-5 w-5" /></div>
-            <div>
-              <p className="text-xl font-semibold tracking-tight text-[#0A192F]">{activeClass.modules.length}<span className="ml-1 text-xs font-medium text-slate-400">modules</span></p>
-              <p className="mt-1 text-[10px] uppercase tracking-[.12em] text-slate-400">Programme de la classe</p>
-            </div>
-          </div>
-        </div>
-
-        <div className={"grid gap-2 rounded-xl p-4 sm:grid-cols-[150px_minmax(0,1fr)] sm:gap-8 " + styles.soft}>
+        <div className={"grid gap-2 rounded-xl p-4 sm:grid-cols-[150px_minmax(0,1fr)] sm:gap-8 " + styles.panel + " text-white"}>
           <aside className="space-y-2 sm:pt-2">
-            <p className="text-[10px] font-bold uppercase tracking-[.16em] text-slate-400">Objectif pédagogique</p>
+            <p className="text-[10px] font-bold uppercase tracking-[.16em] text-white/80">Objectif pédagogique</p>
             <div className={'h-0.5 w-10 ' + styles.bar} />
           </aside>
-          <p className="max-w-3xl text-sm leading-6 text-slate-600">{activeClass.outcome}</p>
+          <p className="max-w-3xl text-sm leading-6 text-white">{activeClass.outcome}</p>
         </div>
 
         <div>
-          <div className={"mb-4 flex flex-wrap items-end justify-between gap-3 rounded-xl p-4 " + styles.soft}>
+          <div className={"mb-4 flex flex-wrap items-end justify-between gap-3 rounded-xl p-4 " + styles.panel + " text-white"}>
             <div>
-              <p className={"mb-1 text-[10px] font-bold uppercase tracking-[.15em] " + styles.text}>Votre programme</p>
-              <h3 className="text-lg font-semibold tracking-tight text-[#0A192F]">Modules de {activeClass.id}</h3>
+              <p className="mb-1 text-[10px] font-bold uppercase tracking-[.15em] text-white/80">Votre programme</p>
+              <h3 className="text-lg font-bold tracking-tight text-white">Modules de {activeClass.id}</h3>
             </div>
-            <span className="text-xs font-medium text-slate-500">{activeClass.modules.length} modules <span className="mx-1 text-slate-300">·</span> {activeClass.modules.reduce((total, module) => total + module.lessons.length, 0)} leçons</span>
+            <span className="text-xs font-semibold text-white/90">{activeClass.modules.length} modules <span className="mx-1 text-white/60">·</span> {activeClass.modules.reduce((total, module) => total + module.lessons.length, 0)} leçons</span>
           </div>
           <div className="space-y-2">
             {activeClass.modules.map((module, moduleIndex) => {
