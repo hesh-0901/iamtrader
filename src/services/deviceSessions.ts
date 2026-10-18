@@ -1,4 +1,4 @@
-import { collection, doc, onSnapshot, orderBy, query, setDoc, updateDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, onSnapshot, orderBy, query, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase/config';
 
 export interface DeviceSession {
@@ -34,13 +34,23 @@ export function watchDeviceSession(uid: string, onRevoked: () => void): () => vo
   const sessionId = getDeviceSessionId();
   const sessionRef = doc(db, 'users', uid, 'sessions', sessionId);
   const now = new Date().toISOString();
-  void setDoc(sessionRef, {
-    deviceName: getDeviceName(),
-    userAgent: navigator.userAgent.slice(0, 300),
-    createdAt: now,
-    lastSeenAt: now,
-    revoked: false,
-  }, { merge: true }).catch(error => {
+  void getDoc(sessionRef).then(snapshot => {
+    if (snapshot.exists()) {
+      if (snapshot.data().revoked === true) {
+        localStorage.removeItem(DEVICE_SESSION_KEY);
+        onRevoked();
+        return;
+      }
+      return updateDoc(sessionRef, { lastSeenAt: now });
+    }
+    return setDoc(sessionRef, {
+      deviceName: getDeviceName(),
+      userAgent: navigator.userAgent.slice(0, 300),
+      createdAt: now,
+      lastSeenAt: now,
+      revoked: false,
+    });
+  }).catch(error => {
     console.warn('Device session registration notice:', error);
   });
   const unsubscribe = onSnapshot(sessionRef, snapshot => {
