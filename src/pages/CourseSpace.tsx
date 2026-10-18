@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BookOpen, CheckCircle2, ChevronDown, Clock3, GraduationCap, LockKeyhole, PlayCircle, Target, LayoutDashboard, FileText } from 'lucide-react';
+import { BookOpen, CheckCircle2, ChevronDown, Clock3, GraduationCap, LockKeyhole, PlayCircle, Target, LayoutDashboard, FileText, ChevronLeft, ChevronRight } from 'lucide-react';
 
 type CourseModule = {
   number: number;
@@ -81,6 +81,11 @@ export function CourseSpace() {
   const [expandedModules, setExpandedModules] = useState<number[]>([1]);
   const activeClass = courseClasses.find(course => course.id === selectedClass) ?? courseClasses[0];
   const styles = accentStyles[activeClass.accent];
+  const activeClassIndex = courseClasses.findIndex(course => course.id === selectedClass);
+  const moveClass = (direction: -1 | 1) => {
+    const nextIndex = (activeClassIndex + direction + courseClasses.length) % courseClasses.length;
+    chooseClass(courseClasses[nextIndex].id);
+  };
 
   const chooseClass = (id: CourseClass['id']) => {
     setSelectedClass(id);
@@ -123,46 +128,53 @@ export function CourseSpace() {
       <section aria-label="Sélection de la classe" className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-xs font-semibold text-slate-500">MON APPRENTISSAGE <span className="mx-1 text-slate-300">/</span> <span className="text-[#0A192F]">{activeClass.id}</span></p>
-          <span className="text-[10px] font-semibold uppercase tracking-[.15em] text-slate-400">3 niveaux · 6 mois</span>
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] font-semibold uppercase tracking-[.15em] text-slate-400">Classe {activeClassIndex + 1} sur {courseClasses.length}</span>
+            <div className="flex gap-1.5">
+              <button type="button" onClick={() => moveClass(-1)} aria-label="Classe précédente" className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition hover:border-slate-400 hover:bg-slate-50"><ChevronLeft className="h-4 w-4" /></button>
+              <button type="button" onClick={() => moveClass(1)} aria-label="Classe suivante" className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition hover:border-slate-400 hover:bg-slate-50"><ChevronRight className="h-4 w-4" /></button>
+            </div>
+          </div>
         </div>
-        <div className="grid grid-cols-1 gap-3">
-          {courseClasses.map((course, index) => {
-            const courseStyles = accentStyles[course.accent];
-            const isSelected = selectedClass === course.id;
-            const moduleCount = course.modules.length;
-            return (
-              <button key={course.id} type="button" onClick={() => chooseClass(course.id)} aria-pressed={isSelected}
-                className={'group relative flex min-h-[210px] flex-col overflow-hidden rounded-2xl border p-4 text-left transition-all duration-200 sm:flex-row sm:items-stretch sm:gap-5 ' + (isSelected ? 'border-slate-300 bg-white shadow-[0_10px_30px_rgba(15,23,42,0.12)] ring-2 ring-slate-200' : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-lg')}>
-                <span className={'absolute inset-x-0 top-0 h-1 ' + courseStyles.bar} />
-                <span className={'relative -mx-4 -mt-4 mb-3 flex h-[190px] items-center justify-center overflow-hidden sm:mx-0 sm:my-0 sm:h-auto sm:min-h-[178px] sm:w-[38%] sm:shrink-0 sm:rounded-xl ' + (course.accent === 'blue' ? 'bg-gradient-to-br from-sky-100 via-cyan-200 to-blue-300' : course.accent === 'green' ? 'bg-gradient-to-br from-emerald-100 via-teal-200 to-green-300' : 'bg-gradient-to-br from-violet-100 via-fuchsia-200 to-purple-300')}>
-                  <span className="absolute inset-0 opacity-30" style={{backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,.95) 1.5px, transparent 0)', backgroundSize: '18px 18px'}} />
-                  <span className={'absolute -right-8 -top-12 h-48 w-48 rounded-full border-[24px] opacity-60 ' + (course.accent === 'blue' ? 'border-sky-400' : course.accent === 'green' ? 'border-emerald-400' : 'border-violet-400')} />
-                  <span className={'absolute -bottom-16 -left-8 h-48 w-48 rounded-full border-[22px] opacity-40 ' + (course.accent === 'blue' ? 'border-cyan-400' : course.accent === 'green' ? 'border-teal-400' : 'border-fuchsia-400')} />
-                  <span className="absolute left-4 top-4 rounded-full border border-white/60 bg-white/35 px-3 py-1 text-[9px] font-bold uppercase tracking-[.2em] text-slate-800/70">Parcours de trading</span>
-                  <span className="absolute right-4 top-3 font-mono text-[11px] font-bold text-slate-800/55">{String(index + 1).padStart(2, '0')} — 03</span>
-                  <span className={'relative flex h-24 w-24 items-center justify-center rounded-[28px] border border-white/70 bg-white/45 shadow-[0_12px_30px_rgba(15,23,42,0.10)] backdrop-blur-sm ' + courseStyles.text}>
-                    {index === 0 ? <Target className="h-12 w-12" strokeWidth={1.35} /> : index === 1 ? <LayoutDashboard className="h-12 w-12" strokeWidth={1.35} /> : <CheckCircle2 className="h-12 w-12" strokeWidth={1.35} />}
-                  </span>
-                  <span className="absolute bottom-3 left-4 text-[10px] font-extrabold uppercase tracking-[.2em] text-slate-800/65">IAMTRADER ACADEMY</span>
-                  <span className="absolute bottom-3 right-4 rounded-full border border-white/60 bg-white/35 px-2 py-1 text-[9px] font-semibold text-slate-800/70">VISUEL À PERSONNALISER</span>
+        <div className="overflow-hidden rounded-2xl">
+          <div key={activeClass.id} className="animate-[class-slide-in_320ms_ease-out]">
+            <button type="button" onClick={() => chooseClass(activeClass.id)} aria-pressed="true"
+              className="group relative flex min-h-[250px] w-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-[0_10px_30px_rgba(15,23,42,0.09)] transition hover:shadow-[0_16px_40px_rgba(15,23,42,0.14)] sm:min-h-[250px] sm:flex-row">
+              <span className="absolute inset-x-0 top-0 z-10 h-1"><span className={'block h-full w-full ' + accentStyles[activeClass.accent].bar} /></span>
+              <span className="relative block h-[190px] w-full shrink-0 overflow-hidden sm:h-auto sm:min-h-[250px] sm:w-[42%]">
+                <img
+                  src={activeClass.id === 'IAM_1' ? 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=1200&q=85' : activeClass.id === 'IAM_2' ? 'https://images.unsplash.com/photo-1642790106117-e829e14a795f?auto=format&fit=crop&w=1200&q=85' : 'https://images.unsplash.com/photo-146自?auto=format&fit=crop&w=1200&q=85'}
+                  alt={'Image illustrative de la classe ' + activeClass.name}
+                  className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.04]"
+                  onError={(event) => { event.currentTarget.style.display = 'none'; }}
+                />
+                <span className="absolute inset-0 bg-gradient-to-tr from-[#07172D]/85 via-[#07172D]/25 to-transparent" />
+                <span className="absolute left-5 top-5 rounded-full border border-white/25 bg-black/20 px-3 py-1.5 text-[9px] font-bold uppercase tracking-[.2em] text-white backdrop-blur-sm">IAMTRADER ACADEMY</span>
+                <span className="absolute bottom-5 left-5 right-5">
+                  <span className="block text-[10px] font-semibold uppercase tracking-[.18em] text-white/70">Parcours de trading · {activeClass.period}</span>
+                  <span className="mt-1 block text-3xl font-semibold tracking-tight text-white">{activeClass.id}</span>
                 </span>
-                <span className="flex w-full flex-1 items-center justify-between gap-2 sm:py-2">
-                  <span className={'inline-flex items-center rounded-md px-2 py-1 text-[10px] font-bold tracking-[.08em] ' + courseStyles.soft + ' ' + courseStyles.text}>{course.id}</span>
-                  <span className="text-[10px] font-medium text-slate-400">{course.period}</span>
+              </span>
+              <span className="flex min-w-0 flex-1 flex-col justify-center p-5 sm:p-8">
+                <span className={'inline-flex w-fit items-center rounded-md px-2.5 py-1 text-[10px] font-bold tracking-[.08em] ' + accentStyles[activeClass.accent].soft + ' ' + accentStyles[activeClass.accent].text}>{activeClass.period}</span>
+                <span className="mt-4 block text-2xl font-semibold tracking-[-.035em] text-[#0A192F] sm:text-3xl">{activeClass.name}</span>
+                <span className="mt-1 block text-sm font-medium text-slate-500">{activeClass.subtitle}</span>
+                <span className="mt-3 block max-w-xl text-sm leading-6 text-slate-600">{activeClass.description}</span>
+                <span className="mt-5 flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
+                  <span className="text-xs font-medium text-slate-500">{activeClass.modules.length} modules au programme</span>
+                  <span className={'flex h-9 w-9 items-center justify-center rounded-full ' + accentStyles[activeClass.accent].soft + ' ' + accentStyles[activeClass.accent].text}><ChevronRight className="h-4 w-4" /></span>
                 </span>
-                <span className="mt-3 block text-base font-semibold tracking-tight text-[#0A192F]">{course.name}</span>
-                <span className="mt-1 block text-xs leading-5 text-slate-500">{course.subtitle}</span>
-                <span className="mt-auto flex items-center justify-between gap-2 pt-4">
-                  <span className="text-[10px] font-medium text-slate-400">{moduleCount} modules au programme</span>
-                  <span className={'flex h-6 w-6 items-center justify-center rounded-full transition-colors ' + (isSelected ? courseStyles.soft + ' ' + courseStyles.text : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200')}><ChevronDown className={'h-3.5 w-3.5 -rotate-90'} /></span>
-                </span>
-                {isSelected && <span className={'absolute bottom-0 left-4 right-4 h-[3px] rounded-t ' + courseStyles.bar} />}
-              </button>
-            );
-          })}
+              </span>
+            </button>
+          </div>
+        </div>
+        <div className="flex justify-center gap-2 pt-1" aria-label="Position dans les classes">
+          {courseClasses.map((course, index) => (
+            <button key={course.id} type="button" onClick={() => chooseClass(course.id)} aria-label={'Afficher la classe ' + course.name} aria-current={selectedClass === course.id ? 'true' : undefined}
+              className={'h-1.5 rounded-full transition-all duration-300 ' + (selectedClass === course.id ? 'w-8 ' + accentStyles[course.accent].bar : 'w-2 bg-slate-300 hover:bg-slate-400')} />
+          ))}
         </div>
       </section>
-
       <section className="space-y-6">
         <div className="grid gap-5 border-b border-slate-200 pb-6 md:grid-cols-[minmax(0,1fr)_220px] md:items-end">
           <div>
