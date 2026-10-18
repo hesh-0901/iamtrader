@@ -66,16 +66,32 @@ export function AnalysisAdminPanel({ isAdmin = true }: { isAdmin?: boolean }) {
   const [success, setSuccess] = useState('');
 
   useEffect(() => {
+    // Pour les membres, éviter la requête composée status + createdAt qui exige
+    // un index Firestore composite. Le tri est effectué côté client.
     const q = isAdmin
       ? query(collection(db, 'dailyAnalyses'), orderBy('createdAt', 'desc'))
-      : query(collection(db, 'dailyAnalyses'), where('status', '==', 'published'), orderBy('createdAt', 'desc'));
+      : query(collection(db, 'dailyAnalyses'), where('status', '==', 'published'));
     return onSnapshot(q, snapshot => {
       const all = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Analysis));
-      setItems(isAdmin ? all : all.filter(a => a.status === 'published'));
+      const visible = isAdmin ? all : all.filter(a => a.status === 'published');
+      visible.sort((a, b) => {
+        const toMillis = (value: Analysis['createdAt']) => {
+          if (value && typeof value === 'object' && typeof value.toDate === 'function') return value.toDate().getTime();
+          if (typeof value === 'string') return new Date(value).getTime();
+          return 0;
+        };
+        return toMillis(b.createdAt) - toMillis(a.createdAt);
+      });
+      setItems(visible);
       setLoading(false);
       setError('');
     }, err => {
-      setError(err.code === 'permission-denied' ? 'Accès refusé par Firestore.' : 'Impossible de charger les analyses pour le moment.');
+      console.error('[dailyAnalyses] Firestore read failed:', err.code, err.message);
+      setError(err.code === 'permission-denied'
+        ? 'Lecture refusée par Firestore. Vérifiez les règles et le rôle du compte.'
+        : err.code === 'failed-precondition'
+          ? 'Index Firestore requis. Consultez le lien fourni dans la console.'
+          : `Impossible de charger les analyses (${err.code || 'erreur inconnue'}).`);
       setLoading(false);
     });
   }, [isAdmin]);
