@@ -126,6 +126,7 @@ export function CourseSpace() {
       </header>
 
       <section aria-label="Sélection de la classe" className="space-y-4">
+        <style>{`@keyframes class-slide-in { from { opacity: 0.65; transform: translateX(28px); } to { opacity: 1; transform: translateX(0); } }`}</style>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-xs font-semibold text-slate-500">MON APPRENTISSAGE <span className="mx-1 text-slate-300">/</span> <span className="text-[#0A192F]">{activeClass.id}</span></p>
           <div className="flex items-center gap-3">
@@ -143,7 +144,7 @@ export function CourseSpace() {
               <span className="absolute inset-x-0 top-0 z-10 h-1"><span className={'block h-full w-full ' + accentStyles[activeClass.accent].bar} /></span>
               <span className="relative block h-[190px] w-full shrink-0 overflow-hidden sm:h-auto sm:min-h-[250px] sm:w-[42%]">
                 <img
-                  src={activeClass.id === 'IAM_1' ? 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=1200&q=85' : activeClass.id === 'IAM_2' ? 'https://images.unsplash.com/photo-1642790106117-e829e14a795f?auto=format&fit=crop&w=1200&q=85' : 'https://images.unsplash.com/photo-146自?auto=format&fit=crop&w=1200&q=85'}
+                  src={activeClass.id === 'IAM_1' ? 'https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&w=1200&q=85' : activeClass.id === 'IAM_2' ? 'https://images.unsplash.com/photo-1642790106117-e829e14a795f?auto=format&fit=crop&w=1200&q=85' : 'https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&w=1200&q=85'}
                   alt={'Image illustrative de la classe ' + activeClass.name}
                   className="absolute inset-0 h-full w-full object-cover transition duration-700 group-hover:scale-[1.04]"
                   onError={(event) => { event.currentTarget.style.display = 'none'; }}
