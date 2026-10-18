@@ -22,6 +22,17 @@ function validTradingViewUrl(value: string) {
     return url.protocol === 'https:' && (url.hostname === 'tradingview.com' || url.hostname.endsWith('.tradingview.com'));
   } catch { return false; }
 }
+function tradingViewSnapshotImageUrl(value: string) {
+  try {
+    const url = new URL(value);
+    const match = url.pathname.match(/^\/x\/([A-Za-z0-9]+)\/?$/);
+    if (url.hostname !== 'www.tradingview.com' || !match) return '';
+    const snapshotId = match[1];
+    return `https://s3.tradingview.com/snapshots/${snapshotId.charAt(0).toLowerCase()}/${snapshotId}.png`;
+  } catch {
+    return '';
+  }
+}
 function dateKey(value: Analysis['createdAt']) {
   if (value && typeof value === 'object' && typeof value.toDate === 'function') return value.toDate().toLocaleDateString('en-CA');
   if (typeof value === 'string') return new Date(value).toLocaleDateString('en-CA');
@@ -140,7 +151,7 @@ export function AnalysisAdminPanel({ isAdmin = true }: { isAdmin?: boolean }) {
           <span className={'rounded-lg px-2.5 py-1.5 text-[10px] font-black ' + (item.direction === 'BUY' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700')}>{item.direction === 'BUY' ? 'BUY' : 'SELL'}</span>
         </div>
         <div className="mx-4 overflow-hidden rounded-xl border border-slate-100 bg-slate-50">
-          {validTradingViewUrl(item.tradingViewUrl) ? <div className="flex min-h-44 flex-col items-center justify-center gap-3 bg-white px-5 py-8 text-center"><p className="text-sm font-bold text-[#0b1f35]">Analyse TradingView partagée</p><p className="max-w-lg text-xs leading-5 text-slate-500">Consultez l’analyse statique partagée par l’analyste sur TradingView.</p><a href={item.tradingViewUrl} target="_blank" rel="noreferrer" className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-[#00a982] px-4 text-sm font-bold text-white hover:bg-[#008f72]"><ExternalLink className="h-4 w-4" /> Voir l’analyse TradingView</a></div> : <div className="flex h-44 items-center justify-center text-sm text-slate-400">Lien TradingView indisponible</div>}
+          {validTradingViewUrl(item.tradingViewUrl) && tradingViewSnapshotImageUrl(item.tradingViewUrl) ? <a href={item.tradingViewUrl} target="_blank" rel="noreferrer" aria-label={'Ouvrir la capture TradingView ' + item.setup} className="block bg-white"><img src={tradingViewSnapshotImageUrl(item.tradingViewUrl)} alt={'Capture TradingView XAUUSD — ' + item.setup} loading="lazy" className="block h-auto max-h-[900px] w-full object-contain" /><p className="px-4 py-2 text-center text-xs text-slate-400">Capture TradingView · cliquer pour agrandir</p></a> : <div className="flex h-44 items-center justify-center text-sm text-slate-400">Lien de capture TradingView invalide</div>}
         </div>
         <div className="grid grid-cols-3 gap-3 px-4 pt-4">
           <MiniLevel label="PE" value={item.entryPrice} /><MiniLevel label="SL" value={item.stopLoss} /><MiniLevel label="TP" value={item.takeProfit} />
@@ -161,7 +172,7 @@ export function AnalysisAdminPanel({ isAdmin = true }: { isAdmin?: boolean }) {
         <header className="flex items-center justify-between border-b border-slate-100 px-5 py-4"><div><h3 id="analysis-modal-title" className="text-base font-black text-[#0b1f35]">{editingId ? 'Modifier l’analyse' : 'Ajouter une analyse'}</h3><p className="mt-1 text-xs text-slate-500">XAUUSD · Gold</p></div><button type="button" onClick={() => !saving && setModalOpen(false)} aria-label="Fermer" className="flex h-9 w-9 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100"><X className="h-5 w-5" /></button></header>
         <form onSubmit={submit} className="space-y-4 overflow-y-auto p-5">
           <div><label htmlFor="analysis-tv-url" className="mb-1.5 block text-xs font-bold text-slate-600">Lien TradingView</label><input id="analysis-tv-url" type="url" required value={form.tradingViewUrl} onChange={e => setField('tradingViewUrl', e.target.value)} placeholder="https://www.tradingview.com/chart/…" className="min-h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-[#00a982] focus:ring-2 focus:ring-emerald-50" /></div>
-          {validTradingViewUrl(form.tradingViewUrl) && <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-4"><p className="text-xs font-bold text-slate-700">Lien statique TradingView prêt</p><p className="mt-1 text-xs leading-5 text-slate-500">Les membres ouvriront le lien partagé. Aucun graphique générique ne sera intégré dans cette publication.</p><a href={form.tradingViewUrl} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-[#008f72]">Vérifier le lien <ExternalLink className="h-3 w-3" /></a></div>}
+          {validTradingViewUrl(form.tradingViewUrl) && tradingViewSnapshotImageUrl(form.tradingViewUrl) && <div className="overflow-hidden rounded-xl border border-slate-200 bg-white"><p className="px-3 py-2 text-[11px] font-bold text-slate-500">Aperçu de la capture TradingView</p><img src={tradingViewSnapshotImageUrl(form.tradingViewUrl)} alt="Aperçu de la capture TradingView" loading="lazy" className="block max-h-64 w-full object-contain" /></div>}
           <div className="grid grid-cols-2 gap-3"><div><label htmlFor="analysis-direction" className="mb-1.5 block text-xs font-bold text-slate-600">Scénario</label><select id="analysis-direction" value={form.direction} onChange={e => setField('direction', e.target.value as Direction)} className="min-h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm"><option value="BUY">Achat · BUY</option><option value="SELL">Vente · SELL</option></select></div><div><label htmlFor="analysis-setup" className="mb-1.5 block text-xs font-bold text-slate-600">Setup</label><input id="analysis-setup" required maxLength={120} value={form.setup} onChange={e => setField('setup', e.target.value)} placeholder="Ex. Sweep + MSS" className="min-h-10 w-full rounded-xl border border-slate-200 px-3 text-sm" /></div></div>
           <div className="grid grid-cols-3 gap-3"><PriceField id="analysis-pe" label="PE" value={form.entryPrice} onChange={v => setField('entryPrice', v)} /><PriceField id="analysis-sl" label="SL" value={form.stopLoss} onChange={v => setField('stopLoss', v)} /><PriceField id="analysis-tp" label="TP" value={form.takeProfit} onChange={v => setField('takeProfit', v)} /></div>
           <div><label htmlFor="analysis-notes" className="mb-1.5 block text-xs font-bold text-slate-600">Notes (facultatif)</label><textarea id="analysis-notes" rows={3} maxLength={5000} value={form.notes} onChange={e => setField('notes', e.target.value)} placeholder="Contexte, confirmations et invalidation du scénario…" className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm leading-5" /></div>
