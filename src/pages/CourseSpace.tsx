@@ -132,16 +132,19 @@ export function CourseSpace() {
             const moduleCount = course.modules.length;
             return (
               <button key={course.id} type="button" onClick={() => chooseClass(course.id)} aria-pressed={isSelected}
-                className={'group relative flex min-h-[154px] flex-col overflow-hidden rounded-xl border p-4 text-left transition-all duration-200 ' + (isSelected ? 'border-slate-300 bg-white shadow-[0_5px_18px_rgba(15,23,42,0.08)] ring-1 ring-slate-200' : 'border-slate-200 bg-white hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md')}>
+                className={'group relative flex min-h-[270px] flex-col overflow-hidden rounded-2xl border p-4 text-left transition-all duration-200 ' + (isSelected ? 'border-slate-300 bg-white shadow-[0_10px_30px_rgba(15,23,42,0.12)] ring-2 ring-slate-200' : 'border-slate-200 bg-white hover:-translate-y-1 hover:border-slate-300 hover:shadow-xl')}>
                 <span className={'absolute inset-x-0 top-0 h-1 ' + courseStyles.bar} />
-                <span className={'relative -mx-4 -mt-4 mb-3 flex h-[96px] items-center justify-center overflow-hidden ' + (course.accent === 'blue' ? 'bg-[#DCEEF0]' : course.accent === 'green' ? 'bg-[#DCEDE5]' : 'bg-[#E8E1F4]')}>
-                  <span className={'absolute -right-3 -top-8 h-28 w-28 rounded-full border-[14px] opacity-50 ' + (course.accent === 'blue' ? 'border-sky-300' : course.accent === 'green' ? 'border-emerald-300' : 'border-violet-300')} />
-                  <span className={'absolute -bottom-10 left-8 h-24 w-24 rounded-full opacity-40 ' + (course.accent === 'blue' ? 'bg-cyan-300' : course.accent === 'green' ? 'bg-teal-300' : 'bg-purple-300')} />
-                  <span className={'relative flex h-14 w-14 items-center justify-center rounded-2xl border border-white/80 bg-white/75 shadow-sm ' + courseStyles.text}>
-                    {index === 0 ? <Target className="h-7 w-7" strokeWidth={1.5} /> : index === 1 ? <LayoutDashboard className="h-7 w-7" strokeWidth={1.5} /> : <CheckCircle2 className="h-7 w-7" strokeWidth={1.5} />}
+                <span className={'relative -mx-4 -mt-4 mb-3 flex h-[190px] items-center justify-center overflow-hidden ' + (course.accent === 'blue' ? 'bg-gradient-to-br from-sky-100 via-cyan-200 to-blue-300' : course.accent === 'green' ? 'bg-gradient-to-br from-emerald-100 via-teal-200 to-green-300' : 'bg-gradient-to-br from-violet-100 via-fuchsia-200 to-purple-300')}>
+                  <span className="absolute inset-0 opacity-30" style={{backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,.95) 1.5px, transparent 0)', backgroundSize: '18px 18px'}} />
+                  <span className={'absolute -right-8 -top-12 h-48 w-48 rounded-full border-[24px] opacity-60 ' + (course.accent === 'blue' ? 'border-sky-400' : course.accent === 'green' ? 'border-emerald-400' : 'border-violet-400')} />
+                  <span className={'absolute -bottom-16 -left-8 h-48 w-48 rounded-full border-[22px] opacity-40 ' + (course.accent === 'blue' ? 'border-cyan-400' : course.accent === 'green' ? 'border-teal-400' : 'border-fuchsia-400')} />
+                  <span className="absolute left-4 top-4 rounded-full border border-white/60 bg-white/35 px-3 py-1 text-[9px] font-bold uppercase tracking-[.2em] text-slate-800/70">Parcours de trading</span>
+                  <span className="absolute right-4 top-3 font-mono text-[11px] font-bold text-slate-800/55">{String(index + 1).padStart(2, '0')} — 03</span>
+                  <span className={'relative flex h-24 w-24 items-center justify-center rounded-[28px] border border-white/70 bg-white/45 shadow-[0_12px_30px_rgba(15,23,42,0.10)] backdrop-blur-sm ' + courseStyles.text}>
+                    {index === 0 ? <Target className="h-12 w-12" strokeWidth={1.35} /> : index === 1 ? <LayoutDashboard className="h-12 w-12" strokeWidth={1.35} /> : <CheckCircle2 className="h-12 w-12" strokeWidth={1.35} />}
                   </span>
-                  <span className="absolute bottom-2 left-3 text-[9px] font-bold uppercase tracking-[.18em] text-slate-600/70">IAMTRADER ACADEMY</span>
-                  <span className="absolute bottom-2 right-3 font-mono text-[10px] font-semibold text-slate-600/70">{String(index + 1).padStart(2, '0')} / 03</span>
+                  <span className="absolute bottom-3 left-4 text-[10px] font-extrabold uppercase tracking-[.2em] text-slate-800/65">IAMTRADER ACADEMY</span>
+                  <span className="absolute bottom-3 right-4 rounded-full border border-white/60 bg-white/35 px-2 py-1 text-[9px] font-semibold text-slate-800/70">VISUEL À PERSONNALISER</span>
                 </span>
                 <span className="flex w-full items-center justify-between gap-2">
                   <span className={'inline-flex items-center rounded-md px-2 py-1 text-[10px] font-bold tracking-[.08em] ' + courseStyles.soft + ' ' + courseStyles.text}>{course.id}</span>
@@ -196,13 +199,39 @@ export function CourseSpace() {
             </div>
             <span className="text-xs font-medium text-slate-500">{activeClass.modules.length} modules <span className="mx-1 text-slate-300">·</span> {activeClass.modules.reduce((total, module) => total + module.lessons.length, 0)} leçons</span>
           </div>
-          <div className="space-y-2">
-            {activeClass.modules.map(module => {
+          <div className="grid gap-4 sm:grid-cols-2">
+            {activeClass.modules.map((module, moduleIndex) => {
               const isExpanded = expandedModules.includes(module.number);
+              const visualPalette = [
+                'bg-gradient-to-br from-cyan-100 via-sky-200 to-blue-300',
+                'bg-gradient-to-br from-amber-100 via-orange-200 to-rose-300',
+                'bg-gradient-to-br from-emerald-100 via-teal-200 to-cyan-300',
+                'bg-gradient-to-br from-violet-100 via-purple-200 to-fuchsia-300',
+                'bg-gradient-to-br from-rose-100 via-pink-200 to-orange-300',
+              ][moduleIndex % 5];
               return (
-                <article key={module.number} className="overflow-hidden rounded-xl border border-slate-200 bg-white transition-shadow hover:shadow-sm">
+                <article key={module.number} className={'overflow-hidden rounded-2xl border transition-all ' + (isExpanded ? 'border-slate-300 shadow-lg sm:col-span-2' : 'border-slate-200 bg-white hover:-translate-y-0.5 hover:shadow-lg')}>
                   <button type="button" onClick={() => toggleModule(module.number)} aria-expanded={isExpanded}
-                    className={'group relative flex w-full items-center gap-4 px-3 py-4 text-left transition-all sm:gap-5 sm:px-4 sm:py-5 ' + (isExpanded ? 'bg-[#F3F8F6] ' + styles.text : 'bg-white hover:bg-slate-50')}>
+                    className="group relative flex w-full flex-col bg-white text-left transition-all">
+                    <span className={'relative flex h-[150px] w-full items-center justify-center overflow-hidden ' + visualPalette}>
+                      <span className="absolute inset-0 opacity-25" style={{backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,.95) 1.5px, transparent 0)', backgroundSize: '16px 16px'}} />
+                      <span className="absolute -right-5 -top-8 h-32 w-32 rounded-full border-[18px] border-white/40" />
+                      <span className="absolute -bottom-12 left-6 h-32 w-32 rounded-full border-[18px] border-white/35" />
+                      <span className="absolute left-3 top-3 rounded-full border border-white/70 bg-white/50 px-2.5 py-1 font-mono text-[10px] font-bold text-slate-800/70">MODULE {String(module.number).padStart(2, '0')}</span>
+                      <span className="flex h-16 w-16 items-center justify-center rounded-2xl border border-white/70 bg-white/55 text-slate-800/80 shadow-sm backdrop-blur-sm"><BookOpen className="h-8 w-8" strokeWidth={1.4} /></span>
+                      <span className="absolute bottom-3 right-3 rounded-full border border-white/60 bg-white/40 px-2 py-1 text-[9px] font-semibold uppercase tracking-wider text-slate-800/70">Visuel à personnaliser</span>
+                    </span>
+                    <span className="flex w-full items-start gap-3 px-4 py-4 sm:px-5">
+                      <span className={'mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xs font-bold ' + styles.soft + ' ' + styles.text}>{String(module.number).padStart(2, '0')}</span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[14px] font-semibold leading-5 tracking-tight text-[#0A192F] sm:text-[15px]">{module.title}</span>
+                        <span className="mt-2 flex flex-wrap items-center gap-2">
+                          <span className="inline-flex rounded-md bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-600">{module.lessons.length} leçons</span>
+                          <span className="text-[10px] text-slate-400">{isExpanded ? 'Contenu affiché' : 'Explorer le module'}</span>
+                        </span>
+                      </span>
+                      <span className={'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-all ' + (isExpanded ? styles.bar + ' text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200')}><ChevronDown className={'h-4 w-4 transition-transform ' + (isExpanded ? 'rotate-180' : '')} /></span>
+                    </span>
                     <span className={'flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border font-mono text-sm font-semibold transition-colors ' + (isExpanded ? styles.soft + ' ' + styles.border + ' ' + styles.text : 'border-slate-200 bg-white text-slate-500 group-hover:border-slate-300 group-hover:text-slate-800')}>{String(module.number).padStart(2, '0')}</span>
                     <span className="min-w-0 flex-1">
                       <span className={'block text-[14px] font-semibold leading-5 tracking-[-.01em] sm:text-[15px] ' + (isExpanded ? 'text-[#0A192F]' : 'text-slate-700 group-hover:text-[#0A192F]')}>{module.title}</span>
