@@ -43,7 +43,7 @@ export function CommunityView({ userProfile }: { userProfile: UserProfile | null
       {activeTab === 'calendar' && <EconomicCalendarView />}
 
       {activeTab === 'chat' && <ChatView userProfile={userProfile} />}
-      {activeTab === 'courses' && <CourseSpace />}
+      {activeTab === 'courses' && <CourseSpace isAdmin={isAdmin} />}
       {activeTab === 'analysis' && (
         <Placeholder title="Analyse" icon={BarChart3} text="Les analyses de marché et idées de trading seront regroupées ici." />
       )}
