@@ -3,7 +3,8 @@ import { CalendarDays, CheckCircle2, Clock3, CreditCard, History, Receipt, Recei
 import { getPaymentHistory, PaymentHistoryItem } from '../services/paymentHistory';
 
 function money(value: number, currency: string) {
-  const formatted = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number.isFinite(value) ? value : 0);\n  return `${formatted} ${currency || 'USD'}`;
+  const formatted = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number.isFinite(value) ? value : 0);
+  return `${formatted} ${currency || 'USD'}`;
 }
 
 function date(value?: string | null) {
