@@ -29,6 +29,7 @@ import { AuthModal } from './components/auth/AuthModal';
 import { ShieldAlert, LogOut, Loader2, Menu } from 'lucide-react';
 import { syncSubscriptionStatus } from './services/payments';
 import { watchDeviceSession } from './services/deviceSessions';
+import { authPersistenceReady } from './firebase/config';
 
 function MainAppContent() {
   const { showToast } = useToast();
@@ -76,7 +77,12 @@ function MainAppContent() {
 
   // 1. Auth Subscription
   useEffect(() => {
-    const unsubscribe = subscribeToAuth(async (user) => {
+    let unsubscribe: (() => void) | undefined;
+    let cancelled = false;
+
+    void authPersistenceReady.then(() => {
+      if (cancelled) return;
+      unsubscribe = subscribeToAuth(async (user) => {
       setCurrentUser(user);
       if (user) {
         try {
@@ -109,9 +115,16 @@ function MainAppContent() {
         setTrades([]);
       }
       setIsAuthLoading(false);
+      });
+    }).catch((error) => {
+      console.error('Firebase auth persistence initialization failed:', error);
+      if (!cancelled) setIsAuthLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
   }, []);
 
   // Keep a device session registered and immediately sign out if its access is revoked.
