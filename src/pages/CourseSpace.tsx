@@ -134,7 +134,16 @@ export function CourseSpace() {
               <button key={course.id} type="button" onClick={() => chooseClass(course.id)} aria-pressed={isSelected}
                 className={'group relative flex min-h-[154px] flex-col overflow-hidden rounded-xl border p-4 text-left transition-all duration-200 ' + (isSelected ? 'border-slate-300 bg-white shadow-[0_5px_18px_rgba(15,23,42,0.08)] ring-1 ring-slate-200' : 'border-slate-200 bg-white hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-md')}>
                 <span className={'absolute inset-x-0 top-0 h-1 ' + courseStyles.bar} />
-                <span className="flex w-full items-center justify-between gap-2 pt-1">
+                <span className={'relative -mx-4 -mt-4 mb-3 flex h-[96px] items-center justify-center overflow-hidden ' + (course.accent === 'blue' ? 'bg-[#DCEEF0]' : course.accent === 'green' ? 'bg-[#DCEDE5]' : 'bg-[#E8E1F4]')}>
+                  <span className={'absolute -right-3 -top-8 h-28 w-28 rounded-full border-[14px] opacity-50 ' + (course.accent === 'blue' ? 'border-sky-300' : course.accent === 'green' ? 'border-emerald-300' : 'border-violet-300')} />
+                  <span className={'absolute -bottom-10 left-8 h-24 w-24 rounded-full opacity-40 ' + (course.accent === 'blue' ? 'bg-cyan-300' : course.accent === 'green' ? 'bg-teal-300' : 'bg-purple-300')} />
+                  <span className={'relative flex h-14 w-14 items-center justify-center rounded-2xl border border-white/80 bg-white/75 shadow-sm ' + courseStyles.text}>
+                    {index === 0 ? <Target className="h-7 w-7" strokeWidth={1.5} /> : index === 1 ? <LayoutDashboard className="h-7 w-7" strokeWidth={1.5} /> : <CheckCircle2 className="h-7 w-7" strokeWidth={1.5} />}
+                  </span>
+                  <span className="absolute bottom-2 left-3 text-[9px] font-bold uppercase tracking-[.18em] text-slate-600/70">IAMTRADER ACADEMY</span>
+                  <span className="absolute bottom-2 right-3 font-mono text-[10px] font-semibold text-slate-600/70">{String(index + 1).padStart(2, '0')} / 03</span>
+                </span>
+                <span className="flex w-full items-center justify-between gap-2">
                   <span className={'inline-flex items-center rounded-md px-2 py-1 text-[10px] font-bold tracking-[.08em] ' + courseStyles.soft + ' ' + courseStyles.text}>{course.id}</span>
                   <span className="text-[10px] font-medium text-slate-400">{course.period}</span>
                 </span>
