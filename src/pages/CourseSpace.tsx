@@ -140,7 +140,7 @@ export function CourseSpace() {
         <div className="overflow-hidden rounded-2xl">
           <div key={activeClass.id} className="animate-[class-slide-in_320ms_ease-out]">
             <button type="button" onClick={() => chooseClass(activeClass.id)} aria-pressed="true"
-              className="group relative flex min-h-[250px] w-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-[0_10px_30px_rgba(15,23,42,0.09)] transition hover:shadow-[0_16px_40px_rgba(15,23,42,0.14)] sm:min-h-[460px] sm:flex-row">
+              className="group relative flex min-h-[250px] w-full flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white text-left shadow-[0_10px_30px_rgba(15,23,42,0.09)] transition hover:shadow-[0_16px_40px_rgba(15,23,42,0.14)] sm:min-h-0">
               <span className="absolute inset-x-0 top-0 z-10 h-1"><span className={'block h-full w-full ' + accentStyles[activeClass.accent].bar} /></span>
               <span className="relative block h-[320px] w-full shrink-0 overflow-hidden sm:h-[440px] lg:h-[500px]">
                 <img
