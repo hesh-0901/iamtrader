@@ -125,16 +125,16 @@ export function CourseSpace() {
           <p className="text-xs font-semibold text-slate-500">MON APPRENTISSAGE <span className="mx-1 text-slate-300">/</span> <span className="text-[#0A192F]">{activeClass.id}</span></p>
           <span className="text-[10px] font-semibold uppercase tracking-[.15em] text-slate-400">3 niveaux · 6 mois</span>
         </div>
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3">
           {courseClasses.map((course, index) => {
             const courseStyles = accentStyles[course.accent];
             const isSelected = selectedClass === course.id;
             const moduleCount = course.modules.length;
             return (
               <button key={course.id} type="button" onClick={() => chooseClass(course.id)} aria-pressed={isSelected}
-                className={'group relative flex min-h-[270px] flex-col overflow-hidden rounded-2xl border p-4 text-left transition-all duration-200 ' + (isSelected ? 'border-slate-300 bg-white shadow-[0_10px_30px_rgba(15,23,42,0.12)] ring-2 ring-slate-200' : 'border-slate-200 bg-white hover:-translate-y-1 hover:border-slate-300 hover:shadow-xl')}>
+                className={'group relative flex min-h-[210px] flex-col overflow-hidden rounded-2xl border p-4 text-left transition-all duration-200 sm:flex-row sm:items-stretch sm:gap-5 ' + (isSelected ? 'border-slate-300 bg-white shadow-[0_10px_30px_rgba(15,23,42,0.12)] ring-2 ring-slate-200' : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-lg')}>
                 <span className={'absolute inset-x-0 top-0 h-1 ' + courseStyles.bar} />
-                <span className={'relative -mx-4 -mt-4 mb-3 flex h-[190px] items-center justify-center overflow-hidden ' + (course.accent === 'blue' ? 'bg-gradient-to-br from-sky-100 via-cyan-200 to-blue-300' : course.accent === 'green' ? 'bg-gradient-to-br from-emerald-100 via-teal-200 to-green-300' : 'bg-gradient-to-br from-violet-100 via-fuchsia-200 to-purple-300')}>
+                <span className={'relative -mx-4 -mt-4 mb-3 flex h-[190px] items-center justify-center overflow-hidden sm:mx-0 sm:my-0 sm:h-auto sm:min-h-[178px] sm:w-[38%] sm:shrink-0 sm:rounded-xl ' + (course.accent === 'blue' ? 'bg-gradient-to-br from-sky-100 via-cyan-200 to-blue-300' : course.accent === 'green' ? 'bg-gradient-to-br from-emerald-100 via-teal-200 to-green-300' : 'bg-gradient-to-br from-violet-100 via-fuchsia-200 to-purple-300')}>
                   <span className="absolute inset-0 opacity-30" style={{backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,.95) 1.5px, transparent 0)', backgroundSize: '18px 18px'}} />
                   <span className={'absolute -right-8 -top-12 h-48 w-48 rounded-full border-[24px] opacity-60 ' + (course.accent === 'blue' ? 'border-sky-400' : course.accent === 'green' ? 'border-emerald-400' : 'border-violet-400')} />
                   <span className={'absolute -bottom-16 -left-8 h-48 w-48 rounded-full border-[22px] opacity-40 ' + (course.accent === 'blue' ? 'border-cyan-400' : course.accent === 'green' ? 'border-teal-400' : 'border-fuchsia-400')} />
@@ -146,7 +146,7 @@ export function CourseSpace() {
                   <span className="absolute bottom-3 left-4 text-[10px] font-extrabold uppercase tracking-[.2em] text-slate-800/65">IAMTRADER ACADEMY</span>
                   <span className="absolute bottom-3 right-4 rounded-full border border-white/60 bg-white/35 px-2 py-1 text-[9px] font-semibold text-slate-800/70">VISUEL À PERSONNALISER</span>
                 </span>
-                <span className="flex w-full items-center justify-between gap-2">
+                <span className="flex w-full flex-1 items-center justify-between gap-2 sm:py-2">
                   <span className={'inline-flex items-center rounded-md px-2 py-1 text-[10px] font-bold tracking-[.08em] ' + courseStyles.soft + ' ' + courseStyles.text}>{course.id}</span>
                   <span className="text-[10px] font-medium text-slate-400">{course.period}</span>
                 </span>
@@ -199,72 +199,23 @@ export function CourseSpace() {
             </div>
             <span className="text-xs font-medium text-slate-500">{activeClass.modules.length} modules <span className="mx-1 text-slate-300">·</span> {activeClass.modules.reduce((total, module) => total + module.lessons.length, 0)} leçons</span>
           </div>
-          <div className="grid gap-4 sm:grid-cols-2">
-            {activeClass.modules.map((module, moduleIndex) => {
+          <div className="space-y-2">
+            {activeClass.modules.map(module => {
               const isExpanded = expandedModules.includes(module.number);
-              const visualPalette = [
-                'bg-gradient-to-br from-cyan-100 via-sky-200 to-blue-300',
-                'bg-gradient-to-br from-amber-100 via-orange-200 to-rose-300',
-                'bg-gradient-to-br from-emerald-100 via-teal-200 to-cyan-300',
-                'bg-gradient-to-br from-violet-100 via-purple-200 to-fuchsia-300',
-                'bg-gradient-to-br from-rose-100 via-pink-200 to-orange-300',
-              ][moduleIndex % 5];
               return (
-                <article key={module.number} className={'overflow-hidden rounded-2xl border transition-all ' + (isExpanded ? 'border-slate-300 shadow-lg sm:col-span-2' : 'border-slate-200 bg-white hover:-translate-y-0.5 hover:shadow-lg')}>
+                <article key={module.number} className={'overflow-hidden rounded-xl border transition-colors ' + (isExpanded ? 'border-slate-300 bg-white shadow-sm' : 'border-slate-200 bg-white hover:border-slate-300')}>
                   <button type="button" onClick={() => toggleModule(module.number)} aria-expanded={isExpanded}
-                    className="group relative flex w-full flex-col bg-white text-left transition-all">
-                    <span className={'relative flex h-[150px] w-full items-center justify-center overflow-hidden ' + visualPalette}>
-                      <span className="absolute inset-0 opacity-25" style={{backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,.95) 1.5px, transparent 0)', backgroundSize: '16px 16px'}} />
-                      <span className="absolute -right-5 -top-8 h-32 w-32 rounded-full border-[18px] border-white/40" />
-                      <span className="absolute -bottom-12 left-6 h-32 w-32 rounded-full border-[18px] border-white/35" />
-                      <span className="absolute left-3 top-3 rounded-full border border-white/70 bg-white/50 px-2.5 py-1 font-mono text-[10px] font-bold text-slate-800/70">MODULE {String(module.number).padStart(2, '0')}</span>
-                      <span className="flex h-16 w-16 items-center justify-center rounded-2xl border border-white/70 bg-white/55 text-slate-800/80 shadow-sm backdrop-blur-sm"><BookOpen className="h-8 w-8" strokeWidth={1.4} /></span>
-                      <span className="absolute bottom-3 right-3 rounded-full border border-white/60 bg-white/40 px-2 py-1 text-[9px] font-semibold uppercase tracking-wider text-slate-800/70">Visuel à personnaliser</span>
-                    </span>
-                    <span className="flex w-full items-start gap-3 px-4 py-4 sm:px-5">
-                      <span className={'mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xs font-bold ' + styles.soft + ' ' + styles.text}>{String(module.number).padStart(2, '0')}</span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-[14px] font-semibold leading-5 tracking-tight text-[#0A192F] sm:text-[15px]">{module.title}</span>
-                        <span className="mt-2 flex flex-wrap items-center gap-2">
-                          <span className="inline-flex rounded-md bg-slate-100 px-2 py-1 text-[10px] font-semibold text-slate-600">{module.lessons.length} leçons</span>
-                          <span className="text-[10px] text-slate-400">{isExpanded ? 'Contenu affiché' : 'Explorer le module'}</span>
-                        </span>
-                      </span>
-                      <span className={'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg transition-all ' + (isExpanded ? styles.bar + ' text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200')}><ChevronDown className={'h-4 w-4 transition-transform ' + (isExpanded ? 'rotate-180' : '')} /></span>
-                    </span>
-                    <span className={'flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border font-mono text-sm font-semibold transition-colors ' + (isExpanded ? styles.soft + ' ' + styles.border + ' ' + styles.text : 'border-slate-200 bg-white text-slate-500 group-hover:border-slate-300 group-hover:text-slate-800')}>{String(module.number).padStart(2, '0')}</span>
+                    className={'group flex w-full items-center gap-4 px-4 py-4 text-left transition-colors sm:gap-5 sm:px-5 ' + (isExpanded ? 'bg-[#F3F8F6]' : 'hover:bg-slate-50')}>
+                    <span className={'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border font-mono text-sm font-semibold ' + (isExpanded ? styles.soft + ' ' + styles.border + ' ' + styles.text : 'border-slate-200 bg-white text-slate-500 group-hover:border-slate-300')}>{String(module.number).padStart(2, '0')}</span>
                     <span className="min-w-0 flex-1">
-                      <span className={'block text-[14px] font-semibold leading-5 tracking-[-.01em] sm:text-[15px] ' + (isExpanded ? 'text-[#0A192F]' : 'text-slate-700 group-hover:text-[#0A192F]')}>{module.title}</span>
+                      <span className="block text-sm font-semibold leading-5 tracking-tight text-[#0A192F] sm:text-[15px]">{module.title}</span>
                       <span className="mt-1.5 flex flex-wrap items-center gap-2">
-                        <span className={'inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-semibold ' + (isExpanded ? styles.soft + ' ' + styles.text : 'bg-slate-100 text-slate-500')}>{module.lessons.length} leçons</span>
-                        {isExpanded && <span className="text-[10px] font-medium uppercase tracking-[.1em] text-slate-400">Module ouvert</span>}
+                        <span className={'inline-flex rounded-md px-2 py-1 text-[10px] font-semibold ' + (isExpanded ? styles.soft + ' ' + styles.text : 'bg-slate-100 text-slate-500')}>{module.lessons.length} leçons</span>
+                        <span className="text-[10px] text-slate-400">{isExpanded ? 'Contenu affiché' : 'Explorer le module'}</span>
                       </span>
                     </span>
-                    <span className={'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-all ' + (isExpanded ? styles.bar + ' text-white shadow-sm' : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200')}><ChevronDown className={'h-4 w-4 transition-transform ' + (isExpanded ? 'rotate-180' : '')} /></span>
+                    <span className={'flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-all ' + (isExpanded ? styles.bar + ' text-white' : 'bg-slate-100 text-slate-500 group-hover:bg-slate-200')}><ChevronDown className={'h-4 w-4 transition-transform ' + (isExpanded ? 'rotate-180' : '')} /></span>
                   </button>
-                  {isExpanded && (
-                    <div className="grid gap-6 border-t border-slate-100 bg-slate-50/70 px-4 py-5 sm:grid-cols-[minmax(0,1fr)_220px] sm:px-6">
-                      <div>
-                        <p className="mb-3 text-[10px] font-bold uppercase tracking-[.15em] text-slate-400">Contenu du module</p>
-                        <ol className="space-y-3">
-                          {module.lessons.map((lesson, index) => (
-                            <li key={lesson} className="flex items-start gap-3 text-sm leading-5 text-slate-600">
-                              <span className="mt-0.5 w-5 shrink-0 font-mono text-[10px] text-slate-400">{String(index + 1).padStart(2, '0')}</span>
-                              <span>{lesson}</span>
-                            </li>
-                          ))}
-                        </ol>
-                      </div>
-                      <div className="self-start border-l-2 border-slate-200 pl-4">
-                        <p className={'text-[10px] font-bold uppercase tracking-[.14em] ' + styles.text}>Compétence visée</p>
-                        <p className="mt-2 text-sm leading-6 text-slate-600">{module.outcome}</p>
-                        <div className="mt-4 flex items-center gap-2 text-[10px] font-medium text-slate-400"><PlayCircle className="h-3.5 w-3.5" /> Leçons à développer</div>
-                      </div>
-                    </div>
-                  )}
-                </article>
-              );
-            })}
           </div>
         </div>
       </section>
