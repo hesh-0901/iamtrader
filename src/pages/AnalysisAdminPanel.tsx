@@ -22,31 +22,34 @@ function validTradingViewUrl(value: string) {
     return url.protocol === 'https:' && (url.hostname === 'tradingview.com' || url.hostname.endsWith('.tradingview.com'));
   } catch { return false; }
 }
-function tradingViewEmbedUrl(value: string) {
-  // Les liens /chart/... partagés ne sont généralement pas intégrables en iframe.
-  // Utiliser le widget officiel TradingView pour afficher un graphique XAUUSD intégré.
+function tradingViewEmbedUrl(_value: string) {
   const params = new URLSearchParams({
+    frameElementId: 'tradingview_analysis_chart',
     symbol: 'OANDA:XAUUSD',
     interval: '60',
+    hidesidetoolbar: '1',
+    symboledit: '0',
+    saveimage: '0',
+    toolbarbg: 'F1F3F6',
+    studies: '[]',
     theme: 'light',
     style: '1',
-    locale: 'fr',
     timezone: 'Etc/UTC',
-    hide_top_toolbar: '1',
-    hide_legend: '1',
-    hideideas: '1',
-    saveimage: '0',
-    toolbarbg: 'f8fafc',
     withdateranges: '1',
-    symboledit: '0',
-    studies: '[]',
+    hideideas: '1',
+    locale: 'fr',
+    utm_source: 'iamtrader.com',
+    utm_medium: 'widget',
+    utm_campaign: 'chart',
   });
-  return 'https://www.tradingview.com/widgetembed/?' + params.toString();
+  return 'https://s.tradingview.com/widgetembed/?' + params.toString();
 }
-  try { const url = new URL(value); return url.protocol === 'https:' && (url.hostname === 'tradingview.com' || url.hostname.endsWith('.tradingview.com')); }
-  catch { return false; }
+function dateKey(value: Analysis['createdAt']) {
+  if (value && typeof value === 'object' && typeof value.toDate === 'function') return value.toDate().toLocaleDateString('en-CA');
+  if (typeof value === 'string') return new Date(value).toLocaleDateString('en-CA');
+  return '';
 }
-function dateKey(value: Analysis['createdAt']) {\n  if (value && typeof value === 'object' && typeof value.toDate === 'function') return value.toDate().toLocaleDateString('en-CA');\n  if (typeof value === 'string') return new Date(value).toLocaleDateString('en-CA');\n  return '';\n}\nfunction formatDate(value: Analysis['createdAt']) {
+function formatDate(value: Analysis['createdAt']) {
   if (value && typeof value === 'object' && typeof value.toDate === 'function') return value.toDate().toLocaleString('fr-FR');
   if (typeof value === 'string') return new Date(value).toLocaleString('fr-FR');
   return 'Date indisponible';
