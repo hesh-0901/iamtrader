@@ -1,5 +1,5 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth, setPersistence, browserLocalPersistence } from "firebase/auth";
+import { getAuth } from "firebase/auth";
 import { initializeFirestore } from "firebase/firestore";
 
 // Existing production Firebase Configuration
@@ -14,15 +14,13 @@ export const firebaseConfig = {
 };
 
 export const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+
+// getAuth() already uses browser-local persistence in supported browser environments.
+// Do not call setPersistence() again at module startup: it can migrate/reset the
+// current user while Firestore listeners and writes are being initialized.
 export const auth = getAuth(app);
 
-export const authPersistenceReady = setPersistence(auth, browserLocalPersistence).catch((error) => {
-  console.error("[Firebase Auth] Local persistence initialization failed:", error);
-  throw error;
-});
-
-// Let the SDK detect when long polling is needed instead of forcing it for every
-// connection. This setting must be applied before any Firestore instance is used.
+// Automatically select the appropriate Firestore transport for this browser/network.
 export const db = initializeFirestore(app, {
   experimentalAutoDetectLongPolling: true
 });
