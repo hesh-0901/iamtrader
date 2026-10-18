@@ -66,7 +66,9 @@ export function AnalysisAdminPanel({ isAdmin = true }: { isAdmin?: boolean }) {
   const [success, setSuccess] = useState('');
 
   useEffect(() => {
-    const q = isAdmin\n      ? query(collection(db, 'dailyAnalyses'), orderBy('createdAt', 'desc'))\n      : query(collection(db, 'dailyAnalyses'), where('status', '==', 'published'), orderBy('createdAt', 'desc'));
+    const q = isAdmin
+      ? query(collection(db, 'dailyAnalyses'), orderBy('createdAt', 'desc'))
+      : query(collection(db, 'dailyAnalyses'), where('status', '==', 'published'), orderBy('createdAt', 'desc'));
     return onSnapshot(q, snapshot => {
       const all = snapshot.docs.map(d => ({ id: d.id, ...d.data() } as Analysis));
       setItems(isAdmin ? all : all.filter(a => a.status === 'published'));
