@@ -82,7 +82,7 @@ const accentStyles = {
 
 export function CourseSpace({ isAdmin = false }: { isAdmin?: boolean }) {
   const [selectedClass, setSelectedClass] = useState<CourseClass['id']>('IAM_1');
-  const [expandedModule, setExpandedModule] = useState<number | null>(1);
+  const [expandedModule, setExpandedModule] = useState<number | null>(null);
   const activeClass = courseClasses.find(course => course.id === selectedClass) ?? courseClasses[0];
   const styles = accentStyles[activeClass.accent];
   const activeClassIndex = courseClasses.findIndex(course => course.id === selectedClass);
@@ -94,7 +94,7 @@ export function CourseSpace({ isAdmin = false }: { isAdmin?: boolean }) {
   const chooseClass = (id: CourseClass['id']) => {
     setSelectedClass(id);
     const next = courseClasses.find(course => course.id === id);
-    setExpandedModule(next ? next.modules[0].number : null);
+    setExpandedModule(null);
   };
 
   const toggleModule = (number: number) => {
