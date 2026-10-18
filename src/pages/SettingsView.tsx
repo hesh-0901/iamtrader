@@ -183,31 +183,6 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
     }
   };
 
-  const handleInstallApp = async () => {
-    if (!installPrompt) {
-      showToast('Pour installer IAMTRADER, ouvrez le menu du navigateur puis choisissez « Installer IAMTRADER » ou « Ajouter à l’écran d’accueil ».', 'info');
-      return;
-    }
-    await installPrompt.prompt();
-    const choice = await installPrompt.userChoice;
-    if (choice?.outcome === 'accepted') showToast('Installation IAMTRADER lancée.', 'success');
-    setInstallPrompt(null);
-  };
-
-  const handleRevokeDevice = async (session: DeviceSession) => {
-    if (!userProfile?.uid || revokingDeviceId) return;
-    const isCurrent = session.id === currentDeviceSessionId;
-    if (!window.confirm(isCurrent ? 'Déconnecter cet appareil ?' : 'Révoquer l’accès de cet appareil ? Il sera déconnecté lors de sa prochaine vérification de session.')) return;
-    setRevokingDeviceId(session.id);
-    try {
-      await revokeDeviceSession(userProfile.uid, session.id);
-      if (isCurrent) await logoutUser();
-      else showToast('Accès de l’appareil révoqué.', 'success');
-    } catch (error: any) {
-      showToast(error?.message || 'Impossible de révoquer cet appareil.', 'error');
-    } finally { setRevokingDeviceId(null); }
-  };
-
   const downloadTraderBadge = async () => {
     const templateUrl = '/assets/iamtrader-badge-template.png';
     const templateWidth = 1665;
