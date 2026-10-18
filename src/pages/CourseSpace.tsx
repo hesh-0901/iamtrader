@@ -177,21 +177,21 @@ export function CourseSpace({ isAdmin = false }: { isAdmin?: boolean }) {
         </div>
       </section>
       <section className="space-y-6">
-        <div className={"grid gap-2 rounded-xl p-4 sm:grid-cols-[150px_minmax(0,1fr)] sm:gap-8 " + styles.panel + " text-white"}>
+        <div className="grid gap-2 rounded-xl p-4 sm:grid-cols-[150px_minmax(0,1fr)] sm:gap-8">
           <aside className="space-y-2 sm:pt-2">
-            <p className="text-[10px] font-bold uppercase tracking-[.16em] text-white/80">Objectif pédagogique</p>
+            <p className="text-[10px] font-bold uppercase tracking-[.16em] text-slate-400">Objectif pédagogique</p>
             <div className={'h-0.5 w-10 ' + styles.bar} />
           </aside>
-          <p className="max-w-3xl text-sm leading-6 text-white">{activeClass.outcome}</p>
+          <p className="max-w-3xl text-sm leading-6 text-slate-600">{activeClass.outcome}</p>
         </div>
 
         <div>
-          <div className={"mb-4 flex flex-wrap items-end justify-between gap-3 rounded-xl p-4 " + styles.panel + " text-white"}>
+          <div className="mb-4 flex flex-wrap items-end justify-between gap-3 rounded-xl p-4">
             <div>
-              <p className="mb-1 text-[10px] font-bold uppercase tracking-[.15em] text-white/80">Votre programme</p>
-              <h3 className="text-lg font-bold tracking-tight text-white">Modules de {activeClass.id}</h3>
+              <p className={"mb-1 text-[10px] font-bold uppercase tracking-[.15em] " + styles.text}>Votre programme</p>
+              <h3 className="text-lg font-semibold tracking-tight text-[#0A192F]">Modules de {activeClass.id}</h3>
             </div>
-            <span className="text-xs font-semibold text-white/90">{activeClass.modules.length} modules <span className="mx-1 text-white/60">·</span> {activeClass.modules.reduce((total, module) => total + module.lessons.length, 0)} leçons</span>
+            <span className="text-xs font-medium text-slate-500">{activeClass.modules.length} modules <span className="mx-1 text-slate-300">·</span> {activeClass.modules.reduce((total, module) => total + module.lessons.length, 0)} leçons</span>
           </div>
           <div className="space-y-2">
             {activeClass.modules.map((module, moduleIndex) => {
