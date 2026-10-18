@@ -131,7 +131,7 @@ export function AnalysisAdminPanel({ isAdmin = true }: { isAdmin?: boolean }) {
     catch { setError('Suppression impossible.'); }
   };
 
-  return <div className="mx-auto w-full max-w-5xl space-y-5">
+  return <div className="mx-auto w-full max-w-[1600px] space-y-6 px-4 lg:px-8">
     <header className="flex items-center justify-between gap-4">
       <div><h2 className="text-xl font-black tracking-tight text-[#0b1f35]">Analyses XAUUSD</h2><p className="mt-1 text-sm text-slate-500">{isAdmin ? 'Analyses de l’or · espace de publication' : 'Scénarios publiés par IAMTRADER'}</p></div>
       {isAdmin && <button type="button" onClick={openCreate} aria-label="Ajouter une analyse" title="Ajouter une analyse" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#00a982] text-white shadow-sm transition hover:bg-[#008f72] focus:outline-none focus:ring-4 focus:ring-emerald-100"><Plus className="h-5 w-5" /></button>}
@@ -140,19 +140,19 @@ export function AnalysisAdminPanel({ isAdmin = true }: { isAdmin?: boolean }) {
     {success && <p role="status" className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{success}</p>}
     {loading ? <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">Chargement des analyses…</div>
       : items.length === 0 ? <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center"><p className="font-bold text-[#0b1f35]">{isAdmin ? 'Aucune analyse ajoutée' : 'Aucune analyse publiée'}</p><p className="mt-2 text-sm text-slate-500">{isAdmin ? 'Utilisez le bouton + pour ajouter la première analyse.' : 'Les prochaines analyses publiées apparaîtront ici.'}</p></div>
-      : <div className="grid gap-4 md:grid-cols-2">{items.map(item => <article key={item.id} className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+      : <div className="grid grid-cols-1 gap-6">{items.map(item => <article key={item.id} className="w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="flex items-start justify-between gap-3 px-4 py-3">
           <div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><span className="rounded-md bg-amber-50 px-2 py-1 text-[10px] font-black tracking-wide text-amber-700">XAUUSD</span><span className={'rounded-full px-2 py-1 text-[10px] font-bold ' + (item.status === 'published' ? 'bg-emerald-50 text-emerald-700' : item.status === 'closed' ? 'bg-slate-100 text-slate-500' : 'bg-amber-50 text-amber-700')}>{item.status === 'published' ? 'Publié' : item.status === 'closed' ? 'Clôturé' : 'Brouillon'}</span></div><h3 className="mt-2 truncate text-sm font-extrabold text-[#0b1f35]">{item.setup}</h3><p className="mt-1 text-[11px] text-slate-400">{formatDate(item.createdAt)}</p></div>
           <span className={'rounded-lg px-2.5 py-1.5 text-[10px] font-black ' + (item.direction === 'BUY' ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700')}>{item.direction === 'BUY' ? 'BUY' : 'SELL'}</span>
         </div>
-        <div className="mx-3 overflow-hidden rounded-xl border border-slate-100 bg-slate-50">
-          {validTradingViewUrl(item.tradingViewUrl) ? <iframe title={'Graphique TradingView XAUUSD ' + item.setup} src={tradingViewEmbedUrl(item.tradingViewUrl)} loading="lazy" referrerPolicy="strict-origin-when-cross-origin" className="h-44 w-full bg-white" /> : <div className="flex h-44 items-center justify-center text-sm text-slate-400">Aperçu TradingView indisponible</div>}
+        <div className="mx-4 overflow-hidden rounded-xl border border-slate-100 bg-slate-50">
+          {validTradingViewUrl(item.tradingViewUrl) ? <iframe title={'Graphique TradingView XAUUSD ' + item.setup} src={tradingViewEmbedUrl(item.tradingViewUrl)} loading="lazy" referrerPolicy="strict-origin-when-cross-origin" className="h-[70vh] min-h-[520px] max-h-[1000px] w-full bg-white" /> : <div className="flex h-44 items-center justify-center text-sm text-slate-400">Aperçu TradingView indisponible</div>}
         </div>
-        <div className="grid grid-cols-3 gap-2 px-3 pt-3">
+        <div className="grid grid-cols-3 gap-3 px-4 pt-4">
           <MiniLevel label="PE" value={item.entryPrice} /><MiniLevel label="SL" value={item.stopLoss} /><MiniLevel label="TP" value={item.takeProfit} />
         </div>
-        {item.notes && <p className="px-4 pt-3 text-xs leading-5 text-slate-600">{item.notes}</p>}
-        <div className="flex items-center gap-2 px-3 py-3">
+        {item.notes && <p className="px-5 pt-4 text-sm leading-6 text-slate-600">{item.notes}</p>}
+        <div className="flex items-center gap-2 px-4 py-4">
           <a href={item.tradingViewUrl} target="_blank" rel="noreferrer" className="inline-flex min-h-8 items-center gap-1.5 rounded-lg px-2.5 text-[11px] font-bold text-slate-500 hover:bg-slate-50"><ExternalLink className="h-3.5 w-3.5" /> Ouvrir le graphique</a>
           {isAdmin && <div className="ml-auto flex items-center gap-1">
             <button type="button" onClick={() => openEdit(item)} aria-label="Modifier l’analyse" title="Modifier" className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-emerald-50 hover:text-[#008f72]"><Pencil className="h-4 w-4" /></button>
