@@ -29,7 +29,9 @@ export interface PaymentHistoryItem {
   discountAmount?: number;
   promoCode?: string | null;
   promotionName?: string | null;
-  providerTransactionId?: string | null;\n  saspayTransactionId?: string | null;\n  cinetpayTransactionId?: string | null;
+  providerTransactionId?: string | null;
+  saspayTransactionId?: string | null;
+  cinetpayTransactionId?: string | null;
 }
 
 export async function getPaymentHistory(): Promise<PaymentHistoryItem[]> {
