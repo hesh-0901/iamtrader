@@ -6,16 +6,18 @@ import { auth, db } from '../firebase/config';
 type Status = 'draft' | 'published' | 'closed';
 type Direction = 'BUY' | 'SELL';
 type SetupGrade = 'A+' | 'A' | 'B' | 'C' | 'D';
+type Bias = 'Haussier' | 'Baissier' | 'Neutre' | 'En attente';
+type MarketPhase = 'Accumulation' | 'Expansion' | 'Distribution' | 'Retracement' | 'Consolidation' | 'Reversal' | 'En attente';
 type Analysis = {
   id: string; asset?: string; tradingViewUrl: string; entryPrice: number; stopLoss: number;
-  takeProfit: number; direction: Direction; setup: string; setupGrade?: SetupGrade; notes: string; status: Status;
+  takeProfit: number; direction: Direction; setup: string; setupGrade?: SetupGrade; dailyBias?: Bias; htfBias?: Bias; entryBias?: Bias; htf?: string; ltf?: string; marketPhase?: MarketPhase; session?: string; liquidityTarget?: string; poi?: string; confirmation?: string; invalidation?: string; notes: string; status: Status;
   createdAt?: { toDate?: () => Date } | string;
 };
 type FormState = {
   tradingViewUrl: string; direction: Direction; entryPrice: string; stopLoss: string;
-  takeProfit: string; setup: string; setupGrade: SetupGrade; notes: string; status: Status;
+  takeProfit: string; setup: string; setupGrade: SetupGrade; dailyBias: Bias; htfBias: Bias; entryBias: Bias; htf: string; ltf: string; marketPhase: MarketPhase; session: string; liquidityTarget: string; poi: string; confirmation: string; invalidation: string; notes: string; status: Status;
 };
-const blank: FormState = { tradingViewUrl: '', direction: 'BUY', entryPrice: '', stopLoss: '', takeProfit: '', setup: '', setupGrade: 'A', notes: '', status: 'published' };
+const blank: FormState = { tradingViewUrl: '', direction: 'BUY', entryPrice: '', stopLoss: '', takeProfit: '', setup: '', setupGrade: 'A', dailyBias: 'En attente', htfBias: 'En attente', entryBias: 'En attente', htf: 'H4', ltf: 'M15', marketPhase: 'En attente', session: '', liquidityTarget: '', poi: '', confirmation: '', invalidation: '', notes: '', status: 'published' };
 
 function validTradingViewUrl(value: string) {
   try {
@@ -116,7 +118,7 @@ export function AnalysisAdminPanel({ isAdmin = true }: { isAdmin?: boolean }) {
   const openEdit = (item: Analysis) => {
     setForm({ tradingViewUrl: item.tradingViewUrl || '', direction: item.direction || 'BUY',
       entryPrice: String(item.entryPrice ?? ''), stopLoss: String(item.stopLoss ?? ''),
-      takeProfit: String(item.takeProfit ?? ''), setup: item.setup || '', setupGrade: item.setupGrade || 'A', notes: item.notes || '',
+      takeProfit: String(item.takeProfit ?? ''), setup: item.setup || '', setupGrade: item.setupGrade || 'A', dailyBias: item.dailyBias || 'En attente', htfBias: item.htfBias || 'En attente', entryBias: item.entryBias || 'En attente', htf: item.htf || 'H4', ltf: item.ltf || 'M15', marketPhase: item.marketPhase || 'En attente', session: item.session || '', liquidityTarget: item.liquidityTarget || '', poi: item.poi || '', confirmation: item.confirmation || '', invalidation: item.invalidation || '', notes: item.notes || '',
       status: item.status || 'draft' });
     setEditingId(item.id); setError(''); setSuccess(''); setModalOpen(true);
   };
@@ -136,7 +138,7 @@ export function AnalysisAdminPanel({ isAdmin = true }: { isAdmin?: boolean }) {
     if (form.status === 'published' && !editingId && todayCount >= 2) { setError('Deux analyses sont déjà publiées aujourd’hui.'); return; }
     setSaving(true); setError(''); setSuccess('');
     const payload = { asset: 'XAUUSD', tradingViewUrl: form.tradingViewUrl.trim(), direction: form.direction,
-      entryPrice: entry, stopLoss: sl, takeProfit: tp, setup: form.setup.trim(), setupGrade: form.setupGrade, notes: form.notes.trim(),
+      entryPrice: entry, stopLoss: sl, takeProfit: tp, setup: form.setup.trim(), setupGrade: form.setupGrade, dailyBias: form.dailyBias, htfBias: form.htfBias, entryBias: form.entryBias, htf: form.htf, ltf: form.ltf, marketPhase: form.marketPhase, session: form.session.trim(), liquidityTarget: form.liquidityTarget.trim(), poi: form.poi.trim(), confirmation: form.confirmation.trim(), invalidation: form.invalidation.trim(), notes: form.notes.trim(),
       status: form.status, updatedAt: serverTimestamp(), updatedBy: auth.currentUser.uid };
     try {
       if (editingId) await updateDoc(doc(db, 'dailyAnalyses', editingId), payload);
@@ -178,6 +180,22 @@ export function AnalysisAdminPanel({ isAdmin = true }: { isAdmin?: boolean }) {
         <div className="grid grid-cols-3 gap-3 px-4 pt-4">
           <MiniLevel label="PE" value={item.entryPrice} /><MiniLevel label="SL" value={item.stopLoss} /><MiniLevel label="TP" value={item.takeProfit} />
         </div>
+        {(item.dailyBias || item.htfBias || item.entryBias || item.marketPhase || item.htf || item.ltf || item.session || item.liquidityTarget || item.poi || item.confirmation || item.invalidation) && <div className="mx-4 mt-4 rounded-xl border border-slate-100 bg-slate-50 p-4">
+          <h4 className="mb-3 text-xs font-black uppercase tracking-wider text-slate-500">Contexte de marché</h4>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <InfoItem label="Biais Daily" value={item.dailyBias} />
+            <InfoItem label="Biais HTF" value={item.htfBias} />
+            <InfoItem label="Biais d’entrée" value={item.entryBias} />
+            <InfoItem label="HTF" value={item.htf} />
+            <InfoItem label="LTF" value={item.ltf} />
+            <InfoItem label="Phase du marché" value={item.marketPhase} />
+            <InfoItem label="Session" value={item.session} />
+            <InfoItem label="Liquidité ciblée" value={item.liquidityTarget} />
+            <InfoItem label="Zone d’intérêt (POI)" value={item.poi} />
+            <InfoItem label="Confirmation" value={item.confirmation} />
+            <InfoItem label="Invalidation" value={item.invalidation} />
+          </div>
+        </div>}
         {item.notes && <div className="px-5 py-4">{formatNotes(item.notes)}</div>}
         <div className="flex items-center gap-2 px-4 py-4">
           <a href={item.tradingViewUrl} target="_blank" rel="noreferrer" className="inline-flex min-h-8 items-center gap-1.5 rounded-lg px-2.5 text-[11px] font-bold text-slate-500 hover:bg-slate-50"><ExternalLink className="h-3.5 w-3.5" /> Ouvrir le graphique</a>
@@ -197,6 +215,25 @@ export function AnalysisAdminPanel({ isAdmin = true }: { isAdmin?: boolean }) {
           {validTradingViewUrl(form.tradingViewUrl) && tradingViewSnapshotImageUrl(form.tradingViewUrl) && <div className="overflow-hidden rounded-xl border border-slate-200 bg-white"><p className="px-3 py-2 text-[11px] font-bold text-slate-500">Aperçu de la capture TradingView</p><img src={tradingViewSnapshotImageUrl(form.tradingViewUrl)} alt="Aperçu de la capture TradingView" loading="lazy" className="block max-h-64 w-full object-contain" /></div>}
           <div className="grid grid-cols-2 gap-3"><div><label htmlFor="analysis-direction" className="mb-1.5 block text-xs font-bold text-slate-600">Scénario</label><select id="analysis-direction" value={form.direction} onChange={e => setField('direction', e.target.value as Direction)} className="min-h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm"><option value="BUY">Achat · BUY</option><option value="SELL">Vente · SELL</option></select></div><div><label htmlFor="analysis-setup" className="mb-1.5 block text-xs font-bold text-slate-600">Setup</label><input id="analysis-setup" required maxLength={120} value={form.setup} onChange={e => setField('setup', e.target.value)} placeholder="Ex. Sweep + MSS" className="min-h-10 w-full rounded-xl border border-slate-200 px-3 text-sm" /></div></div>
           <div><label htmlFor="analysis-grade" className="mb-1.5 block text-xs font-bold text-slate-600">Qualité du setup</label><select id="analysis-grade" value={form.setupGrade} onChange={e => setField('setupGrade', e.target.value as SetupGrade)} className="min-h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm"><option value="A+">A+ · Exceptionnel</option><option value="A">A · Excellent</option><option value="B">B · Bon</option><option value="C">C · Moyen</option><option value="D">D · Faible</option></select><p className="mt-1 text-[11px] text-slate-400">Évalue la qualité de la configuration, pas le résultat futur du trade.</p></div>
+          <div className="rounded-xl border border-slate-100 p-4"><h4 className="mb-3 text-sm font-extrabold text-[#0b1f35]">Contexte et biais</h4>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              <SelectField id="analysis-daily-bias" label="Biais Daily" value={form.dailyBias} onChange={v => setField('dailyBias', v as Bias)} options={['Haussier','Baissier','Neutre','En attente']} />
+              <SelectField id="analysis-htf-bias" label="Biais HTF" value={form.htfBias} onChange={v => setField('htfBias', v as Bias)} options={['Haussier','Baissier','Neutre','En attente']} />
+              <SelectField id="analysis-entry-bias" label="Biais d’entrée" value={form.entryBias} onChange={v => setField('entryBias', v as Bias)} options={['Haussier','Baissier','Neutre','En attente']} />
+              <SelectField id="analysis-htf" label="Timeframe HTF" value={form.htf} onChange={v => setField('htf', v)} options={['Monthly','Weekly','D1','H4','H1']} />
+              <SelectField id="analysis-ltf" label="Timeframe LTF" value={form.ltf} onChange={v => setField('ltf', v)} options={['H1','M30','M15','M5','M1']} />
+              <SelectField id="analysis-phase" label="Phase du marché" value={form.marketPhase} onChange={v => setField('marketPhase', v as MarketPhase)} options={['Accumulation','Expansion','Distribution','Retracement','Consolidation','Reversal','En attente']} />
+              <SelectField id="analysis-session" label="Session" value={form.session} onChange={v => setField('session', v)} options={['','Asia','London','New York','London / New York']} />
+            </div>
+          </div>
+          <div className="rounded-xl border border-slate-100 p-4"><h4 className="mb-3 text-sm font-extrabold text-[#0b1f35]">Liquidité et exécution</h4>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <TextField id="analysis-liquidity" label="Liquidité ciblée" value={form.liquidityTarget} onChange={v => setField('liquidityTarget', v)} placeholder="PDH, PDL, BSL, SSL, BSL/SSL interne…" />
+              <TextField id="analysis-poi" label="Zone d’intérêt (POI)" value={form.poi} onChange={v => setField('poi', v)} placeholder="OB, FVG, SIBI/BISI, zone de demande…" />
+              <TextField id="analysis-confirmation" label="Confirmation attendue" value={form.confirmation} onChange={v => setField('confirmation', v)} placeholder="Sweep, MSS, displacement, clôture…" />
+              <TextField id="analysis-invalidation" label="Invalidation du scénario" value={form.invalidation} onChange={v => setField('invalidation', v)} placeholder="Niveau ou condition qui invalide le biais…" />
+            </div>
+          </div>
           <div className="grid grid-cols-3 gap-3"><PriceField id="analysis-pe" label="PE" value={form.entryPrice} onChange={v => setField('entryPrice', v)} /><PriceField id="analysis-sl" label="SL" value={form.stopLoss} onChange={v => setField('stopLoss', v)} /><PriceField id="analysis-tp" label="TP" value={form.takeProfit} onChange={v => setField('takeProfit', v)} /></div>
           <div><label htmlFor="analysis-notes" className="mb-1.5 block text-xs font-bold text-slate-600">Analyse détaillée</label>
             <div className="mb-2 flex flex-wrap gap-1 rounded-xl border border-slate-200 bg-slate-50 p-2">
@@ -221,6 +258,16 @@ export function AnalysisAdminPanel({ isAdmin = true }: { isAdmin?: boolean }) {
   </div>;
 }
 
+function InfoItem({ label, value }: { label: string; value?: string }) {
+  if (!value) return null;
+  return <div><p className="text-[10px] font-bold uppercase tracking-wide text-slate-400">{label}</p><p className="mt-1 text-xs font-bold text-slate-700">{value}</p></div>;
+}
+function TextField({ id, label, value, onChange, placeholder }: { id: string; label: string; value: string; onChange: (value: string) => void; placeholder: string }) {
+  return <div><label htmlFor={id} className="mb-1.5 block text-xs font-bold text-slate-600">{label}</label><input id={id} value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} className="min-h-10 w-full rounded-xl border border-slate-200 px-3 text-sm" /></div>;
+}
+function SelectField({ id, label, value, onChange, options }: { id: string; label: string; value: string; onChange: (value: string) => void; options: string[] }) {
+  return <div><label htmlFor={id} className="mb-1.5 block text-xs font-bold text-slate-600">{label}</label><select id={id} value={value} onChange={e => onChange(e.target.value)} className="min-h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm">{options.map(option => <option key={option || 'none'} value={option}>{option || 'Non précisée'}</option>)}</select></div>;
+}
 function PriceField({ id, label, value, onChange }: { id: string; label: string; value: string; onChange: (value: string) => void }) {
   return <div><label htmlFor={id} className="mb-1.5 block text-xs font-bold text-slate-600">{label}</label><input id={id} type="number" inputMode="decimal" step="0.01" min="0.01" required value={value} onChange={e => onChange(e.target.value)} placeholder="4350.00" className="min-h-10 w-full min-w-0 rounded-xl border border-slate-200 px-2.5 text-sm tabular-nums" /></div>;
 }
