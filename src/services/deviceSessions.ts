@@ -31,7 +31,7 @@ function getDeviceName(): string {
 }
 
 export function watchDeviceSession(uid: string, onRevoked: () => void): () => void {
-  let unsubscribe = () => undefined;
+  let unsubscribe: () => void = () => {};
   let heartbeat: number | undefined;
   let cancelled = false;
 
