@@ -59,6 +59,8 @@ function MainAppContent() {
   const [inspectingTrade, setInspectingTrade] = useState<Trade | null>(null);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isChloeOpen, setIsChloeOpen] = useState(false);
+  const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   // Capture le retour du checkout sans considérer les paramètres URL comme une preuve de paiement.
   useEffect(() => {
@@ -201,11 +203,39 @@ function MainAppContent() {
     }
   };
 
-  const handleLogout = async () => {
-    await logoutUser();
-    showToast('Vous avez été déconnecté', 'info');
-    setCurrentPage('dashboard');
+  const handleLogout = () => {
+    setIsLogoutConfirmOpen(true);
   };
+
+  const confirmLogout = async () => {
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+    try {
+      await logoutUser();
+      setIsLogoutConfirmOpen(false);
+      showToast('Vous avez été déconnecté', 'info');
+      setCurrentPage('dashboard');
+    } catch (error) {
+      console.error('Logout failed:', error);
+      showToast('La déconnexion a échoué. Réessayez.', 'error');
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
+
+  const logoutConfirmation = isLogoutConfirmOpen ? (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget && !isLoggingOut) setIsLogoutConfirmOpen(false); }}>
+      <section role="dialog" aria-modal="true" aria-labelledby="logout-confirm-title" aria-describedby="logout-confirm-description" className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl sm:p-6">
+        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-50 text-rose-600"><LogOut className="h-5 w-5" /></div>
+        <h2 id="logout-confirm-title" className="mt-4 text-center text-lg font-bold text-slate-900">Confirmer la déconnexion</h2>
+        <p id="logout-confirm-description" className="mt-2 text-center text-sm leading-6 text-slate-500">Voulez-vous vraiment vous déconnecter de votre compte IAMTRADER sur cet appareil ?</p>
+        <div className="mt-6 grid grid-cols-2 gap-3">
+          <button type="button" disabled={isLoggingOut} onClick={() => setIsLogoutConfirmOpen(false)} className="min-h-11 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-50">Annuler</button>
+          <button type="button" disabled={isLoggingOut} onClick={() => void confirmLogout()} className="flex min-h-11 items-center justify-center gap-2 rounded-xl bg-rose-600 px-3 py-2.5 text-sm font-bold text-white transition-colors hover:bg-rose-700 disabled:cursor-wait disabled:opacity-60">{isLoggingOut && <Loader2 className="h-4 w-4 animate-spin" />}{isLoggingOut ? 'Déconnexion…' : 'Oui, me déconnecter'}</button>
+        </div>
+      </section>
+    </div>
+  ) : null;
 
   const handleOpenAuth = (mode: 'login' | 'register') => {
     setAuthModalDefaultMode(mode);
@@ -279,6 +309,7 @@ function MainAppContent() {
             <span>Se déconnecter</span>
           </button>
         </div>
+        {logoutConfirmation}
       </div>
     );
   }
@@ -477,6 +508,8 @@ function MainAppContent() {
         onClose={() => setIsAuthModalOpen(false)}
         defaultMode={authModalDefaultMode}
       />
+
+      {logoutConfirmation}
 
       <ChloeChat
         isOpen={isChloeOpen}
