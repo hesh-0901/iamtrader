@@ -157,7 +157,7 @@ service cloud.firestore {
       allow update: if isAdmin()
         && request.resource.data.asset == 'XAUUSD'
         && request.resource.data.createdBy == resource.data.createdBy
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['asset', 'tradingViewUrl', 'direction', 'entryPrice', 'stopLoss', 'takeProfit', 'setup', 'setupGrade', 'dailyBias', 'htfBias', 'entryBias', 'htf', 'ltf', 'marketPhase', 'session', 'liquidityTarget', 'poi', 'confirmation', 'invalidation', 'notes', 'status', 'updatedAt', 'updatedBy']);
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['asset', 'tradingViewUrl', 'afterAnalysisUrl', 'outcomeStatus', 'exitPrice', 'closureStatus', 'direction', 'entryPrice', 'stopLoss', 'takeProfit', 'setup', 'setupGrade', 'dailyBias', 'htfBias', 'entryBias', 'htf', 'ltf', 'marketPhase', 'session', 'liquidityTarget', 'poi', 'confirmation', 'invalidation', 'notes', 'status', 'updatedAt', 'updatedBy']);
       allow delete: if isAdmin();
     }
 
