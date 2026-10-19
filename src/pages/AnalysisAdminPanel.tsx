@@ -150,7 +150,7 @@ export function AnalysisAdminPanel({ isAdmin = true }: { isAdmin?: boolean }) {
       if (editingId) await updateDoc(doc(db, 'dailyAnalyses', editingId), payload);
       else await addDoc(collection(db, 'dailyAnalyses'), { ...payload, createdAt: serverTimestamp(), createdBy: auth.currentUser.uid });
       setSuccess(editingId ? 'Analyse mise à jour.' : form.status === 'published' ? 'Analyse publiée.' : 'Brouillon enregistré.');
-      // Garder la fenêtre ouverte : seule la croix permet de la fermer.
+      setModalOpen(false);
       setEditingId(null);
     } catch (err) {
       const firebaseError = err as { code?: string; message?: string; name?: string };
@@ -287,17 +287,9 @@ export function AnalysisAdminPanel({ isAdmin = true }: { isAdmin?: boolean }) {
               <SelectField id="analysis-htf" label="Timeframe HTF" value={form.htf} onChange={v => setField('htf', v)} options={['Monthly','Weekly','D1','H4','H1']} />
               <SelectField id="analysis-ltf" label="Timeframe LTF" value={form.ltf} onChange={v => setField('ltf', v)} options={['H1','M30','M15','M5','M1']} />
               <SelectField id="analysis-phase" label="Phase du marché" value={form.marketPhase} onChange={v => setField('marketPhase', v as MarketPhase)} options={['Accumulation','Expansion','Distribution','Retracement','Consolidation','Reversal','En attente']} />
-              <SelectField id="analysis-session" label="Session" value={form.session} onChange={v => setField('session', v)} options={['','Asia','London','New York','London / New York']} />
             </div>
           </div>
-          <div className="mt-3 rounded-xl border border-slate-100 p-4"><h4 className="mb-3 text-sm font-extrabold text-[#0b1f35]">Liquidité et exécution</h4>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <TextField id="analysis-liquidity" label="Liquidité ciblée" value={form.liquidityTarget} onChange={v => setField('liquidityTarget', v)} placeholder="PDH, PDL, BSL, SSL, BSL/SSL interne…" />
-              <TextField id="analysis-poi" label="Zone d’intérêt (POI)" value={form.poi} onChange={v => setField('poi', v)} placeholder="OB, FVG, SIBI/BISI, zone de demande…" />
-              <TextField id="analysis-confirmation" label="Confirmation attendue" value={form.confirmation} onChange={v => setField('confirmation', v)} placeholder="Sweep, MSS, displacement, clôture…" />
-              <TextField id="analysis-invalidation" label="Invalidation du scénario" value={form.invalidation} onChange={v => setField('invalidation', v)} placeholder="Niveau ou condition qui invalide le biais…" />
-            </div>
-          </div></section></div>}
+</section></div>}
           {activeStep === 2 && <div className="flex-1 space-y-5 overflow-y-auto p-4 sm:p-6"><section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5"><div className="mb-3 flex items-center gap-3"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-50 text-sm font-black text-amber-700">3</span><div><h4 className="text-sm font-extrabold text-[#0b1f35]">Plan de trading</h4><p className="text-xs text-slate-400">Prix d’entrée, invalidation et objectif</p></div></div><div className="grid grid-cols-3 gap-3"><PriceField id="analysis-pe" label="PE" value={form.entryPrice} onChange={v => setField('entryPrice', v)} /><PriceField id="analysis-sl" label="SL" value={form.stopLoss} onChange={v => setField('stopLoss', v)} /><PriceField id="analysis-tp" label="TP" value={form.takeProfit} onChange={v => setField('takeProfit', v)} /></div>
           </section></div>}
           {activeStep === 3 && <div className="flex-1 space-y-5 overflow-y-auto p-4 sm:p-6"><section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5"><div className="mb-3 flex items-center gap-3"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-indigo-50 text-sm font-black text-indigo-700">4</span><div><h4 className="text-sm font-extrabold text-[#0b1f35]">Rédaction de l’analyse</h4><p className="text-xs text-slate-400">Mise en forme, arguments et scénario</p></div></div><div><label htmlFor="analysis-notes" className="mb-1.5 block text-xs font-bold text-slate-600">Contenu de l’analyse</label>
