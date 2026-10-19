@@ -132,6 +132,8 @@ export function AnalysisAdminPanel({ isAdmin = true }: { isAdmin?: boolean }) {
 
   const submit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const submitter = (event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
+    if (submitter?.id !== 'analysis-save-submit') return;
     if (!isAdmin) return;
     if (!auth.currentUser) { setError('Votre session a expiré. Reconnectez-vous.'); return; }
     if (!validTradingViewUrl(form.tradingViewUrl.trim())) { setError('Ajoutez un lien TradingView valide en HTTPS.'); return; }
@@ -316,7 +318,7 @@ export function AnalysisAdminPanel({ isAdmin = true }: { isAdmin?: boolean }) {
               if (activeStep === 0 && (!validTradingViewUrl(form.tradingViewUrl) || !form.setup.trim())) { setError(!validTradingViewUrl(form.tradingViewUrl) ? 'Ajoutez un lien TradingView valide avant de continuer.' : 'Indiquez le nom du setup avant de continuer.'); return; }
               if (activeStep === 2 && (![form.entryPrice, form.stopLoss, form.takeProfit].every(v => Number.isFinite(Number(v)) && Number(v) > 0))) { setError('Renseignez un PE, un SL et un TP valides avant de continuer.'); return; }
               setActiveStep(activeStep + 1);
-            }} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-[#00a982] px-5 text-sm font-bold text-white shadow-sm hover:bg-[#008f72]">Suivant <span aria-hidden="true">→</span></button> : <button type="submit" disabled={saving} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-[#00a982] px-5 text-sm font-bold text-white hover:bg-[#008f72] disabled:opacity-60">{saving ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}{saving ? 'Enregistrement…' : editingId ? 'Enregistrer' : 'Publier l’analyse'}</button>}
+            }} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-[#00a982] px-5 text-sm font-bold text-white shadow-sm hover:bg-[#008f72]">Suivant <span aria-hidden="true">→</span></button> : <button id="analysis-save-submit" type="submit" disabled={saving} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-[#00a982] px-5 text-sm font-bold text-white hover:bg-[#008f72] disabled:opacity-60">{saving ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}{saving ? 'Enregistrement…' : editingId ? 'Enregistrer' : 'Publier l’analyse'}</button>}
           </footer>
         </form>
       </section>
