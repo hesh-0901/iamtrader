@@ -152,7 +152,7 @@ service cloud.firestore {
 
     // Analyses quotidiennes XAUUSD : lecture aux utilisateurs connectés, gestion admin uniquement.
     match /dailyAnalyses/{analysisId} {
-      allow read: if isAuthenticated() && (isAdmin() || resource.data.status == 'published');
+      allow read: if isAuthenticated() && (isAdmin() || resource.data.status in ['published', 'closed']);
       allow create: if isAdmin()
         && request.resource.data.asset == 'XAUUSD'
         && request.resource.data.createdBy == request.auth.uid
