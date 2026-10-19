@@ -130,10 +130,7 @@ export function AnalysisAdminPanel({ isAdmin = true }: { isAdmin?: boolean }) {
   };
   const setField = <K extends keyof FormState>(key: K, value: FormState[K]) => setForm(prev => ({ ...prev, [key]: value }));
 
-  const submit = async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    const submitter = (event.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null;
-    if (submitter?.id !== 'analysis-save-submit') return;
+  const submit = async () => {
     if (!isAdmin) return;
     if (!auth.currentUser) { setError('Votre session a expiré. Reconnectez-vous.'); return; }
     if (!validTradingViewUrl(form.tradingViewUrl.trim())) { setError('Ajoutez un lien TradingView valide en HTTPS.'); return; }
@@ -276,7 +273,7 @@ export function AnalysisAdminPanel({ isAdmin = true }: { isAdmin?: boolean }) {
           </div>
           <p className="mt-2 text-[10px] text-slate-400">Étape {activeStep + 1} sur 4</p>
         </div>
-        <form onSubmit={submit} className="flex min-h-0 flex-1 flex-col overflow-hidden bg-slate-50/60">
+        <form onSubmit={event => event.preventDefault()} className="flex min-h-0 flex-1 flex-col overflow-hidden bg-slate-50/60">
           {activeStep === 0 && <div className="flex-1 space-y-5 overflow-y-auto p-4 sm:p-6"><section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5"><div className="mb-3 flex items-center gap-3"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-sm font-black text-emerald-700">1</span><div><h4 className="text-sm font-extrabold text-[#0b1f35]">Graphique de référence</h4><p className="text-xs text-slate-400">Capture TradingView à afficher dans l’analyse</p></div></div><div><label htmlFor="analysis-tv-url" className="mb-1.5 block text-xs font-bold text-slate-600">Lien TradingView</label><input id="analysis-tv-url" type="url" required value={form.tradingViewUrl} onChange={e => setField('tradingViewUrl', e.target.value)} placeholder="https://www.tradingview.com/chart/…" className="min-h-10 w-full rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-[#00a982] focus:ring-2 focus:ring-emerald-50" /></div>
           {validTradingViewUrl(form.tradingViewUrl) && tradingViewSnapshotImageUrl(form.tradingViewUrl) && <div className="mt-3 overflow-hidden rounded-xl border border-slate-200 bg-white"><p className="px-3 py-2 text-[11px] font-bold text-slate-500">Aperçu de la capture TradingView</p><img src={tradingViewSnapshotImageUrl(form.tradingViewUrl)} alt="Aperçu de la capture TradingView" loading="lazy" className="block max-h-64 w-full object-contain" /></div>}</section>
           <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5"><div className="mb-3 flex items-center gap-3"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-50 text-sm font-black text-sky-700">2</span><div><h4 className="text-sm font-extrabold text-[#0b1f35]">Identification du setup</h4><p className="text-xs text-slate-400">Direction, nom et qualité de la configuration</p></div></div><div className="grid grid-cols-1 gap-3 sm:grid-cols-2"><div><label htmlFor="analysis-direction" className="mb-1.5 block text-xs font-bold text-slate-600">Scénario</label><select id="analysis-direction" value={form.direction} onChange={e => setField('direction', e.target.value as Direction)} className="min-h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm"><option value="BUY">Achat · BUY</option><option value="SELL">Vente · SELL</option></select></div><div><label htmlFor="analysis-setup" className="mb-1.5 block text-xs font-bold text-slate-600">Setup</label><input id="analysis-setup" required maxLength={120} value={form.setup} onChange={e => setField('setup', e.target.value)} placeholder="Ex. Sweep + MSS" className="min-h-10 w-full rounded-xl border border-slate-200 px-3 text-sm" /></div></div>
@@ -318,7 +315,7 @@ export function AnalysisAdminPanel({ isAdmin = true }: { isAdmin?: boolean }) {
               if (activeStep === 0 && (!validTradingViewUrl(form.tradingViewUrl) || !form.setup.trim())) { setError(!validTradingViewUrl(form.tradingViewUrl) ? 'Ajoutez un lien TradingView valide avant de continuer.' : 'Indiquez le nom du setup avant de continuer.'); return; }
               if (activeStep === 2 && (![form.entryPrice, form.stopLoss, form.takeProfit].every(v => Number.isFinite(Number(v)) && Number(v) > 0))) { setError('Renseignez un PE, un SL et un TP valides avant de continuer.'); return; }
               setActiveStep(activeStep + 1);
-            }} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-[#00a982] px-5 text-sm font-bold text-white shadow-sm hover:bg-[#008f72]">Suivant <span aria-hidden="true">→</span></button> : <button id="analysis-save-submit" type="submit" disabled={saving} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-[#00a982] px-5 text-sm font-bold text-white hover:bg-[#008f72] disabled:opacity-60">{saving ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}{saving ? 'Enregistrement…' : editingId ? 'Enregistrer' : 'Publier l’analyse'}</button>}
+            }} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-[#00a982] px-5 text-sm font-bold text-white shadow-sm hover:bg-[#008f72]">Suivant <span aria-hidden="true">→</span></button> : <button type="button" onClick={() => void submit()} disabled={saving} className="inline-flex min-h-10 items-center gap-2 rounded-xl bg-[#00a982] px-5 text-sm font-bold text-white hover:bg-[#008f72] disabled:opacity-60">{saving ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}{saving ? 'Enregistrement…' : editingId ? 'Enregistrer' : 'Publier l’analyse'}</button>}
           </footer>
         </form>
       </section>
