@@ -7,18 +7,19 @@ type Status = 'draft' | 'published' | 'closed';
 type Direction = 'BUY' | 'SELL';
 type SetupGrade = 'A+' | 'A' | 'B' | 'C' | 'D';
 type Bias = 'Haussier' | 'Baissier' | 'Neutre' | 'En attente';
-type OutcomeStatus = 'Sortie manuelle' | 'Stop touché' | 'TP touché' | 'BE' | 'Zone non touchée';
+type OutcomeStatus = 'En cours' | 'Sortie manuelle' | 'Stop touché' | 'TP touché' | 'BE' | 'Zone non touchée';
+type ClosureStatus = 'Clôturer' | 'Laisser courir';
 type MarketPhase = 'Accumulation' | 'Expansion' | 'Distribution' | 'Retracement' | 'Consolidation' | 'Reversal' | 'En attente';
 type Analysis = {
-  id: string; asset?: string; tradingViewUrl: string; afterAnalysisUrl?: string; outcomeStatus?: OutcomeStatus; entryPrice: number; stopLoss: number;
+  id: string; asset?: string; tradingViewUrl: string; afterAnalysisUrl?: string; outcomeStatus?: OutcomeStatus; exitPrice?: number; closureStatus?: ClosureStatus; entryPrice: number; stopLoss: number;
   takeProfit: number; direction: Direction; setup: string; setupGrade?: SetupGrade; dailyBias?: Bias; htfBias?: Bias; entryBias?: Bias; htf?: string; ltf?: string; marketPhase?: MarketPhase; session?: string; liquidityTarget?: string; poi?: string; confirmation?: string; invalidation?: string; notes: string; status: Status;
   createdAt?: { toDate?: () => Date } | string;
 };
 type FormState = {
-  tradingViewUrl: string; afterAnalysisUrl: string; outcomeStatus: OutcomeStatus | ''; direction: Direction; entryPrice: string; stopLoss: string;
+  tradingViewUrl: string; afterAnalysisUrl: string; outcomeStatus: OutcomeStatus | ''; exitPrice: string; closureStatus: ClosureStatus | ''; direction: Direction; entryPrice: string; stopLoss: string;
   takeProfit: string; setup: string; setupGrade: SetupGrade; dailyBias: Bias; htfBias: Bias; entryBias: Bias; htf: string; ltf: string; marketPhase: MarketPhase; session: string; liquidityTarget: string; poi: string; confirmation: string; invalidation: string; notes: string; status: Status;
 };
-const blank: FormState = { tradingViewUrl: '', afterAnalysisUrl: '', outcomeStatus: '', direction: 'BUY', entryPrice: '', stopLoss: '', takeProfit: '', setup: '', setupGrade: 'A', dailyBias: 'En attente', htfBias: 'En attente', entryBias: 'En attente', htf: 'H4', ltf: 'M15', marketPhase: 'En attente', session: '', liquidityTarget: '', poi: '', confirmation: '', invalidation: '', notes: '', status: 'published' };
+const blank: FormState = { tradingViewUrl: '', afterAnalysisUrl: '', outcomeStatus: '', exitPrice: '', closureStatus: '', direction: 'BUY', entryPrice: '', stopLoss: '', takeProfit: '', setup: '', setupGrade: 'A', dailyBias: 'En attente', htfBias: 'En attente', entryBias: 'En attente', htf: 'H4', ltf: 'M15', marketPhase: 'En attente', session: '', liquidityTarget: '', poi: '', confirmation: '', invalidation: '', notes: '', status: 'published' };
 
 function validTradingViewUrl(value: string) {
   try {
@@ -78,7 +79,8 @@ export function AnalysisAdminPanel({ isAdmin = true }: { isAdmin?: boolean }) {
   const [form, setForm] = useState<FormState>(blank);
   const [modalOpen, setModalOpen] = useState(false);
   const [activeStep, setActiveStep] = useState(0);
-  const [postAnalysisOpen, setPostAnalysisOpen] = useState(false);
+  const [postAnalysisModalOpen, setPostAnalysisModalOpen] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -121,10 +123,10 @@ export function AnalysisAdminPanel({ isAdmin = true }: { isAdmin?: boolean }) {
     return items.filter(a => a.status === 'published' && a.createdAt && dateKey(a.createdAt) === today).length;
   }, [items]);
 
-  const openCreate = () => { setForm(blank); setEditingId(null); setActiveStep(0); setPostAnalysisOpen(false); setError(''); setSuccess(''); setModalOpen(true); };
+  const openCreate = () => { setForm(blank); setEditingId(null); setActiveStep(0); setPostAnalysisModalOpen(false); setError(''); setSuccess(''); setModalOpen(true); };
   const openEdit = (item: Analysis) => {
-    setActiveStep(0); setPostAnalysisOpen(Boolean(item.afterAnalysisUrl || item.outcomeStatus));
-    setForm({ tradingViewUrl: item.tradingViewUrl || '', afterAnalysisUrl: item.afterAnalysisUrl || '', outcomeStatus: item.outcomeStatus || '', direction: item.direction || 'BUY',
+    setActiveStep(0); setPostAnalysisModalOpen(false);
+    setForm({ tradingViewUrl: item.tradingViewUrl || '', afterAnalysisUrl: item.afterAnalysisUrl || '', outcomeStatus: item.outcomeStatus || '', exitPrice: item.exitPrice == null ? '' : String(item.exitPrice), closureStatus: item.closureStatus || '', direction: item.direction || 'BUY',
       entryPrice: String(item.entryPrice ?? ''), stopLoss: String(item.stopLoss ?? ''),
       takeProfit: String(item.takeProfit ?? ''), setup: item.setup || '', setupGrade: item.setupGrade || 'A', dailyBias: item.dailyBias || 'En attente', htfBias: item.htfBias || 'En attente', entryBias: item.entryBias || 'En attente', htf: item.htf || 'H4', ltf: item.ltf || 'M15', marketPhase: item.marketPhase || 'En attente', session: item.session || '', liquidityTarget: item.liquidityTarget || '', poi: item.poi || '', confirmation: item.confirmation || '', invalidation: item.invalidation || '', notes: item.notes || '',
       status: item.status || 'draft' });
@@ -142,9 +144,10 @@ export function AnalysisAdminPanel({ isAdmin = true }: { isAdmin?: boolean }) {
       setError('Niveaux incohérents : BUY exige SL < PE < TP ; SELL exige TP < PE < SL.'); return;
     }
     if (!form.setup.trim()) { setError('Renseignez le setup de trading.'); return; }
+    if ((form.outcomeStatus === 'BE' || form.outcomeStatus === 'Sortie manuelle') && !(Number(form.exitPrice) > 0)) { setError('Indiquez un prix de sortie valide pour un BE ou une sortie manuelle.'); return; }
     if (form.status === 'published' && !editingId && todayCount >= 2) { setError('Deux analyses sont déjà publiées aujourd’hui.'); return; }
     setSaving(true); setError(''); setSuccess('');
-    const payload = { asset: 'XAUUSD', tradingViewUrl: form.tradingViewUrl.trim(), afterAnalysisUrl: form.afterAnalysisUrl.trim(), outcomeStatus: form.outcomeStatus || '', direction: form.direction,
+    const payload = { asset: 'XAUUSD', tradingViewUrl: form.tradingViewUrl.trim(), afterAnalysisUrl: form.afterAnalysisUrl.trim(), outcomeStatus: form.outcomeStatus || '', exitPrice: form.exitPrice.trim() ? Number(form.exitPrice) : null, closureStatus: form.closureStatus || '', status: form.closureStatus === 'Clôturer' ? 'closed' as Status : form.status, direction: form.direction,
       entryPrice: entry, stopLoss: sl, takeProfit: tp, setup: form.setup.trim(), setupGrade: form.setupGrade, dailyBias: form.dailyBias, htfBias: form.htfBias, entryBias: form.entryBias, htf: form.htf, ltf: form.ltf, marketPhase: form.marketPhase, session: form.session.trim(), liquidityTarget: form.liquidityTarget.trim(), poi: form.poi.trim(), confirmation: form.confirmation.trim(), invalidation: form.invalidation.trim(), notes: form.notes.trim(),
       status: form.status, updatedAt: serverTimestamp(), updatedBy: auth.currentUser.uid };
     try {
