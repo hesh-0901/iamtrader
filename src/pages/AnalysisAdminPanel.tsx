@@ -218,7 +218,7 @@ export function AnalysisAdminPanel({ isAdmin = true }: { isAdmin?: boolean }) {
         <div className="mx-4 mt-2 overflow-hidden rounded-xl border border-slate-200/80 bg-slate-50 sm:mx-6">
           {validTradingViewUrl(item.tradingViewUrl) && tradingViewSnapshotImageUrl(item.tradingViewUrl) ? <div className="bg-white"><img src={tradingViewSnapshotImageUrl(item.tradingViewUrl)} alt={'Capture TradingView XAUUSD — ' + item.setup} loading="lazy" className="mx-auto block h-auto max-h-[620px] w-full max-w-[1100px] object-contain" /><p className="border-t border-slate-100 bg-white px-4 py-2 text-center text-[10px] font-medium tracking-wide text-slate-400">TRADINGVIEW SNAPSHOT</p></div> : <div className="flex h-44 items-center justify-center text-sm text-slate-400">Lien de capture TradingView invalide</div>}
         </div>
-        <section className="px-4 pt-5 sm:px-6">
+        <section className="px-4 pt-3 sm:px-6">
           <div className="mb-3 flex items-center gap-2"><span className="h-5 w-1 rounded-full bg-[#00a982]" /><div><h4 className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-600">Plan de trading</h4><p className="mt-0.5 text-[10px] text-slate-400">Niveaux clés du scénario</p></div></div>
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3">
             <MiniLevel label="PE · Entrée" value={item.entryPrice} kind="entry" />
@@ -226,9 +226,9 @@ export function AnalysisAdminPanel({ isAdmin = true }: { isAdmin?: boolean }) {
             <MiniLevel label="TP · Objectif" value={item.takeProfit} kind="target" />
           </div>
         </section>
-        {(item.dailyBias || item.htfBias || item.entryBias || item.marketPhase || item.htf || item.ltf || item.session || item.liquidityTarget || item.poi || item.confirmation || item.invalidation) && <section className="mx-4 mt-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_4px_18px_rgba(11,31,53,0.035)] sm:mx-6 sm:p-5">
-          <div className="mb-4 flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-50 text-violet-600"><Activity className="h-4 w-4" /></span><div><h4 className="text-xs font-black uppercase tracking-[0.14em] text-[#0b1f35]">Contexte du marché</h4><p className="mt-0.5 text-[11px] text-slate-400">Lecture multi-timeframe et exécution</p></div></div>
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {(item.dailyBias || item.htfBias || item.entryBias || item.marketPhase || item.htf || item.ltf || item.session || item.liquidityTarget || item.poi || item.confirmation || item.invalidation) && <section className="mx-4 mt-3 rounded-xl border border-slate-200 bg-white p-3 shadow-sm sm:mx-6 sm:p-3">
+          <div className="mb-2 flex items-center gap-2"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-violet-50 text-violet-600"><Activity className="h-4 w-4" /></span><div><h4 className="text-xs font-black uppercase tracking-[0.14em] text-[#0b1f35]">Contexte du marché</h4><p className="mt-0.5 text-[11px] text-slate-400">Lecture multi-timeframe et exécution</p></div></div>
+          <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             <InfoItem label="Biais Daily" value={item.dailyBias} icon={TrendingUp} tone="emerald" />
             <InfoItem label="Biais HTF" value={item.htfBias} icon={Compass} tone="blue" />
             <InfoItem label="Biais d’entrée" value={item.entryBias} icon={Crosshair} tone="violet" />
@@ -335,9 +335,9 @@ export function AnalysisAdminPanel({ isAdmin = true }: { isAdmin?: boolean }) {
 function InfoItem({ label, value, icon: Icon, tone = 'slate' }: { label: string; value?: string; icon: React.ElementType; tone?: 'emerald' | 'blue' | 'violet' | 'slate' | 'amber' | 'rose' }) {
   if (!value) return null;
   const tones = { emerald: 'bg-emerald-50 text-emerald-700', blue: 'bg-sky-50 text-sky-700', violet: 'bg-violet-50 text-violet-700', slate: 'bg-slate-100 text-slate-600', amber: 'bg-amber-50 text-amber-700', rose: 'bg-rose-50 text-rose-700' };
-  return <div className="flex min-w-0 items-center gap-3 rounded-xl border border-slate-100 bg-gradient-to-br from-white to-slate-50/80 p-3 transition-colors hover:border-slate-200">
-    <span className={'flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ' + tones[tone]}><Icon className="h-4 w-4" strokeWidth={2} /></span>
-    <div className="min-w-0"><p className="text-[9px] font-extrabold uppercase tracking-[0.12em] text-slate-400">{label}</p><p className="mt-1 break-words text-xs font-extrabold text-[#0b1f35]">{value}</p></div>
+  return <div className="flex min-w-0 items-center gap-3 rounded-lg border border-slate-100 bg-gradient-to-br from-white to-slate-50/80 px-2.5 py-2 transition-colors hover:border-slate-200">
+    <span className={'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ' + tones[tone]}><Icon className="h-4 w-4" strokeWidth={2} /></span>
+    <div className="min-w-0"><p className="text-[8px] font-extrabold uppercase tracking-[0.1em] text-slate-400">{label}</p><p className="mt-0.5 break-words text-[11px] font-extrabold leading-4 text-[#0b1f35]">{value}</p></div>
   </div>;
 }
 function TextField({ id, label, value, onChange, placeholder }: { id: string; label: string; value: string; onChange: (value: string) => void; placeholder: string }) {
