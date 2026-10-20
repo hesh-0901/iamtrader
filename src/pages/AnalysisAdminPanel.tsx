@@ -258,35 +258,7 @@ export function AnalysisAdminPanel({ isAdmin = true }: { isAdmin?: boolean }) {
         </div>
         <div className="grid grid-cols-1 items-start gap-3 p-3 sm:p-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
           <div className="min-w-0"><AnalysisChartCarousel item={item} /></div>
-          <section className="min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-3 sm:px-4"><div className="mb-3 flex items-center gap-2 border-b border-slate-100 pb-2"><span className="h-4 w-1 rounded-full bg-[#00a982]" /><div><h4 className="text-[10px] font-black uppercase tracking-[0.14em] text-[#0b1f35]">Exécution du scénario</h4><p className="text-[9px] text-slate-400">Niveaux, contexte et justification</p></div></div>
-            <div className="mb-2 flex items-center justify-between gap-2"><h4 className="text-[9px] font-black uppercase tracking-[0.12em] text-slate-600">Niveaux de trading</h4><span className="text-[9px] font-bold text-slate-400">XAUUSD</span></div>
-            <div className="grid grid-cols-3 gap-1.5">
-              <MiniLevel label="PE · Entrée" value={item.entryPrice} kind="entry" />
-              <MiniLevel label="SL · Risque" value={item.stopLoss} kind="risk" />
-              <MiniLevel label="TP · Objectif" value={item.takeProfit} kind="target" />
-            </div>
-            {(item.dailyBias || item.htfBias || item.entryBias || item.marketPhase || item.htf || item.ltf || item.session || item.liquidityTarget || item.poi || item.confirmation || item.invalidation) && <section className="mt-3 rounded-lg bg-slate-50 px-2.5 py-2">
-              <div className="mb-1.5"><h4 className="text-[9px] font-black uppercase tracking-[0.12em] text-[#0b1f35]">Contexte du marché</h4><p className="text-[8px] text-slate-400">Biais, unités de temps et exécution</p></div>
-              <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3">
-                <InfoItem label="Biais Daily" value={item.dailyBias} icon={TrendingUp} tone="emerald" />
-                <InfoItem label="Biais HTF" value={item.htfBias} icon={Compass} tone="blue" />
-                <InfoItem label="Biais d’entrée" value={item.entryBias} icon={Crosshair} tone="violet" />
-                <InfoItem label="HTF" value={item.htf} icon={Layers3} tone="slate" />
-                <InfoItem label="LTF" value={item.ltf} icon={Activity} tone="slate" />
-                <InfoItem label="Phase du marché" value={item.marketPhase} icon={Gauge} tone="amber" />
-                <InfoItem label="Session" value={item.session} icon={Clock3} tone="blue" />
-                <InfoItem label="Liquidité ciblée" value={item.liquidityTarget} icon={Target} tone="emerald" />
-                <InfoItem label="Zone d’intérêt (POI)" value={item.poi} icon={Crosshair} tone="violet" />
-                <InfoItem label="Confirmation" value={item.confirmation} icon={CheckCircle2} tone="emerald" />
-                <InfoItem label="Invalidation" value={item.invalidation} icon={ShieldCheck} tone="rose" />
-              </div>
-            </section>}
-            {item.notes && <section className="mt-3 rounded-lg border border-amber-100 bg-amber-50/40 px-2.5 py-2">
-              <div className="mb-2"><h4 className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-600">Justification du scénario</h4></div>
-              <div className="relative max-h-28 overflow-hidden">{formatNotes(item.notes)}<div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-white/95 to-transparent" /></div>
-              {item.notes.length > 260 && <button type="button" onClick={() => setExplanationItem(item)} className="mt-2 inline-flex min-h-7 items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 text-[11px] font-bold text-[#008f72] transition hover:border-emerald-300 hover:bg-emerald-50">Voir plus <span aria-hidden="true">→</span></button>}
-            </section>}
-          </section>
+          <section className="min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-3 sm:px-4"><div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] sm:items-start"><div><h4 className="mb-2 text-[9px] font-black uppercase tracking-[0.12em] text-slate-600">Niveaux de trading</h4><div className="space-y-1"><div className="flex items-center justify-between border-b border-slate-100 py-1.5"><span className="text-xs text-slate-500">Entry</span><span className="text-sm font-extrabold tabular-nums text-[#0b1f35]">{Number(item.entryPrice).toFixed(2)}</span></div><div className="flex items-center justify-between border-b border-slate-100 py-1.5"><span className="text-xs text-rose-600">Stop loss</span><span className="text-sm font-extrabold tabular-nums text-rose-700">{Number(item.stopLoss).toFixed(2)}</span></div><div className="flex items-center justify-between py-1.5"><span className="text-xs text-emerald-700">Take profit</span><span className="text-sm font-extrabold tabular-nums text-emerald-700">{Number(item.takeProfit).toFixed(2)}</span></div></div></div>{(item.dailyBias || item.htfBias || item.entryBias || item.marketPhase || item.htf || item.ltf || item.session || item.liquidityTarget || item.poi || item.confirmation || item.invalidation) && <div className="rounded-lg bg-slate-50 px-2.5 py-2"><h4 className="mb-1 text-[9px] font-black uppercase tracking-[0.12em] text-slate-600">Contexte du marché</h4><p className="text-xs leading-relaxed text-slate-700">{[item.dailyBias && ("Biais Daily : " + item.dailyBias), item.htfBias && ("Biais HTF : " + item.htfBias), item.entryBias && ("Biais d’entrée : " + item.entryBias), item.htf && ("HTF : " + item.htf), item.ltf && ("LTF : " + item.ltf), item.marketPhase && ("Phase : " + item.marketPhase), item.session && ("Session : " + item.session), item.liquidityTarget && ("Liquidité : " + item.liquidityTarget), item.poi && ("POI : " + item.poi), item.confirmation && ("Confirmation : " + item.confirmation), item.invalidation && ("Invalidation : " + item.invalidation)].filter(Boolean).join(" · ")}</p></div>}</div>{item.notes && <section className="mt-3 border-t border-slate-200 pt-2"><h4 className="mb-1.5 text-[9px] font-black uppercase tracking-[0.12em] text-slate-600">Justification du scénario</h4><div className="relative max-h-28 overflow-hidden">{formatNotes(item.notes)}<div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-white/95 to-transparent" /></div>{item.notes.length > 260 && <button type="button" onClick={() => setExplanationItem(item)} className="mt-2 inline-flex min-h-7 items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 text-[11px] font-bold text-[#008f72] transition hover:border-emerald-300 hover:bg-emerald-50">Voir plus <span aria-hidden="true">→</span></button>}</section>}</section>
         </div>
         <div className="mt-2 flex items-center gap-2 border-t border-slate-100 bg-slate-50/70 px-4 py-2 sm:px-5">
           <a href={item.tradingViewUrl} target="_blank" rel="noreferrer" className="inline-flex min-h-8 items-center gap-1.5 rounded-lg px-2.5 text-[11px] font-bold text-slate-500 hover:bg-slate-50"><ExternalLink className="h-3.5 w-3.5" /> Ouvrir le graphique</a>
