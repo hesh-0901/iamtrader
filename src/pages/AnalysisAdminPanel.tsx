@@ -235,7 +235,7 @@ export function AnalysisAdminPanel({ isAdmin = true }: { isAdmin?: boolean }) {
       : items.filter(item => showHistory ? item.status === 'closed' : item.status === 'published' || (isAdmin && item.status === 'draft')).length === 0 ? <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-6 py-12 text-center"><p className="font-bold text-[#0b1f35]">{showHistory ? 'Aucune analyse dans l’historique' : isAdmin ? 'Aucune analyse active' : 'Aucune analyse publiée'}</p><p className="mt-2 text-sm text-slate-500">{showHistory ? 'Les analyses clôturées apparaîtront ici avec leurs détails.' : isAdmin ? 'Utilisez le bouton + pour ajouter la première analyse.' : 'Les prochaines analyses publiées apparaîtront ici.'}</p></div>
       : <div className="space-y-3">{journalView && <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-sm"><div className="min-w-[1120px] grid grid-cols-[44px_1.25fr_0.7fr_1.2fr_0.75fr_0.75fr_0.75fr_0.8fr_0.8fr] gap-3 border-b border-slate-200 bg-slate-100/80 px-5 py-3.5 text-[10px] font-extrabold uppercase tracking-[0.12em] text-slate-500"><span>N°</span><span>Date / Actif</span><span>Ordre</span><span>Setup</span><span>Entrée</span><span>SL</span><span>TP</span><span>RR prévu</span><span>P&amp;L (R)</span></div></div>}<div className="grid grid-cols-1 gap-3">{items.filter(item => showHistory ? item.status === 'closed' : item.status === 'published' || (isAdmin && item.status === 'draft')).map((item, index) => journalView && expandedHistoryId !== item.id ? <button key={item.id} type="button" onClick={() => setExpandedHistoryId(item.id)} aria-label={`Développer l’analyse ${item.setup || 'XAUUSD'}`} className="grid w-full grid-cols-[28px_minmax(180px,1.25fr)_minmax(70px,0.7fr)_minmax(120px,1.2fr)_minmax(82px,0.75fr)_minmax(82px,0.75fr)_minmax(82px,0.75fr)_minmax(85px,0.8fr)_minmax(90px,0.8fr)] items-center gap-3 border-0 border-b border-slate-100 bg-white px-5 py-4 text-left transition last:border-b-0 hover:bg-emerald-50/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#00a982] sm:min-w-[1120px] even:bg-slate-50/40"><span className="text-xs font-black text-slate-400">{index + 1}</span><span className="min-w-0"><span className="block text-xs font-black text-[#0b1f35]">XAUUSD · {formatDate(item.createdAt)}</span><span className="mt-1 block truncate text-[11px] text-slate-500">{item.outcomeStatus || 'Résultat non renseigné'}</span></span><span className={'text-xs font-extrabold ' + (item.direction === 'BUY' ? 'text-emerald-700' : 'text-rose-700')}>{item.direction}</span><span className="truncate text-xs font-semibold text-slate-700">{item.setup || 'Analyse du marché'}</span><span className="text-xs tabular-nums text-slate-700">{Number(item.entryPrice).toFixed(2)}</span><span className="text-xs tabular-nums text-rose-700">{Number(item.stopLoss).toFixed(2)}</span><span className="text-xs tabular-nums text-emerald-700">{Number(item.takeProfit).toFixed(2)}</span><span className="text-xs font-bold tabular-nums text-slate-700">{plannedRR(item) == null ? '—' : '1:' + plannedRR(item)!.toFixed(2)}</span><span className={'text-xs font-black tabular-nums ' + ((realizedR(item) ?? 0) > 0 ? 'text-emerald-700' : (realizedR(item) ?? 0) < 0 ? 'text-rose-700' : 'text-slate-600')}>{realizedR(item) == null ? '—' : (realizedR(item)! > 0 ? '+' : '') + realizedR(item)!.toFixed(2) + 'R'}<span className="ml-2 text-slate-400">⌄</span></span></button> : <article key={item.id} className="group w-full overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-[0_8px_28px_rgba(15,23,42,0.045)] transition-shadow hover:shadow-[0_12px_34px_rgba(15,23,42,0.08)]">
         {item.closureStatus && <div className={'px-4 py-2.5 text-xs font-extrabold uppercase tracking-wider sm:px-6 ' + (item.closureStatus === 'Clôturer' ? 'bg-slate-100 text-slate-700' : 'bg-emerald-50 text-emerald-800')}>{item.closureStatus === 'Clôturer' ? 'Analyse clôturée · Historique' : 'Scénario actif · Laisser courir'}</div>}
-        <div className="relative overflow-hidden border-b border-slate-200 bg-white px-5 py-5 sm:px-7 sm:py-6">
+        <div className="relative overflow-hidden border-b border-slate-200 bg-white px-4 py-3 sm:px-5 sm:py-4">
           <div className="absolute inset-y-0 left-0 w-1 bg-[#00a982]" />
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between sm:gap-6">
             <div className="min-w-0">
@@ -243,7 +243,7 @@ export function AnalysisAdminPanel({ isAdmin = true }: { isAdmin?: boolean }) {
                 <span className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-[#008f72]">IAMTRADER <span className="mx-1 text-slate-300">/</span> Analyse de marché</span>
                 <span className={'rounded-full px-2.5 py-1 text-[9px] font-extrabold uppercase tracking-[0.1em] ' + (item.status === 'published' ? 'bg-emerald-50 text-emerald-700' : item.status === 'closed' ? 'bg-slate-100 text-slate-500' : 'bg-amber-50 text-amber-700')}>{item.status === 'published' ? 'Publié' : item.status === 'closed' ? 'Clôturé' : 'Brouillon'}</span>
               </div>
-              <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
                 <h3 className="text-4xl font-black leading-none tracking-tight text-[#0b1f35] sm:text-5xl">XAUUSD</h3>
                 <span className="hidden h-9 w-px bg-slate-200 sm:block" />
                 <div className="min-w-0">
@@ -251,26 +251,26 @@ export function AnalysisAdminPanel({ isAdmin = true }: { isAdmin?: boolean }) {
                   <span className={'mt-1 inline-flex rounded-md px-2 py-1 text-[10px] font-extrabold uppercase tracking-[0.1em] ' + (item.setupGrade === 'A+' ? 'bg-emerald-100 text-emerald-800' : item.setupGrade === 'A' ? 'bg-emerald-50 text-emerald-700' : item.setupGrade === 'B' ? 'bg-sky-50 text-sky-700' : item.setupGrade === 'C' ? 'bg-amber-50 text-amber-700' : 'bg-rose-50 text-rose-700')}>Qualité {item.setupGrade || '—'}</span>
                 </div>
               </div>
-              <p className="mt-3 text-xs font-medium text-slate-500"><span className="mr-2 font-bold uppercase tracking-wider text-slate-400">Publié le</span>{formatDate(item.createdAt)}</p>
+              <p className="mt-1.5 text-[10px] font-medium text-slate-500"><span className="mr-2 font-bold uppercase tracking-wider text-slate-400">Publié le</span>{formatDate(item.createdAt)}</p>
             </div>
-            <span className={'inline-flex shrink-0 items-center justify-center gap-2 self-start rounded-xl border-2 px-4 py-3 text-base font-black tracking-[0.12em] sm:self-center sm:px-5 sm:py-4 sm:text-lg ' + (item.direction === 'BUY' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-rose-200 bg-rose-50 text-rose-800')}>{item.direction === 'BUY' ? <><span aria-hidden="true">↑</span> BUY</> : <><span aria-hidden="true">↓</span> SELL</>}<span className="text-[10px] font-bold tracking-[0.08em] opacity-75">SCÉNARIO</span></span>
+            <span className={'inline-flex shrink-0 items-center justify-center gap-1.5 self-start rounded-lg border px-3 py-2 text-xs font-black tracking-[0.08em] sm:self-center sm:px-3.5 sm:py-2.5 sm:text-sm ' + (item.direction === 'BUY' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' : 'border-rose-200 bg-rose-50 text-rose-800')}>{item.direction === 'BUY' ? <><span aria-hidden="true">↑</span> BUY</> : <><span aria-hidden="true">↓</span> SELL</>}<span className="text-[10px] font-bold tracking-[0.08em] opacity-75">SCÉNARIO</span></span>
           </div>
         </div>
-        <AnalysisChartCarousel item={item} />
-        <section className="px-4 pt-2 sm:px-6">
-          <div className="mb-2 flex items-center justify-between gap-3">
+        <div className="px-3 pt-2 sm:px-4"><AnalysisChartCarousel item={item} /></div>
+        <section className="mx-3 mt-2 rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2.5 sm:mx-4 sm:px-4">
+          <div className="mb-1.5 flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-2"><span className="h-4 w-1 rounded-full bg-[#00a982]" /><div><h4 className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-600">Plan de trading</h4><p className="text-[9px] text-slate-400">Niveaux clés du scénario</p></div></div>
             <span className="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-slate-500">XAUUSD</span>
           </div>
-          <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
+          <div className="grid grid-cols-3 gap-1.5">
             <MiniLevel label="PE · Entrée" value={item.entryPrice} kind="entry" />
             <MiniLevel label="SL · Risque" value={item.stopLoss} kind="risk" />
             <MiniLevel label="TP · Objectif" value={item.takeProfit} kind="target" />
           </div>
         </section>
-        {(item.dailyBias || item.htfBias || item.entryBias || item.marketPhase || item.htf || item.ltf || item.session || item.liquidityTarget || item.poi || item.confirmation || item.invalidation) && <section className="mx-4 mt-2 rounded-xl border border-slate-200/80 bg-gradient-to-br from-white to-slate-50/70 px-3 py-2.5 shadow-sm sm:mx-6">
-          <div className="mb-2 flex items-center gap-2"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-violet-100 text-violet-700"><Activity className="h-3.5 w-3.5" /></span><div><h4 className="text-[10px] font-black uppercase tracking-[0.14em] text-[#0b1f35]">Contexte du marché</h4><p className="text-[9px] text-slate-400">Lecture multi-timeframe et exécution</p></div></div>
-          <div className="grid grid-cols-2 gap-x-2 gap-y-1 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+        {(item.dailyBias || item.htfBias || item.entryBias || item.marketPhase || item.htf || item.ltf || item.session || item.liquidityTarget || item.poi || item.confirmation || item.invalidation) && <section className="mx-3 mt-1.5 rounded-xl border border-slate-200/80 bg-white px-3 py-2 sm:mx-4">
+          <div className="mb-1.5 flex items-center gap-2"><span className="h-3.5 w-0.5 rounded-full bg-violet-400" /><div><h4 className="text-[9px] font-black uppercase tracking-[0.12em] text-[#0b1f35]">Contexte du marché</h4><p className="text-[8px] text-slate-400">Biais, unités de temps et exécution</p></div></div>
+          <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
             <InfoItem label="Biais Daily" value={item.dailyBias} icon={TrendingUp} tone="emerald" />
             <InfoItem label="Biais HTF" value={item.htfBias} icon={Compass} tone="blue" />
             <InfoItem label="Biais d’entrée" value={item.entryBias} icon={Crosshair} tone="violet" />
@@ -284,8 +284,8 @@ export function AnalysisAdminPanel({ isAdmin = true }: { isAdmin?: boolean }) {
             <InfoItem label="Invalidation" value={item.invalidation} icon={ShieldCheck} tone="rose" />
           </div>
         </section>}
-        {item.notes && <section className="mx-4 mt-4 rounded-xl border border-slate-200/80 bg-slate-50/70 p-4 sm:mx-6 sm:p-5"><div className="mb-3 flex items-center gap-2"><span className="h-4 w-1 rounded-full bg-amber-400" /><h4 className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Analyse & scénario</h4></div><div className="relative max-h-28 overflow-hidden">{formatNotes(item.notes)}<div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-slate-50/95 to-transparent" /></div>{item.notes.length > 260 && <button type="button" onClick={() => setExplanationItem(item)} className="mt-2 inline-flex min-h-8 items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-[#008f72] transition hover:border-emerald-300 hover:bg-emerald-50">Voir plus <span aria-hidden="true">→</span></button>}</section>}
-        <div className="mt-5 flex items-center gap-2 border-t border-slate-100 bg-slate-50/70 px-4 py-3 sm:px-6">
+        {item.notes && <section className="mx-3 mt-2 rounded-xl border border-slate-200/80 bg-slate-50/70 p-3 sm:mx-4 sm:p-3.5"><div className="mb-3 flex items-center gap-2"><span className="h-4 w-1 rounded-full bg-amber-400" /><h4 className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Analyse & scénario</h4></div><div className="relative max-h-28 overflow-hidden">{formatNotes(item.notes)}<div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-slate-50/95 to-transparent" /></div>{item.notes.length > 260 && <button type="button" onClick={() => setExplanationItem(item)} className="mt-2 inline-flex min-h-8 items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-[#008f72] transition hover:border-emerald-300 hover:bg-emerald-50">Voir plus <span aria-hidden="true">→</span></button>}</section>}
+        <div className="mt-2 flex items-center gap-2 border-t border-slate-100 bg-slate-50/70 px-4 py-2 sm:px-5">
           <a href={item.tradingViewUrl} target="_blank" rel="noreferrer" className="inline-flex min-h-8 items-center gap-1.5 rounded-lg px-2.5 text-[11px] font-bold text-slate-500 hover:bg-slate-50"><ExternalLink className="h-3.5 w-3.5" /> Ouvrir le graphique</a>
           {journalView && <button type="button" onClick={() => setExpandedHistoryId(null)} className="ml-auto inline-flex min-h-8 items-center gap-1 rounded-lg px-2.5 text-[11px] font-bold text-slate-500 hover:bg-slate-100" aria-label="Replier les détails de l’analyse">Replier <span aria-hidden="true">⌃</span></button>}{isAdmin && <div className="ml-auto flex items-center gap-1">
             <button type="button" onClick={() => openEdit(item)} aria-label="Modifier l’analyse" title="Modifier" className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-500 hover:bg-emerald-50 hover:text-[#008f72]"><Pencil className="h-4 w-4" /></button>
@@ -374,20 +374,20 @@ function AnalysisChartCarousel({ item }: { item: Analysis }) {
   const url = activeChart === 1 && hasAfter ? item.afterAnalysisUrl! : item.tradingViewUrl;
   const title = activeChart === 1 && hasAfter ? 'Après trade' : 'Analyse initiale';
   const imageUrl = tradingViewSnapshotImageUrl(url);
-  return <section className="mx-4 mt-2 overflow-hidden rounded-xl border border-slate-200/80 bg-slate-50 sm:mx-6">
-    <div className="flex items-center justify-between gap-2 border-b border-slate-200 bg-white px-3 py-2.5 sm:px-4">
+  return <section className="overflow-hidden rounded-lg border border-slate-200/80 bg-slate-50">
+    <div className="flex items-center justify-between gap-2 border-b border-slate-200 bg-white px-3 py-1.5">
       <div className="min-w-0"><h4 className="truncate text-[10px] font-black uppercase tracking-[0.14em] text-[#0b1f35]">{title}</h4><p className="text-[9px] text-slate-400">{activeChart === 1 && item.outcomeStatus ? item.outcomeStatus + (item.exitPrice ? ' · Sortie : ' + Number(item.exitPrice).toFixed(2) : '') : 'Graphique de référence'}</p></div>
       {hasAfter && <div className="flex shrink-0 items-center gap-2"><button type="button" onClick={() => setActiveChart(0)} aria-label="Voir le graphique initial" disabled={activeChart === 0} className="flex h-12 w-12 items-center justify-center rounded-xl border border-slate-200 bg-slate-100 text-slate-500 shadow-sm transition hover:bg-slate-200 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-45"><span aria-hidden="true" className="text-3xl font-light leading-none">‹</span></button><span className="px-1 text-xs font-bold tabular-nums text-slate-500">{activeChart + 1}/2</span><button type="button" onClick={() => setActiveChart(1)} aria-label="Voir le graphique après trade" disabled={activeChart === 1} className="flex h-12 w-12 items-center justify-center rounded-xl border border-slate-200 bg-slate-100 text-slate-500 shadow-sm transition hover:bg-slate-200 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-45"><span aria-hidden="true" className="text-3xl font-light leading-none">›</span></button></div>}
     </div>
-    {imageUrl ? <img src={imageUrl} alt={title + ' — ' + (item.setup || 'XAUUSD')} loading="lazy" className="mx-auto block h-auto max-h-[260px] w-full max-w-[900px] bg-white object-contain sm:max-h-[320px]" /> : <div className="flex min-h-28 items-center justify-center bg-white"><a href={url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs font-bold text-[#008f72] hover:underline">Ouvrir le graphique <ExternalLink className="h-3.5 w-3.5" /></a></div>}
+    {imageUrl ? <img src={imageUrl} alt={title + ' — ' + (item.setup || 'XAUUSD')} loading="lazy" className="mx-auto block h-auto max-h-[150px] w-full max-w-[760px] bg-white object-contain sm:max-h-[190px]" /> : <div className="flex min-h-16 items-center justify-center bg-white"><a href={url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs font-bold text-[#008f72] hover:underline">Ouvrir le graphique <ExternalLink className="h-3.5 w-3.5" /></a></div>}
   </section>;
 }
 
 function InfoItem({ label, value, icon: Icon, tone = 'slate' }: { label: string; value?: string; icon: React.ElementType; tone?: 'emerald' | 'blue' | 'violet' | 'slate' | 'amber' | 'rose' }) {
   if (!value) return null;
   const tones = { emerald: 'bg-emerald-50 text-emerald-700', blue: 'bg-sky-50 text-sky-700', violet: 'bg-violet-50 text-violet-700', slate: 'bg-slate-100 text-slate-600', amber: 'bg-amber-50 text-amber-700', rose: 'bg-rose-50 text-rose-700' };
-  return <div className="flex min-w-0 items-center gap-1.5 rounded-lg px-1.5 py-1 transition-colors hover:bg-white/90">
-    <span className={'flex h-6 w-6 shrink-0 items-center justify-center rounded-md ' + tones[tone]}><Icon className="h-3.5 w-3.5" strokeWidth={2} /></span>
+  return <div className="flex min-w-0 items-center gap-1 rounded-md px-1 py-0.5">
+    
     <div className="min-w-0"><p className="truncate text-[8px] font-extrabold uppercase tracking-[0.08em] text-slate-400">{label}</p><p className="break-words text-[10px] font-extrabold leading-3.5 text-[#0b1f35]">{value}</p></div>
   </div>;
 }
@@ -409,9 +409,9 @@ function MiniLevel({ label, value, kind }: { label: string; value: number; kind:
   const style = styles[kind]; const Icon = style.icon;
   return <div className={'relative min-w-0 overflow-hidden rounded-xl border px-2 py-2 sm:px-3 sm:py-2.5 ' + style.wrap}>
     <div className={'absolute inset-y-0 left-0 w-[3px] ' + style.bar} />
-    <div className="flex min-w-0 items-center gap-1.5 pl-1.5 sm:gap-2">
-      <span className={'flex h-6 w-6 shrink-0 items-center justify-center rounded-md sm:h-7 sm:w-7 ' + style.badge}><Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4" /></span>
-      <div className="min-w-0 flex-1"><p className={'truncate text-[8px] font-black uppercase tracking-[0.08em] sm:text-[9px] ' + style.label}>{label}</p><p className="mt-0.5 truncate text-sm font-black tabular-nums tracking-tight text-[#0b1f35] sm:text-base">{Number(value).toFixed(2)}</p></div>
+    <div className="flex min-w-0 items-center gap-1 pl-1">
+      
+      <div className="min-w-0 flex-1"><p className={'truncate text-[8px] font-black uppercase tracking-[0.08em] sm:text-[9px] ' + style.label}>{label}</p><p className="mt-0.5 truncate text-xs font-black tabular-nums tracking-tight text-[#0b1f35] sm:text-sm">{Number(value).toFixed(2)}</p></div>
     </div>
   </div>;
 }
