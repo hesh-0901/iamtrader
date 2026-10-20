@@ -258,17 +258,14 @@ export function AnalysisAdminPanel({ isAdmin = true }: { isAdmin?: boolean }) {
         </div>
         <div className="grid grid-cols-1 items-start gap-3 p-3 sm:p-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
           <div className="min-w-0"><AnalysisChartCarousel item={item} /></div>
-          <section className="min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-3 sm:px-4">
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <div><h4 className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-600">Plan de trading</h4><p className="text-[9px] text-slate-400">Niveaux clés du scénario</p></div>
-              <span className="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-slate-500">XAUUSD</span>
-            </div>
+          <section className="min-w-0 rounded-xl border border-slate-200 bg-white px-3 py-3 sm:px-4"><div className="mb-3 flex items-center gap-2 border-b border-slate-100 pb-2"><span className="h-4 w-1 rounded-full bg-[#00a982]" /><div><h4 className="text-[10px] font-black uppercase tracking-[0.14em] text-[#0b1f35]">Exécution du scénario</h4><p className="text-[9px] text-slate-400">Niveaux, contexte et justification</p></div></div>
+            <div className="mb-2 flex items-center justify-between gap-2"><h4 className="text-[9px] font-black uppercase tracking-[0.12em] text-slate-600">Niveaux de trading</h4><span className="text-[9px] font-bold text-slate-400">XAUUSD</span></div>
             <div className="grid grid-cols-3 gap-1.5">
               <MiniLevel label="PE · Entrée" value={item.entryPrice} kind="entry" />
               <MiniLevel label="SL · Risque" value={item.stopLoss} kind="risk" />
               <MiniLevel label="TP · Objectif" value={item.takeProfit} kind="target" />
             </div>
-            {(item.dailyBias || item.htfBias || item.entryBias || item.marketPhase || item.htf || item.ltf || item.session || item.liquidityTarget || item.poi || item.confirmation || item.invalidation) && <section className="mt-3 border-t border-slate-200 pt-2">
+            {(item.dailyBias || item.htfBias || item.entryBias || item.marketPhase || item.htf || item.ltf || item.session || item.liquidityTarget || item.poi || item.confirmation || item.invalidation) && <section className="mt-3 rounded-lg bg-slate-50 px-2.5 py-2">
               <div className="mb-1.5"><h4 className="text-[9px] font-black uppercase tracking-[0.12em] text-[#0b1f35]">Contexte du marché</h4><p className="text-[8px] text-slate-400">Biais, unités de temps et exécution</p></div>
               <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3">
                 <InfoItem label="Biais Daily" value={item.dailyBias} icon={TrendingUp} tone="emerald" />
@@ -284,8 +281,8 @@ export function AnalysisAdminPanel({ isAdmin = true }: { isAdmin?: boolean }) {
                 <InfoItem label="Invalidation" value={item.invalidation} icon={ShieldCheck} tone="rose" />
               </div>
             </section>}
-            {item.notes && <section className="mt-3 border-t border-slate-200 pt-2">
-              <div className="mb-2"><h4 className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">Analyse & scénario</h4></div>
+            {item.notes && <section className="mt-3 rounded-lg border border-amber-100 bg-amber-50/40 px-2.5 py-2">
+              <div className="mb-2"><h4 className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-600">Justification du scénario</h4></div>
               <div className="relative max-h-28 overflow-hidden">{formatNotes(item.notes)}<div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-white/95 to-transparent" /></div>
               {item.notes.length > 260 && <button type="button" onClick={() => setExplanationItem(item)} className="mt-2 inline-flex min-h-7 items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 text-[11px] font-bold text-[#008f72] transition hover:border-emerald-300 hover:bg-emerald-50">Voir plus <span aria-hidden="true">→</span></button>}
             </section>}
