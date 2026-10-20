@@ -257,7 +257,7 @@ export function AnalysisAdminPanel({ isAdmin = true }: { isAdmin?: boolean }) {
           </div>
         </div>
         <div className="px-3 pt-2 sm:px-4"><AnalysisChartCarousel item={item} /></div>
-        <section className="mx-3 mt-2 rounded-xl border border-slate-200 bg-slate-50/60 px-3 py-2.5 sm:mx-4 sm:px-4">
+        <section className="mx-3 mt-2 rounded-xl border border-slate-200 bg-white px-3 py-2.5 sm:mx-4 sm:px-4"><div className="space-y-3">
           <div className="mb-1.5 flex items-center justify-between gap-3">
             <div className="flex min-w-0 items-center gap-2"><span className="h-4 w-1 rounded-full bg-[#00a982]" /><div><h4 className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-600">Plan de trading</h4><p className="text-[9px] text-slate-400">Niveaux clés du scénario</p></div></div>
             <span className="shrink-0 rounded-full border border-slate-200 bg-slate-50 px-2 py-1 text-[9px] font-bold uppercase tracking-wider text-slate-500">XAUUSD</span>
@@ -267,8 +267,8 @@ export function AnalysisAdminPanel({ isAdmin = true }: { isAdmin?: boolean }) {
             <MiniLevel label="SL · Risque" value={item.stopLoss} kind="risk" />
             <MiniLevel label="TP · Objectif" value={item.takeProfit} kind="target" />
           </div>
-        </section>
-        {(item.dailyBias || item.htfBias || item.entryBias || item.marketPhase || item.htf || item.ltf || item.session || item.liquidityTarget || item.poi || item.confirmation || item.invalidation) && <section className="mx-3 mt-1.5 rounded-xl border border-slate-200/80 bg-white px-3 py-2 sm:mx-4">
+        </div>
+        {(item.dailyBias || item.htfBias || item.entryBias || item.marketPhase || item.htf || item.ltf || item.session || item.liquidityTarget || item.poi || item.confirmation || item.invalidation) && <section className="rounded-lg border-t border-slate-200 px-1 pt-2">
           <div className="mb-1.5 flex items-center gap-2"><span className="h-3.5 w-0.5 rounded-full bg-violet-400" /><div><h4 className="text-[9px] font-black uppercase tracking-[0.12em] text-[#0b1f35]">Contexte du marché</h4><p className="text-[8px] text-slate-400">Biais, unités de temps et exécution</p></div></div>
           <div className="grid grid-cols-2 gap-x-2 gap-y-0.5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
             <InfoItem label="Biais Daily" value={item.dailyBias} icon={TrendingUp} tone="emerald" />
@@ -283,8 +283,8 @@ export function AnalysisAdminPanel({ isAdmin = true }: { isAdmin?: boolean }) {
             <InfoItem label="Confirmation" value={item.confirmation} icon={CheckCircle2} tone="emerald" />
             <InfoItem label="Invalidation" value={item.invalidation} icon={ShieldCheck} tone="rose" />
           </div>
-        </section>}
-        {item.notes && <section className="mx-3 mt-2 rounded-xl border border-slate-200/80 bg-slate-50/70 p-3 sm:mx-4 sm:p-3.5"><div className="mb-3 flex items-center gap-2"><span className="h-4 w-1 rounded-full bg-amber-400" /><h4 className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Analyse & scénario</h4></div><div className="relative max-h-28 overflow-hidden">{formatNotes(item.notes)}<div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-slate-50/95 to-transparent" /></div>{item.notes.length > 260 && <button type="button" onClick={() => setExplanationItem(item)} className="mt-2 inline-flex min-h-8 items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-[#008f72] transition hover:border-emerald-300 hover:bg-emerald-50">Voir plus <span aria-hidden="true">→</span></button>}</section>}
+        </div>
+        {item.notes && <section className="rounded-lg border-t border-slate-200 px-1 pt-2"><div className="mb-3 flex items-center gap-2"><span className="h-4 w-1 rounded-full bg-amber-400" /><h4 className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-500">Analyse & scénario</h4></div><div className="relative max-h-28 overflow-hidden">{formatNotes(item.notes)}<div className="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-slate-50/95 to-transparent" /></div>{item.notes.length > 260 && <button type="button" onClick={() => setExplanationItem(item)} className="mt-2 inline-flex min-h-8 items-center gap-1 rounded-lg border border-slate-200 bg-white px-3 text-xs font-bold text-[#008f72] transition hover:border-emerald-300 hover:bg-emerald-50">Voir plus <span aria-hidden="true">→</span></button>}</section>}</section>
         <div className="mt-2 flex items-center gap-2 border-t border-slate-100 bg-slate-50/70 px-4 py-2 sm:px-5">
           <a href={item.tradingViewUrl} target="_blank" rel="noreferrer" className="inline-flex min-h-8 items-center gap-1.5 rounded-lg px-2.5 text-[11px] font-bold text-slate-500 hover:bg-slate-50"><ExternalLink className="h-3.5 w-3.5" /> Ouvrir le graphique</a>
           {journalView && <button type="button" onClick={() => setExpandedHistoryId(null)} className="ml-auto inline-flex min-h-8 items-center gap-1 rounded-lg px-2.5 text-[11px] font-bold text-slate-500 hover:bg-slate-100" aria-label="Replier les détails de l’analyse">Replier <span aria-hidden="true">⌃</span></button>}{isAdmin && <div className="ml-auto flex items-center gap-1">
