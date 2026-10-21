@@ -394,3 +394,4 @@ function MiniLevel({ label, value, kind }: { label: string; value: number; kind:
 }
 
 // Trigger Cloudflare production deployment.
+// Ensure JSX card sections remain wrapped in a single parent.
