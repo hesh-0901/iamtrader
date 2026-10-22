@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { MessageCircle, CalendarDays, BookOpen, BarChart3, Activity, Database, BrainCircuit, Share2, CheckCircle2, AlertTriangle, CandlestickChart } from 'lucide-react';
+import { MessageCircle, CalendarDays, BookOpen, BarChart3, Activity, Database, BrainCircuit, Share2, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { EconomicCalendarView } from './EconomicCalendarView';
 import { ChatView } from './ChatView';
 import { UserProfile } from '../types';
@@ -42,25 +42,49 @@ export function CommunityView({ userProfile }: { userProfile: UserProfile | null
       </div>
 
       {activeTab === 'home' && (
-        <section aria-label="Accueil Community" className="relative isolate min-h-[min(70vh,680px)] overflow-hidden rounded-2xl bg-[#0b1f35] sm:rounded-3xl">
+        <section aria-label="Accueil Community" className="relative flex min-h-[min(70vh,680px)] items-center justify-center overflow-hidden bg-transparent">
           <style>{`
-            @keyframes community-candle-drift { 0%,100% { transform: translate3d(0,0,0); } 50% { transform: translate3d(-2px,-1px,0); } }
-            @keyframes community-candle-glow { 0%,100% { opacity:.025; } 50% { opacity:.045; } }
-            @media (prefers-reduced-motion: reduce) { .community-candle-motion { animation:none!important; } }
+            @keyframes community-orbit-one {
+              0% { transform: translate(-42px,-18px) scale(1); }
+              22% { transform: translate(35px,-38px) scale(.92); }
+              46% { transform: translate(44px,25px) scale(1.04); }
+              68% { transform: translate(0,0) scale(.72); }
+              78%,100% { transform: translate(0,0) scale(.25); opacity:0; }
+            }
+            @keyframes community-orbit-two {
+              0% { transform: translate(38px,-24px) scale(.9); }
+              26% { transform: translate(-36px,20px) scale(1.05); }
+              48% { transform: translate(12px,40px) scale(.88); }
+              68% { transform: translate(0,0) scale(.72); }
+              78%,100% { transform: translate(0,0) scale(.25); opacity:0; }
+            }
+            @keyframes community-orbit-three {
+              0% { transform: translate(0,38px) scale(1.05); }
+              24% { transform: translate(24px,-32px) scale(.88); }
+              50% { transform: translate(-42px,-8px) scale(1); }
+              68% { transform: translate(0,0) scale(.72); }
+              78%,100% { transform: translate(0,0) scale(.25); opacity:0; }
+            }
+            @keyframes community-single-form {
+              0%,68% { transform: scale(.3); opacity:0; }
+              78% { transform: scale(1); opacity:.48; }
+              90% { transform: scale(.92); opacity:.28; }
+              100% { transform: scale(1); opacity:.42; }
+            }
+            @media (prefers-reduced-motion: reduce) {
+              .community-orbit { animation:none!important; opacity:0!important; }
+              .community-single { animation:none!important; opacity:.35!important; transform:scale(1)!important; }
+            }
           `}</style>
-          <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_45%,rgba(0,169,130,0.035),transparent_62%)]" />
-            <div className="community-candle-motion absolute inset-0" style={{ animation: 'community-candle-drift 38s ease-in-out infinite' }}>
-              {[
-                {x:'8%',y:'18%',h:42,b:18,up:true},{x:'16%',y:'54%',h:58,b:23,up:false},{x:'25%',y:'31%',h:36,b:16,up:true},
-                {x:'34%',y:'64%',h:50,b:21,up:true},{x:'43%',y:'22%',h:64,b:25,up:false},{x:'52%',y:'46%',h:43,b:18,up:true},
-                {x:'61%',y:'27%',h:54,b:22,up:true},{x:'70%',y:'57%',h:38,b:16,up:false},{x:'79%',y:'34%',h:60,b:24,up:true},
-                {x:'88%',y:'49%',h:45,b:19,up:false},{x:'95%',y:'19%',h:34,b:14,up:true}
-              ].map((candle,i)=><div key={i} className="absolute" style={{left:candle.x,top:candle.y,height:candle.h,width:1,background:candle.up?'rgba(52,211,153,.16)':'rgba(248,113,113,.12)'}}><div style={{position:'absolute',left:-candle.b/2,top:candle.h*.25,width:candle.b,height:candle.h*.48,background:candle.up?'rgba(16,185,129,.12)':'rgba(248,113,113,.09)',border:'1px solid '+(candle.up?'rgba(52,211,153,.14)':'rgba(248,113,113,.1)')}} /></div>)}
+          <div className="flex flex-col items-center gap-4">
+            <div aria-hidden="true" className="relative h-24 w-24">
+              <span className="community-orbit absolute left-1/2 top-1/2 h-3 w-3 -ml-1.5 -mt-1.5 rounded-full bg-gray-400/55" style={{animation:'community-orbit-one 6s ease-in-out infinite'}} />
+              <span className="community-orbit absolute left-1/2 top-1/2 h-3 w-3 -ml-1.5 -mt-1.5 rounded-full bg-gray-400/55" style={{animation:'community-orbit-two 6s ease-in-out infinite'}} />
+              <span className="community-orbit absolute left-1/2 top-1/2 h-3 w-3 -ml-1.5 -mt-1.5 rounded-full bg-gray-400/55" style={{animation:'community-orbit-three 6s ease-in-out infinite'}} />
+              <span className="community-single absolute left-1/2 top-1/2 h-3 w-3 -ml-1.5 -mt-1.5 rounded-full bg-gray-500" style={{animation:'community-single-form 6s ease-in-out infinite'}} />
             </div>
-            <div className="absolute -left-20 top-1/4 h-64 w-64 rounded-full bg-emerald-500/10 blur-3xl" style={{animation:'community-candle-glow 8s ease-in-out infinite'}} />
-            </div>
-          
+            <p className="text-xs font-medium tracking-wide text-gray-500">Bienvenue dans Community</p>
+          </div>
         </section>
       )}
 
