@@ -397,7 +397,7 @@ export function ChatView({ userProfile }: { userProfile: UserProfile | null }) {
                     : message.type === 'image' && message.mediaUrl
                       ? <button type="button" onClick={() => setViewerImage(message)} aria-label="Ouvrir l’image dans PipTalk" className="mb-1 block max-w-full cursor-zoom-in overflow-hidden rounded-xl text-left focus:outline-none focus:ring-2 focus:ring-emerald-400"><img src={message.mediaUrl} alt={message.mediaName || "Image envoyée"} loading="lazy" className="max-h-72 max-w-full rounded-xl object-contain" /></button>
                       : message.type === 'voice' && message.mediaUrl
-                        ? <div className="my-1 flex min-w-[220px] max-w-full items-center gap-2 rounded-xl bg-slate-50 p-2.5"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700"><FileAudio className="h-4 w-4" /></div><div className="min-w-0 flex-1"><p className="mb-1 text-[10px] font-semibold text-slate-600">Message vocal</p><audio controls preload="metadata" src={message.mediaUrl} className="h-8 w-full max-w-[260px] accent-emerald-600" /></div></div>
+                        ? <VoiceMessagePlayer src={message.mediaUrl} mine={mine} duration={message.duration || 0} />
                         : <p className="whitespace-pre-wrap break-words text-[12px] leading-[1.3] sm:text-[13px] sm:leading-[1.35]">{message.text}</p>}
                   <div className="mt-0.5 flex items-center justify-end gap-1"><span className="text-[8px] leading-3 text-slate-400">{message.edited ? 'modifié · ' : ''}{formatTime(message.createdAt)}</span>{mine && <CheckCheck className="h-3 w-3 text-emerald-600" />}</div>
                   {active?.group && <span aria-hidden="true" className={`pointer-events-none absolute bottom-3 h-2.5 w-2.5 rotate-45 ${mine ? '-right-[5px] border-b border-r border-emerald-100 bg-[#d5f6e8]' : '-left-[5px] border-b border-l border-slate-200/80 bg-white'}`} />}
@@ -420,4 +420,80 @@ export function ChatView({ userProfile }: { userProfile: UserProfile | null }) {
       <p className="pointer-events-none absolute bottom-4 left-1/2 max-w-[90vw] -translate-x-1/2 truncate rounded-full bg-black/40 px-4 py-2 text-xs text-white/80">{viewerImage.mediaName || "Image envoyée"} · Échap pour fermer</p>
     </div>}
   </div></>;
+}
+
+
+function VoiceMessagePlayer({ src, mine, duration }: { src: string; mine: boolean; duration: number }) {
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [playing, setPlaying] = useState(false);
+  const [currentTime, setCurrentTime] = useState(0);
+  const [totalTime, setTotalTime] = useState(duration);
+  const [playError, setPlayError] = useState(false);
+  const bars = [4,7,11,6,13,9,5,15,8,12,6,10,16,7,12,5,9,14,6,11,8,15,5,10,13,7,4,12,8,15,6,10,5,13,8,11,6,14,9,5,12,7,15,10,6,13,8,4];
+  const formatDuration = (seconds: number) => {
+    if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
+    return Math.floor(seconds / 60) + ':' + String(Math.floor(seconds % 60)).padStart(2, '0');
+  };
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    const updateTime = () => setCurrentTime(audio.currentTime || 0);
+    const updateDuration = () => {
+      if (Number.isFinite(audio.duration) && audio.duration > 0) setTotalTime(audio.duration);
+    };
+    const ended = () => { setPlaying(false); setCurrentTime(0); };
+    audio.addEventListener('timeupdate', updateTime);
+    audio.addEventListener('loadedmetadata', updateDuration);
+    audio.addEventListener('durationchange', updateDuration);
+    audio.addEventListener('ended', ended);
+    return () => {
+      audio.removeEventListener('timeupdate', updateTime);
+      audio.removeEventListener('loadedmetadata', updateDuration);
+      audio.removeEventListener('durationchange', updateDuration);
+      audio.removeEventListener('ended', ended);
+    };
+  }, [src]);
+  const togglePlayback = async () => {
+    const audio = audioRef.current;
+    if (!audio) return;
+    setPlayError(false);
+    if (audio.paused) {
+      try { await audio.play(); setPlaying(true); }
+      catch { setPlaying(false); setPlayError(true); }
+    } else {
+      audio.pause();
+      setPlaying(false);
+    }
+  };
+  const seek = (event: React.MouseEvent<HTMLDivElement>) => {
+    const audio = audioRef.current;
+    if (!audio || !Number.isFinite(audio.duration) || audio.duration <= 0) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width));
+    audio.currentTime = ratio * audio.duration;
+    setCurrentTime(audio.currentTime);
+  };
+  const progress = totalTime > 0 ? Math.min(1, currentTime / totalTime) : 0;
+  return (
+    <div className={`my-1 flex w-[min(270px,68vw)] min-w-[205px] items-center gap-2.5 rounded-xl px-2 py-1.5 ${mine ? 'bg-emerald-100/70' : 'bg-slate-50'}`}>
+      <audio ref={audioRef} src={src} preload="metadata" className="hidden" />
+      <button type="button" onClick={() => void togglePlayback()} aria-label={playing ? 'Mettre le vocal en pause' : 'Lire le message vocal'} className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${mine ? 'bg-emerald-700 text-white' : 'bg-slate-700 text-white'}`}>
+        {playing ? <Square className="h-3.5 w-3.5 fill-current" /> : <span className="ml-0.5 block h-0 w-0 border-y-[7px] border-y-transparent border-l-[10px] border-l-current" />}
+      </button>
+      <div className="min-w-0 flex-1">
+        <div role="slider" aria-label="Position du message vocal" aria-valuemin={0} aria-valuemax={Math.round(totalTime)} aria-valuenow={Math.round(currentTime)} tabIndex={0} onClick={seek} onKeyDown={event => {
+          const audio = audioRef.current;
+          if (!audio || !Number.isFinite(audio.duration)) return;
+          if (event.key === 'ArrowRight') audio.currentTime = Math.min(audio.duration, audio.currentTime + 5);
+          if (event.key === 'ArrowLeft') audio.currentTime = Math.max(0, audio.currentTime - 5);
+        }} className="flex h-7 cursor-pointer items-center gap-[2px] outline-none" >
+          {bars.map((height, index) => <span key={index} className={`flex-1 rounded-full ${index / bars.length < progress ? (mine ? 'bg-emerald-700' : 'bg-slate-700') : 'bg-slate-300'}`} style={{height: height + 'px', maxHeight: '22px'}} />)}
+        </div>
+        <div className="flex items-center justify-between text-[10px] leading-4 text-slate-500">
+          <span>{formatDuration(currentTime > 0 ? currentTime : totalTime)}</span>
+          <span className="text-[9px]">{playError ? 'Lecture impossible' : 'Message vocal'}</span>
+        </div>
+      </div>
+    </div>
+  );
 }
