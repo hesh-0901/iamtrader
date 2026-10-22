@@ -389,7 +389,7 @@ export function ChatView({ userProfile }: { userProfile: UserProfile | null }) {
               <div className={`group relative flex w-full items-end gap-2 ${mine ? 'justify-end' : 'justify-start'}`}>
                 {!mine && active?.group && <div className="mb-0.5 h-8 w-8 shrink-0 overflow-hidden rounded-full ring-2 ring-white shadow-sm">{message.senderAvatarURL ? <img src={message.senderAvatarURL} alt={senderName} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-emerald-100 to-teal-100 text-[10px] font-extrabold text-emerald-800">{senderName.slice(0, 2).toUpperCase()}</div>}</div>}
                 <div onTouchStart={() => beginMessageLongPress(message.id)} onTouchEnd={cancelMessageLongPress} onTouchMove={cancelMessageLongPress} onContextMenu={event => { event.preventDefault(); setMenuMessage(message.id); }} className={`relative min-w-0 max-w-[82%] rounded-[18px] px-3 py-2.5 shadow-[0_2px_7px_rgba(15,23,42,0.045)] transition-shadow hover:shadow-md sm:max-w-[70%] sm:px-3.5 sm:py-2.5 ${mine ? 'rounded-br-[6px] border border-emerald-100 bg-gradient-to-br from-[#e5fbf2] to-[#d5f6e8] text-slate-800' : 'rounded-bl-[6px] border border-slate-200/80 bg-white text-slate-700'}`}>
-                  {active?.group && <div className={`mb-0.5 flex items-center gap-1.5 text-[10px] font-extrabold tracking-[-0.01em] ${mine ? 'text-emerald-800' : 'text-slate-800'}`}><span className="truncate">{senderName}</span>{mine && <span className="rounded-full bg-emerald-100/80 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-emerald-700">Vous</span>}</div>}
+                  {(active?.group || message.type === 'voice') && <div className={`mb-0.5 flex items-center gap-1.5 text-[10px] font-extrabold tracking-[-0.01em] ${mine ? 'text-emerald-800' : 'text-slate-800'}`}><span className="truncate">{senderName}</span>{mine && <span className="rounded-full bg-emerald-100/80 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-emerald-700">Vous</span>}</div>}
                   {message.pinned && <div className="mb-1 flex items-center gap-1 text-[9px] font-bold text-emerald-700"><Pin className="h-3 w-3" />Message épinglé</div>}
                   {message.replyToId && <div className={`mb-1.5 flex max-w-full gap-1.5 rounded-lg border-l-[3px] px-2 py-1.5 text-left ${mine ? 'border-emerald-600 bg-emerald-100/70' : 'border-slate-400 bg-slate-50'}`}><Reply className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-700" /><div className="min-w-0"><p className="truncate text-[10px] font-bold text-slate-700">{message.replyToSenderName || 'Message cité'}</p><p className="truncate text-[11px] text-slate-500">{message.replyToText || 'Message'}</p></div></div>}
                   {message.expiresAt?.toDate && message.expiresAt.toDate().getTime() <= Date.now()
@@ -475,9 +475,9 @@ function VoiceMessagePlayer({ src, mine, duration }: { src: string; mine: boolea
   };
   const progress = totalTime > 0 ? Math.min(1, currentTime / totalTime) : 0;
   return (
-    <div className={`my-1 flex w-[min(270px,68vw)] min-w-[205px] items-center gap-2.5 rounded-xl px-2 py-1.5 ${mine ? 'bg-emerald-100/70' : 'bg-slate-50'}`}>
+    <div className="my-0.5 flex w-[min(230px,62vw)] min-w-[175px] items-center gap-2">
       <audio ref={audioRef} src={src} preload="metadata" className="hidden" />
-      <button type="button" onClick={() => void togglePlayback()} aria-label={playing ? 'Mettre le vocal en pause' : 'Lire le message vocal'} className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${mine ? 'bg-emerald-700 text-white' : 'bg-slate-700 text-white'}`}>
+      <button type="button" onClick={() => void togglePlayback()} aria-label={playing ? 'Mettre le vocal en pause' : 'Lire le message vocal'} className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${mine ? 'bg-emerald-800 text-white' : 'bg-slate-800 text-white'}`}>
         {playing ? <Square className="h-3.5 w-3.5 fill-current" /> : <span className="ml-0.5 block h-0 w-0 border-y-[7px] border-y-transparent border-l-[10px] border-l-current" />}
       </button>
       <div className="min-w-0 flex-1">
@@ -486,10 +486,10 @@ function VoiceMessagePlayer({ src, mine, duration }: { src: string; mine: boolea
           if (!audio || !Number.isFinite(audio.duration)) return;
           if (event.key === 'ArrowRight') audio.currentTime = Math.min(audio.duration, audio.currentTime + 5);
           if (event.key === 'ArrowLeft') audio.currentTime = Math.max(0, audio.currentTime - 5);
-        }} className="flex h-7 cursor-pointer items-center gap-[2px] outline-none" >
-          {bars.map((height, index) => <span key={index} className={`flex-1 rounded-full ${index / bars.length < progress ? (mine ? 'bg-emerald-700' : 'bg-slate-700') : 'bg-slate-300'}`} style={{height: height + 'px', maxHeight: '22px'}} />)}
+        }} className="flex h-6 cursor-pointer items-center gap-[2px] outline-none" >
+          {bars.map((height, index) => <span key={index} className={`flex-1 rounded-full ${index / bars.length < progress ? (mine ? 'bg-emerald-900' : 'bg-slate-800') : 'bg-slate-400'}`} style={{height: height + 'px', maxHeight: '18px'}} />)}
         </div>
-        <div className="flex items-center justify-between text-[10px] leading-4 text-slate-500">
+        <div className="flex items-center justify-between text-[9px] leading-3 text-slate-600">
           <span>{formatDuration(currentTime > 0 ? currentTime : totalTime)}</span>
           <span className="text-[9px]">{playError ? 'Lecture impossible' : 'Message vocal'}</span>
         </div>
