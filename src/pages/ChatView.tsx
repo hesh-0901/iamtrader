@@ -487,7 +487,7 @@ function VoiceMessagePlayer({ src, mine, duration }: { src: string; mine: boolea
           if (event.key === 'ArrowRight') audio.currentTime = Math.min(audio.duration, audio.currentTime + 5);
           if (event.key === 'ArrowLeft') audio.currentTime = Math.max(0, audio.currentTime - 5);
         }} className="flex h-6 cursor-pointer items-center gap-[2px] outline-none" >
-          {bars.map((height, index) => <span key={index} className={`flex-1 rounded-full ${index / bars.length < progress ? (mine ? 'bg-emerald-900' : 'bg-slate-800') : 'bg-slate-400'}`} style={{height: height + 'px', maxHeight: '18px'}} />)}
+          {bars.map((height, index) => <span key={index} className="block min-w-[2px] flex-1 rounded-full" style={{ height: height + 'px', maxHeight: '18px', backgroundColor: index / bars.length < progress ? (mine ? '#065f46' : '#334155') : (mine ? '#789b91' : '#94a3b8'), opacity: 1, visibility: 'visible' }} />)}
         </div>
         <div className="flex items-center justify-between text-[9px] leading-3 text-slate-600">
           <span>{formatDuration(currentTime > 0 ? currentTime : totalTime)}</span>
