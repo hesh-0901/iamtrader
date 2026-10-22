@@ -51,6 +51,10 @@ export function ChatView({ userProfile }: { userProfile: UserProfile | null }) {
   const recorderRef = useRef<MediaRecorder | null>(null);
   const recordingChunksRef = useRef<Blob[]>([]);
   const [recording, setRecording] = useState(false);
+  const [pendingVoice, setPendingVoice] = useState<File | null>(null);
+  const [pendingVoiceUrl, setPendingVoiceUrl] = useState('');
+  const recordingStartedAtRef = useRef(0);
+  const [pendingVoiceDuration, setPendingVoiceDuration] = useState(0);
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const [showGroupSettings, setShowGroupSettings] = useState(false);
   const [groupTitleDraft, setGroupTitleDraft] = useState('Community Hub');
@@ -281,14 +285,34 @@ export function ChatView({ userProfile }: { userProfile: UserProfile | null }) {
       recorder.onstop = () => {
         const blob = new Blob(recordingChunksRef.current, { type: recorder.mimeType || 'audio/webm' });
         stream.getTracks().forEach(track => track.stop());
-        if (blob.size) void sendMedia(new File([blob], `vocal-${Date.now()}.webm`, { type: blob.type }), 'voice');
+        if (blob.size) {
+          const file = new File([blob], `vocal-${Date.now()}.webm`, { type: blob.type });
+          setPendingVoice(file);
+          setPendingVoiceUrl(URL.createObjectURL(file));
+          setPendingVoiceDuration(Math.max(1, Math.round((Date.now() - recordingStartedAtRef.current) / 1000)));
+        }
       };
-      recorder.start(); setRecording(true);
+      recorder.start(); recordingStartedAtRef.current = Date.now(); setRecording(true);
     } catch (err: any) { setError(err?.message || 'Autorisez l’accès au microphone pour enregistrer un vocal.'); }
   };
 
   const stopRecording = () => {
     if (recorderRef.current?.state === 'recording') { recorderRef.current.stop(); setRecording(false); }
+  };
+
+  const cancelPendingVoice = () => {
+    if (pendingVoiceUrl) URL.revokeObjectURL(pendingVoiceUrl);
+    setPendingVoice(null);
+    setPendingVoiceUrl('');
+    setPendingVoiceDuration(0);
+  };
+
+  const confirmVoiceSend = async () => {
+    if (!pendingVoice) return;
+    const file = pendingVoice;
+    const duration = pendingVoiceDuration;
+    await sendMedia(file, 'voice', duration);
+    cancelPendingVoice();
   };
 
   const sendMessage = async () => {
@@ -412,12 +436,20 @@ export function ChatView({ userProfile }: { userProfile: UserProfile | null }) {
         <footer className="border-t border-slate-200 bg-white px-2 py-2 sm:px-4 sm:py-3">{replyTo && <div className="mb-2 flex items-center gap-2 rounded-xl border-l-4 border-emerald-500 bg-emerald-50 px-3 py-2"><Reply className="h-4 w-4 shrink-0 text-emerald-700" /><div className="min-w-0 flex-1"><p className="text-[10px] font-bold text-emerald-800">Réponse à {replyTo.senderName || (replyTo.senderId === uid ? 'vous' : 'ce message')}</p><p className="truncate text-[11px] text-slate-600">{replyTo.type === 'image' ? '📷 Image' : replyTo.type === 'voice' ? '🎤 Message vocal' : replyTo.text}</p></div><button onClick={() => setReplyTo(null)} aria-label="Annuler la réponse" className="rounded-lg p-1 text-slate-500 hover:bg-white"><X className="h-4 w-4" /></button></div>}{editingId && <div className="mb-2 flex items-center justify-between rounded-lg bg-amber-50 px-3 py-2 text-[10px] text-amber-800"><span className="flex items-center gap-1.5"><Pencil className="h-3 w-3" />Modification du message</span><button onClick={() => { setEditingId(null); setDraft(''); }}><X className="h-3.5 w-3.5" /></button></div>}<div className="flex items-end gap-2"><input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={e => void handleFile(e.target.files?.[0])} /><button type="button" disabled={!active || uploadingMedia} onClick={() => fileInputRef.current?.click()} title="Envoyer une image" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-40"><ImageIcon className="h-4 w-4" /></button><button type="button" disabled={!active || uploadingMedia} onClick={() => recording ? stopRecording() : void startRecording()} title={recording ? "Arrêter l’enregistrement" : "Enregistrer un vocal"} className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border ${recording ? 'border-rose-300 bg-rose-50 text-rose-600' : 'border-slate-200 text-slate-500 hover:bg-slate-50'} disabled:opacity-40`}>{recording ? <Square className="h-4 w-4" /> : <Mic className="h-4 w-4" />}</button><textarea value={draft} onChange={e => setDraft(e.target.value)} onPaste={handlePaste} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void sendMessage(); } }} disabled={!active || sending} placeholder={active ? 'Écrire un message…' : 'Sélectionnez une discussion…'} rows={1} className="max-h-28 min-h-10 flex-1 resize-none rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs leading-5 text-slate-700 outline-none transition focus:border-emerald-300 focus:bg-white focus:ring-2 focus:ring-emerald-50 disabled:opacity-50" /><button onClick={() => void sendMessage()} disabled={!active || !draft.trim() || sending || uploadingMedia} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#00a982] text-white shadow-sm hover:bg-[#008f72] disabled:opacity-40" title="Envoyer">{sending || uploadingMedia ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}</button></div><p className="mt-2 pl-2 text-[9px] text-slate-400">Entrée pour envoyer · Maj + Entrée pour un saut de ligne · Coller une image avec Ctrl+V</p></footer>
       </section>
     </div>
-    {viewerImage?.mediaUrl && <div role="dialog" aria-modal="true" aria-label="Visionneuse d’image" onClick={() => setViewerImage(null)} className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/90 p-3 backdrop-blur-sm sm:p-8">
-      <button type="button" onClick={() => setViewerImage(null)} aria-label="Fermer l’image" className="absolute right-4 top-4 z-10 flex h-11 w-11 items-center justify-center rounded-full border border-white/20 bg-black/40 text-white transition hover:bg-white/20 focus:outline-none focus:ring-2 focus:ring-white"><X className="h-5 w-5" /></button>
-      <div className="flex h-full w-full items-center justify-center" onClick={event => event.stopPropagation()}>
-        <img src={viewerImage.mediaUrl} alt={viewerImage.mediaName || "Image envoyée"} className="max-h-full max-w-full select-none object-contain" />
+    {pendingVoiceUrl && pendingVoice && <div role="dialog" aria-modal="true" aria-label="Confirmer le message vocal" className="fixed inset-0 z-[110] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm">
+      <div className="w-full max-w-sm rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl">
+        <div className="mb-4 flex items-center justify-between"><div><h3 className="text-sm font-extrabold text-slate-900">Message vocal</h3><p className="mt-1 text-xs text-slate-500">Écoutez votre note avant de l’envoyer.</p></div><button type="button" onClick={cancelPendingVoice} aria-label="Annuler le vocal" className="rounded-full p-2 text-slate-500 hover:bg-slate-100"><X className="h-4 w-4" /></button></div>
+        <audio src={pendingVoiceUrl} controls preload="metadata" className="w-full" />
+        <p className="mt-2 text-[11px] text-slate-500">Durée : {Math.floor(pendingVoiceDuration / 60)}:{String(pendingVoiceDuration % 60).padStart(2, '0')}</p>
+        <div className="mt-5 flex justify-end gap-2"><button type="button" onClick={cancelPendingVoice} disabled={uploadingMedia} className="rounded-xl border border-slate-200 px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50 disabled:opacity-50">Supprimer</button><button type="button" onClick={() => void confirmVoiceSend()} disabled={uploadingMedia} className="flex items-center gap-2 rounded-xl bg-[#00a982] px-4 py-2 text-xs font-bold text-white hover:bg-[#008f72] disabled:opacity-50">{uploadingMedia ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}{uploadingMedia ? 'Envoi…' : 'Confirmer et envoyer'}</button></div>
       </div>
-      <p className="pointer-events-none absolute bottom-4 left-1/2 max-w-[90vw] -translate-x-1/2 truncate rounded-full bg-black/40 px-4 py-2 text-xs text-white/80">{viewerImage.mediaName || "Image envoyée"} · Échap pour fermer</p>
+    </div>}
+    {viewerImage?.mediaUrl && <div role="dialog" aria-modal="true" aria-label="Visionneuse d’image" onClick={() => setViewerImage(null)} className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/95 p-3 backdrop-blur-md sm:p-8">
+      <button type="button" onClick={() => setViewerImage(null)} aria-label="Fermer l’image" className="absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-black/50 text-white transition hover:bg-white/15 focus:outline-none focus:ring-2 focus:ring-white sm:right-5 sm:top-5"><X className="h-5 w-5" /></button>
+      <div className="flex h-full w-full items-center justify-center" onClick={event => event.stopPropagation()}>
+        <img src={viewerImage.mediaUrl} alt={viewerImage.mediaName || "Image envoyée"} className="max-h-[88vh] max-w-full rounded-lg object-contain shadow-2xl" />
+      </div>
+      <div className="pointer-events-none absolute bottom-4 left-1/2 max-w-[90vw] -translate-x-1/2 rounded-full border border-white/10 bg-black/55 px-4 py-2 text-xs text-white/85">{viewerImage.mediaName || "Image envoyée"} · Cliquez à côté pour fermer</div>
     </div>}
   </div></>;
 }
