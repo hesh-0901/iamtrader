@@ -44,32 +44,23 @@ export function CommunityView({ userProfile }: { userProfile: UserProfile | null
       {activeTab === 'home' && (
         <section aria-label="Accueil Community" className="relative isolate min-h-[min(70vh,680px)] overflow-hidden rounded-2xl bg-[#0b1f35] sm:rounded-3xl">
           <style>{`
-            @keyframes community-candle-drift { 0%,100% { transform: translate3d(0,0,0); } 50% { transform: translate3d(-14px,-7px,0); } }
-            @keyframes community-candle-glow { 0%,100% { opacity:.35; } 50% { opacity:.72; } }
-            @keyframes community-line-draw { from { stroke-dashoffset:900; opacity:.15; } to { stroke-dashoffset:0; opacity:.5; } }
-            @media (prefers-reduced-motion: reduce) { .community-candle-motion,.community-chart-line { animation:none!important; } }
+            @keyframes community-candle-drift { 0%,100% { transform: translate3d(0,0,0); } 50% { transform: translate3d(-2px,-1px,0); } }
+            @keyframes community-candle-glow { 0%,100% { opacity:.025; } 50% { opacity:.045; } }
+            @media (prefers-reduced-motion: reduce) { .community-candle-motion { animation:none!important; } }
           `}</style>
           <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_45%,rgba(0,169,130,0.12),transparent_62%)]" />
-            <div className="community-candle-motion absolute inset-0" style={{ animation: 'community-candle-drift 16s ease-in-out infinite' }}>
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_50%_45%,rgba(0,169,130,0.035),transparent_62%)]" />
+            <div className="community-candle-motion absolute inset-0" style={{ animation: 'community-candle-drift 38s ease-in-out infinite' }}>
               {[
                 {x:'8%',y:'18%',h:42,b:18,up:true},{x:'16%',y:'54%',h:58,b:23,up:false},{x:'25%',y:'31%',h:36,b:16,up:true},
                 {x:'34%',y:'64%',h:50,b:21,up:true},{x:'43%',y:'22%',h:64,b:25,up:false},{x:'52%',y:'46%',h:43,b:18,up:true},
                 {x:'61%',y:'27%',h:54,b:22,up:true},{x:'70%',y:'57%',h:38,b:16,up:false},{x:'79%',y:'34%',h:60,b:24,up:true},
                 {x:'88%',y:'49%',h:45,b:19,up:false},{x:'95%',y:'19%',h:34,b:14,up:true}
-              ].map((candle,i)=><div key={i} className="absolute" style={{left:candle.x,top:candle.y,height:candle.h,width:1,background:candle.up?'rgba(52,211,153,.55)':'rgba(248,113,113,.45)'}}><div style={{position:'absolute',left:-candle.b/2,top:candle.h*.25,width:candle.b,height:candle.h*.48,background:candle.up?'rgba(16,185,129,.42)':'rgba(248,113,113,.34)',border:'1px solid '+(candle.up?'rgba(52,211,153,.5)':'rgba(248,113,113,.4)')}} /></div>)}
+              ].map((candle,i)=><div key={i} className="absolute" style={{left:candle.x,top:candle.y,height:candle.h,width:1,background:candle.up?'rgba(52,211,153,.16)':'rgba(248,113,113,.12)'}}><div style={{position:'absolute',left:-candle.b/2,top:candle.h*.25,width:candle.b,height:candle.h*.48,background:candle.up?'rgba(16,185,129,.12)':'rgba(248,113,113,.09)',border:'1px solid '+(candle.up?'rgba(52,211,153,.14)':'rgba(248,113,113,.1)')}} /></div>)}
             </div>
-            <svg className="absolute inset-0 h-full w-full" viewBox="0 0 1000 600" preserveAspectRatio="none">
-              <path className="community-chart-line" d="M0 430 C100 410 130 470 220 390 S350 300 420 350 S530 410 600 290 S730 320 800 210 S920 220 1000 130" fill="none" stroke="rgba(52,211,153,.7)" strokeWidth="2" strokeDasharray="900" style={{animation:'community-line-draw 2.8s ease-out both'}} />
-              <path d="M0 500 C150 470 230 520 360 450 S550 480 680 390 S850 410 1000 320" fill="none" stroke="rgba(148,163,184,.13)" strokeWidth="1" />
-            </svg>
             <div className="absolute -left-20 top-1/4 h-64 w-64 rounded-full bg-emerald-500/10 blur-3xl" style={{animation:'community-candle-glow 8s ease-in-out infinite'}} />
-            <div className="absolute -right-16 bottom-0 h-72 w-72 rounded-full bg-cyan-500/10 blur-3xl" style={{animation:'community-candle-glow 10s ease-in-out infinite'}} />
-          </div>
-          <div className="absolute left-5 top-5 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/[0.06] px-3 py-1.5 text-[10px] font-bold tracking-[0.16em] text-slate-300 backdrop-blur-sm sm:left-7 sm:top-7">
-            <CandlestickChart className="h-3.5 w-3.5 text-emerald-300" /> MARKET IN MOTION
-          </div>
-          <div className="absolute bottom-5 right-5 flex items-center gap-2 text-[10px] font-medium text-slate-400/80 sm:bottom-7 sm:right-7"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" /> IAMTRADER COMMUNITY</div>
+            </div>
+          
         </section>
       )}
 
