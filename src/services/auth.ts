@@ -95,6 +95,13 @@ export async function checkIsAdmin(user: User): Promise<boolean> {
 
 export async function updateUserAvatar(uid: string, avatarURL: string, avatarConfig?: object): Promise<void> {
   await setDoc(doc(db, 'users', uid), { avatarURL, photoURL: avatarURL, ...(avatarConfig ? { avatarConfig } : {}) }, { merge: true });
+  // Keep the public directory in sync so other traders see the latest avatar.
+  await setDoc(doc(db, 'publicProfiles', uid), {
+    uid,
+    avatarURL,
+    photoURL: avatarURL,
+    updatedAt: new Date().toISOString()
+  }, { merge: true });
   if (auth.currentUser?.uid === uid) {
     try { await updateProfile(auth.currentUser, { photoURL: avatarURL }); } catch { /* Firestore remains the source of truth. */ }
   }
