@@ -133,12 +133,15 @@ function MainAppContent() {
   // Publier un profil minimal pour permettre aux autres traders de nous mentionner dans PipTalk.
   useEffect(() => {
     if (!currentUser || !userProfile) return;
-    const displayName = userProfile.displayName?.trim() || currentUser.displayName?.trim() || currentUser.email?.split('@')[0] || 'Trader';
+    const displayName = userProfile.displayName?.trim() || currentUser.displayName?.trim() || currentUser.email?.split('@')[0] || '';
+    const username = (userProfile as any).username?.trim?.() || (userProfile as any).traderProfile?.username?.trim?.() || '';
     const avatarURL = currentUser.photoURL || userProfile.avatarURL || userProfile.photoURL || '';
     void setDoc(doc(db, 'publicProfiles', currentUser.uid), {
       uid: currentUser.uid,
-      displayName,
+      displayName: displayName || username || `Trader ${currentUser.uid.slice(0, 7)}`,
+      ...(username ? { username } : {}),
       avatarURL,
+      photoURL: avatarURL,
       updatedAt: serverTimestamp()
     }, { merge: true }).catch(error => {
       console.warn('Public trader profile sync notice:', error?.message || error);
