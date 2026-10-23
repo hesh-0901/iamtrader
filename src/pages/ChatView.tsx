@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { UserProfile } from '../types';
 import { auth, db, app } from '../firebase/config';
 import {
-  addDoc, collection, deleteDoc, doc, getDoc, onSnapshot, orderBy, query,
+  addDoc, collection, deleteDoc, doc, getDoc, onSnapshot, query,
   serverTimestamp, setDoc, updateDoc, where, Timestamp
 } from 'firebase/firestore';
 import {
