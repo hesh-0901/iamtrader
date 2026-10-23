@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Search, UserPlus, Check, X, MessageCircle, Users, Compass, Clock3, ChevronRight, Send, Loader2, UserRound, CheckCircle2 } from 'lucide-react';
-import { collection, doc, getDocs, onSnapshot, query, setDoc, updateDoc, where, serverTimestamp } from 'firebase/firestore';
+import { collection, doc, getDoc, getDocs, onSnapshot, query, setDoc, updateDoc, where, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import { UserProfile } from '../types';
 
@@ -176,14 +176,25 @@ export function FriendsView({ userProfile }: { userProfile: UserProfile | null }
     setBusy(request.id); setError(''); setNotice('');
     console.info('[FriendsView] Création de conversation démarrée', { uid: uid || null, otherUid, conversationId });
     try {
-      await setDoc(doc(db, 'conversations', conversationId), {
-        members, group: false, createdBy: uid,
-        memberNames: {
-          [uid]: userProfile?.displayName || 'Trader',
-          [otherUid]: request.senderId === uid ? request.receiverName || 'Trader' : request.senderName || 'Trader'
-        },
-        lastMessage: '', createdAt: serverTimestamp(), updatedAt: serverTimestamp()
-      }, { merge: true });
+      const conversationRef = doc(db, 'conversations', conversationId);
+      const conversationSnapshot = await getDoc(conversationRef);
+      const memberNames = {
+        [uid]: userProfile?.displayName || 'Trader',
+        [otherUid]: request.senderId === uid ? request.receiverName || 'Trader' : request.senderName || 'Trader'
+      };
+
+      if (conversationSnapshot.exists()) {
+        // Keep immutable fields (members and createdBy) unchanged on an existing DM.
+        await updateDoc(conversationRef, {
+          memberNames: { ...conversationSnapshot.data().memberNames, ...memberNames },
+          updatedAt: serverTimestamp()
+        });
+      } else {
+        await setDoc(conversationRef, {
+          members, group: false, createdBy: uid, memberNames,
+          lastMessage: '', createdAt: serverTimestamp(), updatedAt: serverTimestamp()
+        });
+      }
       setNotice('Conversation prête. Ouvrez PipTalk pour discuter.');
     } catch (err: any) {
       console.error('[FriendsView] Échec de création de conversation', { uid: uid || null, otherUid, conversationId, code: err?.code || null, message: err?.message || String(err), error: err });
