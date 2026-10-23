@@ -134,7 +134,7 @@ function MainAppContent() {
   useEffect(() => {
     if (!currentUser || !userProfile) return;
     const displayName = userProfile.displayName?.trim() || currentUser.displayName?.trim() || currentUser.email?.split('@')[0] || 'Trader';
-    const avatarURL = userProfile.avatarURL || userProfile.photoURL || currentUser.photoURL || '';
+    const avatarURL = currentUser.photoURL || userProfile.avatarURL || userProfile.photoURL || '';
     void setDoc(doc(db, 'publicProfiles', currentUser.uid), {
       uid: currentUser.uid,
       displayName,
