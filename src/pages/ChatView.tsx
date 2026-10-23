@@ -30,6 +30,7 @@ const formatDay = (value?: Timestamp | null) => value?.toDate
 export function ChatView({ userProfile, initialConversationId }: { userProfile: UserProfile | null; initialConversationId?: string }) {
   const uid = auth.currentUser?.uid || userProfile?.uid;
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
+  const [acceptedFriends, setAcceptedFriends] = useState<Array<{ uid: string; name: string; avatarURL?: string }>>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [activeId, setActiveId] = useState(initialConversationId || '');
   const [draft, setDraft] = useState('');
@@ -85,6 +86,36 @@ export function ChatView({ userProfile, initialConversationId }: { userProfile: 
     setActiveId(initialConversationId);
     setMobileChatOpen(true);
   }, [initialConversationId]);
+
+  // Inclure tous les amis acceptés dans la colonne de gauche, même avant leur premier DM.
+  useEffect(() => {
+    if (!uid) { setAcceptedFriends([]); return; }
+    const byRequestId = new Map<string, { id: string; senderId: string; receiverId: string; status: string; senderName?: string; receiverName?: string }>();
+    let sentReady = false;
+    let receivedReady = false;
+    const publish = () => {
+      if (!sentReady || !receivedReady) return;
+      const friends = new Map<string, { uid: string; name: string; avatarURL?: string }>();
+      byRequestId.forEach(request => {
+        if (request.status !== 'accepted') return;
+        const otherUid = request.senderId === uid ? request.receiverId : request.senderId;
+        if (!otherUid || otherUid === uid) return;
+        const publicProfile = publicProfiles.find(profile => profile.uid === otherUid);
+        const name = publicProfile?.displayName || (request.senderId === uid ? request.receiverName : request.senderName) || 'Trader';
+        friends.set(otherUid, { uid: otherUid, name, avatarURL: publicProfile?.avatarURL });
+      });
+      setAcceptedFriends(Array.from(friends.values()));
+    };
+    const unsubSent = onSnapshot(query(collection(db, 'friendRequests'), where('senderId', '==', uid)), snapshot => {
+      snapshot.docs.forEach(item => byRequestId.set(item.id, { id: item.id, ...item.data() } as any));
+      sentReady = true; publish();
+    }, err => console.error('[PipTalk] Demandes envoyées indisponibles', err));
+    const unsubReceived = onSnapshot(query(collection(db, 'friendRequests'), where('receiverId', '==', uid)), snapshot => {
+      snapshot.docs.forEach(item => byRequestId.set(item.id, { id: item.id, ...item.data() } as any));
+      receivedReady = true; publish();
+    }, err => console.error('[PipTalk] Demandes reçues indisponibles', err));
+    return () => { unsubSent(); unsubReceived(); };
+  }, [uid, publicProfiles]);
 
   // Community Hub is a system group available to every authenticated user.
   useEffect(() => {
@@ -197,7 +228,29 @@ export function ChatView({ userProfile, initialConversationId }: { userProfile: 
   // the live Firestore listener is refreshing. New messages already store the
   // sender's display name and avatar at send time.
 
-  const filtered = useMemo(() => conversations.filter(item => {
+  const inboxItems = useMemo(() => {
+    const items = [...conversations];
+    acceptedFriends.forEach(friend => {
+      const existing = items.some(item => item.members?.length === 2 && item.group !== true && item.members.includes(uid || '') && item.members.includes(friend.uid));
+      if (!existing) items.push({
+        id: 'dm_' + [uid || '', friend.uid].sort().join('_'),
+        members: [uid || '', friend.uid],
+        memberNames: { [friend.uid]: friend.name },
+        avatarURL: friend.avatarURL,
+        lastMessage: '',
+        updatedAt: null,
+        createdAt: null,
+        group: false
+      });
+    });
+    return items.sort((a, b) => (b.updatedAt?.toMillis?.() || b.createdAt?.toMillis?.() || 0) - (a.updatedAt?.toMillis?.() || a.createdAt?.toMillis?.() || 0));
+  }, [conversations, acceptedFriends, uid]);
+
+  const filtered = useMemo(() => inboxItems.filter(item => {
+    const other = item.members.find(member => member !== uid) || '';
+    const name = item.title || item.memberNames?.[other] || acceptedFriends.find(friend => friend.uid === other)?.name || other;
+    return name.toLowerCase().includes(queryText.toLowerCase()) || other.toLowerCase().includes(queryText.toLowerCase()) || (item.lastMessage || '').toLowerCase().includes(queryText.toLowerCase());
+  }), [inboxItems, acceptedFriends, queryText, uid]);
     const other = item.members.find(member => member !== uid) || '';
     const name = item.title || item.memberNames?.[other] || other;
     return name.toLowerCase().includes(queryText.toLowerCase()) || other.toLowerCase().includes(queryText.toLowerCase()) || (item.lastMessage || '').toLowerCase().includes(queryText.toLowerCase());
@@ -219,6 +272,37 @@ export function ChatView({ userProfile, initialConversationId }: { userProfile: 
   const cancelMessageLongPress = () => {
     if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
     longPressTimerRef.current = null;
+  };
+
+  const openInboxConversation = async (item: ChatConversation) => {
+    const other = item.members.find(member => member !== uid);
+    if (!uid || !other) return;
+    setError('');
+    setEditingId(null);
+    setDraft('');
+    try {
+      let conversationId = item.id;
+      if (item.id.startsWith('dm_')) {
+        const members = [uid, other].sort();
+        conversationId = 'dm_' + members.join('_');
+        const existing = conversations.find(candidate => candidate.members?.length === 2 && candidate.group !== true && candidate.members.includes(uid) && candidate.members.includes(other));
+        if (existing) conversationId = existing.id;
+        else {
+          await setDoc(doc(db, 'conversations', conversationId), {
+            members, group: false, createdBy: uid,
+            memberNames: {
+              [uid]: currentDisplayName,
+              [other]: acceptedFriends.find(friend => friend.uid === other)?.name || 'Trader'
+            },
+            lastMessage: '', createdAt: serverTimestamp(), updatedAt: serverTimestamp()
+          }, { merge: true });
+        }
+      }
+      setActiveId(conversationId);
+      setMobileChatOpen(true);
+    } catch (err: any) {
+      setError(err?.message || 'Impossible d’ouvrir cette conversation.');
+    }
   };
 
   const startConversation = async () => {
@@ -441,12 +525,12 @@ export function ChatView({ userProfile, initialConversationId }: { userProfile: 
         <div className="flex-1 overflow-y-auto">
           {loadingChats && <div className="flex items-center justify-center gap-2 p-6 text-xs text-slate-400"><Loader2 className="h-4 w-4 animate-spin" />Chargement des discussions…</div>}
           {!loadingChats && filtered.length === 0 && <div className="px-5 py-10 text-center"><Users className="mx-auto h-7 w-7 text-slate-300" /><p className="mt-3 text-xs font-bold text-slate-600">Aucune discussion</p><p className="mt-1 text-[10px] leading-4 text-slate-400">Utilisez + pour démarrer une conversation avec un UID IAMTRADER.</p></div>}
-          {filtered.map(item => { const other = item.members.find(member => member !== uid) || ''; const name = item.title || item.memberNames?.[other] || `Trader ${other.slice(0, 7)}`; return <button key={item.id} onClick={() => { setError(''); setActiveId(item.id); setMobileChatOpen(true); setEditingId(null); setDraft(''); }} className={`flex w-full items-center gap-3 border-b border-slate-50 px-4 py-3.5 text-left hover:bg-slate-50 ${activeId === item.id ? 'bg-[#f0fbf7]' : ''}`}><div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-emerald-100 text-xs font-black text-emerald-700">{item.avatarURL ? <img src={item.avatarURL} alt={name} className="h-full w-full object-cover" /> : name.slice(0, 2).toUpperCase()}</div><div className="min-w-0 flex-1"><div className="truncate text-xs font-bold text-slate-800">{name}</div><p className="mt-1 truncate text-[10px] text-slate-500">{item.lastMessage || 'Démarrer la conversation'}</p></div><span className="text-[9px] text-slate-400">{formatTime(item.updatedAt)}</span></button>; })}
+          {filtered.map(item => { const other = item.members.find(member => member !== uid) || ''; const name = item.title || item.memberNames?.[other] || acceptedFriends.find(friend => friend.uid === other)?.name || `Trader ${other.slice(0, 7)}`; return <button key={item.id} onClick={() => { void openInboxConversation(item); }} className={`flex w-full items-center gap-3 border-b border-slate-50 px-4 py-3.5 text-left hover:bg-slate-50 ${activeId === item.id ? 'bg-[#f0fbf7]' : ''}`}><div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-emerald-100 text-xs font-black text-emerald-700">{item.avatarURL ? <img src={item.avatarURL} alt={name} className="h-full w-full object-cover" /> : name.slice(0, 2).toUpperCase()}</div><div className="min-w-0 flex-1"><div className="truncate text-xs font-bold text-slate-800">{name}</div><p className="mt-1 truncate text-[10px] text-slate-500">{item.lastMessage || 'Démarrer la conversation'}</p></div><span className="text-[9px] text-slate-400">{formatTime(item.updatedAt)}</span></button>; })}
         </div>
         <div className="flex items-center gap-2 border-t border-slate-100 bg-slate-50/70 px-4 py-3"><div className="h-8 w-8 overflow-hidden rounded-full bg-[#0b1f35] text-center text-[10px] font-black leading-8 text-white">{(userProfile?.avatarURL || userProfile?.photoURL) ? <img src={userProfile.avatarURL || userProfile.photoURL} alt="Mon avatar" className="h-full w-full object-cover" /> : (userProfile?.displayName || 'IT').slice(0, 2).toUpperCase()}</div><div className="min-w-0 flex-1"><p className="truncate text-[11px] font-bold text-slate-800">{userProfile?.displayName || 'Mon espace trader'}</p><p className="text-[9px] text-slate-400">Connecté à IAMTRADER</p></div></div>
       </aside>
       <section className={`${mobileChatOpen ? 'flex' : 'hidden md:flex'} min-w-0 flex-1 flex-col bg-[#f7faf9]`}>
-        <header className="flex items-center gap-3 border-b border-slate-200 bg-white px-3 py-3 sm:px-5"><button onClick={closeMobileChat} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 md:hidden" aria-label="Retour"><ArrowLeft className="h-4 w-4" /></button><div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-emerald-100 text-xs font-black text-emerald-700">{active?.avatarURL ? <img src={active.avatarURL} alt={activeName} className="h-full w-full object-cover" /> : activeName.slice(0, 2).toUpperCase()}</div><div className="min-w-0 flex-1"><h3 className="truncate text-sm font-extrabold text-[#0b1f35]">{activeName}</h3><p className="text-[10px] text-slate-500">{active?.description || (active ? (active.group ? 'Groupe communautaire' : 'Conversation privée') : 'Sélectionnez une discussion')}</p></div>{active?.id === 'community-hub' && userProfile?.role === 'admin' && <button onClick={openGroupSettings} className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"><Settings className="h-4 w-4" /><span className="hidden sm:inline">Paramètres</span></button>}</header>
+        {active && <header className="flex items-center gap-3 border-b border-slate-200 bg-white px-3 py-3 sm:px-5"><button onClick={closeMobileChat} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 md:hidden" aria-label="Retour"><ArrowLeft className="h-4 w-4" /></button><div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-emerald-100 text-xs font-black text-emerald-700">{active?.avatarURL ? <img src={active.avatarURL} alt={activeName} className="h-full w-full object-cover" /> : activeName.slice(0, 2).toUpperCase()}</div><div className="min-w-0 flex-1"><h3 className="truncate text-sm font-extrabold text-[#0b1f35]">{activeName}</h3><p className="text-[10px] text-slate-500">{active?.description || (active ? (active.group ? 'Groupe communautaire' : 'Conversation privée') : 'Sélectionnez une discussion')}</p></div>{active?.id === 'community-hub' && userProfile?.role === 'admin' && <button onClick={openGroupSettings} className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"><Settings className="h-4 w-4" /><span className="hidden sm:inline">Paramètres</span></button>}</header>
         {showGroupSettings && <div className="border-b border-emerald-100 bg-emerald-50/50 p-4"><div className="mx-auto max-w-xl rounded-xl border border-slate-200 bg-white p-4 shadow-sm"><div className="mb-3 flex items-center justify-between"><h4 className="text-sm font-extrabold text-slate-800">Paramètres de Community Hub</h4><button onClick={() => setShowGroupSettings(false)} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100"><X className="h-4 w-4" /></button></div><div className="space-y-3"><label className="block text-xs font-semibold text-slate-600">Nom du groupe<input value={groupTitleDraft} onChange={e => setGroupTitleDraft(e.target.value)} maxLength={60} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800" /></label><label className="block text-xs font-semibold text-slate-600">Description<input value={groupDescriptionDraft} onChange={e => setGroupDescriptionDraft(e.target.value)} maxLength={300} placeholder="Présentation du groupe" className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800" /></label><label className="block text-xs font-semibold text-slate-600">URL de l’avatar du groupe<input value={groupAvatarDraft} onChange={e => setGroupAvatarDraft(e.target.value)} placeholder="https://..." className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800" /></label><div className="flex justify-end gap-2"><button onClick={() => setShowGroupSettings(false)} className="rounded-lg border border-slate-200 px-3 py-2 text-xs">Annuler</button><button onClick={() => void saveGroupSettings()} disabled={savingGroupSettings} className="flex items-center gap-2 rounded-lg bg-[#00a982] px-3 py-2 text-xs font-bold text-white"><Save className="h-3.5 w-3.5" />{savingGroupSettings ? 'Enregistrement…' : 'Enregistrer'}</button></div></div></div></div>}
         {error && <div className="flex items-start gap-2 border-b border-rose-100 bg-rose-50 px-4 py-2 text-[10px] text-rose-700"><span className="flex-1 break-words">{error}</span><button onClick={() => setError('')} aria-label="Fermer"><X className="h-3.5 w-3.5" /></button></div>}
         <div className="piptalk-chat-wallpaper relative flex-1 space-y-2 overflow-y-auto px-2 py-3 sm:space-y-3 sm:px-6 sm:py-5">
@@ -483,7 +567,7 @@ export function ChatView({ userProfile, initialConversationId }: { userProfile: 
             </React.Fragment>; })}
           <div ref={bottomRef} />
         </div>
-        <footer className="border-t border-slate-200 bg-white px-2 py-2 sm:px-4 sm:py-3">
+        {active && <footer className="border-t border-slate-200 bg-white px-2 py-2 sm:px-4 sm:py-3">
       {replyTo && <div className="mb-2 flex items-center gap-2 rounded-xl border-l-4 border-emerald-500 bg-emerald-50 px-3 py-2"><Reply className="h-4 w-4 shrink-0 text-emerald-700" /><div className="min-w-0 flex-1"><p className="text-[10px] font-bold text-emerald-800">Réponse à {replyTo.senderName || (replyTo.senderId === uid ? 'vous' : 'ce message')}</p><p className="truncate text-[11px] text-slate-600">{replyTo.type === 'image' ? 'Image' : replyTo.type === 'voice' ? 'Message vocal' : replyTo.text}</p></div><button onClick={() => setReplyTo(null)} aria-label="Annuler la réponse" className="rounded-lg p-1 text-slate-500 hover:bg-white"><X className="h-4 w-4" /></button></div>}
       {editingId && <div className="mb-2 flex items-center justify-between rounded-lg bg-amber-50 px-3 py-2 text-[10px] text-amber-800"><span className="flex items-center gap-1.5"><Pencil className="h-3 w-3" />Modification du message</span><button onClick={() => { setEditingId(null); setDraft(''); }}><X className="h-3.5 w-3.5" /></button></div>}
       {pendingVoice && pendingVoiceUrl ? <div className="flex items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-2.5">
