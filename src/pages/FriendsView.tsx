@@ -87,8 +87,21 @@ export function FriendsView({ userProfile }: { userProfile: UserProfile | null }
     getDocs(collection(db, 'publicProfiles')).then(snapshot => {
       if (!active) return;
       const profiles = snapshot.docs
-        .map(item => ({ uid: item.id, ...item.data() } as Profile))
-        .filter(profile => profile.uid !== uid && typeof profile.displayName === 'string' && profile.displayName.trim().length > 0)
+        .map(item => {
+          const data = item.data() as Record<string, unknown>;
+          const displayName = [data.displayName, data.username, data.name, data.email]
+            .find(value => typeof value === 'string' && value.trim().length > 0);
+          const resolvedName = typeof displayName === 'string'
+            ? (displayName.includes('@') ? displayName.split('@')[0] : displayName).trim()
+            : '';
+          return {
+            uid: item.id,
+            displayName: resolvedName || `Trader ${item.id.slice(0, 7)}`,
+            avatarURL: typeof data.avatarURL === 'string' ? data.avatarURL : typeof data.photoURL === 'string' ? data.photoURL : typeof data.photoUrl === 'string' ? data.photoUrl : undefined,
+            photoURL: typeof data.photoURL === 'string' ? data.photoURL : undefined
+          } as Profile;
+        })
+        .filter(profile => profile.uid !== uid)
         .sort((a, b) => a.displayName.localeCompare(b.displayName));
       setAllProfiles(profiles);
       console.info('[FriendsView] Annuaire des traders chargé', { uid, count: profiles.length });
