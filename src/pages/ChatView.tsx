@@ -27,11 +27,11 @@ const formatDay = (value?: Timestamp | null) => value?.toDate
   ? value.toDate().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
   : '';
 
-export function ChatView({ userProfile }: { userProfile: UserProfile | null }) {
+export function ChatView({ userProfile, initialConversationId }: { userProfile: UserProfile | null; initialConversationId?: string }) {
   const uid = auth.currentUser?.uid || userProfile?.uid;
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [activeId, setActiveId] = useState('');
+  const [activeId, setActiveId] = useState(initialConversationId || '');
   const [draft, setDraft] = useState('');
   const [queryText, setQueryText] = useState('');
   const [targetUid, setTargetUid] = useState('');
@@ -79,6 +79,12 @@ export function ChatView({ userProfile }: { userProfile: UserProfile | null }) {
       console.warn('PipTalk mentions: impossible de charger les profils publics.', err);
     });
   }, [uid]);
+
+  useEffect(() => {
+    if (!initialConversationId) return;
+    setActiveId(initialConversationId);
+    setMobileChatOpen(true);
+  }, [initialConversationId]);
 
   // Community Hub is a system group available to every authenticated user.
   useEffect(() => {

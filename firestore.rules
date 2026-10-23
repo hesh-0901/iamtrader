@@ -50,6 +50,43 @@ service cloud.firestore {
       allow delete: if isOwner(userId);
     }
 
+    // Public trader directory: expose only profile-card fields, never private user documents.
+    // Each authenticated user can publish/update only their own public profile.
+    match /publicProfiles/{profileId} {
+      allow read: if isAuthenticated();
+      allow create, update: if isOwner(profileId)
+        && request.resource.data.uid == profileId
+        && request.resource.data.keys().hasOnly([
+          'uid', 'displayName', 'username', 'avatarURL', 'photoURL', 'updatedAt'
+        ]);
+      allow delete: if isOwner(profileId);
+    }
+
+    // Friend requests are visible only to their sender and receiver.
+    match /friendRequests/{requestId} {
+      allow read: if isAuthenticated()
+        && (resource.data.senderId == request.auth.uid
+          || resource.data.receiverId == request.auth.uid);
+      allow create: if isAuthenticated()
+        && request.resource.data.senderId == request.auth.uid
+        && request.resource.data.receiverId is string
+        && request.resource.data.receiverId != request.auth.uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.keys().hasOnly([
+          'senderId', 'receiverId', 'status', 'senderName', 'receiverName',
+          'createdAt', 'updatedAt'
+        ]);
+      allow update: if isAuthenticated()
+        && resource.data.receiverId == request.auth.uid
+        && resource.data.status == 'pending'
+        && request.resource.data.senderId == resource.data.senderId
+        && request.resource.data.receiverId == resource.data.receiverId
+        && request.resource.data.status in ['accepted', 'rejected']
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'updatedAt']);
+      allow delete: if false;
+    }
+
     // PipTalk conversations. Community Hub is a fixed system group for all signed-in users.
     match /conversations/{conversationId} {
       function isConversationMember() {

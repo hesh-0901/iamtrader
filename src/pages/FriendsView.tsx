@@ -9,7 +9,7 @@ type Request = { id: string; senderId: string; receiverId: string; status: strin
 
 type Tab = 'discover' | 'requests' | 'friends';
 
-export function FriendsView({ userProfile }: { userProfile: UserProfile | null }) {
+export function FriendsView({ userProfile, onOpenChat }: { userProfile: UserProfile | null; onOpenChat?: (conversationId: string) => void }) {
   const uid = auth.currentUser?.uid || userProfile?.uid || '';
   const [tab, setTab] = useState<Tab>('discover');
   const [term, setTerm] = useState('');
@@ -206,34 +206,53 @@ export function FriendsView({ userProfile }: { userProfile: UserProfile | null }
 
   const chat = async (request: Request) => {
     const otherUid = request.senderId === uid ? request.receiverId : request.senderId;
+    if (!uid || !otherUid) { setError('Impossible d’identifier les participants.'); return; }
     const members = [uid, otherUid].sort();
     const conversationId = 'dm_' + members.join('_');
     setBusy(request.id); setError(''); setNotice('');
-    console.info('[FriendsView] Création de conversation démarrée', { uid: uid || null, otherUid, conversationId });
+    console.info('[FriendsView] Ouverture de conversation démarrée', { uid, otherUid });
     try {
-      const conversationRef = doc(db, 'conversations', conversationId);
-      const conversationSnapshot = await getDoc(conversationRef);
+      // Query conversations the current user is allowed to read. Avoid getDoc on
+      // a missing DM document, which can be rejected by membership-based rules.
+      const snapshot = await getDocs(query(
+        collection(db, 'conversations'),
+        where('members', 'array-contains', uid)
+      ));
+      const existing = snapshot.docs
+        .map(item => ({ id: item.id, ...item.data() } as { id: string; members: string[]; group?: boolean; memberNames?: Record<string, string> }))
+        .find(item => item.id !== 'community-hub'
+          && item.group !== true
+          && item.members?.length === 2
+          && item.members.includes(uid)
+          && item.members.includes(otherUid));
       const memberNames = {
-        [uid]: userProfile?.displayName || 'Trader',
-        [otherUid]: request.senderId === uid ? request.receiverName || 'Trader' : request.senderName || 'Trader'
+        ...(existing?.memberNames || {}),
+        [uid]: userProfile?.displayName || auth.currentUser?.displayName || 'Trader',
+        [otherUid]: request.senderId === uid
+          ? request.receiverName || 'Trader'
+          : request.senderName || 'Trader'
       };
-
-      if (conversationSnapshot.exists()) {
-        // Keep immutable fields (members and createdBy) unchanged on an existing DM.
-        await updateDoc(conversationRef, {
-          memberNames: { ...conversationSnapshot.data().memberNames, ...memberNames },
+      let targetConversationId = existing?.id || conversationId;
+      if (existing) {
+        await updateDoc(doc(db, 'conversations', existing.id), {
+          memberNames,
           updatedAt: serverTimestamp()
         });
       } else {
-        await setDoc(conversationRef, {
+        await setDoc(doc(db, 'conversations', conversationId), {
           members, group: false, createdBy: uid, memberNames,
           lastMessage: '', createdAt: serverTimestamp(), updatedAt: serverTimestamp()
         });
       }
-      setNotice('Conversation prête. Ouvrez PipTalk pour discuter.');
+      setNotice('Conversation ouverte dans PipTalk.');
+      onOpenChat?.(targetConversationId);
     } catch (err: any) {
-      console.error('[FriendsView] Échec de création de conversation', { uid: uid || null, otherUid, conversationId, code: err?.code || null, message: err?.message || String(err), error: err });
-      setError(err?.message || 'Création du chat impossible.');
+      console.error('[FriendsView] Échec de l’ouverture de conversation', {
+        uid, otherUid, code: err?.code || null, message: err?.message || String(err), error: err
+      });
+      setError(err?.code === 'permission-denied'
+        ? 'Accès refusé par Firestore. Vérifiez les règles des conversations.'
+        : err?.message || 'Ouverture du chat impossible.');
     } finally { setBusy(''); }
   };
 
@@ -264,7 +283,7 @@ export function FriendsView({ userProfile }: { userProfile: UserProfile | null }
         {allProfiles.length ? <div className="divide-y divide-slate-100">{allProfiles.map(profile => <div key={profile.uid} className="flex min-w-0 items-center gap-3 px-3 py-3 sm:px-4"><img src={profile.avatarURL || profile.photoURL || '/brand/logo-iamtrader-symbol.png'} alt="" className="h-10 w-10 shrink-0 rounded-full border border-slate-100 object-cover" onError={event => { event.currentTarget.onerror = null; event.currentTarget.src = '/brand/logo-iamtrader-symbol.png'; }} /><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold text-slate-900">{profile.displayName}</p><p className="mt-0.5 text-[10px] text-slate-400">Trader IAMTRADER</p></div>{isFriend(profile.uid) ? <span className="rounded-full bg-emerald-50 px-2.5 py-2 text-[10px] font-bold text-emerald-700">Ami</span> : hasPending(profile.uid) ? <span className="rounded-full bg-slate-100 px-2.5 py-2 text-[10px] text-slate-500">En attente</span> : <button type="button" onClick={() => setConfirmFriend(profile)} className="flex shrink-0 items-center gap-1 rounded-xl border border-emerald-200 px-3 py-2.5 text-[10px] font-bold text-emerald-700"><UserPlus className="h-3.5 w-3.5" />Ajouter</button>}</div>)}</div> : <button type="button" onClick={() => setSearchOpen(true)} className="flex min-h-40 w-full flex-col items-center justify-center px-5 py-8 text-center"><div className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-500"><Search className="h-5 w-5" /></div><p className="mt-3 text-sm font-bold text-slate-800">Découvrir les traders</p><p className="mt-1 text-xs text-slate-500">Les profils publiés sur IAMTRADER apparaîtront ici.</p></button>}
       </section>}
       {tab === 'requests' && <section className="min-h-[55vh] flex-1 overflow-y-auto bg-white sm:flex-none sm:rounded-2xl sm:border sm:border-slate-200/80 sm:shadow-sm"><div className="border-b border-slate-100 px-4 py-3"><h2 className="text-sm font-extrabold text-slate-900">Demandes reçues</h2><p className="mt-0.5 text-[11px] text-slate-500">{received.length} en attente</p></div><div className="divide-y divide-slate-100">{received.map(request => <div key={request.id} className="flex items-center gap-3 px-3 py-3.5"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-bold text-slate-600">{(request.senderName || 'T').slice(0,1).toUpperCase()}</div><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold text-slate-900">{request.senderName || 'Trader'}</p><p className="mt-0.5 text-[10px] text-slate-400">Demande d’amitié</p></div><button type="button" onClick={() => void respond(request,'accepted')} disabled={!!busy} className="flex items-center gap-1 rounded-xl bg-emerald-600 px-3 py-2.5 text-[10px] font-bold text-white">{busy===request.id?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<Check className="h-3.5 w-3.5"/>}Accepter</button><button type="button" onClick={() => void respond(request,'rejected')} disabled={!!busy} aria-label="Refuser" className="rounded-xl border border-slate-200 p-2.5 text-slate-500"><X className="h-4 w-4"/></button></div>)}{!received.length && <div className="px-5 py-12 text-center"><CheckCircle2 className="mx-auto h-7 w-7 text-slate-300"/><p className="mt-2 text-sm font-bold text-slate-700">Aucune demande en attente</p><p className="mt-1 text-xs text-slate-400">Les nouvelles demandes apparaîtront ici.</p></div>}</div>{sentPending.length>0 && <div className="border-t border-slate-100 px-4 py-3"><p className="mb-2 text-[11px] font-bold text-slate-500">Demandes envoyées ({sentPending.length})</p>{sentPending.map(request=><div key={request.id} className="flex justify-between gap-3 py-2"><span className="truncate text-xs font-semibold text-slate-700">{request.receiverName||'Trader'}</span><span className="text-[10px] text-amber-700">En attente</span></div>)}</div>}</section>}
-      {tab === 'friends' && <section className="min-h-[55vh] flex-1 overflow-y-auto bg-white sm:flex-none sm:rounded-2xl sm:border sm:border-slate-200/80 sm:shadow-sm"><div className="border-b border-slate-100 px-4 py-3"><h2 className="text-sm font-extrabold text-slate-900">Mes amis</h2><p className="mt-0.5 text-[11px] text-slate-500">{acceptedRequests.length} dans votre réseau</p></div><div className="divide-y divide-slate-100">{acceptedRequests.map(request=>{const otherUid=request.senderId===uid?request.receiverId:request.senderId;return <div key={otherUid} className="flex items-center gap-3 px-3 py-3.5"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-50 text-sm font-extrabold text-emerald-800">{profileName(request).slice(0,2).toUpperCase()}</div><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold text-slate-900">{profileName(request)}</p><p className="mt-0.5 text-[10px] text-slate-400">Dans votre réseau</p></div><button type="button" onClick={()=>void chat(request)} disabled={!!busy} className="flex items-center gap-1.5 rounded-xl bg-slate-900 px-3 py-2.5 text-[10px] font-bold text-white">{busy===request.id?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<MessageCircle className="h-3.5 w-3.5"/>}Discuter</button></div>})}{!acceptedRequests.length&&<div className="px-5 py-12 text-center"><Users className="mx-auto h-7 w-7 text-slate-300"/><p className="mt-2 text-sm font-bold text-slate-700">Votre réseau est vide</p><p className="mt-1 text-xs text-slate-400">Découvrez un trader pour commencer.</p><button type="button" onClick={()=>setTab('discover')} className="mt-3 rounded-xl bg-emerald-600 px-3.5 py-2.5 text-xs font-bold text-white">Découvrir <ChevronRight className="inline h-4 w-4"/></button></div>}</div></section>}
+      {tab === 'friends' && <section className="min-h-[55vh] flex-1 overflow-y-auto bg-white sm:flex-none sm:rounded-2xl sm:border sm:border-slate-200/80 sm:shadow-sm"><div className="border-b border-slate-100 px-4 py-3"><h2 className="text-sm font-extrabold text-slate-900">Mes amis</h2><p className="mt-0.5 text-[11px] text-slate-500">{acceptedRequests.length} dans votre réseau</p></div><div className="divide-y divide-slate-100">{acceptedRequests.map(request=>{const otherUid=request.senderId===uid?request.receiverId:request.senderId;return <div key={otherUid} className="flex items-center gap-3 px-3 py-3.5"><img src={allProfiles.find(profile => profile.uid === otherUid)?.avatarURL || allProfiles.find(profile => profile.uid === otherUid)?.photoURL || '/brand/logo-iamtrader-symbol.png'} alt="" onError={event => { event.currentTarget.onerror = null; event.currentTarget.src = '/brand/logo-iamtrader-symbol.png'; }} className="h-10 w-10 shrink-0 rounded-full border border-slate-100 object-cover" /><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold text-slate-900">{profileName(request)}</p><p className="mt-0.5 text-[10px] text-slate-400">Dans votre réseau</p></div><button type="button" onClick={()=>void chat(request)} disabled={!!busy} className="flex items-center gap-1.5 rounded-xl bg-slate-900 px-3 py-2.5 text-[10px] font-bold text-white">{busy===request.id?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<MessageCircle className="h-3.5 w-3.5"/>}Discuter</button></div>})}{!acceptedRequests.length&&<div className="px-5 py-12 text-center"><Users className="mx-auto h-7 w-7 text-slate-300"/><p className="mt-2 text-sm font-bold text-slate-700">Votre réseau est vide</p><p className="mt-1 text-xs text-slate-400">Découvrez un trader pour commencer.</p><button type="button" onClick={()=>setTab('discover')} className="mt-3 rounded-xl bg-emerald-600 px-3.5 py-2.5 text-xs font-bold text-white">Découvrir <ChevronRight className="inline h-4 w-4"/></button></div>}</div></section>}
       {searchOpen && <div className="fixed inset-0 z-[130] flex items-end justify-center bg-slate-950/45 p-0 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="trader-search-title" onMouseDown={event=>{if(event.target===event.currentTarget)setSearchOpen(false)}}>
         <div className="flex max-h-[100dvh] w-full flex-col overflow-hidden bg-white pb-[env(safe-area-inset-bottom)] shadow-2xl sm:max-h-[min(80dvh,680px)] sm:max-w-lg sm:rounded-3xl">
           <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-4 py-3.5"><div><h2 id="trader-search-title" className="text-base font-extrabold text-slate-900">Rechercher un trader</h2><p className="mt-0.5 text-xs text-slate-500">Entrez au moins deux caractères.</p></div><button type="button" onClick={()=>setSearchOpen(false)} aria-label="Fermer la recherche" className="rounded-full bg-slate-100 p-2.5"><X className="h-4 w-4"/></button></div>

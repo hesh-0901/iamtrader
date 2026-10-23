@@ -11,6 +11,11 @@ type CommunityTab = 'home' | 'chat' | 'friends' | 'calendar' | 'courses' | 'anal
 
 export function CommunityView({ userProfile }: { userProfile: UserProfile | null }) {
   const [activeTab, setActiveTab] = useState<CommunityTab>('home');
+  const [pendingChatId, setPendingChatId] = useState('');
+  const openChat = (conversationId: string) => {
+    setPendingChatId(conversationId);
+    setActiveTab('chat');
+  };
   const isAdmin = userProfile?.role === 'admin';
 
   const tabs = [
@@ -92,8 +97,8 @@ export function CommunityView({ userProfile }: { userProfile: UserProfile | null
 
       {activeTab === 'calendar' && <EconomicCalendarView />}
 
-      {activeTab === 'chat' && <ChatView userProfile={userProfile} />}
-      {activeTab === 'friends' && <FriendsView userProfile={userProfile} />}
+      {activeTab === 'chat' && <ChatView userProfile={userProfile} initialConversationId={pendingChatId} />}
+      {activeTab === 'friends' && <FriendsView userProfile={userProfile} onOpenChat={openChat} />}
       {activeTab === 'courses' && <CourseSpace isAdmin={isAdmin} />}
       {activeTab === 'analysis' && (
         <AnalysisAdminPanel isAdmin={isAdmin} />
