@@ -29,7 +29,8 @@ import { AuthModal } from './components/auth/AuthModal';
 import { ShieldAlert, LogOut, Loader2, Menu } from 'lucide-react';
 import { syncSubscriptionStatus } from './services/payments';
 import { watchDeviceSession } from './services/deviceSessions';
-import { authPersistenceReady } from './firebase/config';
+import { authPersistenceReady, db } from './firebase/config';
+import { doc, serverTimestamp, setDoc } from 'firebase/firestore';
 
 function MainAppContent() {
   const { showToast } = useToast();
@@ -128,6 +129,21 @@ function MainAppContent() {
       unsubscribe?.();
     };
   }, []);
+
+  // Publier un profil minimal pour permettre aux autres traders de nous mentionner dans PipTalk.
+  useEffect(() => {
+    if (!currentUser || !userProfile) return;
+    const displayName = userProfile.displayName?.trim() || currentUser.displayName?.trim() || currentUser.email?.split('@')[0] || 'Trader';
+    const avatarURL = userProfile.avatarURL || userProfile.photoURL || currentUser.photoURL || '';
+    void setDoc(doc(db, 'publicProfiles', currentUser.uid), {
+      uid: currentUser.uid,
+      displayName,
+      avatarURL,
+      updatedAt: serverTimestamp()
+    }, { merge: true }).catch(error => {
+      console.warn('Public trader profile sync notice:', error?.message || error);
+    });
+  }, [currentUser, userProfile]);
 
   // Keep a device session registered and immediately sign out if its access is revoked.
   useEffect(() => {
