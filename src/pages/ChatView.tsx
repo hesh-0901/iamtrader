@@ -83,15 +83,18 @@ export function ChatView({ userProfile }: { userProfile: UserProfile | null }) {
   // Community Hub is a system group available to every authenticated user.
   useEffect(() => {
     if (!uid) { setLoadingChats(false); return; }
-    const q = query(collection(db, 'conversations'), where('members', 'array-contains', uid), orderBy('updatedAt', 'desc'));
+    const q = query(collection(db, 'conversations'), where('members', 'array-contains', uid));
     return onSnapshot(q, snapshot => {
-      const personal = snapshot.docs.map(item => ({ id: item.id, ...item.data() } as ChatConversation));
+      const personal = snapshot.docs
+        .map(item => ({ id: item.id, ...item.data() } as ChatConversation))
+        .sort((a, b) => (b.updatedAt?.toMillis?.() || b.createdAt?.toMillis?.() || 0) - (a.updatedAt?.toMillis?.() || a.createdAt?.toMillis?.() || 0));
+      console.debug('[PipTalk] Conversations chargées', { uid, count: personal.length, ids: personal.map(item => item.id) });
       setConversations(previous => {
         const hub = previous.find(item => item.id === 'community-hub');
         return [...personal.filter(item => item.id !== 'community-hub'), ...(hub ? [hub] : [])];
       });
       setLoadingChats(false);
-    }, err => { setError(err.message); setLoadingChats(false); });
+    }, err => { console.error('[PipTalk] Lecture des conversations refusée', { uid, code: err.code, message: err.message }); setError(err.message); setLoadingChats(false); });
   }, [uid]);
 
   useEffect(() => {
@@ -121,11 +124,15 @@ export function ChatView({ userProfile }: { userProfile: UserProfile | null }) {
   useEffect(() => {
     if (!uid || !activeId) { setMessages([]); return; }
     setLoadingMessages(true);
-    const q = query(collection(db, 'conversations', activeId, 'messages'), orderBy('createdAt', 'asc'));
+    const q = collection(db, 'conversations', activeId, 'messages');
     return onSnapshot(q, snapshot => {
-      setMessages(snapshot.docs.map(item => ({ id: item.id, ...item.data() } as ChatMessage)));
+      const loadedMessages = snapshot.docs
+        .map(item => ({ id: item.id, ...item.data() } as ChatMessage))
+        .sort((a, b) => (a.createdAt?.toMillis?.() || 0) - (b.createdAt?.toMillis?.() || 0));
+      console.debug('[PipTalk] Messages chargés', { uid, conversationId: activeId, count: loadedMessages.length });
+      setMessages(loadedMessages);
       setLoadingMessages(false);
-    }, err => { setError(err.message); setLoadingMessages(false); });
+    }, err => { console.error('[PipTalk] Lecture des messages refusée', { uid, conversationId: activeId, code: err.code, message: err.message }); setError(err.message); setLoadingMessages(false); });
   }, [uid, activeId]);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
