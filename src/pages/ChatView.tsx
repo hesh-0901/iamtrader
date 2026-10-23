@@ -251,10 +251,6 @@ export function ChatView({ userProfile, initialConversationId }: { userProfile: 
     const name = item.title || item.memberNames?.[other] || acceptedFriends.find(friend => friend.uid === other)?.name || other;
     return name.toLowerCase().includes(queryText.toLowerCase()) || other.toLowerCase().includes(queryText.toLowerCase()) || (item.lastMessage || '').toLowerCase().includes(queryText.toLowerCase());
   }), [inboxItems, acceptedFriends, queryText, uid]);
-    const other = item.members.find(member => member !== uid) || '';
-    const name = item.title || item.memberNames?.[other] || other;
-    return name.toLowerCase().includes(queryText.toLowerCase()) || other.toLowerCase().includes(queryText.toLowerCase()) || (item.lastMessage || '').toLowerCase().includes(queryText.toLowerCase());
-  }), [conversations, queryText, uid]);
 
   const closeMobileChat = () => {
     if (mobileCloseTimerRef.current) clearTimeout(mobileCloseTimerRef.current);
