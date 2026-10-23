@@ -26,6 +26,7 @@ export function FriendsView({ userProfile }: { userProfile: UserProfile | null }
   const [confirmFriend, setConfirmFriend] = useState<Profile | null>(null);
 
   useEffect(() => {
+    console.info('[FriendsView] Initialisation des abonnements Firestore', { uid: uid || null, authenticated: !!auth.currentUser });
     if (!uid) {
       setError('Aucun utilisateur connecté : UID absent.');
       return;
@@ -34,6 +35,7 @@ export function FriendsView({ userProfile }: { userProfile: UserProfile | null }
     const a = onSnapshot(
       query(collection(db, 'friendRequests'), where('receiverId', '==', uid)),
       snapshot => {
+        console.debug('[FriendsView] Demandes reçues chargées', { uid, count: snapshot.size });
         setIncoming(snapshot.docs.map(item => ({
           id: item.id,
           ...item.data()
@@ -52,6 +54,7 @@ export function FriendsView({ userProfile }: { userProfile: UserProfile | null }
     const b = onSnapshot(
       query(collection(db, 'friendRequests'), where('senderId', '==', uid)),
       snapshot => {
+        console.debug('[FriendsView] Demandes envoyées chargées', { uid, count: snapshot.size });
         setOutgoing(snapshot.docs.map(item => ({
           id: item.id,
           ...item.data()
@@ -68,6 +71,7 @@ export function FriendsView({ userProfile }: { userProfile: UserProfile | null }
     );
 
     return () => {
+      console.debug('[FriendsView] Arrêt des abonnements Firestore', { uid });
       a();
       b();
     };
@@ -97,13 +101,16 @@ export function FriendsView({ userProfile }: { userProfile: UserProfile | null }
     setNotice('');
     setSearching(true);
     setHasSearched(true);
+    console.info('[FriendsView] Recherche de traders démarrée', { uid: uid || null, termLength: normalizedTerm.length });
     try {
       const snapshot = await getDocs(collection(db, 'publicProfiles'));
+      console.info('[FriendsView] Profils publics chargés', { uid: uid || null, count: snapshot.size });
       setResults(snapshot.docs
         .map(item => ({ uid: item.id, ...item.data() } as Profile))
         .filter(profile => profile.uid !== uid && typeof profile.displayName === 'string' && profile.displayName.toLocaleLowerCase().includes(normalizedTerm))
         .slice(0, 30));
     } catch (err: any) {
+      console.error('[FriendsView] Échec de la recherche de traders', { uid: uid || null, code: err?.code || null, message: err?.message || String(err), error: err });
       setResults([]);
       setError(err?.code === 'permission-denied'
         ? 'Accès refusé par Firestore. Vérifiez la règle de lecture de publicProfiles.'
@@ -116,6 +123,7 @@ export function FriendsView({ userProfile }: { userProfile: UserProfile | null }
   const add = async (profile: Profile) => {
     if (!uid || !userProfile) { setError('Connectez-vous pour ajouter un trader.'); return; }
     setBusy(profile.uid); setError(''); setNotice('');
+    console.info('[FriendsView] Envoi/traitement de demande démarré', { uid: uid || null, targetUid: profile.uid });
     try {
       const reverseId = profile.uid + '_' + uid;
       const reverseSnapshot = await getDocs(query(collection(db, 'friendRequests'), where('__name__', '==', reverseId)));
@@ -132,16 +140,19 @@ export function FriendsView({ userProfile }: { userProfile: UserProfile | null }
       }
       setConfirmFriend(null);
     } catch (err: any) {
+      console.error('[FriendsView] Échec de l’envoi/traitement de demande', { uid: uid || null, targetUid: profile.uid, code: err?.code || null, message: err?.message || String(err), error: err });
       setError(err?.message || 'Envoi impossible.');
     } finally { setBusy(''); }
   };
 
   const respond = async (request: Request, status: 'accepted' | 'rejected') => {
     setBusy(request.id); setError(''); setNotice('');
+    console.info('[FriendsView] Réponse à une demande démarrée', { uid: uid || null, requestId: request.id, status });
     try {
       await updateDoc(doc(db, 'friendRequests', request.id), { status, updatedAt: serverTimestamp() });
       setNotice(status === 'accepted' ? 'Demande acceptée.' : 'Demande refusée.');
     } catch (err: any) {
+      console.error('[FriendsView] Échec de la réponse à une demande', { uid: uid || null, requestId: request.id, status, code: err?.code || null, message: err?.message || String(err), error: err });
       setError(err?.message || 'Action impossible.');
     } finally { setBusy(''); }
   };
@@ -151,6 +162,7 @@ export function FriendsView({ userProfile }: { userProfile: UserProfile | null }
     const members = [uid, otherUid].sort();
     const conversationId = 'dm_' + members.join('_');
     setBusy(request.id); setError(''); setNotice('');
+    console.info('[FriendsView] Création de conversation démarrée', { uid: uid || null, otherUid, conversationId });
     try {
       await setDoc(doc(db, 'conversations', conversationId), {
         members, group: false, createdBy: uid,
@@ -162,6 +174,7 @@ export function FriendsView({ userProfile }: { userProfile: UserProfile | null }
       }, { merge: true });
       setNotice('Conversation prête. Ouvrez PipTalk pour discuter.');
     } catch (err: any) {
+      console.error('[FriendsView] Échec de création de conversation', { uid: uid || null, otherUid, conversationId, code: err?.code || null, message: err?.message || String(err), error: err });
       setError(err?.message || 'Création du chat impossible.');
     } finally { setBusy(''); }
   };
