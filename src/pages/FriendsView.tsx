@@ -124,23 +124,35 @@ export function FriendsView({ userProfile }: { userProfile: UserProfile | null }
     if (!uid || !userProfile) { setError('Connectez-vous pour ajouter un trader.'); return; }
     setBusy(profile.uid); setError(''); setNotice('');
     console.info('[FriendsView] Envoi/traitement de demande démarré', { uid: uid || null, targetUid: profile.uid });
+    let stage = 'lecture_demande_reciproque';
     try {
-      const reverseId = profile.uid + '_' + uid;
-      const reverseSnapshot = await getDocs(query(collection(db, 'friendRequests'), where('__name__', '==', reverseId)));
-      if (!reverseSnapshot.empty && reverseSnapshot.docs[0].data().status === 'pending') {
-        await updateDoc(doc(db, 'friendRequests', reverseId), { status: 'accepted', updatedAt: serverTimestamp() });
+      // Constrain the query by the participant fields so Firestore rules can prove
+      // that the signed-in user is allowed to read the matching request.
+      const reverseSnapshot = await getDocs(query(
+        collection(db, 'friendRequests'),
+        where('senderId', '==', profile.uid),
+        where('receiverId', '==', uid)
+      ));
+      console.debug('[FriendsView] Vérification de la demande réciproque terminée', { uid, targetUid: profile.uid, count: reverseSnapshot.size });
+      const reverseRequest = reverseSnapshot.docs.find(item => item.id === profile.uid + '_' + uid);
+      if (reverseRequest && reverseRequest.data().status === 'pending') {
+        stage = 'acceptation_demande_reciproque';
+        await updateDoc(doc(db, 'friendRequests', reverseRequest.id), { status: 'accepted', updatedAt: serverTimestamp() });
+        console.info('[FriendsView] Demande réciproque acceptée', { uid, targetUid: profile.uid, requestId: reverseRequest.id });
         setNotice('La demande réciproque a été acceptée. Vous êtes maintenant amis.');
       } else {
+        stage = 'creation_demande';
         await setDoc(doc(db, 'friendRequests', uid + '_' + profile.uid), {
           senderId: uid, receiverId: profile.uid, status: 'pending',
           senderName: userProfile.displayName || 'Trader', receiverName: profile.displayName,
           createdAt: serverTimestamp(), updatedAt: serverTimestamp()
         });
+        console.info('[FriendsView] Demande envoyée avec succès', { uid, targetUid: profile.uid, requestId: uid + '_' + profile.uid });
         setNotice('Demande envoyée à ' + profile.displayName + '.');
       }
       setConfirmFriend(null);
     } catch (err: any) {
-      console.error('[FriendsView] Échec de l’envoi/traitement de demande', { uid: uid || null, targetUid: profile.uid, code: err?.code || null, message: err?.message || String(err), error: err });
+      console.error('[FriendsView] Échec de l’envoi/traitement de demande', { stage, uid: uid || null, targetUid: profile.uid, code: err?.code || null, message: err?.message || String(err), error: err });
       setError(err?.message || 'Envoi impossible.');
     } finally { setBusy(''); }
   };
