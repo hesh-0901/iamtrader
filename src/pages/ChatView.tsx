@@ -233,7 +233,6 @@ export function ChatView({ userProfile }: { userProfile: UserProfile | null }) {
     replyToSenderId: message.senderId,
     replyToSenderName: message.senderName?.trim() || (message.senderId === uid ? currentDisplayName : active?.memberNames?.[message.senderId] || `Trader ${message.senderId.slice(0, 7)}`),
     replyToText: message.type === 'image' ? '📷 Image' : message.type === 'voice' ? '🎤 Message vocal' : message.text.slice(0, 240),
-    replyToType: message.type || 'text'
   } : {};
 
   const handleDraftChange = (value: string) => {
