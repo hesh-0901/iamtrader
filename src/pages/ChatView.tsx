@@ -17,7 +17,7 @@ type ChatConversation = {
 };
 type ChatMessage = {
   id: string; senderId: string; text: string; createdAt?: Timestamp | null;
-  edited?: boolean; pinned?: boolean; type?: 'text' | 'image' | 'voice'; mediaUrl?: string; mediaName?: string; mediaPublicId?: string; mediaResourceType?: string; expiresAt?: Timestamp | null; duration?: number; senderName?: string; senderAvatarURL?: string; replyToId?: string; replyToSenderName?: string; replyToText?: string; replyToType?: 'text' | 'image' | 'voice';
+  edited?: boolean; pinned?: boolean; type?: 'text' | 'image' | 'voice'; mediaUrl?: string; mediaName?: string; mediaPublicId?: string; mediaResourceType?: string; expiresAt?: Timestamp | null; duration?: number; senderName?: string; senderAvatarURL?: string; mentions?: string[]; replyToId?: string; replyToMessageId?: string; replyToSenderId?: string; replyToSenderName?: string; replyToText?: string; replyToType?: 'text' | 'image' | 'voice';
 };
 
 const formatTime = (value?: Timestamp | null) => value?.toDate
@@ -63,6 +63,22 @@ export function ChatView({ userProfile }: { userProfile: UserProfile | null }) {
   const [savingGroupSettings, setSavingGroupSettings] = useState(false);
   const [viewerImage, setViewerImage] = useState<ChatMessage | null>(null);
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
+  const [publicProfiles, setPublicProfiles] = useState<Array<{ uid: string; displayName: string; avatarURL?: string }>>([]);
+  const [mentionUids, setMentionUids] = useState<string[]>([]);
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+
+  // Charger les profils publiés pour proposer les mentions @ dans le chat.
+  useEffect(() => {
+    if (!uid) { setPublicProfiles([]); return; }
+    return onSnapshot(collection(db, 'publicProfiles'), snapshot => {
+      setPublicProfiles(snapshot.docs
+        .map(item => ({ uid: item.id, ...item.data() } as { uid: string; displayName?: string; avatarURL?: string }))
+        .filter(item => item.uid !== uid && typeof item.displayName === 'string' && item.displayName.trim())
+        .map(item => ({ uid: item.uid, displayName: item.displayName!.trim(), avatarURL: item.avatarURL })));
+    }, err => {
+      console.warn('PipTalk mentions: impossible de charger les profils publics.', err);
+    });
+  }, [uid]);
 
   // Community Hub is a system group available to every authenticated user.
   useEffect(() => {
@@ -213,11 +229,30 @@ export function ChatView({ userProfile }: { userProfile: UserProfile | null }) {
   };
 
   const replyPayload = (message: ChatMessage | null) => message ? {
-    replyToId: message.id,
+    replyToMessageId: message.id,
+    replyToSenderId: message.senderId,
     replyToSenderName: message.senderName?.trim() || (message.senderId === uid ? currentDisplayName : active?.memberNames?.[message.senderId] || `Trader ${message.senderId.slice(0, 7)}`),
     replyToText: message.type === 'image' ? '📷 Image' : message.type === 'voice' ? '🎤 Message vocal' : message.text.slice(0, 240),
     replyToType: message.type || 'text'
   } : {};
+
+  const handleDraftChange = (value: string) => {
+    setDraft(value);
+    const match = value.match(/(?:^|\\s)@([^@\\s]*)$/);
+    setMentionQuery(match ? match[1].toLocaleLowerCase() : null);
+  };
+
+  const chooseMention = (profile: { uid: string; displayName: string }) => {
+    const match = draft.match(/(?:^|\\s)@([^@\\s]*)$/);
+    if (!match) return;
+    const start = match.index ?? 0;
+    const prefix = draft.slice(0, start);
+    const atOffset = match[0].lastIndexOf('@');
+    const nextDraft = prefix + match[0].slice(0, atOffset) + '@' + profile.displayName + ' ' + draft.slice(start + match[0].length);
+    setDraft(nextDraft);
+    setMentionUids(previous => previous.includes(profile.uid) ? previous : [...previous, profile.uid]);
+    setMentionQuery(null);
+  };
 
   const sendMedia = async (file: File, type: 'image' | 'voice', duration?: number) => {
     if (!uid || !activeId || uploadingMedia) return;
@@ -328,11 +363,13 @@ export function ChatView({ userProfile }: { userProfile: UserProfile | null }) {
           senderId: uid,
           senderName: currentDisplayName,
           senderAvatarURL: currentAvatar,
-          text, ...replyPayload(replyTo), pinned: false, edited: false, createdAt: serverTimestamp()
+          text, mentions: mentionUids, ...replyPayload(replyTo), pinned: false, edited: false, createdAt: serverTimestamp()
         });
         await updateDoc(doc(db, 'conversations', activeId), { lastMessage: text.slice(0, 500), [`memberNames.${uid}`]: currentDisplayName, updatedAt: serverTimestamp() });
       }
       setDraft('');
+      setMentionUids([]);
+      setMentionQuery(null);
       setReplyTo(null);
     } catch (err: any) { setError(err?.message || 'Échec de l’envoi du message.'); }
     finally { setSending(false); }
@@ -415,7 +452,7 @@ export function ChatView({ userProfile }: { userProfile: UserProfile | null }) {
                 <div onTouchStart={() => beginMessageLongPress(message.id)} onTouchEnd={cancelMessageLongPress} onTouchMove={cancelMessageLongPress} onContextMenu={event => { event.preventDefault(); setMenuMessage(message.id); }} className={`relative min-w-0 max-w-[82%] rounded-[18px] px-3 py-2.5 shadow-[0_2px_7px_rgba(15,23,42,0.045)] transition-shadow hover:shadow-md sm:max-w-[70%] sm:px-3.5 sm:py-2.5 ${mine ? 'rounded-br-[6px] border border-emerald-100 bg-gradient-to-br from-[#e5fbf2] to-[#d5f6e8] text-slate-800' : 'rounded-bl-[6px] border border-slate-200/80 bg-white text-slate-700'}`}>
                   {(active?.group || message.type === 'voice') && <div className={`mb-0.5 flex items-center gap-1.5 text-[10px] font-extrabold tracking-[-0.01em] ${mine ? 'text-emerald-800' : 'text-slate-800'}`}><span className="truncate">{senderName}</span>{mine && <span className="rounded-full bg-emerald-100/80 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-emerald-700">Vous</span>}</div>}
                   {message.pinned && <div className="mb-1 flex items-center gap-1 text-[9px] font-bold text-emerald-700"><Pin className="h-3 w-3" />Message épinglé</div>}
-                  {message.replyToId && <div className={`mb-1.5 flex max-w-full gap-1.5 rounded-lg border-l-[3px] px-2 py-1.5 text-left ${mine ? 'border-emerald-600 bg-emerald-100/70' : 'border-slate-400 bg-slate-50'}`}><Reply className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-700" /><div className="min-w-0"><p className="truncate text-[10px] font-bold text-slate-700">{message.replyToSenderName || 'Message cité'}</p><p className="truncate text-[11px] text-slate-500">{message.replyToText || 'Message'}</p></div></div>}
+                  {(message.replyToMessageId || message.replyToId) && <div className={`mb-1.5 flex max-w-full gap-1.5 rounded-lg border-l-[3px] px-2 py-1.5 text-left ${mine ? 'border-emerald-600 bg-emerald-100/70' : 'border-slate-400 bg-slate-50'}`}><Reply className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-700" /><div className="min-w-0"><p className="truncate text-[10px] font-bold text-slate-700">{message.replyToSenderName || 'Message cité'}</p><p className="truncate text-[11px] text-slate-500">{message.replyToText || 'Message'}</p></div></div>}
                   {message.expiresAt?.toDate && message.expiresAt.toDate().getTime() <= Date.now()
                     ? <p className="text-xs italic text-slate-400">Média expiré après 72 heures</p>
                     : message.type === 'image' && message.mediaUrl
@@ -443,7 +480,15 @@ export function ChatView({ userProfile }: { userProfile: UserProfile | null }) {
       </div> : recording ? <div className="flex items-center gap-3 rounded-2xl border border-rose-100 bg-rose-50/70 px-3 py-2.5"><span className="h-2.5 w-2.5 animate-pulse rounded-full bg-rose-500" /><span className="flex-1 text-xs font-medium text-slate-700">Enregistrement en cours…</span><button type="button" onClick={() => { if (recorderRef.current?.state === 'recording') { recorderRef.current.onstop = () => { recorderRef.current?.stream?.getTracks().forEach(track => track.stop()); }; recorderRef.current.stop(); } setRecording(false); recordingChunksRef.current = []; }} className="rounded-full px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-100">Annuler</button><button type="button" onClick={stopRecording} className="flex h-9 w-9 items-center justify-center rounded-full bg-rose-600 text-white" aria-label="Arrêter et préécouter"><Square className="h-4 w-4 fill-current" /></button></div> : <div className="flex items-end gap-2">
         <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={e => void handleFile(e.target.files?.[0])} />
         <button type="button" disabled={!active || uploadingMedia} onClick={() => fileInputRef.current?.click()} title="Envoyer une image" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-40"><ImageIcon className="h-4 w-4" /></button>
-        <textarea value={draft} onChange={e => setDraft(e.target.value)} onPaste={handlePaste} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void sendMessage(); } }} disabled={!active || sending} placeholder={active ? 'Écrire un message…' : 'Sélectionnez une discussion…'} rows={1} className="max-h-28 min-h-10 flex-1 resize-none rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs leading-5 text-slate-700 outline-none transition focus:border-emerald-300 focus:bg-white focus:ring-2 focus:ring-emerald-50 disabled:opacity-50" />
+        <div className="relative min-w-0 flex-1">
+          {mentionQuery !== null && publicProfiles.some(profile => profile.displayName.toLocaleLowerCase().includes(mentionQuery)) && <div className="absolute bottom-full left-0 z-30 mb-2 max-h-52 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+            {publicProfiles.filter(profile => profile.displayName.toLocaleLowerCase().includes(mentionQuery)).slice(0, 8).map(profile => <button key={profile.uid} type="button" onMouseDown={event => event.preventDefault()} onClick={() => chooseMention(profile)} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left hover:bg-emerald-50">
+              {profile.avatarURL ? <img src={profile.avatarURL} alt="" className="h-7 w-7 rounded-full object-cover" /> : <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-[10px] font-bold text-emerald-800">{profile.displayName.slice(0, 2).toUpperCase()}</span>}
+              <span className="min-w-0 flex-1 truncate text-xs font-semibold text-slate-700">{profile.displayName}</span><span className="text-[10px] text-emerald-700">@Mentionner</span>
+            </button>)}
+          </div>}
+          <textarea value={draft} onChange={e => handleDraftChange(e.target.value)} onPaste={handlePaste} onKeyDown={e => { if (e.key === 'Escape') setMentionQuery(null); if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (mentionQuery !== null) { setMentionQuery(null); return; } void sendMessage(); } }} disabled={!active || sending} placeholder={active ? 'Écrire… tapez @ pour mentionner' : 'Sélectionnez une discussion…'} rows={1} className="max-h-28 min-h-10 w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-xs leading-5 text-slate-700 outline-none transition focus:border-emerald-300 focus:bg-white focus:ring-2 focus:ring-emerald-50 disabled:opacity-50" />
+        </div>
         {draft.trim() ? <button onClick={() => void sendMessage()} disabled={!active || sending || uploadingMedia} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#00a982] text-white shadow-sm hover:bg-[#008f72] disabled:opacity-40" title="Envoyer">{sending || uploadingMedia ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}</button> : <button type="button" disabled={!active || uploadingMedia} onClick={() => void startRecording()} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500 transition hover:bg-emerald-50 hover:text-emerald-700 disabled:opacity-40" title="Enregistrer un vocal" aria-label="Enregistrer un vocal"><Mic className="h-4 w-4" /></button>}
       </div>}
       {!pendingVoice && !recording && <p className="mt-2 pl-2 text-[9px] text-slate-400">Entrée pour envoyer · Maj + Entrée pour un saut de ligne · Coller une image avec Ctrl+V</p>}
