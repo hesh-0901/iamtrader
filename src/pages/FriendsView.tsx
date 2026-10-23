@@ -84,7 +84,7 @@ export function FriendsView({ userProfile }: { userProfile: UserProfile | null }
     if (!uid) return;
     let active = true;
     console.info('[FriendsView] Chargement de l’annuaire des traders démarré', { uid });
-    getDocs(collection(db, 'publicProfiles')).then(snapshot => {
+    const unsubscribe = onSnapshot(collection(db, 'publicProfiles'), snapshot => {
       if (!active) return;
       const profiles = snapshot.docs
         .map(item => {
@@ -104,15 +104,15 @@ export function FriendsView({ userProfile }: { userProfile: UserProfile | null }
         .filter(profile => profile.uid !== uid)
         .sort((a, b) => a.displayName.localeCompare(b.displayName));
       setAllProfiles(profiles);
-      console.info('[FriendsView] Annuaire des traders chargé', { uid, count: profiles.length });
-    }).catch((err: any) => {
+      console.info('[FriendsView] Annuaire des traders chargé en temps réel', { uid, count: profiles.length });
+    }, (err: any) => {
       if (!active) return;
       console.error('[FriendsView] Échec du chargement de l’annuaire', { uid, code: err?.code || null, message: err?.message || String(err), error: err });
       setError(err?.code === 'permission-denied'
         ? 'Accès refusé par Firestore : vérifiez la règle de lecture de publicProfiles.'
         : 'Impossible de charger les traders. Réessayez.');
     });
-    return () => { active = false; };
+    return () => { active = false; unsubscribe(); };
   }, [uid]);
 
   const received = incoming.filter(item => item.status === 'pending');
