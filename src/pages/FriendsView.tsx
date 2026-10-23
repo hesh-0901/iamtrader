@@ -26,14 +26,51 @@ export function FriendsView({ userProfile }: { userProfile: UserProfile | null }
   const [confirmFriend, setConfirmFriend] = useState<Profile | null>(null);
 
   useEffect(() => {
-    if (!uid) return;
-    const a = onSnapshot(query(collection(db, 'friendRequests'), where('receiverId', '==', uid)), snapshot => {
-      setIncoming(snapshot.docs.map(item => ({ id: item.id, ...item.data() } as Request)));
-    }, err => setError(err.message));
-    const b = onSnapshot(query(collection(db, 'friendRequests'), where('senderId', '==', uid)), snapshot => {
-      setOutgoing(snapshot.docs.map(item => ({ id: item.id, ...item.data() } as Request)));
-    }, err => setError(err.message));
-    return () => { a(); b(); };
+    if (!uid) {
+      setError('Aucun utilisateur connecté : UID absent.');
+      return;
+    }
+
+    const a = onSnapshot(
+      query(collection(db, 'friendRequests'), where('receiverId', '==', uid)),
+      snapshot => {
+        setIncoming(snapshot.docs.map(item => ({
+          id: item.id,
+          ...item.data()
+        } as Request)));
+      },
+      err => {
+        console.error('[FriendsView] Lecture demandes reçues refusée', {
+          code: err.code,
+          message: err.message,
+          uid
+        });
+        setError(`Demandes reçues : ${err.code} — ${err.message}`);
+      }
+    );
+
+    const b = onSnapshot(
+      query(collection(db, 'friendRequests'), where('senderId', '==', uid)),
+      snapshot => {
+        setOutgoing(snapshot.docs.map(item => ({
+          id: item.id,
+          ...item.data()
+        } as Request)));
+      },
+      err => {
+        console.error('[FriendsView] Lecture demandes envoyées refusée', {
+          code: err.code,
+          message: err.message,
+          uid
+        });
+        setError(`Demandes envoyées : ${err.code} — ${err.message}`);
+      }
+    );
+
+    return () => {
+      a();
+      b();
+    };
   }, [uid]);
 
   const received = incoming.filter(item => item.status === 'pending');
