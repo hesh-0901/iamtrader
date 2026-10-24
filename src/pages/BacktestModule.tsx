@@ -144,6 +144,12 @@ export function BacktestModule() {
 
   const displayCandles = useMemo(() => resampleCandles(candles, timeframeSeconds(timeframe), sourceIntervalSeconds), [candles, timeframe, sourceIntervalSeconds]);
   const visibleCandles = useMemo(() => displayCandles.slice(0, Math.min(currentIndex + 1, displayCandles.length)), [displayCandles, currentIndex]);
+
+  useEffect(() => {
+    if (displayCandles.length && currentIndex >= displayCandles.length) {
+      setCurrentIndex(displayCandles.length - 1);
+    }
+  }, [displayCandles.length, currentIndex]);
   const currentCandle = visibleCandles[visibleCandles.length - 1];
   const openPositions = positions.filter(position => position.status === 'OPEN');
   const closedPositions = positions.filter(position => position.status === 'CLOSED');
