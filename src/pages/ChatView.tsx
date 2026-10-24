@@ -64,7 +64,7 @@ export function ChatView({ userProfile, initialConversationId }: { userProfile: 
   const [savingGroupSettings, setSavingGroupSettings] = useState(false);
   const [viewerImage, setViewerImage] = useState<ChatMessage | null>(null);
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
-  const [publicProfiles, setPublicProfiles] = useState<Array<{ uid: string; displayName: string; avatarURL?: string }>>([]);
+  const [publicProfiles, setPublicProfiles] = useState<Array<{ uid: string; displayName: string; avatarURL?: string; photoURL?: string }>>([]);
   const [mentionUids, setMentionUids] = useState<string[]>([]);
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
 
@@ -73,9 +73,9 @@ export function ChatView({ userProfile, initialConversationId }: { userProfile: 
     if (!uid) { setPublicProfiles([]); return; }
     return onSnapshot(collection(db, 'publicProfiles'), snapshot => {
       setPublicProfiles(snapshot.docs
-        .map(item => ({ uid: item.id, ...item.data() } as { uid: string; displayName?: string; avatarURL?: string }))
-        .filter(item => item.uid !== uid && typeof item.displayName === 'string' && item.displayName.trim())
-        .map(item => ({ uid: item.uid, displayName: item.displayName!.trim(), avatarURL: item.avatarURL })));
+        .map(item => ({ uid: item.id, ...item.data() } as { uid: string; displayName?: string; avatarURL?: string; photoURL?: string }))
+        .filter(item => typeof item.displayName === 'string' && item.displayName.trim())
+        .map(item => ({ uid: item.uid, displayName: item.displayName!.trim(), avatarURL: item.avatarURL, photoURL: item.photoURL })));
     }, err => {
       console.warn('PipTalk mentions: impossible de charger les profils publics.', err);
     });
@@ -144,20 +144,24 @@ export function ChatView({ userProfile, initialConversationId }: { userProfile: 
     }, err => { setError(err.message); });
   }, [uid]);
 
-  // The first administrator to open PipTalk initializes the default group once.
+  // Create the fixed default group if it does not exist yet. Firestore rules
+  // restrict this creation to the exact Community Hub system document.
   useEffect(() => {
-    if (!uid || userProfile?.role !== 'admin') return;
+    if (!uid) return;
     const hubRef = doc(db, 'conversations', 'community-hub');
     void getDoc(hubRef).then(snapshot => {
       if (snapshot.exists()) return;
       return setDoc(hubRef, {
         members: [uid], group: true, title: 'Community Hub',
-        memberNames: { [uid]: userProfile.displayName || auth.currentUser?.displayName || 'Admin' },
+        memberNames: { [uid]: currentDisplayName },
         lastMessage: 'Bienvenue dans Community Hub.', createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(), createdBy: uid, systemGroup: true
       });
-    }).catch(err => setError(err?.message || 'Impossible d’initialiser Community Hub.'));
-  }, [uid, userProfile?.role, userProfile?.displayName]);
+    }).catch(err => {
+      console.error('[PipTalk] Initialisation de Community Hub impossible', err);
+      setError(err?.message || 'Impossible d’initialiser Community Hub.');
+    });
+  }, [uid, currentDisplayName]);
 
   useEffect(() => {
     if (!uid || !activeId) { setMessages([]); return; }
@@ -189,6 +193,11 @@ export function ChatView({ userProfile, initialConversationId }: { userProfile: 
   const activeName = active?.title || active?.memberNames?.[otherUid] || (otherUid ? `Trader ${otherUid.slice(0, 7)}` : 'Choisir une discussion');
   const currentDisplayName = userProfile?.displayName?.trim() || auth.currentUser?.displayName?.trim() || auth.currentUser?.email?.split('@')[0] || 'Trader';
   const currentAvatar = userProfile?.photoURL || userProfile?.avatarURL || auth.currentUser?.photoURL || '';
+  const avatarForMessage = (message: ChatMessage) => {
+    const profile = publicProfiles.find(item => item.uid === message.senderId);
+    return message.senderAvatarURL || profile?.avatarURL || profile?.photoURL ||
+      (message.senderId === uid ? currentAvatar : '');
+  };
   // One-time, admin-only repair for legacy Community Hub messages that lack a
   // real display name. Process each message once and only update missing/generic
   // names, so normal snapshot refreshes cannot make names flicker.
@@ -271,8 +280,22 @@ export function ChatView({ userProfile, initialConversationId }: { userProfile: 
   };
 
   const openInboxConversation = async (item: ChatConversation) => {
+    if (!uid) return;
+    // The system group is intentionally not a two-person conversation and
+    // therefore has no "other" participant to resolve.
+    if (item.id === 'community-hub') {
+      setError('');
+      setEditingId(null);
+      setDraft('');
+      setActiveId('community-hub');
+      setMobileChatOpen(true);
+      return;
+    }
     const other = item.members.find(member => member !== uid);
-    if (!uid || !other) return;
+    if (!other) {
+      setError('Cette conversation ne contient aucun autre participant.');
+      return;
+    }
     setError('');
     setEditingId(null);
     setDraft('');
@@ -541,7 +564,7 @@ export function ChatView({ userProfile, initialConversationId }: { userProfile: 
             return <React.Fragment key={message.id}>
               {showDay && <div className="flex justify-center py-2"><span className="rounded-full border border-slate-200/80 bg-white/90 px-3.5 py-1.5 text-[10px] font-semibold capitalize text-slate-500 shadow-sm">{formatDay(message.createdAt)}</span></div>}
               <div className={`group relative flex w-full items-end gap-2 ${mine ? 'justify-end' : 'justify-start'}`}>
-                {!mine && active?.group && <div className="mb-0.5 h-8 w-8 shrink-0 overflow-hidden rounded-full ring-2 ring-white shadow-sm">{message.senderAvatarURL ? <img src={message.senderAvatarURL} alt={senderName} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-emerald-100 to-teal-100 text-[10px] font-extrabold text-emerald-800">{senderName.slice(0, 2).toUpperCase()}</div>}</div>}
+                {!mine && active?.group && <div className="mb-0.5 h-8 w-8 shrink-0 overflow-hidden rounded-full ring-2 ring-white shadow-sm">{avatarForMessage(message) ? <img src={avatarForMessage(message)} alt={senderName} className="h-full w-full object-cover" onError={event => { event.currentTarget.onerror = null; event.currentTarget.src = '/brand/logo-iamtrader-symbol.png'; }} /> : <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-emerald-100 to-teal-100 text-[10px] font-extrabold text-emerald-800">{senderName.slice(0, 2).toUpperCase()}</div>}</div>}
                 <div onTouchStart={() => beginMessageLongPress(message.id)} onTouchEnd={cancelMessageLongPress} onTouchMove={cancelMessageLongPress} onContextMenu={event => { event.preventDefault(); setMenuMessage(message.id); }} className={`relative min-w-0 max-w-[82%] rounded-[18px] px-3 py-2.5 shadow-[0_2px_7px_rgba(15,23,42,0.045)] transition-shadow hover:shadow-md sm:max-w-[70%] sm:px-3.5 sm:py-2.5 ${mine ? 'rounded-br-[6px] border border-emerald-100 bg-gradient-to-br from-[#e5fbf2] to-[#d5f6e8] text-slate-800' : 'rounded-bl-[6px] border border-slate-200/80 bg-white text-slate-700'}`}>
                   {(active?.group || message.type === 'voice') && <div className={`mb-0.5 flex items-center gap-1.5 text-[10px] font-extrabold tracking-[-0.01em] ${mine ? 'text-emerald-800' : 'text-slate-800'}`}><span className="truncate">{senderName}</span>{mine && <span className="rounded-full bg-emerald-100/80 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-emerald-700">Vous</span>}</div>}
                   {message.pinned && <div className="mb-1 flex items-center gap-1 text-[9px] font-bold text-emerald-700"><Pin className="h-3 w-3" />Message épinglé</div>}
@@ -558,7 +581,7 @@ export function ChatView({ userProfile, initialConversationId }: { userProfile: 
                   <button onClick={() => setMenuMessage(menuMessage === message.id ? null : message.id)} className="absolute -right-2 -top-2 hidden rounded-full border border-slate-200 bg-white p-1.5 text-slate-500 shadow-md sm:flex sm:opacity-0 sm:group-hover:opacity-100" title="Actions" aria-label="Actions du message"><MoreVertical className="h-3 w-3" /></button>
                   {menuMessage === message.id && <div className="absolute right-0 top-6 z-20 w-44 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-xl"><button onClick={() => beginReply(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Reply className="h-3.5 w-3.5" />Répondre</button><button onClick={() => togglePin(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Pin className="h-3.5 w-3.5" />{message.pinned ? 'Désépingler' : 'Épingler'}</button>{mine && <button onClick={() => beginEdit(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Pencil className="h-3.5 w-3.5" />Modifier</button>}{mine && <button onClick={() => removeMessage(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-rose-600 hover:bg-rose-50"><Trash2 className="h-3.5 w-3.5" />Supprimer</button>}</div>}
                 </div>
-                {mine && active?.group && <div className="mb-0.5 h-8 w-8 shrink-0 overflow-hidden rounded-full ring-2 ring-white shadow-sm">{message.senderAvatarURL || currentAvatar ? <img src={message.senderAvatarURL || currentAvatar} alt={senderName} className="h-full w-full object-cover" /> : <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-emerald-100 to-teal-100 text-[10px] font-extrabold text-emerald-800">{senderName.slice(0, 2).toUpperCase()}</div>}</div>}
+                {mine && active?.group && <div className="mb-0.5 h-8 w-8 shrink-0 overflow-hidden rounded-full ring-2 ring-white shadow-sm">{avatarForMessage(message) ? <img src={avatarForMessage(message)} alt={senderName} className="h-full w-full object-cover" onError={event => { event.currentTarget.onerror = null; event.currentTarget.src = '/brand/logo-iamtrader-symbol.png'; }} /> : <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-emerald-100 to-teal-100 text-[10px] font-extrabold text-emerald-800">{senderName.slice(0, 2).toUpperCase()}</div>}</div>}
               </div>
             </React.Fragment>; })}
           <div ref={bottomRef} />
