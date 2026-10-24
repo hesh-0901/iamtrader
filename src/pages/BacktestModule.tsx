@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { createChart, CandlestickData, CandlestickSeries, IChartApi, ISeriesApi, Time, LineStyle } from 'lightweight-charts';
+
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import { addTrade } from '../services/firestore';
 import { ArrowDown, ArrowUp, BrainCircuit, ChartCandlestick, ChevronRight, CircleDollarSign, Play, Pause, RotateCcw, Save, SkipForward, Target, TrendingDown, TrendingUp } from 'lucide-react';
 
-type Candle = CandlestickData<Time> & { volume: number };
+type Candle = { time: number; open: number; high: number; low: number; close: number; volume: number };
 type Side = 'BUY' | 'SELL';
 type SimTrade = { id: string; side: Side; entry: number; sl: number; tp: number; riskAmount: number; riskPct: number; status: 'OPEN' | 'WIN' | 'LOSS' | 'BREAKEVEN'; pnl: number; openedAt: string; closedAt?: string; exit?: number; closeReason?: string };
 const START_BALANCE = 10000;
@@ -24,7 +24,7 @@ function makeDemoCandles(): Candle[] {
     close = Math.max(1800, open + drift);
     const high = Math.max(open, close) + rand() * 1.6;
     const low = Math.min(open, close) - rand() * 1.6;
-    result.push({ time: (start + i * 15 * 60) as Time, open: +open.toFixed(2), high: +high.toFixed(2), low: +low.toFixed(2), close: +close.toFixed(2), volume: Math.round(50 + rand() * 450) });
+    result.push({ time: (start + i * 15 * 60) as number, open: +open.toFixed(2), high: +high.toFixed(2), low: +low.toFixed(2), close: +close.toFixed(2), volume: Math.round(50 + rand() * 450) });
   }
   return result;
 }
@@ -34,10 +34,6 @@ const price = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 
 const dateLabel = (time: Time) => new Date(Number(time) * 1000).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short', timeZone: 'UTC' });
 
 export function BacktestModule({ onAskChloe }: { onAskChloe?: (summary: string) => void }) {
-  const chartContainer = useRef<HTMLDivElement>(null);
-  const chartRef = useRef<IChartApi | null>(null);
-  const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
-  const priceLinesRef = useRef<Array<{ remove: () => void }>>([]);
   const [timeframe, setTimeframe] = useState<'M15' | 'H1' | 'D1'>('M15');
   const [currentIndex, setCurrentIndex] = useState(120);
   const [speed, setSpeed] = useState(1000);
@@ -72,43 +68,6 @@ export function BacktestModule({ onAskChloe }: { onAskChloe?: (summary: string) 
   const profitFactor = grossLoss ? grossWin / grossLoss : grossWin ? Infinity : 0;
   const avgRR = closed.length ? closed.reduce((sum, t) => sum + t.pnl / Math.max(t.riskAmount, 0.01), 0) / closed.length : 0;
   const currentCandle = visible[visible.length - 1];
-
-  const clearPriceLines = useCallback(() => {
-    const series = candleSeriesRef.current;
-    if (series) priceLinesRef.current.forEach(line => { try { series.removePriceLine(line as any); } catch {} });
-    priceLinesRef.current = [];
-  }, []);
-
-  useEffect(() => {
-    if (!chartContainer.current) return;
-    const chart = createChart(chartContainer.current, {
-      autoSize: true, layout: { background: { color: '#ffffff' }, textColor: '#64748b', fontFamily: 'Inter, sans-serif' },
-      grid: { vertLines: { color: '#f1f5f9' }, horzLines: { color: '#f1f5f9' } },
-      rightPriceScale: { borderColor: '#e2e8f0' }, timeScale: { borderColor: '#e2e8f0', timeVisible: true, secondsVisible: false },
-      crosshair: { vertLine: { color: '#94a3b8', style: LineStyle.Dashed }, horzLine: { color: '#94a3b8', style: LineStyle.Dashed } }
-    });
-    const series = chart.addSeries(CandlestickSeries, { upColor: '#00a982', downColor: '#f05252', borderUpColor: '#00a982', borderDownColor: '#f05252', wickUpColor: '#00a982', wickDownColor: '#f05252' });
-    chartRef.current = chart; candleSeriesRef.current = series;
-    const resizeObserver = new ResizeObserver(() => chart.timeScale().fitContent());
-    resizeObserver.observe(chartContainer.current);
-    return () => { resizeObserver.disconnect(); chart.remove(); chartRef.current = null; candleSeriesRef.current = null; priceLinesRef.current = []; };
-  }, []);
-
-  useEffect(() => {
-    const series = candleSeriesRef.current;
-    if (!series || !visible.length) return;
-    series.setData(visible);
-    chartRef.current?.timeScale().fitContent();
-    clearPriceLines();
-    if (position?.status === 'OPEN') {
-      const lines = [
-        { price: position.entry, color: '#0b1f35', title: 'Entrée' },
-        { price: position.sl, color: '#f05252', title: 'SL' },
-        { price: position.tp, color: '#00a982', title: 'TP' }
-      ];
-      lines.forEach(line => priceLinesRef.current.push(series.createPriceLine({ price: line.price, color: line.color, lineWidth: 2, lineStyle: LineStyle.Dashed, axisLabelVisible: true, title: line.title })));
-    }
-  }, [visible, position, clearPriceLines]);
 
   const advanceOne = useCallback(() => {
     setCurrentIndex(index => {
@@ -201,7 +160,41 @@ export function BacktestModule({ onAskChloe }: { onAskChloe?: (summary: string) 
     <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_300px]">
       <section className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 p-3 sm:px-4"><div><p className="text-sm font-extrabold text-[#0b1f35]">XAUUSD <span className="text-[10px] font-semibold text-slate-400">GOLD · synthétique</span></p><p className="mt-1 text-[10px] text-slate-500">{currentCandle ? dateLabel(currentCandle.time) : '—'} · Bougie {currentIndex+1}/{candles.length}</p></div><div className="flex gap-1 rounded-lg bg-slate-100 p-1">{(['M15','H1','D1'] as const).map(tf=><button key={tf} onClick={()=>{setPlaying(false);setTimeframe(tf);setCurrentIndex(Math.min(currentIndex,Math.ceil(DATA.length/(tf==='M15'?1:tf==='H1'?4:96))-1));setPosition(null)}} className={`rounded-md px-3 py-1.5 text-xs font-bold ${timeframe===tf?'bg-white text-emerald-700 shadow-sm':'text-slate-500'}`}>{tf}</button>)}</div></div>
-        <div ref={chartContainer} className="h-[360px] w-full sm:h-[480px]" />
+        <div className="h-[360px] w-full overflow-hidden bg-white p-2 sm:h-[480px]">
+          <svg viewBox="0 0 900 360" role="img" aria-label="Graphique de chandeliers synthétiques" className="h-full w-full">
+            {Array.from({ length: 5 }, (_, i) => <line key={`grid-${i}`} x1="44" x2="890" y1={20 + i * 78} y2={20 + i * 78} stroke="#e2e8f0" strokeDasharray="3 4" />)}
+            {visible.length > 0 && (
+              {(() => {
+                const sample = visible.slice(-100);
+                const lo = Math.min(...sample.map(c => c.low), position?.status === 'OPEN' ? position.sl : Infinity);
+                const hi = Math.max(...sample.map(c => c.high), position?.status === 'OPEN' ? position.tp : -Infinity);
+                const range = Math.max(hi - lo, 0.01);
+                const y = (p: number) => 330 - ((p - lo) / range) * 300;
+                const step = 840 / Math.max(sample.length, 1);
+                return <>
+                  {sample.map((c, i) => {
+                    const x = 48 + i * step + step * 0.5;
+                    const up = c.close >= c.open;
+                    const color = up ? '#00a982' : '#f05252';
+                    const top = y(Math.max(c.open, c.close));
+                    const bottom = y(Math.min(c.open, c.close));
+                    return <g key={String(c.time)}>
+                      <line x1={x} x2={x} y1={y(c.high)} y2={y(c.low)} stroke={color} strokeWidth="1.2" />
+                      <rect x={x - Math.max(1, step * 0.28)} y={top} width={Math.max(2, step * 0.56)} height={Math.max(1, bottom - top)} fill={color} />
+                    </g>;
+                  })}
+                  {position?.status === 'OPEN' && [{p:position.entry,c:'#0b1f35',label:'Entrée'},{p:position.sl,c:'#f05252',label:'SL'},{p:position.tp,c:'#00a982',label:'TP'}].map(line => <g key={line.label}>
+                    <line x1="44" x2="890" y1={y(line.p)} y2={y(line.p)} stroke={line.c} strokeDasharray="6 4" strokeWidth="1.5" />
+                    <text x="886" y={Math.max(12, y(line.p)-4)} textAnchor="end" fontSize="10" fill={line.c}>{line.label} {price(line.p)}</text>
+                  </g>)}
+                  <text x="48" y="350" fontSize="10" fill="#64748b">{dateLabel(sample[0].time)}</text>
+                  <text x="890" y="350" textAnchor="end" fontSize="10" fill="#64748b">{dateLabel(sample[sample.length-1].time)}</text>
+                  <text x="890" y="12" textAnchor="end" fontSize="11" fill="#0b1f35" fontWeight="700">{price(sample[sample.length-1].close)}</text>
+                </>;
+              })()}
+            )}
+          </svg>
+        </div>
         <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 p-3"><button onClick={()=>setPlaying(v=>!v)} disabled={currentIndex>=candles.length-1} className="inline-flex items-center gap-2 rounded-xl bg-[#0b1f35] px-4 py-2.5 text-xs font-bold text-white disabled:opacity-40">{playing?<Pause className="h-4 w-4"/>:<Play className="h-4 w-4"/>}{playing?'Pause':'Play'}</button><button onClick={advanceOne} disabled={playing||currentIndex>=candles.length-1} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-bold text-slate-700 disabled:opacity-40"><SkipForward className="h-4 w-4"/>Bougie suivante</button><label className="ml-auto flex items-center gap-2 text-[10px] text-slate-500">Vitesse<select value={speed} onChange={e=>setSpeed(Number(e.target.value))} className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs"><option value={500}>0,5 s</option><option value={1000}>1 s</option><option value={2000}>2 s</option></select></label></div>
         <div className="px-4 pb-4"><input aria-label="Position du replay" type="range" min={0} max={candles.length-1} value={currentIndex} onChange={e=>{setPlaying(false);setCurrentIndex(Number(e.target.value))}} className="w-full accent-emerald-600"/><div className="flex justify-between text-[9px] text-slate-400"><span>Début</span><span>Départ : <input type="date" aria-label="Date de départ" value={new Date(Number(candles[Math.min(currentIndex,candles.length-1)].time)*1000).toISOString().slice(0,10)} onChange={e=>{const target=Date.parse(e.target.value+'T00:00:00Z')/1000;const index=candles.findIndex(c=>Number(c.time)>=target);if(index>=0){setPlaying(false);setCurrentIndex(index)}}} className="rounded border border-slate-200 px-1 py-0.5 text-slate-600"/></span><span>Fin</span></div></div>
       </section>
