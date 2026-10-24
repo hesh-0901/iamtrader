@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { addDoc, collection, deleteDoc, doc, getDocs, orderBy, query, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import {
-  ArrowLeftRight, ArrowRight, ChartCandlestick, Clock3, Crosshair,
+  ArrowLeft, ArrowLeftRight, ArrowRight, ChartCandlestick, Clock3, Crosshair,
   Download, Eraser, FolderOpen, Minus, Pause, Play, Plus, Save, Trash2,
   TrendingUp, Upload, X
 } from 'lucide-react';
@@ -488,6 +488,7 @@ export function BacktestModule() {
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          <button onClick={() => { if (window.history.length > 1) window.history.back(); else window.location.assign('/'); }} className="flex items-center gap-2 rounded-md border px-3 py-2 text-xs hover:bg-[#252a36]" style={{ borderColor: COLORS.border }}><ArrowLeft size={14} /> Retour</button>
           <button onClick={() => fileRef.current?.click()} className="flex items-center gap-2 rounded-md border px-3 py-2 text-xs hover:bg-[#252a36]" style={{ borderColor: COLORS.border }}><Upload size={14} /> Importer CSV</button>
           <input ref={fileRef} type="file" accept=".csv,.txt" className="hidden" onChange={event => { loadCsv(event.target.files?.[0]); event.currentTarget.value = ''; }} />
           <button onClick={() => { void saveSession(); }} disabled={busy || !candles.length} className="flex items-center gap-2 rounded-md px-3 py-2 text-xs font-semibold text-white disabled:opacity-40" style={{ background: COLORS.blue }}><Save size={14} /> {busy ? 'Sauvegarde…' : 'Sauvegarder'}</button>
