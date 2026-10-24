@@ -1,8 +1,8 @@
 import React from 'react';
-import { LayoutDashboard, BookOpen, LineChart, ShieldCheck, Wallet, CalendarDays, BrainCircuit, Sliders, ShieldAlert, ChevronLeft, X, Users, ChartCandlestick } from 'lucide-react';
+import { LayoutDashboard, BookOpen, LineChart, ShieldCheck, Wallet, CalendarDays, BrainCircuit, Sliders, ShieldAlert, ChevronLeft, X, Users } from 'lucide-react';
 import { UserRole } from '../../types';
 
-export type NavigationPage = 'dashboard' | 'journal' | 'calendar' | 'performance' | 'psychology' | 'trader-score' | 'accounts' | 'history' | 'community' | 'backtest' | 'settings' | 'admin';
+export type NavigationPage = 'dashboard' | 'journal' | 'calendar' | 'performance' | 'psychology' | 'trader-score' | 'accounts' | 'history' | 'community' | 'settings' | 'admin';
 
 interface SidebarProps {
   currentPage: NavigationPage;
@@ -27,7 +27,6 @@ export function Sidebar({ currentPage, onNavigate, userRole, isMobileOpen, onClo
       { id: 'calendar' as NavigationPage, label: 'Calendrier P&L', icon: CalendarDays },
       { id: 'psychology' as NavigationPage, label: 'Psychologie & Biais', icon: BrainCircuit },
       { id: 'community' as NavigationPage, label: 'Community', icon: Users, tag: 'BETA' },
-      { id: 'backtest' as NavigationPage, label: 'Backtest', icon: ChartCandlestick, tag: 'NEW' }
     ]},
     { group: 'Système', items: [
       ...(userRole === 'admin' ? [{ id: 'admin' as NavigationPage, label: 'Console Admin', icon: ShieldAlert, tag: 'ADMIN' }] : []),
