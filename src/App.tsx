@@ -22,6 +22,7 @@ import { AccountsView } from './pages/AccountsView';
 import { SettingsView } from './pages/SettingsView';
 import { AdminConsole } from './pages/AdminConsole';
 import { CommunityView } from './pages/CommunityView';
+import { BacktestModule } from './pages/BacktestModule';
 import { TradeModal } from './components/journal/TradeModal';
 import { TradeDetailModal } from './components/journal/TradeDetailModal';
 import { AccountModal } from './components/accounts/AccountModal';
@@ -60,6 +61,7 @@ function MainAppContent() {
   const [inspectingTrade, setInspectingTrade] = useState<Trade | null>(null);
   const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
   const [isChloeOpen, setIsChloeOpen] = useState(false);
+  const [backtestChloeSummary, setBacktestChloeSummary] = useState('');
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
@@ -403,6 +405,7 @@ function MainAppContent() {
     'history': 'Historique des paiements',
     'settings': 'Paramètres Système',
     'community': 'Community',
+    'backtest': 'Backtest',
     'admin': 'Console Administration'
   };
 
