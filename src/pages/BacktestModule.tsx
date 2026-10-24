@@ -11,8 +11,8 @@ import {
 import { addDoc, collection, deleteDoc, doc, getDocs, orderBy, query, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import {
-  ArrowLeftRight, ArrowRight, ChartCandlestick, ChevronDown, CircleHelp, Clock3, Crosshair,
-  Download, Eraser, FolderOpen, LineChart, Loader2, Minus, Pause, Play, Plus, Save, Trash2,
+  ArrowLeftRight, ArrowRight, ChartCandlestick, Clock3, Crosshair,
+  Download, Eraser, FolderOpen, Minus, Pause, Play, Plus, Save, Trash2,
   TrendingUp, Upload, X
 } from 'lucide-react';
 
@@ -43,7 +43,7 @@ function parseCsv(text: string): Candle[] {
   const normalize = (value: string) => value.trim().toLowerCase().replace(/["']/g, '').replace(/[\s_-]/g, '');
   const headers = lines[0].split(delimiter).map(normalize);
   const findColumn = (...names: string[]) => headers.findIndex(header => names.includes(header));
-  const timeIndex = findColumn('time', 'date', 'datetime', 'timestamp', 'gmt time', 'opentime');
+  const timeIndex = findColumn('time', 'date', 'datetime', 'timestamp', 'gmttime', 'opentime');
   const openIndex = findColumn('open', 'o');
   const highIndex = findColumn('high', 'h');
   const lowIndex = findColumn('low', 'l');
@@ -91,6 +91,7 @@ export function BacktestModule() {
   const chartRef = useRef<IChartApi | null>(null);
   const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
+  const pendingRestoreRef = useRef<SavedReplay | null>(null);
   const [candles, setCandles] = useState<Candle[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [timeframe, setTimeframe] = useState('M15');
@@ -175,29 +176,28 @@ export function BacktestModule() {
 
   useEffect(() => {
     if (!playing || candles.length === 0) return;
+    if (currentIndex >= candles.length - 1) {
+      setPlaying(false);
+      return;
+    }
     const timer = window.setInterval(() => {
-      setCurrentIndex(index => {
-        if (index >= candles.length - 1) {
-          setPlaying(false);
-          return index;
-        }
-        const nextIndex = index + 1;
-        const candle = candles[nextIndex];
-        setPositions(previous => previous.map(position => {
-          if (position.status !== 'OPEN') return position;
-          const stopHit = position.stopLoss !== null && (position.side === 'BUY' ? candle.low <= position.stopLoss : candle.high >= position.stopLoss);
-          const targetHit = position.takeProfit !== null && (position.side === 'BUY' ? candle.high >= position.takeProfit : candle.low <= position.takeProfit);
-          if (!stopHit && !targetHit) return position;
-          // Conservative OHLC rule: if SL and TP are both hit in the same candle, SL wins.
-          const exitPrice = stopHit ? position.stopLoss! : position.takeProfit!;
-          const pnl = (position.side === 'BUY' ? exitPrice - position.entryPrice : position.entryPrice - exitPrice) * Number(riskSize || 1);
-          return { ...position, status: 'CLOSED', exitTime: Number(candle.time), exitPrice, pnl };
-        }));
-        return nextIndex;
-      });
+      const nextIndex = currentIndex + 1;
+      const candle = candles[nextIndex];
+      if (!candle) { setPlaying(false); return; }
+      setPositions(previous => previous.map(position => {
+        if (position.status !== 'OPEN') return position;
+        const stopHit = position.stopLoss !== null && (position.side === 'BUY' ? candle.low <= position.stopLoss : candle.high >= position.stopLoss);
+        const targetHit = position.takeProfit !== null && (position.side === 'BUY' ? candle.high >= position.takeProfit : candle.low <= position.takeProfit);
+        if (!stopHit && !targetHit) return position;
+        // Conservative OHLC rule: if SL and TP are both hit in the same candle, SL wins.
+        const exitPrice = stopHit ? position.stopLoss! : position.takeProfit!;
+        const pnl = (position.side === 'BUY' ? exitPrice - position.entryPrice : position.entryPrice - exitPrice) * Number(riskSize || 1);
+        return { ...position, status: 'CLOSED', exitTime: Number(candle.time), exitPrice, pnl };
+      }));
+      setCurrentIndex(nextIndex);
     }, Math.max(80, 700 / speed));
     return () => window.clearInterval(timer);
-  }, [playing, candles, speed, riskSize]);
+  }, [playing, candles, currentIndex, speed, riskSize]);
 
   useEffect(() => {
     const chart = chartRef.current;
@@ -232,14 +232,19 @@ export function BacktestModule() {
       reader.onload = () => {
         try {
           const parsed = parseCsv(String(reader.result || ''));
+          const pendingSession = pendingRestoreRef.current;
+          const matchesSavedDataset = pendingSession && pendingSession.datasetName === file.name;
           setCandles(parsed);
-          setCurrentIndex(0);
-          setDrawings([]);
-          setPositions([]);
+          setCurrentIndex(matchesSavedDataset ? Math.min(Math.max(0, pendingSession.currentIndex), parsed.length - 1) : 0);
+          setDrawings(matchesSavedDataset && Array.isArray(pendingSession.drawings) ? pendingSession.drawings : []);
+          setPositions(matchesSavedDataset && Array.isArray(pendingSession.positions) ? pendingSession.positions : []);
           setDraftPoints([]);
-          setActiveSessionId('');
+          if (!matchesSavedDataset) setActiveSessionId('');
           setDatasetName(file.name);
-          setNotice(parsed.length.toLocaleString('fr-FR') + ' bougies chargées depuis ' + file.name + '. Les données sont celles du fichier importé.');
+          pendingRestoreRef.current = null;
+          setNotice(matchesSavedDataset
+            ? 'Session et historique rechargés. Vérifie que le fichier est bien la même version que lors de la sauvegarde.'
+            : parsed.length.toLocaleString('fr-FR') + ' bougies chargées depuis ' + file.name + '. Les données sont celles du fichier importé.');
         } catch (err) {
           setError(err instanceof Error ? err.message : 'Le fichier historique ne peut pas être lu.');
         }
@@ -324,6 +329,7 @@ export function BacktestModule() {
     setPositions(Array.isArray(session.positions) ? session.positions : []);
     setCurrentIndex(Math.max(0, Number(session.currentIndex || 0)));
     setActiveSessionId(session.id);
+    pendingRestoreRef.current = session;
     setNotice('Session chargée. Réimporte le fichier historique correspondant pour reprendre le graphique.');
     setError('');
   };
