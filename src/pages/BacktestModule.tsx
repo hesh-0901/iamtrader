@@ -139,6 +139,9 @@ export function BacktestModule() {
   const [notice, setNotice] = useState('');
   const [error, setError] = useState('');
   const [datasetName, setDatasetName] = useState('');
+  const [historyStart, setHistoryStart] = useState(() => new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10));
+  const [historyEnd, setHistoryEnd] = useState(() => new Date().toISOString().slice(0, 10));
+  const [historyBusy, setHistoryBusy] = useState(false);
 
   const displayCandles = useMemo(() => resampleCandles(candles, timeframeSeconds(timeframe), sourceIntervalSeconds), [candles, timeframe, sourceIntervalSeconds]);
   const visibleCandles = useMemo(() => displayCandles.slice(0, Math.min(currentIndex + 1, displayCandles.length)), [displayCandles, currentIndex]);
@@ -311,6 +314,42 @@ export function BacktestModule() {
     }
   };
 
+  const loadOnlineHistory = async () => {
+    setHistoryBusy(true); setError(''); setNotice('');
+    try {
+      if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(historyStart) || !/^\\d{4}-\\d{2}-\\d{2}$/.test(historyEnd) || historyStart > historyEnd) {
+        throw new Error('Sélectionne une période valide.');
+      }
+      const params = new URLSearchParams({ start: historyStart, end: historyEnd, interval: timeframe });
+      const response = await fetch('/api/backtest-history?' + params.toString());
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || 'Impossible de récupérer les données historiques.');
+      if (!Array.isArray(payload.candles) || payload.candles.length < 2) throw new Error('Aucune bougie disponible pour cette période.');
+      const parsed: Candle[] = payload.candles.map((item: any) => ({
+        time: Number(item.time), open: Number(item.open), high: Number(item.high), low: Number(item.low), close: Number(item.close),
+      })).filter((candle: Candle) =>
+        Number.isFinite(candle.time) && [candle.open, candle.high, candle.low, candle.close].every(value => Number.isFinite(value) && value > 0) && candle.high >= candle.low
+      ).sort((a: Candle, b: Candle) => a.time - b.time);
+      const unique = [...new Map(parsed.map(candle => [candle.time, candle])).values()];
+      if (unique.length < 2) throw new Error('Les données reçues ne contiennent pas assez de bougies valides.');
+      setCandles(unique);
+      setSourceIntervalSeconds(timeframeSeconds(timeframe));
+      setCurrentIndex(0);
+      setDrawings([]);
+      setPositions([]);
+      setDraftPoints([]);
+      setActiveSessionId('');
+      setDatasetName('XAU/USD · Twelve Data · ' + historyStart + ' → ' + historyEnd);
+      pendingRestoreRef.current = null;
+      setPlaying(false);
+      setNotice(unique.length.toLocaleString('fr-FR') + ' bougies historiques chargées automatiquement depuis Twelve Data.');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Erreur lors du chargement historique en ligne.');
+    } finally {
+      setHistoryBusy(false);
+    }
+  };
+
   const placePosition = (direction: 'BUY' | 'SELL') => {
     if (!currentCandle) { setError('Importe d’abord un fichier historique réel au format CSV.'); return; }
     if (!Number.isFinite(Number(riskSize)) || Number(riskSize) <= 0) { setError('La taille virtuelle doit être un nombre positif.'); return; }
@@ -455,6 +494,17 @@ export function BacktestModule() {
         </div>
       </header>
 
+      <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2" style={{ borderColor: COLORS.border, background: COLORS.panel }}>
+        <span className="text-xs font-semibold text-white">Historique en ligne</span>
+        <label className="flex items-center gap-1 text-[10px]" style={{ color: COLORS.muted }}>Du
+          <input type="date" value={historyStart} max={historyEnd} onChange={event => setHistoryStart(event.target.value)} className="rounded border bg-[#131722] px-2 py-1.5 text-xs text-white" style={{ borderColor: COLORS.border }} />
+        </label>
+        <label className="flex items-center gap-1 text-[10px]" style={{ color: COLORS.muted }}>Au
+          <input type="date" value={historyEnd} min={historyStart} max={new Date().toISOString().slice(0, 10)} onChange={event => setHistoryEnd(event.target.value)} className="rounded border bg-[#131722] px-2 py-1.5 text-xs text-white" style={{ borderColor: COLORS.border }} />
+        </label>
+        <button onClick={() => void loadOnlineHistory()} disabled={historyBusy} className="rounded-md px-3 py-2 text-xs font-semibold text-white disabled:opacity-50" style={{ background: COLORS.green }}>{historyBusy ? 'Chargement…' : 'Charger XAUUSD'}</button>
+        <span className="text-[10px]" style={{ color: COLORS.muted }}>Twelve Data · clé API serveur requise.</span>
+      </div>
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2" style={{ borderColor: COLORS.border, background: COLORS.panel }}>
           <span className="text-xs font-bold text-white">XAUUSD</span>
