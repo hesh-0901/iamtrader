@@ -307,7 +307,6 @@ export function BacktestModule() {
       id: makeId(), side: direction, entryTime: Number(currentCandle.time), entryPrice: currentCandle.close,
       stopLoss: stop, takeProfit: target, status: 'OPEN',
     }]);
-    setSide(direction);
     setError('');
     setNotice(direction + ' virtuel ouvert à ' + formatPrice(currentCandle.close) + '.');
   };
@@ -358,6 +357,8 @@ export function BacktestModule() {
 
   const loadSession = (session: SavedReplay) => {
     setSessionName(session.name || 'Session XAUUSD');
+    setCandles([]);
+    setDatasetName('');
     setTimeframe(session.timeframe || 'M15');
     setDrawings(Array.isArray(session.drawings) ? session.drawings : []);
     setPositions(Array.isArray(session.positions) ? session.positions : []);
@@ -428,7 +429,7 @@ export function BacktestModule() {
         <div className="flex shrink-0 items-center gap-2">
           <button onClick={() => fileRef.current?.click()} className="flex items-center gap-2 rounded-md border px-3 py-2 text-xs hover:bg-[#252a36]" style={{ borderColor: COLORS.border }}><Upload size={14} /> Importer CSV</button>
           <input ref={fileRef} type="file" accept=".csv,.txt" className="hidden" onChange={event => { loadCsv(event.target.files?.[0]); event.currentTarget.value = ''; }} />
-          <button onClick={saveSession} disabled={busy || !candles.length} className="flex items-center gap-2 rounded-md px-3 py-2 text-xs font-semibold text-white disabled:opacity-40" style={{ background: COLORS.blue }}><Save size={14} /> {busy ? 'Sauvegarde…' : 'Sauvegarder'}</button>
+          <button onClick={() => { void saveSession(); }} disabled={busy || !candles.length} className="flex items-center gap-2 rounded-md px-3 py-2 text-xs font-semibold text-white disabled:opacity-40" style={{ background: COLORS.blue }}><Save size={14} /> {busy ? 'Sauvegarde…' : 'Sauvegarder'}</button>
         </div>
       </header>
 
