@@ -21,6 +21,8 @@ interface ChloeChatProps {
   accounts: TradingAccount[];
   trades: Trade[];
   currentPage: string;
+  initialPrompt?: string;
+  onInitialPromptConsumed?: () => void;
 }
 
 const STORAGE_KEY = 'iamtrader_chloe_chat_v1';
@@ -147,7 +149,7 @@ function getSession(date: string) {
   return 'Asia';
 }
 
-export function ChloeChat({ isOpen, onClose, userId, userProfile, accounts, trades, currentPage }: ChloeChatProps) {
+export function ChloeChat({ isOpen, onClose, userId, userProfile, accounts, trades, currentPage, initialPrompt, onInitialPromptConsumed }: ChloeChatProps) {
   const { showToast } = useToast();
   const [messages, setMessages] = useState<Message[]>(() => {
     try {
@@ -242,11 +244,11 @@ export function ChloeChat({ isOpen, onClose, userId, userProfile, accounts, trad
     showToast('Fichier ajouté à Chloé.', 'success');
   };
 
-  const send = async (event?: React.FormEvent) => {
+  const send = async (event?: React.FormEvent, forcedText?: string) => {
     event?.preventDefault();
-    if ((!input.trim() && !attachments.length) || loading) return;
+    if ((!input.trim() && !forcedText?.trim() && !attachments.length) || loading) return;
 
-    const visibleText = input.trim() || 'Analyse le fichier que je viens de joindre.';
+    const visibleText = forcedText?.trim() || input.trim() || 'Analyse le fichier que je viens de joindre.';
     const attachmentNames = attachments.map(a => a.name).join(', ');
     const messageTimestamp = Date.now();
     setMessages(prev => [
@@ -388,6 +390,14 @@ export function ChloeChat({ isOpen, onClose, userId, userProfile, accounts, trad
     mediaRecorderRef.current = null;
     setRecording(false);
   };
+
+  const consumedPromptRef = useRef('');
+  useEffect(() => {
+    if (!isOpen || !initialPrompt?.trim() || consumedPromptRef.current === initialPrompt) return;
+    consumedPromptRef.current = initialPrompt;
+    void send(undefined, initialPrompt);
+    onInitialPromptConsumed?.();
+  }, [isOpen, initialPrompt]);
 
   return (
     <div className="fixed inset-0 z-[80] pointer-events-none">
