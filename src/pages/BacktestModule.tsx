@@ -31,7 +31,7 @@ function makeDemoCandles(): Candle[] {
 const DATA = makeDemoCandles();
 const money = (n: number) => new Intl.NumberFormat('fr-FR', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 }).format(n);
 const price = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const dateLabel = (time: Time) => new Date(Number(time) * 1000).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short', timeZone: 'UTC' });
+const dateLabel = (time: number) => new Date(Number(time) * 1000).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short', timeZone: 'UTC' });
 
 export function BacktestModule({ onAskChloe }: { onAskChloe?: (summary: string) => void }) {
   const [timeframe, setTimeframe] = useState<'M15' | 'H1' | 'D1'>('M15');
@@ -163,8 +163,7 @@ export function BacktestModule({ onAskChloe }: { onAskChloe?: (summary: string) 
         <div className="h-[360px] w-full overflow-hidden bg-white p-2 sm:h-[480px]">
           <svg viewBox="0 0 900 360" role="img" aria-label="Graphique de chandeliers synthétiques" className="h-full w-full">
             {Array.from({ length: 5 }, (_, i) => <line key={`grid-${i}`} x1="44" x2="890" y1={20 + i * 78} y2={20 + i * 78} stroke="#e2e8f0" strokeDasharray="3 4" />)}
-            {visible.length > 0 && (
-              {(() => {
+            {visible.length > 0 && (() => {
                 const sample = visible.slice(-100);
                 const lo = Math.min(...sample.map(c => c.low), position?.status === 'OPEN' ? position.sl : Infinity);
                 const hi = Math.max(...sample.map(c => c.high), position?.status === 'OPEN' ? position.tp : -Infinity);
@@ -192,7 +191,6 @@ export function BacktestModule({ onAskChloe }: { onAskChloe?: (summary: string) 
                   <text x="890" y="12" textAnchor="end" fontSize="11" fill="#0b1f35" fontWeight="700">{price(sample[sample.length-1].close)}</text>
                 </>;
               })()}
-            )}
           </svg>
         </div>
         <div className="flex flex-wrap items-center gap-2 border-t border-slate-100 p-3"><button onClick={()=>setPlaying(v=>!v)} disabled={currentIndex>=candles.length-1} className="inline-flex items-center gap-2 rounded-xl bg-[#0b1f35] px-4 py-2.5 text-xs font-bold text-white disabled:opacity-40">{playing?<Pause className="h-4 w-4"/>:<Play className="h-4 w-4"/>}{playing?'Pause':'Play'}</button><button onClick={advanceOne} disabled={playing||currentIndex>=candles.length-1} className="inline-flex items-center gap-2 rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-bold text-slate-700 disabled:opacity-40"><SkipForward className="h-4 w-4"/>Bougie suivante</button><label className="ml-auto flex items-center gap-2 text-[10px] text-slate-500">Vitesse<select value={speed} onChange={e=>setSpeed(Number(e.target.value))} className="rounded-lg border border-slate-200 bg-white px-2 py-2 text-xs"><option value={500}>0,5 s</option><option value={1000}>1 s</option><option value={2000}>2 s</option></select></label></div>
