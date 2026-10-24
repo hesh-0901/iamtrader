@@ -54,9 +54,16 @@ service cloud.firestore {
     // Each authenticated user can publish/update only their own public profile.
     match /publicProfiles/{profileId} {
       allow read: if isAuthenticated();
-      allow create, update: if isOwner(profileId)
+      allow create: if isOwner(profileId)
         && request.resource.data.uid == profileId
         && request.resource.data.keys().hasOnly([
+          'uid', 'displayName', 'username', 'avatarURL', 'photoURL', 'updatedAt'
+        ]);
+      // Existing public cards may contain legacy fields; allow the owner to
+      // refresh only the public-card fields without letting private fields be added.
+      allow update: if isOwner(profileId)
+        && request.resource.data.uid == profileId
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'uid', 'displayName', 'username', 'avatarURL', 'photoURL', 'updatedAt'
         ]);
       allow delete: if isOwner(profileId);

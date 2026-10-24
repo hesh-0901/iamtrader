@@ -161,7 +161,7 @@ export function ChatView({ userProfile, initialConversationId }: { userProfile: 
       console.error('[PipTalk] Initialisation de Community Hub impossible', err);
       setError(err?.message || 'Impossible d’initialiser Community Hub.');
     });
-  }, [uid, currentDisplayName]);
+  }, [uid, userProfile?.displayName, auth.currentUser?.displayName, auth.currentUser?.email]);
 
   useEffect(() => {
     if (!uid || !activeId) { setMessages([]); return; }
