@@ -1,13 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import {
-  CandlestickSeries,
-  createChart,
-  type IChartApi,
-  type ISeriesApi,
-  type MouseEventParams,
-  type Time,
-  type UTCTimestamp,
-} from 'lightweight-charts';
 import { addDoc, collection, deleteDoc, doc, getDocs, orderBy, query, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 import {
@@ -16,7 +7,7 @@ import {
   TrendingUp, Upload, X
 } from 'lucide-react';
 
-type Candle = { time: UTCTimestamp; open: number; high: number; low: number; close: number };
+type Candle = { time: number; open: number; high: number; low: number; close: number };
 type DrawingKind = 'trendline' | 'fibonacci' | 'path';
 type DrawingPoint = { time: number; price: number };
 type Drawing = { id: string; kind: DrawingKind; points: DrawingPoint[] };
@@ -30,6 +21,8 @@ type SavedReplay = {
   datasetEnd: number | null; candleCount: number; currentIndex: number;
   drawings: Drawing[]; positions: SimPosition[]; updatedAt?: { toDate?: () => Date } | null;
 };
+
+declare global { interface Window { LightweightCharts?: any } }
 
 const COLORS = {
   bg: '#131722', panel: '#1e222d', border: '#2a2e39', text: '#d1d4dc',
@@ -71,7 +64,7 @@ function parseCsv(text: string): Candle[] {
     if (!Number.isFinite(milliseconds) || values.some(value => !Number.isFinite(value))) continue;
     const [open, high, low, close] = values;
     if (open <= 0 || high <= 0 || low <= 0 || close <= 0 || high < low) continue;
-    candles.push({ time: Math.floor(milliseconds / 1000) as UTCTimestamp, open, high, low, close });
+    candles.push({ time: Math.floor(milliseconds / 1000), open, high, low, close });
   }
   const unique = new Map<number, Candle>();
   candles.sort((a, b) => Number(a.time) - Number(b.time)).forEach(candle => unique.set(Number(candle.time), candle));
@@ -121,8 +114,9 @@ function makeId() {
 
 export function BacktestModule() {
   const chartHostRef = useRef<HTMLDivElement | null>(null);
-  const chartRef = useRef<IChartApi | null>(null);
-  const candleSeriesRef = useRef<ISeriesApi<'Candlestick'> | null>(null);
+  const chartRef = useRef<any>(null);
+  const candleSeriesRef = useRef<any>(null);
+  const [chartLibraryReady, setChartLibraryReady] = useState(false);
   const fileRef = useRef<HTMLInputElement | null>(null);
   const pendingRestoreRef = useRef<SavedReplay | null>(null);
   const [candles, setCandles] = useState<Candle[]>([]);
@@ -176,8 +170,26 @@ export function BacktestModule() {
   }, [refreshSessions]);
 
   useEffect(() => {
-    if (!chartHostRef.current || chartRef.current) return;
-    const chart = createChart(chartHostRef.current, {
+    if (window.LightweightCharts) {
+      setChartLibraryReady(true);
+      return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://unpkg.com/lightweight-charts@5.0.9/dist/lightweight-charts.standalone.production.js';
+    script.async = true;
+    script.onload = () => setChartLibraryReady(true);
+    script.onerror = () => setError('La bibliothèque graphique n’a pas pu être chargée. Vérifie la connexion réseau et recharge la page.');
+    document.head.appendChild(script);
+    return () => {
+      script.onload = null;
+      script.onerror = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!chartLibraryReady || !chartHostRef.current || chartRef.current || !window.LightweightCharts) return;
+    const library = window.LightweightCharts;
+    const chart = library.createChart(chartHostRef.current, {
       autoSize: true,
       layout: { background: { color: COLORS.bg }, textColor: COLORS.text, fontFamily: 'Inter, Arial, sans-serif' },
       grid: { vertLines: { color: '#1d2330' }, horzLines: { color: '#1d2330' } },
@@ -185,7 +197,7 @@ export function BacktestModule() {
       timeScale: { borderColor: COLORS.border, timeVisible: true, secondsVisible: false },
       crosshair: { vertLine: { color: '#758696', labelBackgroundColor: COLORS.panel }, horzLine: { color: '#758696', labelBackgroundColor: COLORS.panel } },
     });
-    const series = chart.addSeries(CandlestickSeries, {
+    const series = chart.addSeries(library.CandlestickSeries, {
       upColor: COLORS.green, downColor: COLORS.red, borderUpColor: COLORS.green,
       borderDownColor: COLORS.red, wickUpColor: COLORS.green, wickDownColor: COLORS.red,
     });
@@ -199,7 +211,7 @@ export function BacktestModule() {
       chartRef.current = null;
       candleSeriesRef.current = null;
     };
-  }, []);
+  }, [chartLibraryReady]);
 
   useEffect(() => {
     const series = candleSeriesRef.current;
@@ -243,7 +255,7 @@ export function BacktestModule() {
     const chart = chartRef.current;
     const series = candleSeriesRef.current;
     if (!chart || !series) return;
-    const onChartClick = (param: MouseEventParams<Time>) => {
+    const onChartClick = (param: any) => {
       if (tool === 'cursor' || !param.point || !currentCandle) return;
       const time = chart.timeScale().coordinateToTime(param.point.x);
       const price = series.coordinateToPrice(param.point.y);
@@ -419,7 +431,7 @@ export function BacktestModule() {
 
   const chartPoints = useMemo(() => drawings.map(drawing => {
     const points = drawing.points.map(point => {
-      const x = chartRef.current?.timeScale().timeToCoordinate(point.time as Time);
+      const x = chartRef.current?.timeScale().timeToCoordinate(point.time);
       const y = candleSeriesRef.current?.priceToCoordinate(point.price);
       return x === null || x === undefined || y === null || y === undefined ? null : { x, y, price: point.price };
     }).filter((point): point is { x: number; y: number; price: number } => point !== null);
