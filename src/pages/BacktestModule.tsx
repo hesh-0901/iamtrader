@@ -52,7 +52,7 @@ export function BacktestModule() {
   const svgRef = useRef<SVGSVGElement>(null);
 
   const candles = useMemo(() => {
-    const factor = timeframe === 'M1' ? 1 : timeframe === 'M5' ? 5 : timeframe === 'M15' ? 15 : timeframe === 'H1' ? 60 : timeframe === 'H4' ? 240 : 1440;
+    const factor = timeframe === 'M15' ? 15 : timeframe === 'H1' ? 60 : timeframe === 'H4' ? 240 : 1440;
     if (factor === 15) return DATA;
     const group = Math.max(1, Math.round(factor / 15));
     const out: Candle[] = [];
@@ -141,7 +141,7 @@ export function BacktestModule() {
       <div className="flex items-center gap-2 border-r border-[#2a2e39] pr-3"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#2962ff] text-xs font-black text-white">IAM</span><div><div className="text-sm font-bold text-white">Chart Studio</div><div className="text-[9px] uppercase tracking-[.18em] text-[#787b86]">Independent replay</div></div></div>
       <button className="rounded px-3 py-2 text-sm font-bold text-white hover:bg-[#2a2e39]">XAUUSD <ChevronDown className="ml-1 inline h-3 w-3" /></button>
       <span className="hidden text-xs text-[#787b86] md:inline">Gold / U.S. Dollar</span>
-      <div className="flex items-center gap-1 rounded-md bg-[#1e222d] p-1">{['M1','M5','M15','H1','H4','D1'].map(tf => <button key={tf} onClick={() => { setTimeframe(tf); setCurrentIndex(Math.min(lastIndex, DATA.length - 1)); }} className={`rounded px-2 py-1 text-xs font-semibold ${timeframe === tf ? 'bg-[#2962ff] text-white' : 'text-[#aab0bd] hover:bg-[#2a2e39]'}`}>{tf}</button>)}</div>
+      <div className="flex items-center gap-1 rounded-md bg-[#1e222d] p-1">{['M15','H1','H4','D1'].map(tf => <button key={tf} onClick={() => { setTimeframe(tf); setCurrentIndex(Math.min(lastIndex, DATA.length - 1)); }} className={`rounded px-2 py-1 text-xs font-semibold ${timeframe === tf ? 'bg-[#2962ff] text-white' : 'text-[#aab0bd] hover:bg-[#2a2e39]'}`}>{tf}</button>)}</div>
       <button onClick={() => setShowMenu(v => !v)} className="flex items-center gap-2 rounded-md px-3 py-2 text-xs hover:bg-[#2a2e39]"><Activity className="h-4 w-4" /> Indicateurs</button>
       <div className="ml-auto flex items-center gap-2"><span className="hidden text-[10px] text-[#787b86] lg:inline">SIMULATION LOCALE</span><button title="Réinitialiser" onClick={reset} className="rounded-md p-2 hover:bg-[#2a2e39]"><RotateCcw className="h-4 w-4" /></button><button title="Fermer le plein écran" onClick={() => setNotice('Le graphique reste en plein écran dans l’onglet Backtest.')} className="rounded-md p-2 hover:bg-[#2a2e39]"><Settings2 className="h-4 w-4" /></button></div>
     </header>
