@@ -317,7 +317,7 @@ export function BacktestModule() {
   const loadOnlineHistory = async () => {
     setHistoryBusy(true); setError(''); setNotice('');
     try {
-      if (!/^\\d{4}-\\d{2}-\\d{2}$/.test(historyStart) || !/^\\d{4}-\\d{2}-\\d{2}$/.test(historyEnd) || historyStart > historyEnd) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(historyStart) || !/^\d{4}-\d{2}-\d{2}$/.test(historyEnd) || historyStart > historyEnd) {
         throw new Error('Sélectionne une période valide.');
       }
       const params = new URLSearchParams({ start: historyStart, end: historyEnd, interval: timeframe });
