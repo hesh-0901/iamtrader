@@ -198,6 +198,14 @@ export function ChatView({ userProfile, initialConversationId }: { userProfile: 
     return message.senderAvatarURL || profile?.avatarURL || profile?.photoURL ||
       (message.senderId === uid ? currentAvatar : '');
   };
+  // Resolve inbox avatars from the participant profile, not only the conversation
+  // document (older direct-message documents do not store an avatarURL).
+  const avatarForConversation = (conversation: ChatConversation, participantUid: string) => {
+    const profile = publicProfiles.find(item => item.uid === participantUid);
+    const friend = acceptedFriends.find(item => item.uid === participantUid);
+    return conversation.avatarURL || profile?.avatarURL || profile?.photoURL ||
+      friend?.avatarURL || (participantUid === uid ? currentAvatar : '');
+  };
   // One-time, admin-only repair for legacy Community Hub messages that lack a
   // real display name. Process each message once and only update missing/generic
   // names, so normal snapshot refreshes cannot make names flicker.
@@ -544,7 +552,7 @@ export function ChatView({ userProfile, initialConversationId }: { userProfile: 
         <div className="flex-1 overflow-y-auto">
           {loadingChats && <div className="flex items-center justify-center gap-2 p-6 text-xs text-slate-400"><Loader2 className="h-4 w-4 animate-spin" />Chargement des discussions…</div>}
           {!loadingChats && filtered.length === 0 && <div className="px-5 py-10 text-center"><Users className="mx-auto h-7 w-7 text-slate-300" /><p className="mt-3 text-xs font-bold text-slate-600">Aucune discussion</p><p className="mt-1 text-[10px] leading-4 text-slate-400">Utilisez + pour démarrer une conversation avec un UID IAMTRADER.</p></div>}
-          {filtered.map(item => { const other = item.members.find(member => member !== uid) || ''; const name = item.title || item.memberNames?.[other] || acceptedFriends.find(friend => friend.uid === other)?.name || `Trader ${other.slice(0, 7)}`; return <button key={item.id} onClick={() => { void openInboxConversation(item); }} className={`flex w-full items-center gap-3 border-b border-slate-50 px-4 py-3.5 text-left hover:bg-slate-50 ${activeId === item.id ? 'bg-[#f0fbf7]' : ''}`}><div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-emerald-100 text-xs font-black text-emerald-700">{item.avatarURL ? <img src={item.avatarURL} alt={name} className="h-full w-full object-cover" /> : name.slice(0, 2).toUpperCase()}</div><div className="min-w-0 flex-1"><div className="truncate text-xs font-bold text-slate-800">{name}</div><p className="mt-1 truncate text-[10px] text-slate-500">{item.lastMessage || 'Démarrer la conversation'}</p></div><span className="text-[9px] text-slate-400">{formatTime(item.updatedAt)}</span></button>; })}
+          {filtered.map(item => { const other = item.members.find(member => member !== uid) || ''; const name = item.title || item.memberNames?.[other] || acceptedFriends.find(friend => friend.uid === other)?.name || `Trader ${other.slice(0, 7)}`; const avatar = avatarForConversation(item, other); return <button key={item.id} onClick={() => { void openInboxConversation(item); }} className={`flex w-full items-center gap-3 border-b border-slate-50 px-4 py-3.5 text-left hover:bg-slate-50 ${activeId === item.id ? 'bg-[#f0fbf7]' : ''}`}><div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-emerald-100 text-xs font-black text-emerald-700">{avatar ? <img src={avatar} alt={name} className="h-full w-full object-cover" onError={event => { event.currentTarget.style.display = 'none'; }} /> : name.slice(0, 2).toUpperCase()}</div><div className="min-w-0 flex-1"><div className="truncate text-xs font-bold text-slate-800">{name}</div><p className="mt-1 truncate text-[10px] text-slate-500">{item.lastMessage || 'Démarrer la conversation'}</p></div><span className="text-[9px] text-slate-400">{formatTime(item.updatedAt)}</span></button>; })}
         </div>
         <div className="flex items-center gap-2 border-t border-slate-100 bg-slate-50/70 px-4 py-3"><div className="h-8 w-8 overflow-hidden rounded-full bg-[#0b1f35] text-center text-[10px] font-black leading-8 text-white">{(userProfile?.avatarURL || userProfile?.photoURL) ? <img src={userProfile.avatarURL || userProfile.photoURL} alt="Mon avatar" className="h-full w-full object-cover" /> : (userProfile?.displayName || 'IT').slice(0, 2).toUpperCase()}</div><div className="min-w-0 flex-1"><p className="truncate text-[11px] font-bold text-slate-800">{userProfile?.displayName || 'Mon espace trader'}</p><p className="text-[9px] text-slate-400">Connecté à IAMTRADER</p></div></div>
       </aside>
