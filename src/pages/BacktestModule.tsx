@@ -56,12 +56,16 @@ function parseCsv(text: string): Candle[] {
     const cells = line.split(delimiter).map(cell => cell.trim().replace(/^["']|["']$/g, ''));
     const rawTime = cells[timeIndex];
     const numericTime = Number(rawTime);
-    let milliseconds = Number.isFinite(numericTime) && rawTime !== ''
-      ? (rawTime.length <= 10 ? numericTime * 1000 : numericTime)
-      : Date.parse(rawTime);
-    if (!Number.isFinite(milliseconds)) {
+    let milliseconds: number;
+    if (rawTime !== '' && Number.isFinite(numericTime)) {
+      milliseconds = rawTime.length <= 10 ? numericTime * 1000 : numericTime;
+    } else if (/(?:Z|[+-]\d{2}:?\d{2}|GMT)$/i.test(rawTime)) {
+      milliseconds = Date.parse(rawTime);
+    } else {
       const match = rawTime.match(/^(\d{4})[./-](\d{2})[./-](\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?/);
-      if (match) milliseconds = Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]), Number(match[4] || 0), Number(match[5] || 0), Number(match[6] || 0));
+      milliseconds = match
+        ? Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3]), Number(match[4] || 0), Number(match[5] || 0), Number(match[6] || 0))
+        : Date.parse(rawTime);
     }
     const values = [cells[openIndex], cells[highIndex], cells[lowIndex], cells[closeIndex]].map(value => Number(value.replace(',', '.')));
     if (!Number.isFinite(milliseconds) || values.some(value => !Number.isFinite(value))) continue;
