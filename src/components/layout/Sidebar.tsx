@@ -26,7 +26,8 @@ export function Sidebar({ currentPage, onNavigate, userRole, isMobileOpen, onClo
       { id: 'accounts' as NavigationPage, label: 'Comptes & Prop Firms', icon: Wallet },
       { id: 'calendar' as NavigationPage, label: 'Calendrier P&L', icon: CalendarDays },
       { id: 'psychology' as NavigationPage, label: 'Psychologie & Biais', icon: BrainCircuit },
-      { id: 'community' as NavigationPage, label: 'Community', icon: Users, tag: 'BETA' },\n      { id: 'backtest' as NavigationPage, label: 'Backtest', icon: ChartCandlestick, tag: 'NEW' }
+      { id: 'community' as NavigationPage, label: 'Community', icon: Users, tag: 'BETA' },
+      { id: 'backtest' as NavigationPage, label: 'Backtest', icon: ChartCandlestick, tag: 'NEW' }
     ]},
     { group: 'Système', items: [
       ...(userRole === 'admin' ? [{ id: 'admin' as NavigationPage, label: 'Console Admin', icon: ShieldAlert, tag: 'ADMIN' }] : []),
