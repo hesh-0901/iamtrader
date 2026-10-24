@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { UserProfile } from '../types';
+import { FriendsView } from './FriendsView';
 import { auth, db, app } from '../firebase/config';
 import {
   addDoc, collection, deleteDoc, doc, getDoc, getDocs, limit, onSnapshot, orderBy, query,
@@ -37,6 +38,7 @@ export function ChatView({ userProfile, initialConversationId }: { userProfile: 
   const [queryText, setQueryText] = useState('');
   const [targetUid, setTargetUid] = useState('');
   const [showNewChat, setShowNewChat] = useState(false);
+  const [showFriendsModal, setShowFriendsModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [menuMessage, setMenuMessage] = useState<string | null>(null);
   const [loadingChats, setLoadingChats] = useState(true);
@@ -598,7 +600,7 @@ export function ChatView({ userProfile, initialConversationId }: { userProfile: 
     <div className={`flex min-h-0 ${mobileChatOpen ? 'h-full' : 'h-[calc(100dvh-112px)]'} sm:h-[min(760px,calc(100dvh-210px))] sm:min-h-[520px]`}>
       <aside className={`${mobileChatOpen ? 'hidden md:flex' : 'flex'} w-full shrink-0 flex-col border-r border-slate-200 bg-white md:w-[310px] lg:w-[340px]`}>
         <div className="border-b border-slate-100 px-3 pb-3 pt-3 sm:px-4 sm:pb-4 sm:pt-5">
-          <div className="flex items-center justify-between"><div className="flex items-center gap-2"><div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#e7f8f2] text-[#00a982]"><MessageCircle className="h-5 w-5" /></div><div><h2 className="text-base font-black text-[#0b1f35]">PipTalk</h2><p className="text-[10px] text-slate-400">Messagerie en temps réel</p></div></div><button onClick={() => { setShowNewChat(v => !v); setError(''); }} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100" title="Nouvelle conversation"><Plus className="h-4 w-4" /></button></div>
+          <div className="flex items-center justify-between"><div className="flex items-center gap-2"><div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#e7f8f2] text-[#00a982]"><MessageCircle className="h-5 w-5" /></div><div><h2 className="text-base font-black text-[#0b1f35]">PipTalk</h2><p className="text-[10px] text-slate-400">Messagerie en temps réel</p></div></div><button onClick={() => { setShowFriendsModal(true); setShowNewChat(false); setError(''); }} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100" title="Ouvrir mes amis et démarrer une conversation"><Plus className="h-4 w-4" /></button></div>
           {showNewChat && <div className="mt-3 rounded-xl border border-emerald-100 bg-emerald-50/60 p-3"><label className="text-[10px] font-bold text-slate-700">UID du trader destinataire</label><input value={targetUid} onChange={e => setTargetUid(e.target.value)} placeholder="Coller l’UID Firebase du trader" className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 outline-none focus:border-emerald-400" /><button onClick={startConversation} className="mt-2 w-full rounded-lg bg-[#00a982] px-3 py-2 text-xs font-bold text-white">Créer la discussion</button><p className="mt-2 text-[9px] leading-4 text-slate-500">L’UID doit appartenir à un autre compte IAMTRADER.</p></div>}
           <label className="mt-4 flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5"><Search className="h-4 w-4 text-slate-400" /><input value={queryText} onChange={e => setQueryText(e.target.value)} placeholder="Rechercher une discussion" className="w-full bg-transparent text-xs text-slate-700 outline-none placeholder:text-slate-400" /></label>
         </div>
@@ -672,6 +674,17 @@ export function ChatView({ userProfile, initialConversationId }: { userProfile: 
     </footer>}
       </section>
     </div>
+    {showFriendsModal && <div role="dialog" aria-modal="true" aria-label="Traders et amis" className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/55 p-2 backdrop-blur-sm sm:p-6" onMouseDown={event => { if (event.target === event.currentTarget) setShowFriendsModal(false); }}>
+      <div className="relative flex max-h-[94dvh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl sm:rounded-3xl">
+        <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-4 py-3">
+          <div><h2 className="text-sm font-extrabold text-slate-900">Traders & amis</h2><p className="mt-0.5 text-[10px] text-slate-500">Retrouvez vos amis, gérez les demandes et découvrez des traders.</p></div>
+          <button type="button" onClick={() => setShowFriendsModal(false)} aria-label="Fermer Traders et amis" className="rounded-xl border border-slate-200 p-2 text-slate-500 hover:bg-slate-50"><X className="h-4 w-4" /></button>
+        </div>
+        <div className="min-h-0 flex-1 overflow-y-auto">
+          <FriendsView userProfile={userProfile} initialTab="friends" onOpenChat={conversationId => { setShowFriendsModal(false); setError(''); setActiveId(conversationId); setMobileChatOpen(true); }} />
+        </div>
+      </div>
+    </div>}
     {viewerImage?.mediaUrl && <div role="dialog" aria-modal="true" aria-label="Visionneuse d’image" onClick={() => setViewerImage(null)} className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/95 p-3 backdrop-blur-md sm:p-8">
       <button type="button" onClick={() => setViewerImage(null)} aria-label="Fermer l’image" className="absolute right-3 top-3 z-10 flex h-10 w-10 items-center justify-center rounded-full border border-white/20 bg-black/50 text-white transition hover:bg-white/15 focus:outline-none focus:ring-2 focus:ring-white sm:right-5 sm:top-5"><X className="h-5 w-5" /></button>
       <div className="flex h-full w-full items-center justify-center" onClick={event => event.stopPropagation()}>
