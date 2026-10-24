@@ -674,11 +674,11 @@ export function ChatView({ userProfile, initialConversationId }: { userProfile: 
     </footer>}
       </section>
     </div>
-    {showFriendsModal && <div role="dialog" aria-modal="true" aria-label="Traders et amis" className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/55 p-2 backdrop-blur-sm sm:p-6" onMouseDown={event => { if (event.target === event.currentTarget) setShowFriendsModal(false); }}>
-      <div className="relative flex max-h-[94dvh] w-full max-w-5xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl sm:rounded-3xl">
+    {showFriendsModal && <div role="dialog" aria-modal="true" aria-label="Traders et amis" className="fixed inset-0 z-[90] flex items-end justify-center bg-slate-950/55 backdrop-blur-sm sm:items-center sm:p-6" onMouseDown={event => { if (event.target === event.currentTarget) setShowFriendsModal(false); }}>
+      <div className="relative flex h-[60dvh] max-h-[60dvh] w-full max-w-5xl translate-y-0 flex-col overflow-hidden rounded-t-2xl border border-slate-200 bg-white shadow-2xl animate-[slideUp_220ms_ease-out] sm:h-auto sm:max-h-[94dvh] sm:rounded-3xl">
         <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-4 py-3">
           <div><h2 className="text-sm font-extrabold text-slate-900">Traders & amis</h2><p className="mt-0.5 text-[10px] text-slate-500">Retrouvez vos amis, gérez les demandes et découvrez des traders.</p></div>
-          <button type="button" onClick={() => setShowFriendsModal(false)} aria-label="Fermer Traders et amis" className="rounded-xl border border-slate-200 p-2 text-slate-500 hover:bg-slate-50"><X className="h-4 w-4" /></button>
+          <button type="button" onClick={() => setShowFriendsModal(false)} aria-label="Fermer Traders et amis" className="flex h-6 w-6 items-center justify-center rounded-md text-slate-400 hover:bg-slate-100 hover:text-slate-700"><X className="h-3 w-3" /></button>
         </div>
         <div className="min-h-0 flex-1 overflow-y-auto">
           <FriendsView userProfile={userProfile} initialTab="friends" onOpenChat={conversationId => { setShowFriendsModal(false); setError(''); setActiveId(conversationId); setMobileChatOpen(true); }} />
