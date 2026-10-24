@@ -8,7 +8,7 @@ const TRADINGVIEW_WIDGET_URL =
  * Market data and chart interactions are hosted by TradingView; IAMTRADER does
  * not fabricate prices or request private OANDA credentials for this widget.
  */
-export default function BacktestModule() {
+export function BacktestModule() {
   const containerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
