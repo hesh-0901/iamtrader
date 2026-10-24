@@ -22,8 +22,7 @@
     "motion": "^12.23.24",
     "react": "^19.0.1",
     "react-dom": "^19.0.1",
-    "vite": "^8.3.0",
-    "lightweight-charts": "^5.0.9"
+    "vite": "^8.3.0"
   },
   "devDependencies": {
     "@types/bun": "^1.4.3",
