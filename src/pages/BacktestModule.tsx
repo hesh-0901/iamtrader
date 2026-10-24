@@ -76,6 +76,35 @@ function parseCsv(text: string): Candle[] {
   return result;
 }
 
+function timeframeSeconds(value: string): number {
+  const values: Record<string, number> = { M1: 60, M5: 300, M15: 900, M30: 1800, H1: 3600, H4: 14400, D1: 86400 };
+  return values[value] || 900;
+}
+function detectSourceInterval(candles: Candle[]): number {
+  const deltas: number[] = [];
+  for (let index = 1; index < Math.min(candles.length, 200); index++) {
+    const delta = Number(candles[index].time) - Number(candles[index - 1].time);
+    if (delta > 0 && delta <= 7 * 86400) deltas.push(delta);
+  }
+  if (!deltas.length) return 60;
+  deltas.sort((a, b) => a - b);
+  return deltas[Math.floor(deltas.length / 2)];
+}
+function resampleCandles(candles: Candle[], targetSeconds: number, sourceSeconds: number): Candle[] {
+  if (!candles.length || targetSeconds <= sourceSeconds) return candles;
+  const buckets = new Map<number, Candle>();
+  for (const candle of candles) {
+    const bucketTime = Math.floor(Number(candle.time) / targetSeconds) * targetSeconds;
+    const previous = buckets.get(bucketTime);
+    if (!previous) {
+      buckets.set(bucketTime, { time: bucketTime as UTCTimestamp, open: candle.open, high: candle.high, low: candle.low, close: candle.close });
+    } else {
+      buckets.set(bucketTime, { ...previous, high: Math.max(previous.high, candle.high), low: Math.min(previous.low, candle.low), close: candle.close });
+    }
+  }
+  return [...buckets.values()].sort((a, b) => Number(a.time) - Number(b.time));
+}
+
 function formatPrice(value: number) {
   return value.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 3 });
 }
@@ -93,6 +122,7 @@ export function BacktestModule() {
   const fileRef = useRef<HTMLInputElement | null>(null);
   const pendingRestoreRef = useRef<SavedReplay | null>(null);
   const [candles, setCandles] = useState<Candle[]>([]);
+  const [sourceIntervalSeconds, setSourceIntervalSeconds] = useState(60);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [timeframe, setTimeframe] = useState('M15');
   const [tool, setTool] = useState<'cursor' | DrawingKind>('cursor');
@@ -112,7 +142,8 @@ export function BacktestModule() {
   const [error, setError] = useState('');
   const [datasetName, setDatasetName] = useState('');
 
-  const visibleCandles = useMemo(() => candles.slice(0, Math.min(currentIndex + 1, candles.length)), [candles, currentIndex]);
+  const displayCandles = useMemo(() => resampleCandles(candles, timeframeSeconds(timeframe), sourceIntervalSeconds), [candles, timeframe, sourceIntervalSeconds]);
+  const visibleCandles = useMemo(() => displayCandles.slice(0, Math.min(currentIndex + 1, displayCandles.length)), [displayCandles, currentIndex]);
   const currentCandle = visibleCandles[visibleCandles.length - 1];
   const openPositions = positions.filter(position => position.status === 'OPEN');
   const closedPositions = positions.filter(position => position.status === 'CLOSED');
@@ -174,14 +205,14 @@ export function BacktestModule() {
   }, [visibleCandles]);
 
   useEffect(() => {
-    if (!playing || candles.length === 0) return;
-    if (currentIndex >= candles.length - 1) {
+    if (!playing || displayCandles.length === 0) return;
+    if (currentIndex >= displayCandles.length - 1) {
       setPlaying(false);
       return;
     }
     const timer = window.setInterval(() => {
       const nextIndex = currentIndex + 1;
-      const candle = candles[nextIndex];
+      const candle = displayCandles[nextIndex];
       if (!candle) { setPlaying(false); return; }
       setPositions(previous => previous.map(position => {
         if (position.status !== 'OPEN') return position;
@@ -196,7 +227,7 @@ export function BacktestModule() {
       setCurrentIndex(nextIndex);
     }, Math.max(80, 700 / speed));
     return () => window.clearInterval(timer);
-  }, [playing, candles, currentIndex, speed, riskSize]);
+  }, [playing, displayCandles, currentIndex, speed, riskSize]);
 
   useEffect(() => {
     const chart = chartRef.current;
@@ -233,8 +264,11 @@ export function BacktestModule() {
           const parsed = parseCsv(String(reader.result || ''));
           const pendingSession = pendingRestoreRef.current;
           const matchesSavedDataset = pendingSession && pendingSession.datasetName === file.name;
+          const detectedInterval = detectSourceInterval(parsed);
+          const targetBars = resampleCandles(parsed, timeframeSeconds(timeframe), detectedInterval);
+          setSourceIntervalSeconds(detectedInterval);
           setCandles(parsed);
-          setCurrentIndex(matchesSavedDataset ? Math.min(Math.max(0, pendingSession.currentIndex), parsed.length - 1) : 0);
+          setCurrentIndex(matchesSavedDataset ? Math.min(Math.max(0, pendingSession.currentIndex), targetBars.length - 1) : 0);
           setDrawings(matchesSavedDataset && Array.isArray(pendingSession.drawings) ? pendingSession.drawings : []);
           setPositions(matchesSavedDataset && Array.isArray(pendingSession.positions) ? pendingSession.positions : []);
           setDraftPoints([]);
@@ -243,7 +277,7 @@ export function BacktestModule() {
           pendingRestoreRef.current = null;
           setNotice(matchesSavedDataset
             ? 'Session et historique rechargés. Vérifie que le fichier est bien la même version que lors de la sauvegarde.'
-            : parsed.length.toLocaleString('fr-FR') + ' bougies chargées depuis ' + file.name + '. Les données sont celles du fichier importé.');
+            : parsed.length.toLocaleString('fr-FR') + ' bougies sources chargées depuis ' + file.name + '.');
         } catch (err) {
           setError(err instanceof Error ? err.message : 'Le fichier historique ne peut pas être lu.');
         }
@@ -257,6 +291,7 @@ export function BacktestModule() {
 
   const placePosition = (direction: 'BUY' | 'SELL') => {
     if (!currentCandle) { setError('Importe d’abord un fichier historique réel au format CSV.'); return; }
+    if (!Number.isFinite(Number(riskSize)) || Number(riskSize) <= 0) { setError('La taille virtuelle doit être un nombre positif.'); return; }
     const stop = stopLossText.trim() ? Number(stopLossText) : null;
     const target = takeProfitText.trim() ? Number(takeProfitText) : null;
     if ((stop !== null && (!Number.isFinite(stop) || stop <= 0)) || (target !== null && (!Number.isFinite(target) || target <= 0))) {
@@ -299,7 +334,7 @@ export function BacktestModule() {
         datasetName,
         datasetStart: Number(candles[0].time),
         datasetEnd: Number(candles[candles.length - 1].time),
-        candleCount: candles.length,
+        candleCount: displayCandles.length,
         currentIndex,
         drawings,
         positions,
@@ -453,12 +488,12 @@ export function BacktestModule() {
             <section className="border-b p-4" style={{ borderColor: COLORS.border }}>
               <h3 className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-white"><Clock3 size={14} /> Replay</h3>
               <div className="mb-3 flex items-center justify-between gap-2">
-                <button disabled={!candles.length || currentIndex === 0} onClick={() => { setPlaying(false); setCurrentIndex(index => Math.max(0, index - 1)); }} className="rounded border p-2 disabled:opacity-30" style={{ borderColor: COLORS.border }} title="Bougie précédente"><Minus size={14} /></button>
-                <button disabled={!candles.length} onClick={() => setPlaying(value => !value)} className="flex flex-1 items-center justify-center gap-2 rounded px-3 py-2 text-xs font-bold text-white disabled:opacity-30" style={{ background: playing ? '#555b6a' : COLORS.blue }}>{playing ? <Pause size={14} /> : <Play size={14} />}{playing ? 'Pause' : 'Lecture'}</button>
-                <button disabled={!candles.length || currentIndex >= candles.length - 1} onClick={() => { setPlaying(false); setCurrentIndex(index => Math.min(candles.length - 1, index + 1)); }} className="rounded border p-2 disabled:opacity-30" style={{ borderColor: COLORS.border }} title="Bougie suivante"><Plus size={14} /></button>
+                <button disabled={!displayCandles.length || currentIndex === 0} onClick={() => { setPlaying(false); setCurrentIndex(index => Math.max(0, index - 1)); }} className="rounded border p-2 disabled:opacity-30" style={{ borderColor: COLORS.border }} title="Bougie précédente"><Minus size={14} /></button>
+                <button disabled={!displayCandles.length} onClick={() => setPlaying(value => !value)} className="flex flex-1 items-center justify-center gap-2 rounded px-3 py-2 text-xs font-bold text-white disabled:opacity-30" style={{ background: playing ? '#555b6a' : COLORS.blue }}>{playing ? <Pause size={14} /> : <Play size={14} />}{playing ? 'Pause' : 'Lecture'}</button>
+                <button disabled={!displayCandles.length || currentIndex >= displayCandles.length - 1} onClick={() => { setPlaying(false); setCurrentIndex(index => Math.min(displayCandles.length - 1, index + 1)); }} className="rounded border p-2 disabled:opacity-30" style={{ borderColor: COLORS.border }} title="Bougie suivante"><Plus size={14} /></button>
               </div>
-              <label className="mb-1 flex justify-between text-[10px]" style={{ color: COLORS.muted }}><span>Progression</span><span>{candles.length ? (currentIndex + 1).toLocaleString('fr-FR') + ' / ' + candles.length.toLocaleString('fr-FR') : '0 / 0'}</span></label>
-              <input type="range" min={0} max={Math.max(0, candles.length - 1)} value={candles.length ? currentIndex : 0} disabled={!candles.length} onChange={event => { setPlaying(false); setCurrentIndex(Number(event.target.value)); }} className="w-full accent-blue-500" />
+              <label className="mb-1 flex justify-between text-[10px]" style={{ color: COLORS.muted }}><span>Progression</span><span>{displayCandles.length ? (currentIndex + 1).toLocaleString('fr-FR') + ' / ' + displayCandles.length.toLocaleString('fr-FR') : '0 / 0'}</span></label>
+              <input type="range" min={0} max={Math.max(0, displayCandles.length - 1)} value={displayCandles.length ? Math.min(currentIndex, displayCandles.length - 1) : 0} disabled={!displayCandles.length} onChange={event => { setPlaying(false); setCurrentIndex(Number(event.target.value)); }} className="w-full accent-blue-500" />
               <label className="mt-3 flex items-center justify-between text-xs" style={{ color: COLORS.muted }}>Vitesse
                 <select value={speed} onChange={event => setSpeed(Number(event.target.value))} className="rounded border bg-[#131722] px-2 py-1.5 text-xs text-white" style={{ borderColor: COLORS.border }}><option value={0.5}>0,5×</option><option value={1}>1×</option><option value={2}>2×</option><option value={5}>5×</option><option value={10}>10×</option></select>
               </label>
