@@ -26,7 +26,7 @@ type SimPosition = {
   exitPrice?: number; pnl?: number; status: 'OPEN' | 'CLOSED';
 };
 type SavedReplay = {
-  id: string; name: string; symbol: string; timeframe: string; datasetStart: number | null;
+  id: string; name: string; symbol: string; timeframe: string; datasetName?: string; datasetStart: number | null;
   datasetEnd: number | null; candleCount: number; currentIndex: number;
   drawings: Drawing[]; positions: SimPosition[]; updatedAt?: { toDate?: () => Date } | null;
 };
@@ -101,7 +101,6 @@ export function BacktestModule() {
   const [positions, setPositions] = useState<SimPosition[]>([]);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
-  const [side, setSide] = useState<'BUY' | 'SELL'>('BUY');
   const [stopLossText, setStopLossText] = useState('');
   const [takeProfitText, setTakeProfitText] = useState('');
   const [riskSize, setRiskSize] = useState('1');
@@ -209,19 +208,19 @@ export function BacktestModule() {
       const price = series.coordinateToPrice(param.point.y);
       if (time === null || price === null || !Number.isFinite(price)) return;
       const point = { time: Number(time), price: Number(price) };
-      setDraftPoints(previous => {
-        const next = [...previous, point];
-        const required = tool === 'path' ? 2 : 2;
-        if (next.length < required) return next;
-        setDrawings(items => [...items, { id: makeId(), kind: tool, points: next }]);
-        setNotice(tool === 'fibonacci' ? 'Fibonacci ajouté.' : tool === 'path' ? 'Flèche du chemin ajoutée.' : 'Ligne ajoutée.');
-        setTool('cursor');
-        return [];
-      });
+      const next = [...draftPoints, point];
+      if (next.length < 2) {
+        setDraftPoints(next);
+        return;
+      }
+      setDrawings(items => [...items, { id: makeId(), kind: tool, points: next }]);
+      setNotice(tool === 'fibonacci' ? 'Fibonacci ajouté.' : tool === 'path' ? 'Flèche du chemin ajoutée.' : 'Ligne ajoutée.');
+      setDraftPoints([]);
+      setTool('cursor');
     };
     chart.subscribeClick(onChartClick);
     return () => chart.unsubscribeClick(onChartClick);
-  }, [tool, currentCandle]);
+  }, [tool, currentCandle, draftPoints]);
 
   const loadCsv = (file?: File) => {
     if (!file) return;
@@ -287,7 +286,7 @@ export function BacktestModule() {
     }));
   };
 
-  const saveSession = async () => {
+  const saveSession = async (forceNew = false) => {
     const uid = auth.currentUser?.uid;
     if (!uid) { setError('Connecte-toi à IAMTRADER pour sauvegarder tes sessions.'); return; }
     if (candles.length === 0) { setError('Importe un fichier de données historiques avant de sauvegarder.'); return; }
@@ -307,7 +306,7 @@ export function BacktestModule() {
         updatedAt: serverTimestamp(),
       };
       const sessionsRef = collection(db, 'replaySessions', uid, 'sessions');
-      if (activeSessionId) {
+      if (activeSessionId && !forceNew) {
         await updateDoc(doc(db, 'replaySessions', uid, 'sessions', activeSessionId), payload);
       } else {
         const created = await addDoc(sessionsRef, { ...payload, createdAt: serverTimestamp() });
@@ -499,7 +498,7 @@ export function BacktestModule() {
             <section className="border-b p-4" style={{ borderColor: COLORS.border }}>
               <h3 className="mb-3 flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-white"><Save size={14} /> Sessions sauvegardées</h3>
               <input value={sessionName} onChange={event => setSessionName(event.target.value)} placeholder="Nom de la session" className="mb-3 w-full rounded border bg-[#131722] px-3 py-2 text-xs text-white outline-none focus:border-blue-500" style={{ borderColor: COLORS.border }} />
-              <button onClick={() => { setActiveSessionId(''); void saveSession(); }} disabled={!candles.length || busy} className="mb-3 w-full rounded border px-3 py-2 text-xs disabled:opacity-30" style={{ borderColor: COLORS.border }}>Enregistrer comme nouvelle session</button>
+              <button onClick={() => { void saveSession(true); }} disabled={!candles.length || busy} className="mb-3 w-full rounded border px-3 py-2 text-xs disabled:opacity-30" style={{ borderColor: COLORS.border }}>Enregistrer comme nouvelle session</button>
               <div className="space-y-2">
                 {savedSessions.map(session => <div key={session.id} className="flex items-start gap-2 rounded-lg border p-3" style={{ borderColor: COLORS.border, background: COLORS.bg }}>
                   <FolderOpen size={15} className="mt-0.5 shrink-0" style={{ color: COLORS.blue }} />
