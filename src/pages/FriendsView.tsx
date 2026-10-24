@@ -9,9 +9,9 @@ type Request = { id: string; senderId: string; receiverId: string; status: strin
 
 type Tab = 'discover' | 'requests' | 'friends';
 
-export function FriendsView({ userProfile, onOpenChat }: { userProfile: UserProfile | null; onOpenChat?: (conversationId: string) => void }) {
+export function FriendsView({ userProfile, onOpenChat, initialTab = 'discover' }: { userProfile: UserProfile | null; onOpenChat?: (conversationId: string) => void; initialTab?: Tab }) {
   const uid = auth.currentUser?.uid || userProfile?.uid || '';
-  const [tab, setTab] = useState<Tab>('discover');
+  const [tab, setTab] = useState<Tab>(initialTab);
   const [term, setTerm] = useState('');
   const [allProfiles, setAllProfiles] = useState<Profile[]>([]);
   const [results, setResults] = useState<Profile[]>([]);
