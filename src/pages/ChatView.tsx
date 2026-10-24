@@ -180,10 +180,8 @@ export function ChatView({ userProfile, initialConversationId }: { userProfile: 
         const next = previous.map(conversation => {
           const latest = latestById.get(conversation.id);
           if (!latest) return conversation;
-          const currentMillis = conversation.updatedAt?.toMillis?.() || conversation.createdAt?.toMillis?.() || 0;
-          const messageMillis = latest.createdAt?.toMillis?.() || 0;
-          // Do not replace a newer conversation preview with an older message.
-          if (messageMillis && currentMillis > messageMillis && conversation.lastMessage) return conversation;
+          // The conversation's updatedAt can be a few milliseconds newer than
+          // the message's createdAt, so it cannot reliably determine preview freshness.
           if (conversation.lastMessage === latest.preview) return conversation;
           changed = true;
           return { ...conversation, lastMessage: latest.preview };
