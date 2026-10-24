@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { UserProfile } from '../types';
 import { auth, db, app } from '../firebase/config';
 import {
-  addDoc, collection, deleteDoc, doc, getDoc, onSnapshot, query,
+  addDoc, collection, deleteDoc, doc, getDoc, getDocs, limit, onSnapshot, orderBy, query,
   serverTimestamp, setDoc, updateDoc, where, Timestamp
 } from 'firebase/firestore';
 import {
@@ -143,6 +143,57 @@ export function ChatView({ userProfile, initialConversationId }: { userProfile: 
       setConversations(previous => [hub, ...previous.filter(item => item.id !== hub.id)]);
     }, err => { setError(err.message); });
   }, [uid]);
+
+  // Repair inbox previews from the actual latest message. Older app versions
+  // sometimes wrote messages without updating conversations.lastMessage.
+  useEffect(() => {
+    if (!uid || !conversations.length) return;
+    let cancelled = false;
+    const refreshLatestPreviews = async () => {
+      const previews = await Promise.all(conversations.map(async conversation => {
+        try {
+          const latestQuery = query(
+            collection(db, 'conversations', conversation.id, 'messages'),
+            orderBy('createdAt', 'desc'),
+            limit(1)
+          );
+          const snapshot = await getDocs(latestQuery);
+          if (snapshot.empty) return null;
+          const latest = snapshot.docs[0].data() as Partial<ChatMessage>;
+          const preview = latest.type === 'image'
+            ? '📷 Image'
+            : latest.type === 'voice'
+              ? '🎤 Message vocal'
+              : (typeof latest.text === 'string' ? latest.text.trim().slice(0, 500) : '');
+          if (!preview) return null;
+          return { id: conversation.id, preview, createdAt: latest.createdAt };
+        } catch (err) {
+          // A preview refresh must never break the conversation list.
+          console.warn('[PipTalk] Aperçu du dernier message indisponible', conversation.id, err);
+          return null;
+        }
+      }));
+      if (cancelled) return;
+      const latestById = new Map(previews.filter((item): item is NonNullable<typeof item> => !!item).map(item => [item.id, item]));
+      setConversations(previous => {
+        let changed = false;
+        const next = previous.map(conversation => {
+          const latest = latestById.get(conversation.id);
+          if (!latest) return conversation;
+          const currentMillis = conversation.updatedAt?.toMillis?.() || conversation.createdAt?.toMillis?.() || 0;
+          const messageMillis = latest.createdAt?.toMillis?.() || 0;
+          // Do not replace a newer conversation preview with an older message.
+          if (messageMillis && currentMillis > messageMillis && conversation.lastMessage) return conversation;
+          if (conversation.lastMessage === latest.preview) return conversation;
+          changed = true;
+          return { ...conversation, lastMessage: latest.preview };
+        });
+        return changed ? next : previous;
+      });
+    };
+    void refreshLatestPreviews();
+    return () => { cancelled = true; };
+  }, [uid, conversations.map(conversation => conversation.id).join('|')]);
 
   // Create the fixed default group if it does not exist yet. Firestore rules
   // restrict this creation to the exact Community Hub system document.
@@ -480,7 +531,11 @@ export function ChatView({ userProfile, initialConversationId }: { userProfile: 
     setSending(true); setError('');
     try {
       if (editingId) {
+        const previousMessage = messages.find(message => message.id === editingId);
         await updateDoc(doc(db, 'conversations', activeId, 'messages', editingId), { text, edited: true, editedAt: serverTimestamp() });
+        if (previousMessage?.text && active?.lastMessage === previousMessage.text) {
+          await updateDoc(doc(db, 'conversations', activeId), { lastMessage: text.slice(0, 500), updatedAt: serverTimestamp() });
+        }
         setEditingId(null);
       } else {
         await addDoc(collection(db, 'conversations', activeId, 'messages'), {
