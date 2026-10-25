@@ -12,6 +12,9 @@ service cloud.firestore {
           || get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('admin', false) == true
         );
     }
+    function primaryAdmin() { return admin() && request.auth.token.email == 'henochshungu@gmail.com'; }
+    function groupAdmin(cid) { return primaryAdmin() || (member(cid) && request.auth.uid in get(/databases/$(database)/documents/conversations/$(cid)).data.get('admins', [])); }
+    function groupMentor(cid) { return member(cid) && request.auth.uid in get(/databases/$(database)/documents/conversations/$(cid)).data.get('mentors', []); }
     function member(cid) {
       return signedIn()
         && exists(/databases/$(database)/documents/conversations/$(cid))
@@ -81,32 +84,48 @@ service cloud.firestore {
     match /conversations/{cid} {
       allow get, list: if signedIn() && (cid == 'community-hub' || request.auth.uid in resource.data.members);
       allow create: if cid == 'community-hub'
-        ? admin()
+        ? primaryAdmin()
           && request.resource.data.title == 'Community Hub'
           && request.resource.data.group == true
           && request.resource.data.systemGroup == true
           && request.resource.data.members is list
           && request.resource.data.members.size() >= 1
           && request.resource.data.members.size() <= 500
-        : signedIn()
+        : primaryAdmin()
           && request.resource.data.createdBy == request.auth.uid
+          && request.resource.data.group == true
+          && request.resource.data.systemGroup == false
           && request.resource.data.members is list
           && request.auth.uid in request.resource.data.members
-          && request.resource.data.members.size() >= 2
-          && request.resource.data.members.size() <= 50;
+          && request.resource.data.members.size() >= 1
+          && request.resource.data.members.size() <= 500
+          && request.resource.data.admins == [request.auth.uid]
+          && request.resource.data.mentors == []
+          && request.resource.data.closed == false;
       allow update: if cid == 'community-hub'
-        ? signedIn()
+        ? primaryAdmin()
           && request.resource.data.members == resource.data.members
           && request.resource.data.createdBy == resource.data.createdBy
           && request.resource.data.systemGroup == resource.data.systemGroup
-          && (
-            request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastMessage', 'updatedAt', 'memberNames'])
-            || (admin() && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title', 'description', 'avatarURL', 'updatedAt']))
-          )
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title', 'description', 'avatarURL', 'updatedAt'])
         : member(cid)
-          && request.resource.data.members == resource.data.members
           && request.resource.data.createdBy == resource.data.createdBy
-          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastMessage', 'updatedAt', 'title', 'memberNames']);
+          && (
+            (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastMessage', 'updatedAt', 'memberNames'])
+              && request.resource.data.members == resource.data.members)
+            || (groupAdmin(cid)
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title', 'description', 'avatarURL', 'updatedAt', 'closed', 'admins', 'mentors', 'members', 'memberNames'])
+              && request.resource.data.members is list
+              && request.auth.uid in request.resource.data.members
+              && resource.data.createdBy in request.resource.data.members
+              && request.resource.data.get('admins', []).hasAll([resource.data.createdBy])
+              && request.resource.data.get('admins', []).size() >= 1
+              && request.resource.data.get('mentors', []) is list
+              && request.resource.data.get('closed', false) is bool
+              && request.resource.data.systemGroup == false
+              && request.resource.data.get('avatarURL', '') is string
+              && request.resource.data.get('title', '') is string
+              && request.resource.data.get('description', '') is string));
       allow delete: if false;
 
       match /readStates/{uid} {
@@ -123,7 +142,7 @@ service cloud.firestore {
       }
 
       match /messages/{messageId} {
-        function canChat() { return signedIn() && (cid == 'community-hub' || member(cid)); }
+        function canChat() { return signedIn() && (cid == 'community-hub' ? member(cid) : member(cid) && (!get(/databases/$(database)/documents/conversations/$(cid)).data.get('closed', false) || groupAdmin(cid) || groupMentor(cid))); }
         allow get, list: if canChat();
         allow create: if canChat()
           && request.resource.data.senderId == request.auth.uid
