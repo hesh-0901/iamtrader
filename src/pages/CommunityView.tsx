@@ -99,7 +99,7 @@ export function CommunityView({ userProfile }: { userProfile: UserProfile | null
 
       {activeTab === 'calendar' && <EconomicCalendarView />}
 
-      {activeTab === 'chat' && <ChatView userProfile={userProfile} initialConversationId={pendingChatId} onUnreadCountChange={setUnreadChatCount} />}
+      <div className={activeTab === 'chat' ? 'block' : 'hidden'} aria-hidden={activeTab !== 'chat'}><ChatView userProfile={userProfile} initialConversationId={pendingChatId} onUnreadCountChange={setUnreadChatCount} isVisible={activeTab === 'chat'} /></div>
       {activeTab === 'friends' && <FriendsView userProfile={userProfile} onOpenChat={openChat} />}
       {activeTab === 'courses' && <CourseSpace isAdmin={isAdmin} />}
       {activeTab === 'analysis' && (
