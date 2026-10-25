@@ -7,7 +7,8 @@ import { UserProfile } from '../types';
 type Profile = { uid: string; displayName: string; avatarURL?: string; photoURL?: string };
 type Request = { id: string; senderId: string; receiverId: string; status: string; senderName?: string; receiverName?: string };
 
-type Tab = 'discover' | 'requests' | 'friends';
+type Tab = 'discover' | 'requests' | 'friends' | 'groups';
+type GroupConversation = { id: string; title?: string; name?: string; groupName?: string; group?: boolean; members?: string[]; memberNames?: Record<string, string>; avatarURL?: string; photoURL?: string; lastMessage?: string; closed?: boolean; };
 
 export function FriendsView({ userProfile, onOpenChat, initialTab = 'discover' }: { userProfile: UserProfile | null; onOpenChat?: (conversationId: string) => void; initialTab?: Tab }) {
   const uid = auth.currentUser?.uid || userProfile?.uid || '';
@@ -18,6 +19,7 @@ export function FriendsView({ userProfile, onOpenChat, initialTab = 'discover' }
   const [incoming, setIncoming] = useState<Request[]>([]);
   const [outgoing, setOutgoing] = useState<Request[]>([]);
   const [friends, setFriends] = useState<Request[]>([]);
+  const [groups, setGroups] = useState<GroupConversation[]>([]);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [busy, setBusy] = useState('');
@@ -76,6 +78,26 @@ export function FriendsView({ userProfile, onOpenChat, initialTab = 'discover' }
       a();
       b();
     };
+  }, [uid]);
+
+  // Live list of groups the current user belongs to; reuse PipTalk conversations.
+  useEffect(() => {
+    if (!uid) return;
+    const unsubscribe = onSnapshot(
+      query(collection(db, 'conversations'), where('members', 'array-contains', uid)),
+      snapshot => {
+        const nextGroups = snapshot.docs
+          .map(item => ({ id: item.id, ...item.data() } as GroupConversation))
+          .filter(item => item.group === true && item.id !== 'community-hub')
+          .sort((a, b) => (b.id || '').localeCompare(a.id || ''));
+        setGroups(nextGroups);
+      },
+      err => {
+        console.error('[FriendsView] Échec du chargement des groupes', { uid, code: err.code, message: err.message });
+        setError(err.code === 'permission-denied' ? 'Accès refusé par Firestore pour les groupes PipTalk.' : 'Impossible de charger les groupes. Réessayez.');
+      }
+    );
+    return unsubscribe;
   }, [uid]);
 
   // Load the platform's published trader directory independently of the search dialog.
@@ -265,7 +287,8 @@ export function FriendsView({ userProfile, onOpenChat, initialTab = 'discover' }
   const tabs: { id: Tab; label: string; icon: React.ReactNode; count?: number }[] = [
     { id: 'discover', label: 'Découvrir', icon: <Compass className="h-4 w-4" /> },
     { id: 'requests', label: 'Demandes', icon: <Clock3 className="h-4 w-4" />, count: received.length },
-    { id: 'friends', label: 'Mes amis', icon: <Users className="h-4 w-4" />, count: acceptedRequests.length }
+    { id: 'friends', label: 'Mes amis', icon: <Users className="h-4 w-4" />, count: acceptedRequests.length },
+    { id: 'groups', label: 'Groupes', icon: <Users className="h-4 w-4" />, count: groups.length }
   ];
 
   return (
@@ -274,7 +297,7 @@ export function FriendsView({ userProfile, onOpenChat, initialTab = 'discover' }
         <div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-[0.14em] text-emerald-700">Communauté</p><p className="truncate text-sm font-extrabold text-slate-900 sm:text-base">Votre réseau de traders</p></div>
         <button type="button" onClick={() => { setSearchOpen(true); setError(''); setNotice(''); }} aria-label="Rechercher un trader" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm"><Search className="h-4 w-4" /></button>
       </div>
-      <nav className="z-20 mb-2 grid shrink-0 grid-cols-3 gap-1 border-b border-slate-200 bg-white px-1 py-1 sm:sticky sm:top-0 sm:mb-3 sm:rounded-2xl sm:border sm:p-1.5 sm:shadow-sm" aria-label="Sections traders et amis">
+      <nav className="z-20 mb-2 grid shrink-0 grid-cols-4 gap-1 border-b border-slate-200 bg-white px-1 py-1 sm:sticky sm:top-0 sm:mb-3 sm:rounded-2xl sm:border sm:p-1.5 sm:shadow-sm" aria-label="Sections traders et amis">
         {tabs.map(item => <button key={item.id} type="button" onClick={() => { setTab(item.id); setError(''); setNotice(''); }} className={`flex min-w-0 items-center justify-center gap-1.5 rounded-xl px-2 py-3 text-[11px] font-bold transition-all sm:gap-2 sm:text-xs ${tab === item.id ? 'bg-slate-900 text-white shadow-sm' : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'}`}>{item.icon}<span className="truncate">{item.label}</span>{typeof item.count === 'number' && <span className={`rounded-full px-1.5 py-0.5 text-[9px] ${tab === item.id ? 'bg-white/15 text-white' : 'bg-slate-100 text-slate-500'}`}>{item.count}</span>}</button>)}
       </nav>
       {(error || notice) && <div className={`mb-3 flex items-start gap-2 rounded-xl border px-3 py-2.5 text-xs ${error ? 'border-rose-200 bg-rose-50 text-rose-700' : 'border-emerald-200 bg-emerald-50 text-emerald-800'}`}><span className="flex-1 break-words">{error || notice}</span><button type="button" onClick={() => { setError(''); setNotice(''); }} aria-label="Fermer" className="font-bold">×</button></div>}
@@ -283,6 +306,22 @@ export function FriendsView({ userProfile, onOpenChat, initialTab = 'discover' }
         {allProfiles.length ? <div className="divide-y divide-slate-100">{allProfiles.map(profile => <div key={profile.uid} className="flex min-w-0 items-center gap-3 px-3 py-3 sm:px-4"><img src={profile.avatarURL || profile.photoURL || '/brand/logo-iamtrader-symbol.png'} alt="" className="h-10 w-10 shrink-0 rounded-full border border-slate-100 object-cover" onError={event => { event.currentTarget.onerror = null; event.currentTarget.src = '/brand/logo-iamtrader-symbol.png'; }} /><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold text-slate-900">{profile.displayName}</p><p className="mt-0.5 text-[10px] text-slate-400">Trader IAMTRADER</p></div>{isFriend(profile.uid) ? <span className="rounded-full bg-emerald-50 px-2.5 py-2 text-[10px] font-bold text-emerald-700">Ami</span> : hasPending(profile.uid) ? <span className="rounded-full bg-slate-100 px-2.5 py-2 text-[10px] text-slate-500">En attente</span> : <button type="button" onClick={() => setConfirmFriend(profile)} className="flex shrink-0 items-center gap-1 rounded-xl border border-emerald-200 px-3 py-2.5 text-[10px] font-bold text-emerald-700"><UserPlus className="h-3.5 w-3.5" />Ajouter</button>}</div>)}</div> : <button type="button" onClick={() => setSearchOpen(true)} className="flex min-h-40 w-full flex-col items-center justify-center px-5 py-8 text-center"><div className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-500"><Search className="h-5 w-5" /></div><p className="mt-3 text-sm font-bold text-slate-800">Découvrir les traders</p><p className="mt-1 text-xs text-slate-500">Les profils publiés sur IAMTRADER apparaîtront ici.</p></button>}
       </section>}
       {tab === 'requests' && <section className="min-h-[55vh] flex-1 overflow-y-auto bg-white sm:flex-none sm:rounded-2xl sm:border sm:border-slate-200/80 sm:shadow-sm"><div className="border-b border-slate-100 px-4 py-3"><h2 className="text-sm font-extrabold text-slate-900">Demandes reçues</h2><p className="mt-0.5 text-[11px] text-slate-500">{received.length} en attente</p></div><div className="divide-y divide-slate-100">{received.map(request => <div key={request.id} className="flex items-center gap-3 px-3 py-3.5"><div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-bold text-slate-600">{(request.senderName || 'T').slice(0,1).toUpperCase()}</div><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold text-slate-900">{request.senderName || 'Trader'}</p><p className="mt-0.5 text-[10px] text-slate-400">Demande d’amitié</p></div><button type="button" onClick={() => void respond(request,'accepted')} disabled={!!busy} className="flex items-center gap-1 rounded-xl bg-emerald-600 px-3 py-2.5 text-[10px] font-bold text-white">{busy===request.id?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<Check className="h-3.5 w-3.5"/>}Accepter</button><button type="button" onClick={() => void respond(request,'rejected')} disabled={!!busy} aria-label="Refuser" className="rounded-xl border border-slate-200 p-2.5 text-slate-500"><X className="h-4 w-4"/></button></div>)}{!received.length && <div className="px-5 py-12 text-center"><CheckCircle2 className="mx-auto h-7 w-7 text-slate-300"/><p className="mt-2 text-sm font-bold text-slate-700">Aucune demande en attente</p><p className="mt-1 text-xs text-slate-400">Les nouvelles demandes apparaîtront ici.</p></div>}</div>{sentPending.length>0 && <div className="border-t border-slate-100 px-4 py-3"><p className="mb-2 text-[11px] font-bold text-slate-500">Demandes envoyées ({sentPending.length})</p>{sentPending.map(request=><div key={request.id} className="flex justify-between gap-3 py-2"><span className="truncate text-xs font-semibold text-slate-700">{request.receiverName||'Trader'}</span><span className="text-[10px] text-amber-700">En attente</span></div>)}</div>}</section>}
+      {tab === 'groups' && <section className="min-h-[55vh] flex-1 overflow-y-auto bg-white sm:flex-none sm:rounded-2xl sm:border sm:border-slate-200/80 sm:shadow-sm">
+        <div className="border-b border-slate-100 px-4 py-3"><h2 className="text-sm font-extrabold text-slate-900">Groupes PipTalk</h2><p className="mt-0.5 text-[11px] text-slate-500">{groups.length} groupe{groups.length === 1 ? '' : 's'} dont vous êtes membre</p></div>
+        <div className="divide-y divide-slate-100">
+          {groups.map(group => {
+            const memberIds = group.members || [];
+            const title = group.title || group.groupName || group.name || 'Groupe PipTalk';
+            const preview = group.lastMessage?.trim() || (group.closed ? 'Groupe fermé' : 'Touchez pour ouvrir la discussion');
+            return <button key={group.id} type="button" onClick={() => onOpenChat?.(group.id)} className="flex w-full items-center gap-3 px-3 py-3.5 text-left transition hover:bg-slate-50 sm:px-4">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-emerald-50 text-emerald-700">{group.avatarURL || group.photoURL ? <img src={group.avatarURL || group.photoURL} alt="" className="h-full w-full object-cover" onError={event => { event.currentTarget.onerror = null; event.currentTarget.style.display = 'none'; }} /> : <Users className="h-5 w-5" />}</div>
+              <div className="min-w-0 flex-1"><div className="flex items-center gap-2"><p className="truncate text-sm font-bold text-slate-900">{title}</p>{group.closed && <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-[9px] font-semibold text-amber-700">Fermé</span>}</div><p className="mt-1 truncate text-[11px] text-slate-500">{preview}</p><div className="mt-1 flex items-center gap-1.5">{memberIds.slice(0, 4).map(memberId => { const profile = allProfiles.find(item => item.uid === memberId); const name = group.memberNames?.[memberId] || profile?.displayName || 'Membre'; const avatar = profile?.avatarURL || profile?.photoURL; return <span key={memberId} title={name} className="flex h-5 w-5 items-center justify-center overflow-hidden rounded-full border border-white bg-slate-100 text-[8px] font-bold text-slate-500">{avatar ? <img src={avatar} alt="" className="h-full w-full object-cover" onError={event => { event.currentTarget.onerror = null; event.currentTarget.style.display = 'none'; }} /> : name.slice(0, 1).toUpperCase()}</span>; })}<span className="text-[9px] text-slate-400">{memberIds.length} membre{memberIds.length === 1 ? '' : 's'}</span></div></div>
+              <ChevronRight className="h-4 w-4 shrink-0 text-slate-400" />
+            </button>;
+          })}
+          {!groups.length && <div className="px-5 py-12 text-center"><Users className="mx-auto h-7 w-7 text-slate-300"/><p className="mt-2 text-sm font-bold text-slate-700">Aucun groupe pour le moment</p><p className="mt-1 text-xs text-slate-400">Les groupes PipTalk auxquels vous appartenez apparaîtront ici.</p></div>}
+        </div>
+      </section>}
       {tab === 'friends' && <section className="min-h-[55vh] flex-1 overflow-y-auto bg-white sm:flex-none sm:rounded-2xl sm:border sm:border-slate-200/80 sm:shadow-sm"><div className="border-b border-slate-100 px-4 py-3"><h2 className="text-sm font-extrabold text-slate-900">Mes amis</h2><p className="mt-0.5 text-[11px] text-slate-500">{acceptedRequests.length} dans votre réseau</p></div><div className="divide-y divide-slate-100">{acceptedRequests.map(request=>{const otherUid=request.senderId===uid?request.receiverId:request.senderId;return <div key={otherUid} className="flex items-center gap-3 px-3 py-3.5"><img src={allProfiles.find(profile => profile.uid === otherUid)?.avatarURL || allProfiles.find(profile => profile.uid === otherUid)?.photoURL || '/brand/logo-iamtrader-symbol.png'} alt="" onError={event => { event.currentTarget.onerror = null; event.currentTarget.src = '/brand/logo-iamtrader-symbol.png'; }} className="h-10 w-10 shrink-0 rounded-full border border-slate-100 object-cover" /><div className="min-w-0 flex-1"><p className="truncate text-sm font-bold text-slate-900">{profileName(request)}</p><p className="mt-0.5 text-[10px] text-slate-400">Dans votre réseau</p></div><button type="button" onClick={()=>void chat(request)} disabled={!!busy} className="flex items-center gap-1.5 rounded-xl bg-slate-900 px-3 py-2.5 text-[10px] font-bold text-white">{busy===request.id?<Loader2 className="h-3.5 w-3.5 animate-spin"/>:<MessageCircle className="h-3.5 w-3.5"/>}Discuter</button></div>})}{!acceptedRequests.length&&<div className="px-5 py-12 text-center"><Users className="mx-auto h-7 w-7 text-slate-300"/><p className="mt-2 text-sm font-bold text-slate-700">Votre réseau est vide</p><p className="mt-1 text-xs text-slate-400">Découvrez un trader pour commencer.</p><button type="button" onClick={()=>setTab('discover')} className="mt-3 rounded-xl bg-emerald-600 px-3.5 py-2.5 text-xs font-bold text-white">Découvrir <ChevronRight className="inline h-4 w-4"/></button></div>}</div></section>}
       {searchOpen && <div className="fixed inset-0 z-[130] flex items-end justify-center bg-slate-950/45 p-0 sm:items-center sm:p-4" role="dialog" aria-modal="true" aria-labelledby="trader-search-title" onMouseDown={event=>{if(event.target===event.currentTarget)setSearchOpen(false)}}>
         <div className="flex max-h-[100dvh] w-full flex-col overflow-hidden bg-white pb-[env(safe-area-inset-bottom)] shadow-2xl sm:max-h-[min(80dvh,680px)] sm:max-w-lg sm:rounded-3xl">
