@@ -12,7 +12,8 @@
   },
   "vars": {
     
-    "VITE_FIREBASE_VAPID_KEY": "BHLjkXD3pnHWR_GPIDRqmG3am_JTqlkyVHXJksV5uWPRIhFxC5LOwNj1AFkh0k4fjAdQ8iahNxVnCPpRW_XF6xU","PAYMENT_SIMULATION_ENABLED": "false",
+    "VITE_FIREBASE_VAPID_KEY": "BHLjkXD3pnHWR_GPIDRqmG3am_JTqlkyVHXJksV5uWPRIhFxC5LOwNj1AFkh0k4fjAdQ8iahNxVnCPpRW_XF6xU",
+    "PAYMENT_SIMULATION_ENABLED": "false",
     "RESEND_FROM_EMAIL": "hello@iamtrader.trade",
     "RESEND_REPLY_TO": "hello@iamtrader.trade",
     "CINETPAY_COUNTRY": "CD",
