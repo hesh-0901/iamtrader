@@ -137,6 +137,20 @@ service cloud.firestore {
             .hasOnly(['lastMessage', 'updatedAt', 'title', 'memberNames']);
       allow delete: if false;
 
+      // Per-user read marker: users may only maintain their own read state.
+      match /readStates/{userId} {
+        function canAccessConversation() {
+          return isAuthenticated() && (conversationId == 'community-hub'
+            || request.auth.uid in get(/databases/$(database)/documents/conversations/$(conversationId)).data.members);
+        }
+        allow read: if canAccessConversation() && request.auth.uid == userId;
+        allow create, update: if canAccessConversation()
+          && request.auth.uid == userId
+          && request.resource.data.userId == userId
+          && request.resource.data.keys().hasOnly(['userId', 'lastReadAt', 'updatedAt']);
+        allow delete: if false;
+      }
+
       match /messages/{messageId} {
         function parentConversation() {
           return get(/databases/$(database)/documents/conversations/$(conversationId));
