@@ -289,11 +289,22 @@ export function ChatView({ userProfile, initialConversationId }: { userProfile: 
               : newest.type === 'voice' ? 'Vous a envoyé un message vocal'
               : (newest.text || 'Vous a envoyé un message').slice(0, 140);
             try {
-              const notification = new Notification(sender, { body, tag: 'piptalk-' + activeId });
-              notification.onclick = () => {
-                window.focus();
-                notification.close();
-              };
+              const registration = 'serviceWorker' in navigator
+                ? await navigator.serviceWorker.getRegistration()
+                : undefined;
+              if (registration?.showNotification) {
+                await registration.showNotification(sender, {
+                  body,
+                  icon: '/brand/favicon-iamtrader-192.png',
+                  badge: '/brand/favicon-iamtrader-192.png',
+                  tag: 'piptalk-' + activeId,
+                  renotify: true,
+                  data: { url: '/?section=piptalk', conversationId: activeId }
+                });
+              } else {
+                const notification = new Notification(sender, { body, tag: 'piptalk-' + activeId });
+                notification.onclick = () => { window.focus(); notification.close(); };
+              }
             } catch (err) {
               console.debug('[PipTalk] Notification système indisponible', err);
             }
