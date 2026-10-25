@@ -49,6 +49,8 @@ export function ChatView({ userProfile, initialConversationId }: { userProfile: 
   const [mobileChatClosing, setMobileChatClosing] = useState(false);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const mobileCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const messageSoundContextRef = useRef<AudioContext | null>(null);
+  const firstMessageSnapshotRef = useRef(true);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
@@ -214,7 +216,52 @@ export function ChatView({ userProfile, initialConversationId }: { userProfile: 
     });
   }, [uid, userProfile?.displayName, auth.currentUser?.displayName, auth.currentUser?.email]);
 
+  // Initialiser le contexte audio après la première interaction utilisateur
+  // pour respecter les restrictions d'autoplay des navigateurs mobiles.
   useEffect(() => {
+    const unlockAudio = () => {
+      if (typeof window === 'undefined' || !('AudioContext' in window)) return;
+      if (!messageSoundContextRef.current) {
+        const AudioContextConstructor = window.AudioContext;
+        messageSoundContextRef.current = new AudioContextConstructor();
+      }
+      if (messageSoundContextRef.current?.state === 'suspended') {
+        void messageSoundContextRef.current.resume().catch(() => undefined);
+      }
+    };
+    window.addEventListener('pointerdown', unlockAudio, { passive: true });
+    window.addEventListener('keydown', unlockAudio);
+    return () => {
+      window.removeEventListener('pointerdown', unlockAudio);
+      window.removeEventListener('keydown', unlockAudio);
+      void messageSoundContextRef.current?.close().catch(() => undefined);
+      messageSoundContextRef.current = null;
+    };
+  }, []);
+
+  const playIncomingMessageSound = () => {
+    const audioContext = messageSoundContextRef.current;
+    if (!audioContext || audioContext.state !== 'running') return;
+    try {
+      const oscillator = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
+      oscillator.frequency.setValueAtTime(660, audioContext.currentTime + 0.09);
+      gain.gain.setValueAtTime(0.0001, audioContext.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.12, audioContext.currentTime + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.22);
+      oscillator.connect(gain);
+      gain.connect(audioContext.destination);
+      oscillator.start();
+      oscillator.stop(audioContext.currentTime + 0.23);
+    } catch (err) {
+      console.debug('[PipTalk] Son de notification indisponible', err);
+    }
+  };
+
+  useEffect(() => {
+    firstMessageSnapshotRef.current = true;
     if (!uid || !activeId) { setMessages([]); return; }
     setLoadingMessages(true);
     const q = collection(db, 'conversations', activeId, 'messages');
@@ -222,6 +269,38 @@ export function ChatView({ userProfile, initialConversationId }: { userProfile: 
       const loadedMessages = snapshot.docs
         .map(item => ({ id: item.id, ...item.data() } as ChatMessage))
         .sort((a, b) => (a.createdAt?.toMillis?.() || 0) - (b.createdAt?.toMillis?.() || 0));
+
+      // Ignorer le snapshot initial (historique) et ne signaler que les vrais
+      // nouveaux messages ajoutés par un autre utilisateur.
+      if (firstMessageSnapshotRef.current) {
+        firstMessageSnapshotRef.current = false;
+      } else {
+        const incomingMessages = snapshot.docChanges()
+          .filter(change => change.type === 'added')
+          .map(change => ({ id: change.doc.id, ...change.doc.data() } as ChatMessage))
+          .filter(message => message.senderId && message.senderId !== uid);
+        if (incomingMessages.length) {
+          playIncomingMessageSound();
+          if (typeof document !== 'undefined' && document.hidden &&
+              typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+            const newest = incomingMessages[incomingMessages.length - 1];
+            const sender = newest.senderName?.trim() || 'Nouveau message';
+            const body = newest.type === 'image' ? 'Vous a envoyé une image'
+              : newest.type === 'voice' ? 'Vous a envoyé un message vocal'
+              : (newest.text || 'Vous a envoyé un message').slice(0, 140);
+            try {
+              const notification = new Notification(sender, { body, tag: 'piptalk-' + activeId });
+              notification.onclick = () => {
+                window.focus();
+                notification.close();
+              };
+            } catch (err) {
+              console.debug('[PipTalk] Notification système indisponible', err);
+            }
+          }
+        }
+      }
+
       console.debug('[PipTalk] Messages chargés', { uid, conversationId: activeId, count: loadedMessages.length });
       setMessages(loadedMessages);
       setLoadingMessages(false);
