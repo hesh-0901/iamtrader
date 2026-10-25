@@ -9,7 +9,7 @@ import {
 } from 'firebase/firestore';
 import {
   Search, MoreVertical, Send, Pin, Pencil, Trash2, X, CheckCheck,
-  MessageCircle, Plus, ArrowLeft, Users, Loader2, Image as ImageIcon, Mic, Square, Settings, Save, Reply, FileAudio, BellRing
+  MessageCircle, Plus, ArrowLeft, Users, Loader2, Image as ImageIcon, Mic, Square, Settings, Save, Reply, FileAudio, BellRing, Smile
 } from 'lucide-react';
 
 type ChatConversation = {
@@ -19,7 +19,7 @@ type ChatConversation = {
 };
 type ChatMessage = {
   id: string; senderId: string; text: string; createdAt?: Timestamp | null;
-  edited?: boolean; pinned?: boolean; type?: 'text' | 'image' | 'voice'; mediaUrl?: string; mediaName?: string; mediaPublicId?: string; mediaResourceType?: string; expiresAt?: Timestamp | null; duration?: number; senderName?: string; senderAvatarURL?: string; mentions?: string[]; replyToId?: string; replyToMessageId?: string; replyToSenderId?: string; replyToSenderName?: string; replyToText?: string; replyToType?: 'text' | 'image' | 'voice';
+  edited?: boolean; pinned?: boolean; reactions?: Record<string, string>; type?: 'text' | 'image' | 'voice'; mediaUrl?: string; mediaName?: string; mediaPublicId?: string; mediaResourceType?: string; expiresAt?: Timestamp | null; duration?: number; senderName?: string; senderAvatarURL?: string; mentions?: string[]; replyToId?: string; replyToMessageId?: string; replyToSenderId?: string; replyToSenderName?: string; replyToText?: string; replyToType?: 'text' | 'image' | 'voice';
 };
 
 const formatTime = (value?: Timestamp | null) => value?.toDate
@@ -38,6 +38,8 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
   const [readReceiptsByUser, setReadReceiptsByUser] = useState<Record<string, number>>({});
   const [activeId, setActiveId] = useState(initialConversationId || '');
   const [draft, setDraft] = useState('');
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [reactionMessageId, setReactionMessageId] = useState<string | null>(null);
   const [queryText, setQueryText] = useState('');
   const [targetUid, setTargetUid] = useState('');
   const [showNewChat, setShowNewChat] = useState(false);
@@ -715,6 +717,22 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
     cancelPendingVoice();
   };
 
+  const insertEmoji = (emoji: string) => {
+    handleDraftChange(draft + emoji);
+    setShowEmojiPicker(false);
+  };
+
+  const toggleReaction = async (message: ChatMessage, emoji: string) => {
+    if (!uid || !activeId) return;
+    const reactions = { ...(message.reactions || {}) };
+    if (reactions[uid] === emoji) delete reactions[uid];
+    else reactions[uid] = emoji;
+    try {
+      await updateDoc(doc(db, 'conversations', activeId, 'messages', message.id), { reactions });
+      setReactionMessageId(null);
+    } catch (err: any) { setError(err?.message || 'Impossible d’ajouter la réaction.'); }
+  };
+
   const sendMessage = async () => {
     const text = draft.trim();
     if (!uid || !activeId || !text || sending) return;
@@ -862,10 +880,13 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
                       : message.type === 'voice' && message.mediaUrl
                         ? <VoiceMessagePlayer src={message.mediaUrl} mine={mine} duration={message.duration || 0} />
                         : <p className="whitespace-pre-wrap break-words text-[14px] leading-[1.5] sm:text-[15px] sm:leading-[1.55]">{message.text}</p>}
+                  {message.reactions && Object.keys(message.reactions).length > 0 && <div className="mt-1 flex max-w-full flex-wrap gap-1">{Object.entries(Object.values(message.reactions).reduce((counts, emoji) => { counts[emoji] = (counts[emoji] || 0) + 1; return counts; }, {} as Record<string, number>)).map(([emoji, count]) => <button key={emoji} type="button" onClick={() => void toggleReaction(message, emoji)} aria-label={`Réagir avec ${emoji}`} className={`rounded-full border px-2 py-0.5 text-xs shadow-sm transition ${message.reactions?.[uid] === emoji ? 'border-emerald-300 bg-emerald-100' : 'border-slate-200 bg-white/90'}`}>{emoji} <span className="text-[10px] font-semibold text-slate-600">{count}</span></button>)}</div>}
                   <div className="mt-0.5 flex items-center justify-end gap-1"><span className="text-[10px] leading-4 text-slate-500">{message.edited ? 'modifié · ' : ''}{formatTime(message.createdAt)}</span>{mine && (() => { const sentAt = message.createdAt?.toMillis?.() || 0; const readBySomeone = sentAt > 0 && (active?.members || []).some(memberUid => memberUid !== uid && (readReceiptsByUser[memberUid] || 0) >= sentAt); return readBySomeone ? <CheckCheck title="Lu" aria-label="Lu" className="h-3 w-3 text-emerald-600" /> : null; })()}</div>
                   {active?.group && <span aria-hidden="true" className={`pointer-events-none absolute bottom-3 h-2.5 w-2.5 rotate-45 ${mine ? '-right-[5px] border-b border-r border-emerald-200 bg-[#bbf7d0]' : '-left-[5px] border-b border-l border-slate-200 bg-[#f1f5f9]'}`} />}
                   <button onClick={() => setMenuMessage(menuMessage === message.id ? null : message.id)} className="absolute -right-2 -top-2 hidden rounded-full border border-slate-200 bg-white p-1.5 text-slate-500 shadow-md sm:flex sm:opacity-0 sm:group-hover:opacity-100" title="Actions" aria-label="Actions du message"><MoreVertical className="h-3 w-3" /></button>
-                  {menuMessage === message.id && <div className="absolute right-0 top-6 z-20 w-44 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-xl"><button onClick={() => beginReply(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Reply className="h-3.5 w-3.5" />Répondre</button><button onClick={() => togglePin(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Pin className="h-3.5 w-3.5" />{message.pinned ? 'Désépingler' : 'Épingler'}</button>{mine && <button onClick={() => beginEdit(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Pencil className="h-3.5 w-3.5" />Modifier</button>}{mine && <button onClick={() => removeMessage(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-rose-600 hover:bg-rose-50"><Trash2 className="h-3.5 w-3.5" />Supprimer</button>}</div>}
+                  <button type="button" onClick={() => setReactionMessageId(reactionMessageId === message.id ? null : message.id)} className="absolute -right-2 -top-2 flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-md sm:hidden" title="Réagir au message" aria-label="Réagir au message"><Smile className="h-3.5 w-3.5" /></button>
+                  {menuMessage === message.id && <div className="absolute right-0 top-6 z-20 w-48 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-xl"><button onClick={() => { setReactionMessageId(reactionMessageId === message.id ? null : message.id); setMenuMessage(null); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Smile className="h-3.5 w-3.5" />Réagir</button><button onClick={() => beginReply(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Reply className="h-3.5 w-3.5" />Répondre</button><button onClick={() => togglePin(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Pin className="h-3.5 w-3.5" />{message.pinned ? 'Désépingler' : 'Épingler'}</button>{mine && <button onClick={() => beginEdit(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Pencil className="h-3.5 w-3.5" />Modifier</button>}{mine && <button onClick={() => removeMessage(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-rose-600 hover:bg-rose-50"><Trash2 className="h-3.5 w-3.5" />Supprimer</button>}</div>}
+                  {reactionMessageId === message.id && <div className="absolute right-0 top-6 z-30 flex items-center gap-1 rounded-full border border-slate-200 bg-white p-1.5 shadow-xl">{['❤️','👍','😂','🔥','😮','🙏'].map(emoji => <button key={emoji} type="button" onClick={() => void toggleReaction(message, emoji)} aria-label={`Réagir avec ${emoji}`} className="flex h-8 w-8 items-center justify-center rounded-full text-lg hover:bg-emerald-50">{emoji}</button>)}</div>}
                 </div>
                 {mine && active?.group && <div className="mb-0.5 h-8 w-8 shrink-0 overflow-hidden rounded-full ring-2 ring-white shadow-sm">{avatarForMessage(message) ? <img src={avatarForMessage(message)} alt={senderName} className="h-full w-full object-cover" onError={event => { event.currentTarget.onerror = null; event.currentTarget.src = '/brand/logo-iamtrader-symbol.png'; }} /> : <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-emerald-100 to-teal-100 text-[10px] font-extrabold text-emerald-800">{senderName.slice(0, 2).toUpperCase()}</div>}</div>}
               </div>
@@ -882,7 +903,9 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
       </div> : recording ? <div className="flex items-center gap-3 rounded-2xl border border-rose-100 bg-rose-50/70 px-3 py-2.5"><span className="h-2.5 w-2.5 animate-pulse rounded-full bg-rose-500" /><span className="flex-1 text-xs font-medium text-slate-700">Enregistrement en cours…</span><button type="button" onClick={() => { if (recorderRef.current?.state === 'recording') { recorderRef.current.onstop = () => { recorderRef.current?.stream?.getTracks().forEach(track => track.stop()); }; recorderRef.current.stop(); } setRecording(false); recordingChunksRef.current = []; }} className="rounded-full px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-100">Annuler</button><button type="button" onClick={stopRecording} className="flex h-9 w-9 items-center justify-center rounded-full bg-rose-600 text-white" aria-label="Arrêter et préécouter"><Square className="h-4 w-4 fill-current" /></button></div> : <div className="flex items-end gap-2">
         <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={e => void handleFile(e.target.files?.[0])} />
         <button type="button" disabled={!active || uploadingMedia} onClick={() => fileInputRef.current?.click()} title="Envoyer une image" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50 disabled:opacity-40 sm:h-10 sm:w-10"><ImageIcon className="h-4 w-4" /></button>
+        <button type="button" disabled={!active || uploadingMedia} onClick={() => setShowEmojiPicker(value => !value)} title="Insérer un émoji" aria-label="Insérer un émoji" aria-expanded={showEmojiPicker} className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border shadow-sm transition sm:h-10 sm:w-10 ${showEmojiPicker ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-500 hover:border-emerald-200 hover:bg-emerald-50'}`}><Smile className="h-4 w-4" /></button>
         <div className="relative min-w-0 flex-1">
+          {showEmojiPicker && <div role="dialog" aria-label="Choisir un émoji" className="absolute bottom-full left-0 z-40 mb-2 grid w-[min(280px,calc(100vw-24px))] grid-cols-7 gap-1 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">{['😀','😂','🥹','😍','😎','🤔','😮','😭','🙏','👏','👍','👎','❤️','🔥','🎉','💯','💪','🤝','📈','📉','🚀','💰','✅','❌','⚠️','💡','🙌','✨'].map(emoji => <button key={emoji} type="button" onClick={() => insertEmoji(emoji)} aria-label={`Insérer ${emoji}`} className="flex h-9 w-9 items-center justify-center rounded-lg text-xl hover:bg-emerald-50 active:scale-95">{emoji}</button>)}</div>}
           {mentionQuery !== null && publicProfiles.some(profile => profile.displayName.toLocaleLowerCase().includes(mentionQuery)) && <div className="absolute bottom-full left-0 z-30 mb-2 max-h-52 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
             {publicProfiles.filter(profile => profile.displayName.toLocaleLowerCase().includes(mentionQuery)).slice(0, 8).map(profile => <button key={profile.uid} type="button" onMouseDown={event => event.preventDefault()} onClick={() => chooseMention(profile)} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left hover:bg-emerald-50">
               {profile.avatarURL ? <img src={profile.avatarURL} alt="" className="h-7 w-7 rounded-full object-cover" /> : <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-[10px] font-bold text-emerald-800">{profile.displayName.slice(0, 2).toUpperCase()}</span>}
