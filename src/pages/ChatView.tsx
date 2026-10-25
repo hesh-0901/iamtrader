@@ -521,29 +521,30 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
     mobileCloseTimerRef.current = setTimeout(() => { setMobileChatOpen(false); setMobileChatClosing(false); }, 180);
   };
 
-  const getMessageMenuPosition = (rect: DOMRect) => {
+  const getMessageMenuPosition = (bubble: HTMLElement) => {
+    const rect = bubble.getBoundingClientRect();
     const menuWidth = 208;
-    // Keep the menu attached to the actual bubble. On short screens the menu scrolls,
-    // so it can stay near the message instead of being pushed far away.
-    const menuHeight = Math.min(320, Math.max(180, window.innerHeight * 0.52));
-    const left = Math.max(8, Math.min(rect.left + rect.width / 2 - menuWidth / 2, window.innerWidth - menuWidth - 8));
     const gap = 6;
-    const spaceBelow = window.innerHeight - rect.bottom - gap - 8;
-    const spaceAbove = rect.top - gap - 8;
-    const top = spaceBelow >= Math.min(menuHeight, 260)
-      ? rect.bottom + gap
-      : spaceAbove >= Math.min(menuHeight, 260)
-        ? rect.top - Math.min(menuHeight, spaceAbove) - gap
-        : spaceBelow >= spaceAbove
-          ? rect.bottom + gap
-          : Math.max(8, rect.top - Math.min(menuHeight, spaceAbove) - gap);
-    return { left, top: Math.max(8, Math.min(top, window.innerHeight - 180 - 8)) };
+    let pane: HTMLElement | null = bubble.parentElement;
+    while (pane && pane !== document.body) {
+      if (pane.scrollHeight > pane.clientHeight + 4 && pane.clientHeight > 0) break;
+      pane = pane.parentElement;
+    }
+    const bounds = pane && pane !== document.body ? pane.getBoundingClientRect() : new DOMRect(0, 0, window.innerWidth, window.innerHeight);
+    const visibleTop = Math.max(8, bounds.top + 8);
+    const visibleBottom = Math.min(window.innerHeight - 8, bounds.bottom - 8);
+    const menuHeight = Math.max(120, Math.min(320, visibleBottom - visibleTop));
+    const left = Math.max(8, Math.min(rect.left + rect.width / 2 - menuWidth / 2, window.innerWidth - menuWidth - 8));
+    const below = rect.bottom + gap;
+    const above = rect.top - menuHeight - gap;
+    const top = below + menuHeight <= visibleBottom ? below : above >= visibleTop ? above : Math.max(visibleTop, Math.min(rect.top, visibleBottom - menuHeight));
+    return { left, top, maxHeight: Math.max(120, Math.min(menuHeight, visibleBottom - top)) };
   };
 
   const beginMessageLongPress = (messageId: string, event?: React.TouchEvent<HTMLDivElement>) => {
     if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
     const rect = event?.currentTarget.getBoundingClientRect();
-    if (rect) setMessageMenuPosition(getMessageMenuPosition(rect));
+    if (rect) setMessageMenuPosition(getMessageMenuPosition(event!.currentTarget));
     longPressTimerRef.current = setTimeout(() => {
       setReactionMessageId(null);
       setMenuMessage(messageId);
@@ -551,8 +552,8 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
     }, 450);
   };
   const openMessageMenu = (event: React.MouseEvent<HTMLButtonElement>, messageId: string) => {
-    const rect = event.currentTarget.parentElement?.getBoundingClientRect() || event.currentTarget.getBoundingClientRect();
-    setMessageMenuPosition(getMessageMenuPosition(rect));
+    const bubble = event.currentTarget.parentElement || event.currentTarget;
+    setMessageMenuPosition(getMessageMenuPosition(bubble));
     setMenuMessage(messageId);
     setReactionMessageId(null);
   };
@@ -942,7 +943,7 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
               <div className={`group relative flex w-full items-end gap-2 ${mine ? 'justify-end' : 'justify-start'}`}>
                 {!mine && active?.group && <div className="mb-0.5 h-8 w-8 shrink-0 overflow-hidden rounded-full ring-2 ring-white shadow-sm">{avatarForMessage(message) ? <img src={avatarForMessage(message)} alt={senderName} className="h-full w-full object-cover" onError={event => { event.currentTarget.onerror = null; event.currentTarget.src = '/brand/logo-iamtrader-symbol.png'; }} /> : <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-emerald-100 to-teal-100 text-[10px] font-extrabold text-emerald-800">{senderName.slice(0, 2).toUpperCase()}</div>}</div>}
                 <div className={`relative flex min-w-0 max-w-[82%] flex-col ${mine ? 'items-end' : 'items-start'} sm:max-w-[70%]`}>
-                <div onTouchStart={event => beginMessageLongPress(message.id, event)} onTouchEnd={cancelMessageLongPress} onTouchMove={cancelMessageLongPress} onContextMenu={event => { event.preventDefault(); setMessageMenuPosition(getMessageMenuPosition(event.currentTarget.getBoundingClientRect())); setMenuMessage(message.id); setReactionMessageId(null); }} className={`relative min-w-0 max-w-full rounded-[18px] px-3 py-2.5 shadow-[0_2px_7px_rgba(15,23,42,0.045)] transition-shadow hover:shadow-md sm:px-3.5 sm:py-2.5 ${mine ? 'rounded-br-[6px] border border-emerald-200 bg-gradient-to-br from-[#d1fae5] to-[#bbf7d0] text-slate-900' : 'rounded-bl-[6px] border border-slate-200 bg-[#f1f5f9] text-slate-800'}`}>
+                <div onTouchStart={event => beginMessageLongPress(message.id, event)} onTouchEnd={cancelMessageLongPress} onTouchMove={cancelMessageLongPress} onContextMenu={event => { event.preventDefault(); setMessageMenuPosition(getMessageMenuPosition(event.currentTarget)); setMenuMessage(message.id); setReactionMessageId(null); }} className={`relative min-w-0 max-w-full rounded-[18px] px-3 py-2.5 shadow-[0_2px_7px_rgba(15,23,42,0.045)] transition-shadow hover:shadow-md sm:px-3.5 sm:py-2.5 ${mine ? 'rounded-br-[6px] border border-emerald-200 bg-gradient-to-br from-[#d1fae5] to-[#bbf7d0] text-slate-900' : 'rounded-bl-[6px] border border-slate-200 bg-[#f1f5f9] text-slate-800'}`}>
                   {(active?.group || message.type === 'voice') && <div className={`mb-0.5 flex items-center gap-1.5 text-[10px] font-extrabold tracking-[-0.01em] ${mine ? 'text-emerald-800' : 'text-slate-800'}`}><span className="truncate">{senderName}</span>{mine && <span className="rounded-full bg-emerald-100/80 px-1.5 py-0.5 text-[8px] font-bold uppercase tracking-wide text-emerald-700">Vous</span>}</div>}
                   {message.forwarded && <div className={`mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold ${mine ? "text-emerald-800" : "text-slate-500"}`}><Forward className="h-3 w-3" /><span>Transféré · Origine : {message.forwardedFrom || "Expéditeur initial inconnu"}</span></div>}
                   {message.pinned && <div className="mb-1 flex items-center gap-1 text-[9px] font-bold text-emerald-700"><Pin className="h-3 w-3" />Message épinglé</div>}
@@ -958,7 +959,7 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
                   <div className="mt-0.5 flex items-center justify-end gap-1"><span className="text-[10px] leading-4 text-slate-500">{message.edited ? 'modifié · ' : ''}{formatTime(message.createdAt)}</span>{mine && (() => { const sentAt = message.createdAt?.toMillis?.() || 0; const readBySomeone = sentAt > 0 && (active?.members || []).some(memberUid => memberUid !== uid && (readReceiptsByUser[memberUid] || 0) >= sentAt); return readBySomeone ? <CheckCheck title="Lu" aria-label="Lu" className="h-3 w-3 text-emerald-600" /> : null; })()}</div>
                   {active?.group && <span aria-hidden="true" className={`pointer-events-none absolute bottom-3 h-2.5 w-2.5 rotate-45 ${mine ? '-right-[5px] border-b border-r border-emerald-200 bg-[#bbf7d0]' : '-left-[5px] border-b border-l border-slate-200 bg-[#f1f5f9]'}`} />}
                   <button type="button" onClick={event => { event.stopPropagation(); openMessageMenu(event, message.id); }} className={`absolute -top-2 z-20 flex rounded-full border border-slate-200 bg-white p-1.5 text-slate-500 shadow-md transition-opacity ${mine ? '-left-2' : '-right-2'} opacity-100 sm:opacity-0 sm:group-hover:opacity-100 focus:opacity-100`} title="Actions" aria-label="Actions du message"><MoreVertical className="h-3 w-3" /></button>
-                  {menuMessage === message.id && messageMenuPosition && <div ref={messageMenuRef} style={{ position: 'fixed', left: messageMenuPosition.left, top: messageMenuPosition.top, maxHeight: 'calc(100dvh - 16px)' }} className="z-[1400] w-52 max-h-[52dvh] overflow-y-auto overscroll-contain rounded-xl border border-slate-200 bg-white py-1 shadow-[0_18px_55px_rgba(15,23,42,0.22)] ring-1 ring-slate-900/5"><div className="border-b border-slate-100 px-2 py-2"><p className="mb-1.5 px-1 text-[10px] font-semibold text-slate-500">Réactions</p><div className="flex items-center justify-between gap-0.5">{['❤️','👍','😂','🔥','😮','🙏'].map(emoji => <button key={emoji} type="button" onClick={() => { void toggleReaction(message, emoji); setMenuMessage(null); }} aria-label={`Réagir avec ${emoji}`} className="flex h-7 w-7 items-center justify-center rounded-full text-base hover:bg-emerald-50">{emoji}</button>)}</div></div><button onClick={() => { setReactionMessageId(reactionMessageId === message.id ? null : message.id); setMenuMessage(null); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Smile className="h-3.5 w-3.5" />Plus de réactions</button><button onClick={() => void copyMessage(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Copy className="h-3.5 w-3.5" />Copier</button><button onClick={() => { setForwardingMessage(message); setMenuMessage(null); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Forward className="h-3.5 w-3.5" />Transférer</button><button onClick={() => beginReply(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Reply className="h-3.5 w-3.5" />Répondre</button><button onClick={() => togglePin(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Pin className="h-3.5 w-3.5" />{message.pinned ? 'Désépingler' : 'Épingler'}</button>{mine && <button onClick={() => beginEdit(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Pencil className="h-3.5 w-3.5" />Modifier</button>}{mine && <button onClick={() => removeMessage(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-rose-600 hover:bg-rose-50"><Trash2 className="h-3.5 w-3.5" />Supprimer</button>}</div>}
+                  {menuMessage === message.id && messageMenuPosition && <div ref={messageMenuRef} style={{ position: 'fixed', left: messageMenuPosition.left, top: messageMenuPosition.top, maxHeight: messageMenuPosition.maxHeight }} className="z-[2147483000] w-52 overflow-y-auto overscroll-contain rounded-xl border border-slate-200 bg-white py-1 shadow-[0_18px_55px_rgba(15,23,42,0.22)] ring-1 ring-slate-900/5"><div className="border-b border-slate-100 px-2 py-2"><p className="mb-1.5 px-1 text-[10px] font-semibold text-slate-500">Réactions</p><div className="flex items-center justify-between gap-0.5">{['❤️','👍','😂','🔥','😮','🙏'].map(emoji => <button key={emoji} type="button" onClick={() => { void toggleReaction(message, emoji); setMenuMessage(null); }} aria-label={`Réagir avec ${emoji}`} className="flex h-7 w-7 items-center justify-center rounded-full text-base hover:bg-emerald-50">{emoji}</button>)}</div></div><button onClick={() => { setReactionMessageId(reactionMessageId === message.id ? null : message.id); setMenuMessage(null); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Smile className="h-3.5 w-3.5" />Plus de réactions</button><button onClick={() => void copyMessage(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Copy className="h-3.5 w-3.5" />Copier</button><button onClick={() => { setForwardingMessage(message); setMenuMessage(null); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Forward className="h-3.5 w-3.5" />Transférer</button><button onClick={() => beginReply(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Reply className="h-3.5 w-3.5" />Répondre</button><button onClick={() => togglePin(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Pin className="h-3.5 w-3.5" />{message.pinned ? 'Désépingler' : 'Épingler'}</button>{mine && <button onClick={() => beginEdit(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Pencil className="h-3.5 w-3.5" />Modifier</button>}{mine && <button onClick={() => removeMessage(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-rose-600 hover:bg-rose-50"><Trash2 className="h-3.5 w-3.5" />Supprimer</button>}</div>}
                   {reactionMessageId === message.id && messageMenuPosition && <div style={{ position: 'fixed', left: messageMenuPosition.left, top: messageMenuPosition.top }} className="z-[1200] flex max-w-[calc(100vw-16px)] items-center gap-1 rounded-full border border-slate-200 bg-white p-1.5 shadow-xl">{['❤️','👍','😂','🔥','😮','🙏'].map(emoji => <button key={emoji} type="button" onClick={() => void toggleReaction(message, emoji)} aria-label={`Réagir avec ${emoji}`} className="flex h-8 w-8 items-center justify-center rounded-full text-lg hover:bg-emerald-50">{emoji}</button>)}</div>}
                 </div>
                 {message.reactions && Object.keys(message.reactions).length > 0 && <div className={`mt-1 flex max-w-full flex-wrap gap-1 ${mine ? 'justify-end' : 'justify-start'}`}>{Object.entries(Object.values(message.reactions).reduce((counts, emoji) => { counts[emoji] = (counts[emoji] || 0) + 1; return counts; }, {} as Record<string, number>)).map(([emoji, count]) => <button key={emoji} type="button" onClick={() => void toggleReaction(message, emoji)} aria-label={`Réagir avec ${emoji}`} className={`rounded-full border px-2 py-0.5 text-xs shadow-sm transition ${message.reactions?.[uid] === emoji ? 'border-emerald-300 bg-emerald-100' : 'border-slate-200 bg-white/90'}`}>{emoji} <span className="text-[10px] font-semibold text-slate-600">{count}</span></button>)}</div>}
