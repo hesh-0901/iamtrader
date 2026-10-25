@@ -288,26 +288,28 @@ export function ChatView({ userProfile, initialConversationId }: { userProfile: 
             const body = newest.type === 'image' ? 'Vous a envoyé une image'
               : newest.type === 'voice' ? 'Vous a envoyé un message vocal'
               : (newest.text || 'Vous a envoyé un message').slice(0, 140);
-            try {
-              const registration = 'serviceWorker' in navigator
-                ? await navigator.serviceWorker.getRegistration()
-                : undefined;
-              if (registration?.showNotification) {
-                await registration.showNotification(sender, {
-                  body,
-                  icon: '/brand/favicon-iamtrader-192.png',
-                  badge: '/brand/favicon-iamtrader-192.png',
-                  tag: 'piptalk-' + activeId,
-                  renotify: true,
-                  data: { url: '/?section=piptalk', conversationId: activeId }
-                });
-              } else {
-                const notification = new Notification(sender, { body, tag: 'piptalk-' + activeId });
-                notification.onclick = () => { window.focus(); notification.close(); };
+            void (async () => {
+              try {
+                const registration = 'serviceWorker' in navigator
+                  ? await navigator.serviceWorker.getRegistration()
+                  : undefined;
+                if (registration?.showNotification) {
+                  await registration.showNotification(sender, {
+                    body,
+                    icon: '/brand/favicon-iamtrader-192.png',
+                    badge: '/brand/favicon-iamtrader-192.png',
+                    tag: 'piptalk-' + activeId,
+                    renotify: true,
+                    data: { url: '/?section=piptalk', conversationId: activeId }
+                  });
+                } else {
+                  const notification = new Notification(sender, { body, tag: 'piptalk-' + activeId });
+                  notification.onclick = () => { window.focus(); notification.close(); };
+                }
+              } catch (err) {
+                console.debug('[PipTalk] Notification système indisponible', err);
               }
-            } catch (err) {
-              console.debug('[PipTalk] Notification système indisponible', err);
-            }
+            })();
           }
         }
       }
