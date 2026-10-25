@@ -2,13 +2,14 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { UserProfile } from '../types';
 import { FriendsView } from './FriendsView';
 import { auth, db, app } from '../firebase/config';
+import { enablePipTalkPush, notifyPipTalkRecipients } from '../services/pushNotifications';
 import {
   addDoc, collection, deleteDoc, doc, getDoc, getDocs, limit, onSnapshot, orderBy, query,
   serverTimestamp, setDoc, updateDoc, where, Timestamp
 } from 'firebase/firestore';
 import {
   Search, MoreVertical, Send, Pin, Pencil, Trash2, X, CheckCheck,
-  MessageCircle, Plus, ArrowLeft, Users, Loader2, Image as ImageIcon, Mic, Square, Settings, Save, Reply, FileAudio
+  MessageCircle, Plus, ArrowLeft, Users, Loader2, Image as ImageIcon, Mic, Square, Settings, Save, Reply, FileAudio, BellRing
 } from 'lucide-react';
 
 type ChatConversation = {
@@ -46,6 +47,8 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
+  const [pushStatus, setPushStatus] = useState('');
+  const [pushBusy, setPushBusy] = useState(false);
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
   const [mobileChatClosing, setMobileChatClosing] = useState(false);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -610,6 +613,7 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
         ...replyPayload(replyTo),
         pinned: false, edited: false, createdAt: serverTimestamp()
       });
+      void notifyPipTalkRecipients({ conversationId: activeId, senderId: uid, senderName: currentDisplayName, text: type === 'image' ? 'Image' : 'Message vocal', type });
       setReplyTo(null);
       await updateDoc(doc(db, 'conversations', activeId), {
         lastMessage: type === 'image' ? '📷 Image' : '🎤 Message vocal',
@@ -695,6 +699,7 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
           senderAvatarURL: currentAvatar,
           text, mentions: mentionUids, ...replyPayload(replyTo), pinned: false, edited: false, createdAt: serverTimestamp()
         });
+        void notifyPipTalkRecipients({ conversationId: activeId, senderId: uid, senderName: currentDisplayName, text, type: 'text', mentions: mentionUids });
         await updateDoc(doc(db, 'conversations', activeId), { lastMessage: text.slice(0, 500), [`memberNames.${uid}`]: currentDisplayName, updatedAt: serverTimestamp() });
       }
       setDraft('');
@@ -751,7 +756,7 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
     <div className={`flex min-h-0 ${mobileChatOpen ? 'h-full' : 'h-[calc(100dvh-112px)]'} sm:h-[min(760px,calc(100dvh-210px))] sm:min-h-[520px]`}>
       <aside className={`${mobileChatOpen ? 'hidden md:flex' : 'flex'} w-full shrink-0 flex-col border-r border-slate-200 bg-white md:w-[310px] lg:w-[340px]`}>
         <div className="border-b border-slate-100 px-3 pb-3 pt-3 sm:px-4 sm:pb-4 sm:pt-5">
-          <div className="flex items-center justify-between"><div className="flex items-center gap-2"><div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#e7f8f2] text-[#00a982]"><MessageCircle className="h-5 w-5" /></div><div><div className="flex items-center gap-1.5"><h2 className="text-base font-black text-[#0b1f35]">PipTalk</h2>{totalUnread > 0 && <span aria-label={`${totalUnread} messages non lus`} className="inline-flex min-w-5 h-5 items-center justify-center rounded-full bg-emerald-500 px-1.5 text-[10px] font-extrabold text-white">{totalUnread > 99 ? '99+' : totalUnread}</span>}</div><p className="text-[10px] text-slate-400">Messagerie en temps réel</p></div></div><button onClick={() => { setShowFriendsModal(true); setShowNewChat(false); setError(''); }} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100" title="Ouvrir mes amis et démarrer une conversation"><Plus className="h-4 w-4" /></button></div>
+          <div className="flex items-center justify-between"><div className="flex items-center gap-2"><div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#e7f8f2] text-[#00a982]"><MessageCircle className="h-5 w-5" /></div><div><div className="flex items-center gap-1.5"><h2 className="text-base font-black text-[#0b1f35]">PipTalk</h2>{totalUnread > 0 && <span aria-label={`${totalUnread} messages non lus`} className="inline-flex min-w-5 h-5 items-center justify-center rounded-full bg-emerald-500 px-1.5 text-[10px] font-extrabold text-white">{totalUnread > 99 ? '99+' : totalUnread}</span>}</div><p className="text-[10px] text-slate-400">Messagerie en temps réel</p>{pushStatus && <p role="status" className="mt-1 max-w-[230px] text-[10px] leading-4 text-emerald-700">{pushStatus}</p>}</div></div><button disabled={pushBusy} onClick={async () => { setPushBusy(true); setPushStatus(''); const result = await enablePipTalkPush(); setPushStatus(result.message); setPushBusy(false); }} className="rounded-lg p-2 text-slate-500 hover:bg-emerald-50 hover:text-emerald-700 disabled:opacity-50" title="Activer les notifications même lorsque IAMTRADER est fermé"><BellRing className="h-4 w-4" /></button><button onClick={() => { setShowFriendsModal(true); setShowNewChat(false); setError(''); }} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100" title="Ouvrir mes amis et démarrer une conversation"><Plus className="h-4 w-4" /></button></div>
           {showNewChat && <div className="mt-3 rounded-xl border border-emerald-100 bg-emerald-50/60 p-3"><label className="text-[10px] font-bold text-slate-700">UID du trader destinataire</label><input value={targetUid} onChange={e => setTargetUid(e.target.value)} placeholder="Coller l’UID Firebase du trader" className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 outline-none focus:border-emerald-400" /><button onClick={startConversation} className="mt-2 w-full rounded-lg bg-[#00a982] px-3 py-2 text-xs font-bold text-white">Créer la discussion</button><p className="mt-2 text-[9px] leading-4 text-slate-500">L’UID doit appartenir à un autre compte IAMTRADER.</p></div>}
           <label className="mt-4 flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5"><Search className="h-4 w-4 text-slate-400" /><input value={queryText} onChange={e => setQueryText(e.target.value)} placeholder="Rechercher une discussion" className="w-full bg-transparent text-xs text-slate-700 outline-none placeholder:text-slate-400" /></label>
         </div>
