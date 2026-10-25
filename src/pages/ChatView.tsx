@@ -35,6 +35,7 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
   const [unreadByConversation, setUnreadByConversation] = useState<Record<string, number>>({});
   const [acceptedFriends, setAcceptedFriends] = useState<Array<{ uid: string; name: string; avatarURL?: string }>>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [readReceiptsByUser, setReadReceiptsByUser] = useState<Record<string, number>>({});
   const [activeId, setActiveId] = useState(initialConversationId || '');
   const [draft, setDraft] = useState('');
   const [queryText, setQueryText] = useState('');
@@ -320,6 +321,26 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
       messageUnsubscribers.forEach(unsubscribe => unsubscribe());
     };
   }, [uid, conversations.map(conversation => conversation.id).join('|'), activeId, isVisible]);
+
+  // Confirmations de lecture : ne refléter que les états réellement écrits par les destinataires.
+  useEffect(() => {
+    if (!uid || !activeId || !isVisible) { setReadReceiptsByUser({}); return; }
+    const conversation = conversations.find(item => item.id === activeId);
+    const otherMembers = (conversation?.members || []).filter(memberUid => memberUid && memberUid !== uid);
+    if (!otherMembers.length) { setReadReceiptsByUser({}); return; }
+    const latestByUser: Record<string, number> = {};
+    const unsubscribers = otherMembers.map(memberUid => onSnapshot(
+      doc(db, 'conversations', activeId, 'readStates', memberUid),
+      snapshot => {
+        const value = snapshot.data()?.lastReadAt as Timestamp | undefined;
+        if (value?.toMillis) latestByUser[memberUid] = value.toMillis();
+        else delete latestByUser[memberUid];
+        setReadReceiptsByUser({ ...latestByUser });
+      },
+      err => console.warn('[PipTalk] Confirmation de lecture indisponible', memberUid, err)
+    ));
+    return () => unsubscribers.forEach(unsubscribe => unsubscribe());
+  }, [uid, activeId, isVisible, conversations]);
 
   useEffect(() => {
     firstMessageSnapshotRef.current = true;
@@ -841,7 +862,7 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
                       : message.type === 'voice' && message.mediaUrl
                         ? <VoiceMessagePlayer src={message.mediaUrl} mine={mine} duration={message.duration || 0} />
                         : <p className="whitespace-pre-wrap break-words text-[14px] leading-[1.5] sm:text-[15px] sm:leading-[1.55]">{message.text}</p>}
-                  <div className="mt-0.5 flex items-center justify-end gap-1"><span className="text-[10px] leading-4 text-slate-500">{message.edited ? 'modifié · ' : ''}{formatTime(message.createdAt)}</span>{mine && <CheckCheck className="h-3 w-3 text-emerald-600" />}</div>
+                  <div className="mt-0.5 flex items-center justify-end gap-1"><span className="text-[10px] leading-4 text-slate-500">{message.edited ? 'modifié · ' : ''}{formatTime(message.createdAt)}</span>{mine && (() => { const sentAt = message.createdAt?.toMillis?.() || 0; const readBySomeone = sentAt > 0 && (active?.members || []).some(memberUid => memberUid !== uid && (readReceiptsByUser[memberUid] || 0) >= sentAt); return readBySomeone ? <CheckCheck title="Lu" aria-label="Lu" className="h-3 w-3 text-emerald-600" /> : null; })()}</div>
                   {active?.group && <span aria-hidden="true" className={`pointer-events-none absolute bottom-3 h-2.5 w-2.5 rotate-45 ${mine ? '-right-[5px] border-b border-r border-emerald-200 bg-[#bbf7d0]' : '-left-[5px] border-b border-l border-slate-200 bg-[#f1f5f9]'}`} />}
                   <button onClick={() => setMenuMessage(menuMessage === message.id ? null : message.id)} className="absolute -right-2 -top-2 hidden rounded-full border border-slate-200 bg-white p-1.5 text-slate-500 shadow-md sm:flex sm:opacity-0 sm:group-hover:opacity-100" title="Actions" aria-label="Actions du message"><MoreVertical className="h-3 w-3" /></button>
                   {menuMessage === message.id && <div className="absolute right-0 top-6 z-20 w-44 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-xl"><button onClick={() => beginReply(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Reply className="h-3.5 w-3.5" />Répondre</button><button onClick={() => togglePin(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Pin className="h-3.5 w-3.5" />{message.pinned ? 'Désépingler' : 'Épingler'}</button>{mine && <button onClick={() => beginEdit(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Pencil className="h-3.5 w-3.5" />Modifier</button>}{mine && <button onClick={() => removeMessage(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-rose-600 hover:bg-rose-50"><Trash2 className="h-3.5 w-3.5" />Supprimer</button>}</div>}
