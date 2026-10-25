@@ -28,7 +28,7 @@ const formatDay = (value?: Timestamp | null) => value?.toDate
   ? value.toDate().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
   : '';
 
-export function ChatView({ userProfile, initialConversationId, onUnreadCountChange }: { userProfile: UserProfile | null; initialConversationId?: string; onUnreadCountChange?: (count: number) => void }) {
+export function ChatView({ userProfile, initialConversationId, onUnreadCountChange, isVisible = true }: { userProfile: UserProfile | null; initialConversationId?: string; onUnreadCountChange?: (count: number) => void; isVisible?: boolean }) {
   const uid = auth.currentUser?.uid || userProfile?.uid;
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [unreadByConversation, setUnreadByConversation] = useState<Record<string, number>>({});
@@ -271,28 +271,43 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
   useEffect(() => {
     if (!uid || !conversations.length) { setUnreadByConversation({}); return; }
     const unsubscribers: Array<() => void> = [];
+    const messageUnsubscribers = new Map<string, () => void>();
     const liveCounts = new Map<string, number>();
     const publishCounts = () => setUnreadByConversation(Object.fromEntries(liveCounts));
     conversations.forEach(conversation => {
-      const unsubscribe = onSnapshot(doc(db, 'conversations', conversation.id, 'readStates', uid), async readSnapshot => {
-        try {
+      const unsubscribeReadState = onSnapshot(
+        doc(db, 'conversations', conversation.id, 'readStates', uid),
+        readSnapshot => {
           const lastReadAt = readSnapshot.data()?.lastReadAt as Timestamp | undefined;
           const messagesRef = collection(db, 'conversations', conversation.id, 'messages');
-          const messagesQuery = lastReadAt ? query(messagesRef, where('createdAt', '>', lastReadAt), orderBy('createdAt', 'asc')) : query(messagesRef, orderBy('createdAt', 'desc'), limit(100));
-          const snapshot = await getDocs(messagesQuery);
-          const unread = snapshot.docs.filter(message => { const data = message.data(); return data.senderId !== uid && (!lastReadAt || (data.createdAt?.toMillis?.() || 0) > lastReadAt.toMillis()); }).length;
-          liveCounts.set(conversation.id, conversation.id === activeId ? 0 : unread); publishCounts();
-        } catch (err) { console.warn('[PipTalk] Compteur non lu indisponible', conversation.id, err); }
-      }, err => console.warn('[PipTalk] État de lecture indisponible', conversation.id, err));
-      unsubscribers.push(unsubscribe);
+          const messagesQuery = lastReadAt
+            ? query(messagesRef, where('createdAt', '>', lastReadAt), orderBy('createdAt', 'asc'))
+            : query(messagesRef, orderBy('createdAt', 'desc'), limit(100));
+          messageUnsubscribers.get(conversation.id)?.();
+          const unsubscribeMessages = onSnapshot(messagesQuery, snapshot => {
+            const unread = snapshot.docs.filter(message => {
+              const data = message.data();
+              return data.senderId !== uid && (!lastReadAt || (data.createdAt?.toMillis?.() || 0) > lastReadAt.toMillis());
+            }).length;
+            liveCounts.set(conversation.id, isVisible && conversation.id === activeId ? 0 : unread);
+            publishCounts();
+          }, err => console.warn('[PipTalk] Comptage temps réel indisponible', conversation.id, err));
+          messageUnsubscribers.set(conversation.id, unsubscribeMessages);
+        },
+        err => console.warn('[PipTalk] État de lecture indisponible', conversation.id, err)
+      );
+      unsubscribers.push(unsubscribeReadState);
     });
-    return () => unsubscribers.forEach(unsubscribe => unsubscribe());
-  }, [uid, conversations.map(conversation => conversation.id).join('|'), activeId]);
+    return () => {
+      unsubscribers.forEach(unsubscribe => unsubscribe());
+      messageUnsubscribers.forEach(unsubscribe => unsubscribe());
+    };
+  }, [uid, conversations.map(conversation => conversation.id).join('|'), activeId, isVisible]);
 
   useEffect(() => {
     firstMessageSnapshotRef.current = true;
     if (!uid || !activeId) { setMessages([]); return; }
-    void markConversationRead(activeId);
+    if (isVisible) void markConversationRead(activeId);
     setLoadingMessages(true);
     const q = collection(db, 'conversations', activeId, 'messages');
     return onSnapshot(q, snapshot => {
@@ -346,13 +361,13 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
 
       if (loadedMessages.length && activeId) {
         const latestTimestamp = loadedMessages[loadedMessages.length - 1].createdAt;
-        if (latestTimestamp) void markConversationRead(activeId, latestTimestamp);
+        if (latestTimestamp && isVisible) void markConversationRead(activeId, latestTimestamp);
       }
       console.debug('[PipTalk] Messages chargés', { uid, conversationId: activeId, count: loadedMessages.length });
       setMessages(loadedMessages);
       setLoadingMessages(false);
     }, err => { console.error('[PipTalk] Lecture des messages refusée', { uid, conversationId: activeId, code: err.code, message: err.message }); setError(err.message); setLoadingMessages(false); });
-  }, [uid, activeId]);
+  }, [uid, activeId, isVisible]);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
@@ -446,7 +461,7 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
     return items.sort((a, b) => (b.updatedAt?.toMillis?.() || b.createdAt?.toMillis?.() || 0) - (a.updatedAt?.toMillis?.() || a.createdAt?.toMillis?.() || 0));
   }, [conversations, acceptedFriends, uid]);
 
-  const totalUnread = Object.entries(unreadByConversation).filter(([conversationId]) => conversationId !== activeId).reduce((total, [, count]) => total + count, 0);
+  const totalUnread = Object.entries(unreadByConversation).filter(([conversationId]) => !isVisible || conversationId !== activeId).reduce((total, [, count]) => total + count, 0);
 
   useEffect(() => { onUnreadCountChange?.(totalUnread); }, [totalUnread, onUnreadCountChange]);
 
