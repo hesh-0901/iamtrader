@@ -3,11 +3,19 @@ import { firestoreGet, firestoreSet, firestoreQueryCollection, firebaseMessaging
 type PushEnv = {
   FIREBASE_SERVICE_ACCOUNT_JSON?: string;
   FIREBASE_API_KEY?: string;
+  VITE_FIREBASE_VAPID_KEY?: string;
 };
 
 const json = (data: unknown, status = 200) => new Response(JSON.stringify(data), {
   status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }
 });
+
+export async function handlePushConfig(request: Request, env: PushEnv): Promise<Response> {
+  if (request.method !== 'GET') return json({ success: false, error: 'Method not allowed' }, 405);
+  const vapidKey = env.VITE_FIREBASE_VAPID_KEY?.trim();
+  if (!vapidKey) return json({ success: false, error: 'VAPID key is not configured on the Worker' }, 503);
+  return json({ success: true, vapidKey });
+}
 
 async function authenticate(request: Request, env: PushEnv) {
   const header = request.headers.get('Authorization') || '';
