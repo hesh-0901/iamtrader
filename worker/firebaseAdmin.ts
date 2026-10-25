@@ -137,7 +137,11 @@ async function accessToken(env: PaymentEnv, scope = 'https://www.googleapis.com/
   return data.access_token;
 }
 
-export async function firebaseMessagingAccessToken(env: PaymentEnv): Promise<string> {\n  return accessToken(env, 'https://www.googleapis.com/auth/firebase.messaging');\n}\n\nexport async function firestoreGet(env: PaymentEnv, path: string) {
+export async function firebaseMessagingAccessToken(env: PaymentEnv): Promise<string> {
+  return accessToken(env, 'https://www.googleapis.com/auth/firebase.messaging');
+}
+
+export async function firestoreGet(env: PaymentEnv, path: string) {
   const token = await accessToken(env);
   const response = await fetch(`${FIRESTORE_BASE}/${path}`, { headers: { Authorization: `Bearer ${token}` } });
   if (response.status === 404) return null;
