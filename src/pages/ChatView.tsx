@@ -8,7 +8,7 @@ import {
   serverTimestamp, setDoc, updateDoc, where, Timestamp
 } from 'firebase/firestore';
 import {
-  Search, MoreVertical, Send, Pin, Pencil, Trash2, X, CheckCheck,
+  Search, MoreVertical, Send, Pin, Pencil, Trash2, X, CheckCheck, Copy, Forward,
   MessageCircle, Plus, ArrowLeft, Users, Loader2, Image as ImageIcon, Mic, Square, Settings, Save, Reply, FileAudio, BellRing, Smile
 } from 'lucide-react';
 
@@ -48,6 +48,8 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
   const [showFriendsModal, setShowFriendsModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [menuMessage, setMenuMessage] = useState<string | null>(null);
+  const [forwardingMessage, setForwardingMessage] = useState<ChatMessage | null>(null);
+  const messageMenuRef = useRef<HTMLDivElement>(null);
   const [loadingChats, setLoadingChats] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [sending, setSending] = useState(false);
@@ -822,6 +824,37 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
     finally { setSavingGroupSettings(false); }
   };
 
+  const copyMessage = async (message: ChatMessage) => {
+    if (!message.text?.trim()) { setError('Ce message ne contient pas de texte à copier.'); setMenuMessage(null); return; }
+    try { await navigator.clipboard.writeText(message.text); setMenuMessage(null); }
+    catch { setError('Impossible de copier le message. Vérifiez les autorisations du navigateur.'); }
+  };
+
+  const forwardMessage = async (conversation: ChatConversation) => {
+    const message = forwardingMessage;
+    if (!message || !uid) return;
+    try {
+      const forwardedText = message.text || (message.type === 'image' ? 'Image transférée' : message.type === 'voice' ? 'Message vocal transféré' : '');
+      const payload: Record<string, unknown> = { senderId: uid, senderName: currentDisplayName, text: forwardedText, type: message.type || 'text', createdAt: serverTimestamp(), forwarded: true, forwardedFrom: message.senderName || (message.senderId === uid ? 'Vous' : 'Trader') };
+      if (message.mediaUrl) payload.mediaUrl = message.mediaUrl;
+      if (message.mediaName) payload.mediaName = message.mediaName;
+      if (message.mediaPublicId) payload.mediaPublicId = message.mediaPublicId;
+      if (message.mediaResourceType) payload.mediaResourceType = message.mediaResourceType;
+      if (message.duration !== undefined) payload.duration = message.duration;
+      await addDoc(collection(db, 'conversations', conversation.id, 'messages'), payload);
+      await updateDoc(doc(db, 'conversations', conversation.id), { lastMessage: forwardedText, updatedAt: serverTimestamp() });
+      setForwardingMessage(null); setMenuMessage(null);
+    } catch (err: any) { setError(err?.message || 'Impossible de transférer ce message.'); }
+  };
+
+  useEffect(() => {
+    if (!menuMessage) return;
+    const outside = (event: PointerEvent) => { if (messageMenuRef.current && !messageMenuRef.current.contains(event.target as Node)) { setMenuMessage(null); setReactionMessageId(null); } };
+    const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') { setMenuMessage(null); setReactionMessageId(null); } };
+    document.addEventListener('pointerdown', outside); document.addEventListener('keydown', escape);
+    return () => { document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', escape); };
+  }, [menuMessage]);
+
   const togglePin = async (message: ChatMessage) => {
     if (!activeId) return;
     try {
@@ -919,7 +952,7 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
                   <div className="mt-0.5 flex items-center justify-end gap-1"><span className="text-[10px] leading-4 text-slate-500">{message.edited ? 'modifié · ' : ''}{formatTime(message.createdAt)}</span>{mine && (() => { const sentAt = message.createdAt?.toMillis?.() || 0; const readBySomeone = sentAt > 0 && (active?.members || []).some(memberUid => memberUid !== uid && (readReceiptsByUser[memberUid] || 0) >= sentAt); return readBySomeone ? <CheckCheck title="Lu" aria-label="Lu" className="h-3 w-3 text-emerald-600" /> : null; })()}</div>
                   {active?.group && <span aria-hidden="true" className={`pointer-events-none absolute bottom-3 h-2.5 w-2.5 rotate-45 ${mine ? '-right-[5px] border-b border-r border-emerald-200 bg-[#bbf7d0]' : '-left-[5px] border-b border-l border-slate-200 bg-[#f1f5f9]'}`} />}
                   <button onClick={event => openMessageMenu(event, message.id)} className="absolute -right-2 -top-2 hidden rounded-full border border-slate-200 bg-white p-1.5 text-slate-500 shadow-md sm:flex sm:opacity-0 sm:group-hover:opacity-100" title="Actions" aria-label="Actions du message"><MoreVertical className="h-3 w-3" /></button>
-                  {menuMessage === message.id && messageMenuPosition && <div style={{ position: 'fixed', left: messageMenuPosition.left, top: messageMenuPosition.top, maxHeight: 'calc(100dvh - 16px)' }} className="z-[1200] w-52 overflow-y-auto overscroll-contain rounded-xl border border-slate-200 bg-white py-1 shadow-xl"><div className="border-b border-slate-100 px-2 py-2"><p className="mb-1.5 px-1 text-[10px] font-semibold text-slate-500">Réactions</p><div className="flex items-center justify-between gap-0.5">{['❤️','👍','😂','🔥','😮','🙏'].map(emoji => <button key={emoji} type="button" onClick={() => { void toggleReaction(message, emoji); setMenuMessage(null); }} aria-label={`Réagir avec ${emoji}`} className="flex h-7 w-7 items-center justify-center rounded-full text-base hover:bg-emerald-50">{emoji}</button>)}</div></div><button onClick={() => { setReactionMessageId(reactionMessageId === message.id ? null : message.id); setMenuMessage(null); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Smile className="h-3.5 w-3.5" />Plus de réactions</button><button onClick={() => beginReply(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Reply className="h-3.5 w-3.5" />Répondre</button><button onClick={() => togglePin(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Pin className="h-3.5 w-3.5" />{message.pinned ? 'Désépingler' : 'Épingler'}</button>{mine && <button onClick={() => beginEdit(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Pencil className="h-3.5 w-3.5" />Modifier</button>}{mine && <button onClick={() => removeMessage(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-rose-600 hover:bg-rose-50"><Trash2 className="h-3.5 w-3.5" />Supprimer</button>}</div>}
+                  {menuMessage === message.id && messageMenuPosition && <div ref={messageMenuRef} style={{ position: 'fixed', left: messageMenuPosition.left, top: messageMenuPosition.top, maxHeight: 'calc(100dvh - 16px)' }} className="z-[1200] w-52 overflow-y-auto overscroll-contain rounded-xl border border-slate-200 bg-white py-1 shadow-xl"><div className="border-b border-slate-100 px-2 py-2"><p className="mb-1.5 px-1 text-[10px] font-semibold text-slate-500">Réactions</p><div className="flex items-center justify-between gap-0.5">{['❤️','👍','😂','🔥','😮','🙏'].map(emoji => <button key={emoji} type="button" onClick={() => { void toggleReaction(message, emoji); setMenuMessage(null); }} aria-label={`Réagir avec ${emoji}`} className="flex h-7 w-7 items-center justify-center rounded-full text-base hover:bg-emerald-50">{emoji}</button>)}</div></div><button onClick={() => { setReactionMessageId(reactionMessageId === message.id ? null : message.id); setMenuMessage(null); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Smile className="h-3.5 w-3.5" />Plus de réactions</button><button onClick={() => void copyMessage(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Copy className="h-3.5 w-3.5" />Copier</button><button onClick={() => { setForwardingMessage(message); setMenuMessage(null); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Forward className="h-3.5 w-3.5" />Transférer</button><button onClick={() => beginReply(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Reply className="h-3.5 w-3.5" />Répondre</button><button onClick={() => togglePin(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Pin className="h-3.5 w-3.5" />{message.pinned ? 'Désépingler' : 'Épingler'}</button>{mine && <button onClick={() => beginEdit(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Pencil className="h-3.5 w-3.5" />Modifier</button>}{mine && <button onClick={() => removeMessage(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-rose-600 hover:bg-rose-50"><Trash2 className="h-3.5 w-3.5" />Supprimer</button>}</div>}
                   {reactionMessageId === message.id && messageMenuPosition && <div style={{ position: 'fixed', left: messageMenuPosition.left, top: messageMenuPosition.top }} className="z-[1200] flex max-w-[calc(100vw-16px)] items-center gap-1 rounded-full border border-slate-200 bg-white p-1.5 shadow-xl">{['❤️','👍','😂','🔥','😮','🙏'].map(emoji => <button key={emoji} type="button" onClick={() => void toggleReaction(message, emoji)} aria-label={`Réagir avec ${emoji}`} className="flex h-8 w-8 items-center justify-center rounded-full text-lg hover:bg-emerald-50">{emoji}</button>)}</div>}
                 </div>
                 {message.reactions && Object.keys(message.reactions).length > 0 && <div className={`mt-1 flex max-w-full flex-wrap gap-1 ${mine ? 'justify-end' : 'justify-start'}`}>{Object.entries(Object.values(message.reactions).reduce((counts, emoji) => { counts[emoji] = (counts[emoji] || 0) + 1; return counts; }, {} as Record<string, number>)).map(([emoji, count]) => <button key={emoji} type="button" onClick={() => void toggleReaction(message, emoji)} aria-label={`Réagir avec ${emoji}`} className={`rounded-full border px-2 py-0.5 text-xs shadow-sm transition ${message.reactions?.[uid] === emoji ? 'border-emerald-300 bg-emerald-100' : 'border-slate-200 bg-white/90'}`}>{emoji} <span className="text-[10px] font-semibold text-slate-600">{count}</span></button>)}</div>}
@@ -956,6 +989,12 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
     </footer>}
       </section>
     </div>
+    {forwardingMessage && <div role="dialog" aria-modal="true" aria-label="Transférer le message" className="fixed inset-0 z-[1300] flex items-center justify-center bg-slate-950/50 p-4" onMouseDown={event => { if (event.target === event.currentTarget) setForwardingMessage(null); }}>
+      <div className="flex max-h-[80dvh] w-full max-w-sm flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b border-slate-100 px-4 py-3"><div><h2 className="text-sm font-bold text-slate-900">Transférer le message</h2><p className="mt-0.5 text-[11px] text-slate-500">Choisissez une conversation.</p></div><button type="button" onClick={() => setForwardingMessage(null)} aria-label="Fermer" className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100"><X className="h-4 w-4" /></button></div>
+        <div className="overflow-y-auto p-2">{conversations.filter(conversation => conversation.id !== activeId).map(conversation => <button key={conversation.id} type="button" onClick={() => void forwardMessage(conversation)} className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left hover:bg-emerald-50"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-xs font-bold text-emerald-800">{(conversation.title || conversation.memberNames?.[conversation.members.find(member => member !== uid) || ''] || 'Chat').slice(0, 2).toUpperCase()}</span><span className="min-w-0 flex-1"><span className="block truncate text-xs font-semibold text-slate-800">{conversation.title || conversation.memberNames?.[conversation.members.find(member => member !== uid) || ''] || 'Discussion'}</span><span className="block truncate text-[10px] text-slate-500">{conversation.group ? 'Groupe' : 'Discussion privée'}</span></span><Forward className="h-4 w-4 shrink-0 text-slate-400" /></button>)}{!conversations.some(conversation => conversation.id !== activeId) && <p className="px-3 py-6 text-center text-xs text-slate-500">Aucune autre conversation disponible.</p>}</div>
+      </div>
+    </div>}
     {showFriendsModal && <div role="dialog" aria-modal="true" aria-label="Traders et amis" className="fixed inset-0 z-[90] flex items-end justify-center bg-slate-950/55 backdrop-blur-sm sm:items-center sm:p-6" onMouseDown={event => { if (event.target === event.currentTarget) setShowFriendsModal(false); }}>
       <div className="relative flex h-[60dvh] max-h-[60dvh] w-full max-w-5xl translate-y-0 flex-col overflow-hidden rounded-t-2xl border border-slate-200 bg-white shadow-2xl animate-[slideUp_220ms_ease-out] sm:h-auto sm:max-h-[94dvh] sm:rounded-3xl">
         <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-4 py-3">
