@@ -52,6 +52,8 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
   const [notificationsEnabled, setNotificationsEnabled] = useState(() => typeof window !== 'undefined' && window.localStorage.getItem('piptalk-notifications-enabled') === 'true');
   const [showNotificationOptions, setShowNotificationOptions] = useState(false);
   const [notificationMode, setNotificationMode] = useState(() => typeof window !== 'undefined' ? window.localStorage.getItem('piptalk-notification-mode') || '' : '');
+  const [selectedAlertSound, setSelectedAlertSound] = useState(() => typeof window !== 'undefined' ? window.localStorage.getItem('piptalk-alert-sound') || 'doux' : 'doux');
+  const [previewingAlertSound, setPreviewingAlertSound] = useState('');
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
   const [mobileChatClosing, setMobileChatClosing] = useState(false);
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -246,26 +248,36 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
     };
   }, []);
 
-  const playIncomingMessageSound = () => {
+  const playAlertSound = (soundId: string) => {
     const audioContext = messageSoundContextRef.current;
     if (!audioContext || audioContext.state !== 'running') return;
+    const patterns: Record<string, { notes: number[]; spacing: number; type: OscillatorType }> = {
+      doux: { notes: [880, 1175], spacing: 0.12, type: 'sine' },
+      dynamique: { notes: [660, 880, 1175], spacing: 0.09, type: 'sine' },
+      pulse: { notes: [740, 740], spacing: 0.16, type: 'triangle' }
+    };
+    const pattern = patterns[soundId] || patterns.doux;
     try {
-      const oscillator = audioContext.createOscillator();
-      const gain = audioContext.createGain();
-      oscillator.type = 'sine';
-      oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
-      oscillator.frequency.setValueAtTime(660, audioContext.currentTime + 0.09);
-      gain.gain.setValueAtTime(0.0001, audioContext.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.12, audioContext.currentTime + 0.015);
-      gain.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + 0.22);
-      oscillator.connect(gain);
-      gain.connect(audioContext.destination);
-      oscillator.start();
-      oscillator.stop(audioContext.currentTime + 0.23);
+      pattern.notes.forEach((frequency, index) => {
+        const startAt = audioContext.currentTime + index * pattern.spacing;
+        const oscillator = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        oscillator.type = pattern.type;
+        oscillator.frequency.setValueAtTime(frequency, startAt);
+        gain.gain.setValueAtTime(0.0001, startAt);
+        gain.gain.exponentialRampToValueAtTime(0.1, startAt + 0.012);
+        gain.gain.exponentialRampToValueAtTime(0.0001, startAt + 0.105);
+        oscillator.connect(gain);
+        gain.connect(audioContext.destination);
+        oscillator.start(startAt);
+        oscillator.stop(startAt + 0.12);
+      });
     } catch (err) {
       console.debug('[PipTalk] Son de notification indisponible', err);
     }
   };
+
+  const playIncomingMessageSound = () => playAlertSound(selectedAlertSound);
 
   const markConversationRead = async (conversationId: string, lastMessageAt?: Timestamp | null) => {
     if (!uid || !conversationId) return;
@@ -769,35 +781,31 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
           {filtered.map(item => { const other = item.members.find(member => member !== uid) || ''; const name = item.title || item.memberNames?.[other] || acceptedFriends.find(friend => friend.uid === other)?.name || `Trader ${other.slice(0, 7)}`; const avatar = item.id === 'community-hub' ? (item.avatarURL || '') : avatarForConversation(item, other); return <button key={item.id} onClick={() => { void openInboxConversation(item); }} className={`flex w-full items-center gap-3 border-b border-slate-50 px-4 py-3.5 text-left hover:bg-slate-50 ${activeId === item.id ? 'bg-[#f0fbf7]' : ''}`}><div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-emerald-100 text-xs font-black text-emerald-700">{avatar ? <img src={avatar} alt={name} className="h-full w-full object-cover" onError={event => { event.currentTarget.style.display = 'none'; }} /> : name.slice(0, 2).toUpperCase()}</div><div className="min-w-0 flex-1"><div className="truncate text-xs font-bold text-slate-800">{name}</div><p className="mt-1 truncate text-[10px] text-slate-500">{item.lastMessage || 'Démarrer la conversation'}</p></div><span className="shrink-0 text-[9px] tabular-nums text-slate-500">{formatTime(item.updatedAt)}</span>{(unreadByConversation[item.id] || 0) > 0 && activeId !== item.id && <span aria-label={`${unreadByConversation[item.id]} messages non lus`} className="inline-flex min-w-5 h-5 shrink-0 items-center justify-center rounded-full bg-emerald-500 px-1.5 text-[9px] font-extrabold text-white">{unreadByConversation[item.id] > 99 ? '99+' : unreadByConversation[item.id]}</span>}</button>; })}
         </div>
         <div className="relative mt-auto shrink-0 border-t border-slate-200 bg-white px-3 py-2.5 pb-[max(0.625rem,env(safe-area-inset-bottom))] sm:bg-slate-50/70">
-          {showNotificationOptions && <div className="absolute bottom-full left-3 right-3 z-30 mb-2 rounded-xl border border-emerald-100 bg-white p-3 shadow-xl">
-            <div className="mb-2 flex items-center justify-between"><p className="text-xs font-extrabold text-slate-800">Alertes PipTalk</p><button onClick={() => setShowNotificationOptions(false)} aria-label="Fermer les options" className="rounded-md p-1 text-slate-400 hover:bg-slate-100"><X className="h-4 w-4" /></button></div>
-            <p className="mb-3 text-[10px] leading-4 text-slate-500">Choisis comment être averti des nouveaux messages.</p>
-            {[
-              { id: 'sound-push', title: 'Son + notification', detail: 'Alerte sonore et notification système, y compris en arrière-plan.' },
-              { id: 'silent-push', title: 'Notification silencieuse', detail: 'Notification système sans son choisi dans IAMTRADER.' },
-              { id: 'app-sound', title: 'Son dans l’application', detail: 'Son uniquement quand IAMTRADER est ouvert.' }
-            ].map(option => <button key={option.id} disabled={pushBusy} onClick={async () => {
-              setPushBusy(true); setPushStatus('');
-              if (option.id === 'app-sound') {
-                window.localStorage.setItem('piptalk-notifications-enabled', 'true');
-                window.localStorage.setItem('piptalk-notification-mode', option.id);
-                setNotificationsEnabled(true); setNotificationMode(option.id);
-                setPushStatus('Son dans l’application activé. Les notifications lorsque l’application est fermée nécessitent une option push.');
-              } else {
-                const result = await enablePipTalkPush();
-                setPushStatus(result.message);
-                if (result.success) {
-                  window.localStorage.setItem('piptalk-notifications-enabled', 'true');
-                  window.localStorage.setItem('piptalk-notification-mode', option.id);
-                  setNotificationsEnabled(true); setNotificationMode(option.id);
-                }
-              }
-              setPushBusy(false);
-              setShowNotificationOptions(false);
-            }} className={`mb-1.5 flex w-full items-start gap-2 rounded-lg border px-2.5 py-2 text-left transition ${notificationMode === option.id ? 'border-emerald-400 bg-emerald-50' : 'border-slate-100 hover:border-emerald-200 hover:bg-emerald-50/50'} disabled:opacity-50`}>
-              <span className={`mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${notificationMode === option.id ? 'border-emerald-600 bg-emerald-500 text-white' : 'border-slate-300'}`}>{notificationMode === option.id && <span className="text-[9px]">✓</span>}</span>
-              <span><span className="block text-[11px] font-bold text-slate-800">{option.title}</span><span className="mt-0.5 block text-[9px] leading-4 text-slate-500">{option.detail}</span></span>
-            </button>)}
+          {showNotificationOptions && <div className="fixed inset-0 z-[2000] flex items-center justify-center bg-[#071a2b]/55 p-4 backdrop-blur-md" role="dialog" aria-modal="true" aria-labelledby="piptalk-sound-title" onClick={event => { if (event.target === event.currentTarget) setShowNotificationOptions(false); }}>
+            <div className="relative w-full max-w-md overflow-hidden rounded-[28px] border border-white/70 bg-white shadow-[0_28px_100px_rgba(3,20,35,0.35)]">
+              <div className="relative overflow-hidden bg-gradient-to-br from-[#082b3b] via-[#075b51] to-[#00a982] px-5 pb-6 pt-5 text-white sm:px-7 sm:pt-7">
+                <div className="absolute -right-8 -top-12 h-36 w-36 rounded-full border border-white/10 bg-white/5" /><div className="absolute -right-2 top-8 h-20 w-20 rounded-full border border-white/10" />
+                <button onClick={() => setShowNotificationOptions(false)} aria-label="Fermer" className="absolute right-4 top-4 rounded-full border border-white/20 bg-white/10 p-2 text-white/80 transition hover:bg-white/20"><X className="h-4 w-4" /></button>
+                <div className="relative flex h-12 w-12 items-center justify-center rounded-2xl border border-white/20 bg-white/15 shadow-inner"><BellRing className="h-6 w-6" /></div>
+                <p className="relative mt-4 text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-100">Personnalisation PipTalk</p>
+                <h3 id="piptalk-sound-title" className="relative mt-1 text-xl font-black tracking-tight sm:text-2xl">Choisis ton son d’alerte</h3>
+                <p className="relative mt-2 max-w-xs text-xs leading-5 text-white/75">Écoute les trois signatures sonores et sélectionne celle qui te convient.</p>
+              </div>
+              <div className="space-y-2.5 px-4 py-4 sm:px-6 sm:py-5">
+                {[
+                  { id: 'doux', title: 'Doux', subtitle: 'Deux notes cristallines', detail: 'Discret et élégant', icon: '◖' },
+                  { id: 'dynamique', title: 'Dynamique', subtitle: 'Carillon montant', detail: 'Clair et perceptible', icon: '♫' },
+                  { id: 'pulse', title: 'Pulse', subtitle: 'Deux bips électroniques', detail: 'Moderne et distinctif', icon: '∿' }
+                ].map(sound => <div key={sound.id} className={`flex items-center gap-3 rounded-2xl border p-3 transition-all sm:p-3.5 ${selectedAlertSound === sound.id ? 'border-emerald-400 bg-emerald-50/80 shadow-[0_5px_18px_rgba(16,185,129,0.10)]' : 'border-slate-200 bg-white hover:border-emerald-200 hover:bg-slate-50'}`}>
+                  <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl text-lg font-black ${selectedAlertSound === sound.id ? 'bg-emerald-500 text-white' : 'bg-slate-100 text-slate-500'}`}>{sound.icon}</div>
+                  <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-2"><p className="text-sm font-extrabold text-[#0b1f35]">{sound.title}</p>{selectedAlertSound === sound.id && <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-emerald-700">Sélectionné</span>}</div><p className="mt-0.5 text-[11px] font-medium text-slate-600">{sound.subtitle}</p><p className="mt-0.5 text-[10px] text-slate-400">{sound.detail}</p></div>
+                  <div className="flex shrink-0 items-center gap-1.5"><button type="button" onClick={() => { setPreviewingAlertSound(sound.id); playAlertSound(sound.id); window.setTimeout(() => setPreviewingAlertSound(current => current === sound.id ? '' : current), 650); }} aria-label={`Écouter le son ${sound.title}`} className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-600 transition hover:border-emerald-300 hover:text-emerald-700"><span className={`text-sm ${previewingAlertSound === sound.id ? 'text-emerald-600' : ''}`}>▶</span></button><button type="button" onClick={() => { setSelectedAlertSound(sound.id); window.localStorage.setItem('piptalk-alert-sound', sound.id); playAlertSound(sound.id); }} aria-label={`Sélectionner le son ${sound.title}`} className={`flex h-9 w-9 items-center justify-center rounded-full transition ${selectedAlertSound === sound.id ? 'bg-emerald-500 text-white shadow-md shadow-emerald-200' : 'bg-slate-100 text-slate-400 hover:bg-emerald-100 hover:text-emerald-700'}`}>{selectedAlertSound === sound.id ? <CheckCheck className="h-4 w-4" /> : <span className="text-base">✓</span>}</button></div>
+                </div>)}
+                {pushStatus && <p role="status" className="rounded-xl bg-amber-50 px-3 py-2 text-[11px] leading-4 text-amber-800">{pushStatus}</p>}
+                <button disabled={pushBusy} onClick={async () => { setPushBusy(true); const result = await enablePipTalkPush(); setPushStatus(result.message); if (result.success) { setNotificationsEnabled(true); window.localStorage.setItem('piptalk-notifications-enabled', 'true'); setNotificationMode('push'); window.localStorage.setItem('piptalk-notification-mode', 'push'); setShowNotificationOptions(false); } setPushBusy(false); }} className="mt-1 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-[#00a982] to-[#059669] px-4 py-3 text-xs font-extrabold text-white shadow-[0_8px_20px_rgba(0,169,130,0.22)] transition hover:brightness-105 disabled:opacity-60">{pushBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <BellRing className="h-4 w-4" />}{pushBusy ? 'Activation…' : notificationsEnabled ? 'Enregistrer mon choix' : 'Activer les notifications'}</button>
+                <p className="px-2 text-center text-[9px] leading-4 text-slate-400">Ton choix de son est mémorisé sur cet appareil. Le son système en arrière-plan dépend aussi des réglages du téléphone.</p>
+              </div>
+            </div>
           </div>}
           <div className="flex min-h-[48px] items-center justify-between gap-2">
             <div className="h-8 w-8 shrink-0 overflow-hidden rounded-full bg-[#0b1f35] text-center text-[10px] font-black leading-8 text-white">{(userProfile?.avatarURL || userProfile?.photoURL) ? <img src={userProfile.avatarURL || userProfile.photoURL} alt="Mon avatar" className="h-full w-full object-cover" /> : (userProfile?.displayName || 'IT').slice(0, 2).toUpperCase()}</div>
