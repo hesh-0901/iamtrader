@@ -40,6 +40,8 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
   const [draft, setDraft] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const [reactionMessageId, setReactionMessageId] = useState<string | null>(null);
+  const [messageMenuPosition, setMessageMenuPosition] = useState<{ left: number; top: number } | null>(null);
+  const draftTextareaRef = useRef<HTMLTextAreaElement>(null);
   const [queryText, setQueryText] = useState('');
   const [targetUid, setTargetUid] = useState('');
   const [showNewChat, setShowNewChat] = useState(false);
@@ -520,9 +522,22 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
   const beginMessageLongPress = (messageId: string) => {
     if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
     longPressTimerRef.current = setTimeout(() => {
-      setMenuMessage(messageId);
+      setMenuMessage(null);
+      setReactionMessageId(messageId);
       if (typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate?.(12);
     }, 450);
+  };
+  const openMessageMenu = (event: React.MouseEvent<HTMLButtonElement>, messageId: string) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const menuWidth = 192;
+    const menuHeight = 220;
+    const left = Math.max(8, Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 8));
+    const top = rect.bottom + menuHeight <= window.innerHeight - 8
+      ? rect.bottom + 6
+      : Math.max(8, rect.top - menuHeight - 6);
+    setMessageMenuPosition({ left, top });
+    setMenuMessage(messageId);
+    setReactionMessageId(null);
   };
   const cancelMessageLongPress = () => {
     if (longPressTimerRef.current) clearTimeout(longPressTimerRef.current);
@@ -717,9 +732,18 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
     cancelPendingVoice();
   };
 
+  useEffect(() => {
+    const textarea = draftTextareaRef.current;
+    if (!textarea) return;
+    textarea.style.height = 'auto';
+    const maxHeight = window.matchMedia('(min-width: 640px)').matches ? 160 : 144;
+    textarea.style.height = Math.min(textarea.scrollHeight, maxHeight) + 'px';
+  }, [draft]);
+
   const insertEmoji = (emoji: string) => {
     handleDraftChange(draft + emoji);
     setShowEmojiPicker(false);
+    requestAnimationFrame(() => draftTextareaRef.current?.focus());
   };
 
   const toggleReaction = async (message: ChatMessage, emoji: string) => {
@@ -883,9 +907,8 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
                   {message.reactions && Object.keys(message.reactions).length > 0 && <div className="mt-1 flex max-w-full flex-wrap gap-1">{Object.entries(Object.values(message.reactions).reduce((counts, emoji) => { counts[emoji] = (counts[emoji] || 0) + 1; return counts; }, {} as Record<string, number>)).map(([emoji, count]) => <button key={emoji} type="button" onClick={() => void toggleReaction(message, emoji)} aria-label={`Réagir avec ${emoji}`} className={`rounded-full border px-2 py-0.5 text-xs shadow-sm transition ${message.reactions?.[uid] === emoji ? 'border-emerald-300 bg-emerald-100' : 'border-slate-200 bg-white/90'}`}>{emoji} <span className="text-[10px] font-semibold text-slate-600">{count}</span></button>)}</div>}
                   <div className="mt-0.5 flex items-center justify-end gap-1"><span className="text-[10px] leading-4 text-slate-500">{message.edited ? 'modifié · ' : ''}{formatTime(message.createdAt)}</span>{mine && (() => { const sentAt = message.createdAt?.toMillis?.() || 0; const readBySomeone = sentAt > 0 && (active?.members || []).some(memberUid => memberUid !== uid && (readReceiptsByUser[memberUid] || 0) >= sentAt); return readBySomeone ? <CheckCheck title="Lu" aria-label="Lu" className="h-3 w-3 text-emerald-600" /> : null; })()}</div>
                   {active?.group && <span aria-hidden="true" className={`pointer-events-none absolute bottom-3 h-2.5 w-2.5 rotate-45 ${mine ? '-right-[5px] border-b border-r border-emerald-200 bg-[#bbf7d0]' : '-left-[5px] border-b border-l border-slate-200 bg-[#f1f5f9]'}`} />}
-                  <button onClick={() => setMenuMessage(menuMessage === message.id ? null : message.id)} className="absolute -right-2 -top-2 hidden rounded-full border border-slate-200 bg-white p-1.5 text-slate-500 shadow-md sm:flex sm:opacity-0 sm:group-hover:opacity-100" title="Actions" aria-label="Actions du message"><MoreVertical className="h-3 w-3" /></button>
-                  <button type="button" onClick={() => setReactionMessageId(reactionMessageId === message.id ? null : message.id)} className="absolute -right-2 -top-2 flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-md sm:hidden" title="Réagir au message" aria-label="Réagir au message"><Smile className="h-3.5 w-3.5" /></button>
-                  {menuMessage === message.id && <div className="absolute right-0 top-6 z-20 w-48 overflow-hidden rounded-xl border border-slate-200 bg-white py-1 shadow-xl"><button onClick={() => { setReactionMessageId(reactionMessageId === message.id ? null : message.id); setMenuMessage(null); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Smile className="h-3.5 w-3.5" />Réagir</button><button onClick={() => beginReply(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Reply className="h-3.5 w-3.5" />Répondre</button><button onClick={() => togglePin(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Pin className="h-3.5 w-3.5" />{message.pinned ? 'Désépingler' : 'Épingler'}</button>{mine && <button onClick={() => beginEdit(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Pencil className="h-3.5 w-3.5" />Modifier</button>}{mine && <button onClick={() => removeMessage(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-rose-600 hover:bg-rose-50"><Trash2 className="h-3.5 w-3.5" />Supprimer</button>}</div>}
+                  <button onClick={event => openMessageMenu(event, message.id)} className="absolute -right-2 -top-2 hidden rounded-full border border-slate-200 bg-white p-1.5 text-slate-500 shadow-md sm:flex sm:opacity-0 sm:group-hover:opacity-100" title="Actions" aria-label="Actions du message"><MoreVertical className="h-3 w-3" /></button>
+                  {menuMessage === message.id && messageMenuPosition && <div style={{ position: 'fixed', left: messageMenuPosition.left, top: messageMenuPosition.top, maxHeight: 'min(220px, calc(100dvh - 16px))' }} className="z-[1200] w-48 overflow-y-auto overscroll-contain rounded-xl border border-slate-200 bg-white py-1 shadow-xl"><button onClick={() => { setReactionMessageId(reactionMessageId === message.id ? null : message.id); setMenuMessage(null); }} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Smile className="h-3.5 w-3.5" />Réagir</button><button onClick={() => beginReply(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Reply className="h-3.5 w-3.5" />Répondre</button><button onClick={() => togglePin(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Pin className="h-3.5 w-3.5" />{message.pinned ? 'Désépingler' : 'Épingler'}</button>{mine && <button onClick={() => beginEdit(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-slate-700 hover:bg-slate-50"><Pencil className="h-3.5 w-3.5" />Modifier</button>}{mine && <button onClick={() => removeMessage(message)} className="flex w-full items-center gap-2 px-3 py-2 text-left text-[11px] text-rose-600 hover:bg-rose-50"><Trash2 className="h-3.5 w-3.5" />Supprimer</button>}</div>}
                   {reactionMessageId === message.id && <div className="absolute right-0 top-6 z-30 flex items-center gap-1 rounded-full border border-slate-200 bg-white p-1.5 shadow-xl">{['❤️','👍','😂','🔥','😮','🙏'].map(emoji => <button key={emoji} type="button" onClick={() => void toggleReaction(message, emoji)} aria-label={`Réagir avec ${emoji}`} className="flex h-8 w-8 items-center justify-center rounded-full text-lg hover:bg-emerald-50">{emoji}</button>)}</div>}
                 </div>
                 {mine && active?.group && <div className="mb-0.5 h-8 w-8 shrink-0 overflow-hidden rounded-full ring-2 ring-white shadow-sm">{avatarForMessage(message) ? <img src={avatarForMessage(message)} alt={senderName} className="h-full w-full object-cover" onError={event => { event.currentTarget.onerror = null; event.currentTarget.src = '/brand/logo-iamtrader-symbol.png'; }} /> : <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-emerald-100 to-teal-100 text-[10px] font-extrabold text-emerald-800">{senderName.slice(0, 2).toUpperCase()}</div>}</div>}
@@ -912,7 +935,7 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
               <span className="min-w-0 flex-1 truncate text-xs font-semibold text-slate-700">{profile.displayName}</span><span className="text-[10px] text-emerald-700">@Mentionner</span>
             </button>)}
           </div>}
-          <textarea value={draft} onChange={e => handleDraftChange(e.target.value)} onPaste={handlePaste} onKeyDown={e => { if (e.key === 'Escape') setMentionQuery(null); if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (mentionQuery !== null) { setMentionQuery(null); return; } void sendMessage(); } }} disabled={!active || sending} placeholder={active ? 'Écrire un message… tapez @ pour mentionner' : 'Sélectionnez une discussion…'} rows={1} className="max-h-24 min-h-9 w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[13px] leading-5 text-slate-700 outline-none transition focus:border-emerald-300 focus:bg-white focus:ring-2 focus:ring-emerald-50 disabled:opacity-50 sm:max-h-28 sm:min-h-10 sm:px-3.5 sm:py-2.5 sm:text-xs" />
+          <textarea ref={draftTextareaRef} value={draft} onChange={e => handleDraftChange(e.target.value)} onPaste={handlePaste} onKeyDown={e => { if (e.key === 'Escape') setMentionQuery(null); if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (mentionQuery !== null) { setMentionQuery(null); return; } void sendMessage(); } }} disabled={!active || sending} placeholder={active ? 'Écrire un message… tapez @ pour mentionner' : 'Sélectionnez une discussion…'} rows={1} className="max-h-36 sm:max-h-40 min-h-9 w-full resize-none overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[13px] leading-5 text-slate-700 outline-none transition focus:border-emerald-300 focus:bg-white focus:ring-2 focus:ring-emerald-50 disabled:opacity-50 sm:min-h-10 sm:px-3.5 sm:py-2.5 sm:text-xs" />
         </div>
         {draft.trim() ? <button onClick={() => void sendMessage()} disabled={!active || sending || uploadingMedia} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#00b98b] to-[#008f72] text-white shadow-md shadow-emerald-900/15 transition hover:brightness-105 disabled:opacity-40 sm:h-10 sm:w-10" title="Envoyer">{sending || uploadingMedia ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}</button> : <button type="button" disabled={!active || uploadingMedia} onClick={() => void startRecording()} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-slate-600 shadow-sm transition hover:bg-emerald-50 hover:text-emerald-700 disabled:opacity-40 sm:h-10 sm:w-10" title="Enregistrer un vocal" aria-label="Enregistrer un vocal"><Mic className="h-4 w-4" /></button>}
       </div>}
