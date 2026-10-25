@@ -12,6 +12,7 @@ type CommunityTab = 'home' | 'chat' | 'friends' | 'calendar' | 'courses' | 'anal
 export function CommunityView({ userProfile }: { userProfile: UserProfile | null }) {
   const [activeTab, setActiveTab] = useState<CommunityTab>('home');
   const [pendingChatId, setPendingChatId] = useState('');
+  const [unreadChatCount, setUnreadChatCount] = useState(0);
   const openChat = (conversationId: string) => {
     setPendingChatId(conversationId);
     setActiveTab('chat');
@@ -42,6 +43,7 @@ export function CommunityView({ userProfile }: { userProfile: UserProfile | null
               >
                 <Icon className="h-4 w-4" />
                 {label}
+                {id === 'chat' && unreadChatCount > 0 && <span aria-label={`${unreadChatCount} messages non lus`} className="inline-flex min-w-5 h-5 items-center justify-center rounded-full bg-emerald-500 px-1.5 text-[9px] font-extrabold leading-none text-white shadow-sm">{unreadChatCount > 99 ? '99+' : unreadChatCount}</span>}
               </button>
             );
           })}
@@ -97,7 +99,7 @@ export function CommunityView({ userProfile }: { userProfile: UserProfile | null
 
       {activeTab === 'calendar' && <EconomicCalendarView />}
 
-      {activeTab === 'chat' && <ChatView userProfile={userProfile} initialConversationId={pendingChatId} />}
+      {activeTab === 'chat' && <ChatView userProfile={userProfile} initialConversationId={pendingChatId} onUnreadCountChange={setUnreadChatCount} />}
       {activeTab === 'friends' && <FriendsView userProfile={userProfile} onOpenChat={openChat} />}
       {activeTab === 'courses' && <CourseSpace isAdmin={isAdmin} />}
       {activeTab === 'analysis' && (
