@@ -541,12 +541,13 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
   };
   const openMessageMenu = (event: React.MouseEvent<HTMLButtonElement>, messageId: string) => {
     const rect = event.currentTarget.getBoundingClientRect();
-    const menuWidth = 192;
-    const menuHeight = 220;
+    const menuWidth = 200;
+    // Reserve room for the complete menu (reactions + actions), not only the old short menu.
+    const menuHeight = 360;
     const left = Math.max(8, Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 8));
-    const top = rect.bottom + menuHeight <= window.innerHeight - 8
-      ? rect.bottom + 6
-      : Math.max(8, rect.top - menuHeight - 6);
+    const top = rect.top >= menuHeight + 16
+      ? rect.top - menuHeight - 6
+      : Math.max(8, Math.min(rect.bottom + 6, window.innerHeight - menuHeight - 8));
     setMessageMenuPosition({ left, top });
     setMenuMessage(messageId);
     setReactionMessageId(null);
