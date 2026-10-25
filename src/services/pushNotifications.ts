@@ -5,9 +5,18 @@ export async function enablePipTalkPush(): Promise<{ success: boolean; message: 
   if (!('Notification' in window) || !('serviceWorker' in navigator)) {
     return { success: false, message: 'Les notifications push ne sont pas prises en charge par ce navigateur.' };
   }
-  const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY as string | undefined;
+  let vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY as string | undefined;
+  try {
+    const configResponse = await fetch('/api/push/config', { cache: 'no-store' });
+    if (configResponse.ok) {
+      const config = await configResponse.json() as { vapidKey?: string };
+      if (typeof config.vapidKey === 'string' && config.vapidKey.trim()) vapidKey = config.vapidKey.trim();
+    }
+  } catch (error) {
+    console.warn('[PipTalk] Impossible de récupérer la configuration push du Worker', error);
+  }
   if (!vapidKey) {
-    return { success: false, message: 'La clé VAPID Web Push doit être configurée dans Cloudflare Pages/Workers (VITE_FIREBASE_VAPID_KEY) et provenir des paramètres Firebase.' };
+    return { success: false, message: 'Clé VAPID introuvable. Vérifie VITE_FIREBASE_VAPID_KEY dans les variables du Worker de production, puis redéploie le Worker.' };
   }
   if (!(await isSupported())) return { success: false, message: 'Firebase Messaging n’est pas pris en charge sur cet appareil.' };
   const user = auth.currentUser;
