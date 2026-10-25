@@ -261,9 +261,38 @@ export function ChatView({ userProfile, initialConversationId }: { userProfile: 
     }
   };
 
+  const markConversationRead = async (conversationId: string, lastMessageAt?: Timestamp | null) => {
+    if (!uid || !conversationId) return;
+    try {
+      await setDoc(doc(db, 'conversations', conversationId, 'readStates', uid), { userId: uid, lastReadAt: lastMessageAt || serverTimestamp(), updatedAt: serverTimestamp() }, { merge: true });
+    } catch (err) { console.warn('[PipTalk] État de lecture non synchronisé', conversationId, err); }
+  };
+
+  useEffect(() => {
+    if (!uid || !conversations.length) { setUnreadByConversation({}); return; }
+    const unsubscribers: Array<() => void> = [];
+    const liveCounts = new Map<string, number>();
+    const publishCounts = () => setUnreadByConversation(Object.fromEntries(liveCounts));
+    conversations.forEach(conversation => {
+      const unsubscribe = onSnapshot(doc(db, 'conversations', conversation.id, 'readStates', uid), async readSnapshot => {
+        try {
+          const lastReadAt = readSnapshot.data()?.lastReadAt as Timestamp | undefined;
+          const messagesRef = collection(db, 'conversations', conversation.id, 'messages');
+          const messagesQuery = lastReadAt ? query(messagesRef, where('createdAt', '>', lastReadAt), orderBy('createdAt', 'asc')) : query(messagesRef, orderBy('createdAt', 'desc'), limit(100));
+          const snapshot = await getDocs(messagesQuery);
+          const unread = snapshot.docs.filter(message => { const data = message.data(); return data.senderId !== uid && (!lastReadAt || (data.createdAt?.toMillis?.() || 0) > lastReadAt.toMillis()); }).length;
+          liveCounts.set(conversation.id, conversation.id === activeId ? 0 : unread); publishCounts();
+        } catch (err) { console.warn('[PipTalk] Compteur non lu indisponible', conversation.id, err); }
+      }, err => console.warn('[PipTalk] État de lecture indisponible', conversation.id, err));
+      unsubscribers.push(unsubscribe);
+    });
+    return () => unsubscribers.forEach(unsubscribe => unsubscribe());
+  }, [uid, conversations.map(conversation => conversation.id).join('|'), activeId]);
+
   useEffect(() => {
     firstMessageSnapshotRef.current = true;
     if (!uid || !activeId) { setMessages([]); return; }
+    void markConversationRead(activeId);
     setLoadingMessages(true);
     const q = collection(db, 'conversations', activeId, 'messages');
     return onSnapshot(q, snapshot => {
@@ -315,6 +344,10 @@ export function ChatView({ userProfile, initialConversationId }: { userProfile: 
         }
       }
 
+      if (loadedMessages.length && activeId) {
+        const latestTimestamp = loadedMessages[loadedMessages.length - 1].createdAt;
+        if (latestTimestamp) void markConversationRead(activeId, latestTimestamp);
+      }
       console.debug('[PipTalk] Messages chargés', { uid, conversationId: activeId, count: loadedMessages.length });
       setMessages(loadedMessages);
       setLoadingMessages(false);
@@ -412,6 +445,8 @@ export function ChatView({ userProfile, initialConversationId }: { userProfile: 
     });
     return items.sort((a, b) => (b.updatedAt?.toMillis?.() || b.createdAt?.toMillis?.() || 0) - (a.updatedAt?.toMillis?.() || a.createdAt?.toMillis?.() || 0));
   }, [conversations, acceptedFriends, uid]);
+
+  const totalUnread = Object.entries(unreadByConversation).filter(([conversationId]) => conversationId !== activeId).reduce((total, [, count]) => total + count, 0);
 
   const filtered = useMemo(() => inboxItems.filter(item => {
     const other = item.members.find(member => member !== uid) || '';
@@ -699,14 +734,14 @@ export function ChatView({ userProfile, initialConversationId }: { userProfile: 
     <div className={`flex min-h-0 ${mobileChatOpen ? 'h-full' : 'h-[calc(100dvh-112px)]'} sm:h-[min(760px,calc(100dvh-210px))] sm:min-h-[520px]`}>
       <aside className={`${mobileChatOpen ? 'hidden md:flex' : 'flex'} w-full shrink-0 flex-col border-r border-slate-200 bg-white md:w-[310px] lg:w-[340px]`}>
         <div className="border-b border-slate-100 px-3 pb-3 pt-3 sm:px-4 sm:pb-4 sm:pt-5">
-          <div className="flex items-center justify-between"><div className="flex items-center gap-2"><div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#e7f8f2] text-[#00a982]"><MessageCircle className="h-5 w-5" /></div><div><h2 className="text-base font-black text-[#0b1f35]">PipTalk</h2><p className="text-[10px] text-slate-400">Messagerie en temps réel</p></div></div><button onClick={() => { setShowFriendsModal(true); setShowNewChat(false); setError(''); }} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100" title="Ouvrir mes amis et démarrer une conversation"><Plus className="h-4 w-4" /></button></div>
+          <div className="flex items-center justify-between"><div className="flex items-center gap-2"><div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#e7f8f2] text-[#00a982]"><MessageCircle className="h-5 w-5" /></div><div><div className="flex items-center gap-1.5"><h2 className="text-base font-black text-[#0b1f35]">PipTalk</h2>{totalUnread > 0 && <span aria-label={`${totalUnread} messages non lus`} className="inline-flex min-w-5 h-5 items-center justify-center rounded-full bg-rose-500 px-1.5 text-[10px] font-extrabold text-white">{totalUnread > 99 ? '99+' : totalUnread}</span>}</div><p className="text-[10px] text-slate-400">Messagerie en temps réel</p></div></div><button onClick={() => { setShowFriendsModal(true); setShowNewChat(false); setError(''); }} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100" title="Ouvrir mes amis et démarrer une conversation"><Plus className="h-4 w-4" /></button></div>
           {showNewChat && <div className="mt-3 rounded-xl border border-emerald-100 bg-emerald-50/60 p-3"><label className="text-[10px] font-bold text-slate-700">UID du trader destinataire</label><input value={targetUid} onChange={e => setTargetUid(e.target.value)} placeholder="Coller l’UID Firebase du trader" className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 outline-none focus:border-emerald-400" /><button onClick={startConversation} className="mt-2 w-full rounded-lg bg-[#00a982] px-3 py-2 text-xs font-bold text-white">Créer la discussion</button><p className="mt-2 text-[9px] leading-4 text-slate-500">L’UID doit appartenir à un autre compte IAMTRADER.</p></div>}
           <label className="mt-4 flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5"><Search className="h-4 w-4 text-slate-400" /><input value={queryText} onChange={e => setQueryText(e.target.value)} placeholder="Rechercher une discussion" className="w-full bg-transparent text-xs text-slate-700 outline-none placeholder:text-slate-400" /></label>
         </div>
         <div className="flex-1 overflow-y-auto">
           {loadingChats && <div className="flex items-center justify-center gap-2 p-6 text-xs text-slate-400"><Loader2 className="h-4 w-4 animate-spin" />Chargement des discussions…</div>}
           {!loadingChats && filtered.length === 0 && <div className="px-5 py-10 text-center"><Users className="mx-auto h-7 w-7 text-slate-300" /><p className="mt-3 text-xs font-bold text-slate-600">Aucune discussion</p><p className="mt-1 text-[10px] leading-4 text-slate-400">Utilisez + pour démarrer une conversation avec un UID IAMTRADER.</p></div>}
-          {filtered.map(item => { const other = item.members.find(member => member !== uid) || ''; const name = item.title || item.memberNames?.[other] || acceptedFriends.find(friend => friend.uid === other)?.name || `Trader ${other.slice(0, 7)}`; const avatar = item.id === 'community-hub' ? (item.avatarURL || '') : avatarForConversation(item, other); return <button key={item.id} onClick={() => { void openInboxConversation(item); }} className={`flex w-full items-center gap-3 border-b border-slate-50 px-4 py-3.5 text-left hover:bg-slate-50 ${activeId === item.id ? 'bg-[#f0fbf7]' : ''}`}><div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-emerald-100 text-xs font-black text-emerald-700">{avatar ? <img src={avatar} alt={name} className="h-full w-full object-cover" onError={event => { event.currentTarget.style.display = 'none'; }} /> : name.slice(0, 2).toUpperCase()}</div><div className="min-w-0 flex-1"><div className="truncate text-xs font-bold text-slate-800">{name}</div><p className="mt-1 truncate text-[10px] text-slate-500">{item.lastMessage || 'Démarrer la conversation'}</p></div><span className="text-[9px] text-slate-400">{formatTime(item.updatedAt)}</span></button>; })}
+          {filtered.map(item => { const other = item.members.find(member => member !== uid) || ''; const name = item.title || item.memberNames?.[other] || acceptedFriends.find(friend => friend.uid === other)?.name || `Trader ${other.slice(0, 7)}`; const avatar = item.id === 'community-hub' ? (item.avatarURL || '') : avatarForConversation(item, other); return <button key={item.id} onClick={() => { void openInboxConversation(item); }} className={`flex w-full items-center gap-3 border-b border-slate-50 px-4 py-3.5 text-left hover:bg-slate-50 ${activeId === item.id ? 'bg-[#f0fbf7]' : ''}`}><div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-emerald-100 text-xs font-black text-emerald-700">{avatar ? <img src={avatar} alt={name} className="h-full w-full object-cover" onError={event => { event.currentTarget.style.display = 'none'; }} /> : name.slice(0, 2).toUpperCase()}</div><div className="min-w-0 flex-1"><div className="truncate text-xs font-bold text-slate-800">{name}</div><p className="mt-1 truncate text-[10px] text-slate-500">{item.lastMessage || 'Démarrer la conversation'}</p></div>{(unreadByConversation[item.id] || 0) > 0 && activeId !== item.id && <span aria-label={`${unreadByConversation[item.id]} messages non lus`} className="inline-flex min-w-5 h-5 shrink-0 items-center justify-center rounded-full bg-rose-500 px-1.5 text-[9px] font-extrabold text-white">{unreadByConversation[item.id] > 99 ? '99+' : unreadByConversation[item.id]}</span>}<span className="text-[9px] text-slate-400">{formatTime(item.updatedAt)}</span></button>; })}
         </div>
         <div className="flex items-center gap-2 border-t border-slate-100 bg-slate-50/70 px-4 py-3"><div className="h-8 w-8 overflow-hidden rounded-full bg-[#0b1f35] text-center text-[10px] font-black leading-8 text-white">{(userProfile?.avatarURL || userProfile?.photoURL) ? <img src={userProfile.avatarURL || userProfile.photoURL} alt="Mon avatar" className="h-full w-full object-cover" /> : (userProfile?.displayName || 'IT').slice(0, 2).toUpperCase()}</div><div className="min-w-0 flex-1"><p className="truncate text-[11px] font-bold text-slate-800">{userProfile?.displayName || 'Mon espace trader'}</p><p className="text-[9px] text-slate-400">Connecté à IAMTRADER</p></div></div>
       </aside>
