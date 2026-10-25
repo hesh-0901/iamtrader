@@ -31,6 +31,7 @@ const formatDay = (value?: Timestamp | null) => value?.toDate
 export function ChatView({ userProfile, initialConversationId }: { userProfile: UserProfile | null; initialConversationId?: string }) {
   const uid = auth.currentUser?.uid || userProfile?.uid;
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
+  const [unreadByConversation, setUnreadByConversation] = useState<Record<string, number>>({});
   const [acceptedFriends, setAcceptedFriends] = useState<Array<{ uid: string; name: string; avatarURL?: string }>>([]);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [activeId, setActiveId] = useState(initialConversationId || '');
