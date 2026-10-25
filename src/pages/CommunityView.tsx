@@ -1,14 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { MessageCircle, CalendarDays, BookOpen, BarChart3, Activity, Database, BrainCircuit, Share2, CheckCircle2, AlertTriangle, Users, ChartCandlestick } from 'lucide-react';
+import { MessageCircle, CalendarDays, BookOpen, BarChart3, Activity, Database, BrainCircuit, Share2, CheckCircle2, AlertTriangle, Users } from 'lucide-react';
 import { EconomicCalendarView } from './EconomicCalendarView';
 import { ChatView } from './ChatView';
 import { FriendsView } from './FriendsView';
 import { UserProfile } from '../types';
 import { CourseSpace } from './CourseSpace';
 import { AnalysisAdminPanel } from './AnalysisAdminPanel';
-import { BacktestModule } from './BacktestModule';
 
-type CommunityTab = 'home' | 'chat' | 'friends' | 'calendar' | 'courses' | 'analysis' | 'sentiment' | 'economic-data' | 'backtest';
+type CommunityTab = 'home' | 'chat' | 'friends' | 'calendar' | 'courses' | 'analysis' | 'sentiment' | 'economic-data';
 
 export function CommunityView({ userProfile }: { userProfile: UserProfile | null }) {
   const [activeTab, setActiveTab] = useState<CommunityTab>('home');
@@ -21,7 +20,6 @@ export function CommunityView({ userProfile }: { userProfile: UserProfile | null
 
   const tabs = [
     { id: 'chat' as const, label: 'PipTalk', icon: MessageCircle },
-    { id: 'backtest' as const, label: 'Backtest', icon: ChartCandlestick },
     { id: 'friends' as const, label: 'Traders & amis', icon: Users },
     { id: 'calendar' as const, label: 'Calendrier', icon: CalendarDays },
     { id: 'courses' as const, label: 'Cours', icon: BookOpen },
@@ -100,7 +98,6 @@ export function CommunityView({ userProfile }: { userProfile: UserProfile | null
       {activeTab === 'calendar' && <EconomicCalendarView />}
 
       {activeTab === 'chat' && <ChatView userProfile={userProfile} initialConversationId={pendingChatId} />}
-      {activeTab === 'backtest' && <BacktestModule />}
       {activeTab === 'friends' && <FriendsView userProfile={userProfile} onOpenChat={openChat} />}
       {activeTab === 'courses' && <CourseSpace isAdmin={isAdmin} />}
       {activeTab === 'analysis' && (
