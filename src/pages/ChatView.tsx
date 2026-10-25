@@ -3,7 +3,6 @@ import { createPortal } from 'react-dom';
 import { UserProfile } from '../types';
 import { FriendsView } from './FriendsView';
 import { auth, db, app } from '../firebase/config';
-import { getDownloadURL, getStorage, ref as storageRef, uploadBytes } from 'firebase/storage';
 import { enablePipTalkPush, notifyPipTalkRecipients } from '../services/pushNotifications';
 import {
   addDoc, collection, deleteDoc, doc, getDoc, getDocs, limit, onSnapshot, orderBy, query,
@@ -829,10 +828,17 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
       const conversationRef = doc(collection(db, 'conversations'));
       let avatarURL = '';
       if (newGroupAvatarFile) {
-        const storage = getStorage(app);
-        const imageRef = storageRef(storage, `piptalk/groups/${conversationRef.id}/avatar-${Date.now()}-${newGroupAvatarFile.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`);
-        const uploaded = await uploadBytes(imageRef, newGroupAvatarFile, { contentType: newGroupAvatarFile.type });
-        avatarURL = await getDownloadURL(uploaded.ref);
+        // Reuse the existing unsigned Cloudinary preset used by PipTalk media.
+        const form = new FormData();
+        form.append('file', newGroupAvatarFile, newGroupAvatarFile.name.replace(/[^a-zA-Z0-9._-]/g, '_'));
+        form.append('upload_preset', 'piptalk_media');
+        form.append('folder', `piptalk/groups/${conversationRef.id}`);
+        const response = await fetch('https://api.cloudinary.com/v1_1/ocgef9bk/image/upload', { method: 'POST', body: form });
+        const uploaded = await response.json() as { secure_url?: string; public_id?: string; error?: { message?: string } };
+        if (!response.ok || !uploaded.secure_url) {
+          throw new Error(uploaded.error?.message || 'Impossible de téléverser la photo du groupe sur Cloudinary.');
+        }
+        avatarURL = uploaded.secure_url;
       }
       const memberNames: Record<string, string> = {};
       members.forEach(memberUid => { memberNames[memberUid] = memberUid === uid ? currentDisplayName : (publicProfiles.find(profile => profile.uid === memberUid)?.displayName || 'Trader'); });
