@@ -72,7 +72,7 @@ function fromFirestoreDocument(doc: any): Record<string, unknown> {
   return Object.fromEntries(Object.entries(doc?.fields || {}).map(([key, value]) => [key, fromFirestoreValue(value)]));
 }
 
-async function accessToken(env: PaymentEnv): Promise<string> {
+async function accessToken(env: PaymentEnv, scope = 'https://www.googleapis.com/auth/datastore'): Promise<string> {
   if (!env.FIREBASE_SERVICE_ACCOUNT_JSON) throw new Error('FIREBASE_SERVICE_ACCOUNT_JSON is not configured');
   let service: { client_email?: string; private_key?: string };
   try {
@@ -88,7 +88,7 @@ async function accessToken(env: PaymentEnv): Promise<string> {
   const header = base64Url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
   const payload = base64Url(JSON.stringify({
     iss: service.client_email,
-    scope: 'https://www.googleapis.com/auth/datastore',
+    scope,
     aud: GOOGLE_TOKEN_URL,
     iat: now,
     exp: now + 3600
@@ -137,7 +137,7 @@ async function accessToken(env: PaymentEnv): Promise<string> {
   return data.access_token;
 }
 
-export async function firestoreGet(env: PaymentEnv, path: string) {
+export async function firebaseMessagingAccessToken(env: PaymentEnv): Promise<string> {\n  return accessToken(env, 'https://www.googleapis.com/auth/firebase.messaging');\n}\n\nexport async function firestoreGet(env: PaymentEnv, path: string) {
   const token = await accessToken(env);
   const response = await fetch(`${FIRESTORE_BASE}/${path}`, { headers: { Authorization: `Bearer ${token}` } });
   if (response.status === 404) return null;
