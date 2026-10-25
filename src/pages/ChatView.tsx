@@ -446,7 +446,9 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
     return items.sort((a, b) => (b.updatedAt?.toMillis?.() || b.createdAt?.toMillis?.() || 0) - (a.updatedAt?.toMillis?.() || a.createdAt?.toMillis?.() || 0));
   }, [conversations, acceptedFriends, uid]);
 
-  const totalUnread = Object.entries(unreadByConversation).filter(([conversationId]) => conversationId !== activeId).reduce((total, [, count]) => total + count, 0);\n\n  useEffect(() => { onUnreadCountChange?.(totalUnread); }, [totalUnread, onUnreadCountChange]);
+  const totalUnread = Object.entries(unreadByConversation).filter(([conversationId]) => conversationId !== activeId).reduce((total, [, count]) => total + count, 0);
+
+  useEffect(() => { onUnreadCountChange?.(totalUnread); }, [totalUnread, onUnreadCountChange]);
 
   const filtered = useMemo(() => inboxItems.filter(item => {
     const other = item.members.find(member => member !== uid) || '';
