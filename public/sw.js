@@ -21,20 +21,20 @@ self.addEventListener('push', event => {
     payload = { body: event.data ? event.data.text() : '' };
   }
 
-  const title = typeof payload.title === 'string' && payload.title.trim()
-    ? payload.title.trim()
-    : 'Nouveau message · IAMTRADER';
-  const body = typeof payload.body === 'string' && payload.body.trim()
-    ? payload.body.trim()
-    : 'Vous avez reçu un nouveau message sur PipTalk.';
-  const conversationId = typeof payload.conversationId === 'string' ? payload.conversationId : '';
+  const notificationPayload = payload.notification && typeof payload.notification === 'object' ? payload.notification : {};
+  const dataPayload = payload.data && typeof payload.data === 'object' ? payload.data : {};
+  const titleValue = payload.title || notificationPayload.title;
+  const bodyValue = payload.body || notificationPayload.body;
+  const title = typeof titleValue === 'string' && titleValue.trim() ? titleValue.trim() : 'Nouveau message · IAMTRADER';
+  const body = typeof bodyValue === 'string' && bodyValue.trim() ? bodyValue.trim() : 'Vous avez reçu un nouveau message sur PipTalk.';
+  const conversationId = typeof payload.conversationId === 'string' ? payload.conversationId : (typeof dataPayload.conversationId === 'string' ? dataPayload.conversationId : '');
   const options = {
     body,
     icon: '/brand/favicon-iamtrader-192.png',
     badge: '/brand/favicon-iamtrader-192.png',
     tag: conversationId ? 'piptalk-' + conversationId : 'iamtrader-piptalk',
     renotify: true,
-    data: { url: typeof payload.url === 'string' ? payload.url : '/?section=piptalk', conversationId }
+    data: { url: typeof payload.url === 'string' ? payload.url : (typeof dataPayload.url === 'string' ? dataPayload.url : '/?section=piptalk'), conversationId }
   };
 
   event.waitUntil(self.registration.showNotification(title, options));
