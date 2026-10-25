@@ -236,35 +236,6 @@ service cloud.firestore {
       allow update, delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
     }
 
-    // Replay sessions are private to each authenticated owner and independent of the Journal.
-    match /replaySessions/{userId}/sessions/{sessionId} {
-      allow read: if isOwner(userId);
-      allow create: if isOwner(userId)
-        && request.resource.data.keys().hasOnly([
-          'name', 'symbol', 'timeframe', 'datasetName', 'datasetStart', 'datasetEnd',
-          'candleCount', 'currentIndex', 'drawings', 'positions', 'createdAt', 'updatedAt'
-        ])
-        && request.resource.data.symbol == 'XAUUSD'
-        && request.resource.data.name is string
-        && request.resource.data.name.size() <= 120
-        && request.resource.data.drawings is list
-        && request.resource.data.drawings.size() <= 100
-        && request.resource.data.positions is list
-        && request.resource.data.positions.size() <= 500;
-      allow update: if isOwner(userId)
-        && request.resource.data.keys().hasOnly([
-          'name', 'symbol', 'timeframe', 'datasetName', 'datasetStart', 'datasetEnd',
-          'candleCount', 'currentIndex', 'drawings', 'positions', 'createdAt', 'updatedAt'
-        ])
-        && request.resource.data.symbol == 'XAUUSD'
-        && request.resource.data.name is string
-        && request.resource.data.name.size() <= 120
-        && request.resource.data.drawings is list
-        && request.resource.data.drawings.size() <= 100
-        && request.resource.data.positions is list
-        && request.resource.data.positions.size() <= 500;
-      allow delete: if isOwner(userId);
-    }
 
     match /{document=**} {
       allow read, write: if false;
