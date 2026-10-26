@@ -148,7 +148,7 @@ export async function onRequest(context: { request: Request; env: Env }) {
       responseJson: true,
       temperature: 0.2,
       maxTokens: 1000,
-      timeoutMs: 9000,
+      globalTimeoutMs: 20000,
     },
   );
 
@@ -161,10 +161,39 @@ export async function onRequest(context: { request: Request; env: Env }) {
       status: result.httpStatus,
       reason: result.error,
     });
+    const status = result.httpStatus;
+    const isTimeout = /budget global dépassé|timeout/i.test(result.error || '');
+    const responseStatus = status === 400
+      ? 400
+      : status === 401 || status === 403 || /GEMINI_API_KEY non configurée/i.test(result.error || '')
+        ? 500
+        : status === 429
+          ? 429
+          : isTimeout
+            ? 504
+            : status === 404
+              ? 503
+              : 502;
+    const errorCode = responseStatus === 400
+      ? 'INVALID_REQUEST'
+      : responseStatus === 500
+        ? 'CONFIG_ERROR'
+        : responseStatus === 429
+          ? 'RATE_LIMIT_EXCEEDED'
+          : responseStatus === 504
+            ? 'TIMEOUT'
+            : responseStatus === 503
+              ? 'MODEL_UNAVAILABLE'
+              : 'PROVIDER_UNAVAILABLE';
     return json({
+      success: false,
       reply: 'Chloé est momentanément indisponible. Réessaie dans quelques instants.',
       action: null,
-    }, 200);
+      error: {
+        code: errorCode,
+        message: 'Le service IA n’a pas pu traiter cette demande.',
+      },
+    }, responseStatus);
   }
 
   let parsed: any;
@@ -175,6 +204,7 @@ export async function onRequest(context: { request: Request; env: Env }) {
   }
 
   return json({
+    success: true,
     reply: typeof parsed.reply === 'string' ? parsed.reply : 'Je n’ai pas pu formuler une réponse exploitable.',
     action: parsed.action ?? null,
   });
