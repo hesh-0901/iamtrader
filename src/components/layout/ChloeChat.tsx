@@ -269,14 +269,22 @@ export function ChloeChat({ isOpen, onClose, userId, userProfile, accounts, trad
         body: JSON.stringify({ messages: [...messages, { role: 'user', content: visibleText, timestamp: messageTimestamp }], userContext: context, attachments }),
       });
       const data = (await response.json().catch(() => ({}))) as {
-        error?: string;
+        success?: boolean;
+        error?: string | { code?: string; message?: string };
         reply?: string;
         action?: ChloeAction | null;
         details?: { provider?: string; reason?: string };
       };
-      if (!response.ok) {
+      if (!response.ok || data.success === false) {
+        const structuredError = typeof data.error === 'object' && data.error !== null
+          ? data.error
+          : null;
+        const errorMessage = structuredError?.message
+          || (typeof data.error === 'string' ? data.error : '')
+          || data.reply
+          || 'Chloé est indisponible.';
         const diagnostic = data?.details?.provider || data?.details?.reason || '';
-        throw new Error(diagnostic ? `${data.error || 'Chloé est indisponible.'} [${diagnostic}]` : (data.error || 'Chloé est indisponible.'));
+        throw new Error(diagnostic ? `${errorMessage} [${diagnostic}]` : errorMessage);
       }
       setMessages(prev => [...prev, { role: 'assistant', timestamp: Date.now(), content: data.reply || 'Je n’ai pas de réponse exploitable.' }]);
       setPendingAction(data.action ? {
