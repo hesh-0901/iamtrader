@@ -7,6 +7,7 @@ export interface GeminiRequestOptions {
   maxTokens?: number;
   responseJson?: boolean;
   timeoutMs?: number;
+  globalTimeoutMs?: number;
 }
 
 export interface GeminiResponse {
@@ -32,13 +33,15 @@ function extractErrorMessage(raw: string, status: number): string {
   }
 }
 
-function shouldRetry(status: number): boolean {
-  return [400, 404, 408, 429, 500, 502, 503, 504].includes(status);
+function shouldTryFallback(status: number): boolean {
+  // Invalid requests and credentials will not be fixed by switching models.
+  if ([400, 401, 403].includes(status)) return false;
+  return status === 404 || status === 429 || status >= 500;
 }
 
 /**
  * Appelle Gemini côté serveur. La clé reste dans l'en-tête et n'est jamais ajoutée à l'URL.
- * Chaque tentative est bornée et toutes les erreurs réseau/JSON sont capturées.
+ * Un seul budget temporel couvre toute la chaîne principale + secours.
  */
 export async function callGeminiUnified(
   promptOrContents: unknown,
@@ -64,11 +67,16 @@ export async function callGeminiUnified(
 
   let lastError = 'Aucun modèle Gemini n’a pu répondre.';
   let lastStatus: number | undefined;
+  const globalTimeoutMs = Math.max(1000, options.globalTimeoutMs ?? options.timeoutMs ?? 20000);
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), globalTimeoutMs);
 
+  try {
   for (const model of models) {
-    const controller = new AbortController();
-    const timeoutMs = Math.max(1000, options.timeoutMs ?? 7000);
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    if (controller.signal.aborted) {
+      lastError = `Budget global dépassé (${globalTimeoutMs} ms).`;
+      break;
+    }
 
     try {
       const generationConfig: Record<string, unknown> = {
@@ -97,7 +105,7 @@ export async function callGeminiUnified(
         lastStatus = response.status;
         lastError = `Gemini (${model}): ${extractErrorMessage(raw, response.status)}`;
         console.warn('[GeminiClient] Provider error', { model, status: response.status });
-        if (shouldRetry(response.status)) continue;
+        if (shouldTryFallback(response.status)) continue;
         break;
       }
 
@@ -131,15 +139,16 @@ export async function callGeminiUnified(
       return { success: true, text, modelUsed: model, httpStatus: response.status };
     } catch (error) {
       lastError = error instanceof Error && error.name === 'AbortError'
-        ? `Timeout de ${timeoutMs} ms pour ${model}.`
+        ? `Budget global dépassé (${globalTimeoutMs} ms) pendant l’appel à ${model}.`
         : error instanceof Error ? error.message : 'Erreur réseau Gemini inconnue.';
       console.warn('[GeminiClient] Request failed', {
         model,
         reason: error instanceof Error ? error.name : 'unknown',
       });
-    } finally {
-      clearTimeout(timer);
     }
+  }
+  } finally {
+    clearTimeout(timer);
   }
 
   return { success: false, error: lastError, httpStatus: lastStatus };
