@@ -175,8 +175,6 @@ export function ChloeChat({ isOpen, onClose, userId, userProfile, accounts, trad
     endRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, loading, pendingAction]);
 
-  if (!isOpen) return null;
-
   const context = {
     currentPage,
     user: userProfile ? {
@@ -398,6 +396,8 @@ export function ChloeChat({ isOpen, onClose, userId, userProfile, accounts, trad
     void send(undefined, initialPrompt);
     onInitialPromptConsumed?.();
   }, [isOpen, initialPrompt]);
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-[80] pointer-events-none">
