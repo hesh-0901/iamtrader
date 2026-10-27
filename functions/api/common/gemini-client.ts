@@ -69,6 +69,7 @@ export async function callGeminiUnified(
   let lastStatus: number | undefined;
   const globalTimeoutMs = Math.max(1000, options.globalTimeoutMs ?? options.timeoutMs ?? 20000);
   const controller = new AbortController();
+  const deadline = Date.now() + globalTimeoutMs;
   const timer = setTimeout(() => controller.abort(), globalTimeoutMs);
 
   try {
@@ -77,6 +78,15 @@ export async function callGeminiUnified(
       lastError = `Budget global dépassé (${globalTimeoutMs} ms).`;
       break;
     }
+
+    const remainingMs = deadline - Date.now();
+    if (remainingMs <= 0) {
+      lastError = `Budget global dépassé (${globalTimeoutMs} ms).`;
+      break;
+    }
+    const attemptController = new AbortController();
+    const attemptTimeoutMs = Math.min(Math.max(1000, options.timeoutMs ?? 12000), remainingMs);
+    const attemptTimer = setTimeout(() => attemptController.abort(), attemptTimeoutMs);
 
     try {
       const generationConfig: Record<string, unknown> = {
@@ -96,7 +106,7 @@ export async function callGeminiUnified(
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
           body: JSON.stringify(payload),
-          signal: controller.signal,
+          signal: AbortSignal.any([controller.signal, attemptController.signal]),
         },
       );
 
@@ -138,13 +148,18 @@ export async function callGeminiUnified(
 
       return { success: true, text, modelUsed: model, httpStatus: response.status };
     } catch (error) {
-      lastError = error instanceof Error && error.name === 'AbortError'
-        ? `Budget global dépassé (${globalTimeoutMs} ms) pendant l’appel à ${model}.`
+      const wasTimeout = error instanceof Error && error.name === 'AbortError';
+      lastError = wasTimeout
+        ? (controller.signal.aborted
+            ? `Budget global dépassé (${globalTimeoutMs} ms) pendant l’appel à ${model}.`
+            : `Délai dépassé (${attemptTimeoutMs} ms) pour le modèle ${model}.`)
         : error instanceof Error ? error.message : 'Erreur réseau Gemini inconnue.';
       console.warn('[GeminiClient] Request failed', {
         model,
-        reason: error instanceof Error ? error.name : 'unknown',
+        reason: wasTimeout ? (controller.signal.aborted ? 'GlobalTimeout' : 'AttemptTimeout') : error instanceof Error ? error.name : 'unknown',
       });
+    } finally {
+      clearTimeout(attemptTimer);
     }
   }
   } finally {
