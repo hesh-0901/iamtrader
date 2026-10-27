@@ -131,13 +131,15 @@ export async function onRequest(context: { request: Request; env: Env }) {
     parts.push({ inlineData: { mimeType: file.mimeType, data: cleanData } });
   }
 
-  // Respecter le modèle configuré, mais toujours tenter un modèle différent en secours.
-  // Si la variable Cloudflare pointe déjà vers Flash-Lite, le secours devient Flash.
-  const preferredModel = (context.env.GEMINI_CHLOE_MODEL || '').trim() || 'gemini-3.8-flash';
-  // Utiliser un modèle Flash stable en secours plutôt que Flash-Lite, qui a déjà subi des timeouts.
-  const fallbackModels = preferredModel === 'gemini-3.7-flash'
-    ? ['gemini-3.6-flash']
-    : ['gemini-3.7-flash'];
+  // Modèles Gemini choisis pour Chloé : Flash en principal, Pro en secours.
+  const preferredModel =
+    (context.env.GEMINI_CHLOE_MODEL || '').trim() ||
+    'gemini-2.5-flash';
+
+  const fallbackModels =
+    preferredModel === 'gemini-2.5-flash'
+      ? ['gemini-2.5-pro']
+      : ['gemini-2.5-flash'];
 
   const result = await callGeminiUnified(
     [{ role: 'user', parts }],
