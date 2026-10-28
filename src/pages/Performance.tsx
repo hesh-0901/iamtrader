@@ -113,37 +113,40 @@ function DailyBars({ trades }: { trades: Trade[] }) {
     });
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const calendarDays: { date: string; value: number; index: number }[] = [];
+    const recentKeys = new Set<string>();
     for (let i = 29; i >= 0; i--) {
       const date = new Date(today);
       date.setDate(today.getDate() - i);
-      const key = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
-      calendarDays.push({ date: key, value: map.get(key) || 0, index: 29 - i });
+      recentKeys.add(date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0'));
     }
-    return calendarDays;
+    return Array.from(map.entries())
+      .filter(([date]) => recentKeys.has(date))
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([date, value]) => ({ date, value }));
   }, [trades]);
   const maxAbs = Math.max(1, ...days.map(day => Math.abs(day.value)));
+  const barHalfHeight = 112;
   return <div className="min-w-0">
-    <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[10px] text-slate-500"><span className="inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Jour positif</span><span className="inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-rose-500" /> Jour négatif</span><span className="ml-auto text-slate-400">Survoler une barre pour le P&amp;L exact</span></div>
-    <div className="relative h-[250px] border-b border-slate-200">
+    <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[10px] text-slate-500"><span className="inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Jour positif</span><span className="inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-rose-700" /> Jour négatif</span><span className="ml-auto text-slate-400">Survoler une barre pour le P&amp;L exact</span></div>
+    {days.length === 0 ? <div className="flex h-[250px] items-center justify-center rounded-xl bg-slate-50 text-sm text-slate-500">Aucun trade clôturé sur les 30 derniers jours.</div> : <div className="relative h-[250px] border-b border-slate-200">
       <div className="absolute inset-x-0 top-1/2 border-t border-slate-300" />
-      <div className="relative flex h-full items-stretch gap-[2px] sm:gap-1">
-        {days.map(({ date, value, index }) => {
-          const barHeight = value === 0 ? 0 : Math.max(2, Math.abs(value) / maxAbs * 112);
-          const showDate = index % 5 === 0 || index === 29;
+      <div className="relative flex h-full items-stretch gap-1">
+        {days.map(({ date, value }, index) => {
+          const barHeight = value === 0 ? 2 : Math.max(2, Math.abs(value) / maxAbs * barHalfHeight);
+          const showDate = days.length <= 8 || index % Math.max(1, Math.ceil(days.length / 6)) === 0 || index === days.length - 1;
           return <div key={date} className="group relative flex min-w-0 flex-1 flex-col items-center" title={shortDate(date) + ' : ' + money(value)}>
             <div className="relative h-full w-full">
-              {value > 0 && <div className="absolute bottom-1/2 left-[12%] w-[76%] rounded-t-sm bg-emerald-500 shadow-[0_3px_10px_rgba(16,185,129,0.10)] transition-colors group-hover:bg-emerald-600" style={{ height: barHeight + 'px' }} />}
-              {value < 0 && <div className="absolute left-[12%] top-1/2 w-[76%] rounded-b-sm bg-rose-400/90 transition-colors group-hover:bg-rose-500" style={{ height: barHeight + 'px' }} />}
-              {value === 0 && <div className="absolute left-[28%] top-1/2 h-[2px] w-[44%] rounded-full bg-slate-200" />}
+              {value > 0 && <div className="absolute bottom-1/2 left-[10%] w-[80%] rounded-t-sm bg-emerald-500 shadow-[0_3px_10px_rgba(16,185,129,0.10)] transition-colors group-hover:bg-emerald-600" style={{ height: barHeight + 'px' }} />}
+              {value < 0 && <div className="absolute left-[10%] top-1/2 w-[80%] rounded-b-sm bg-rose-700 transition-colors group-hover:bg-rose-800" style={{ height: barHeight + 'px' }} />}
+              {value === 0 && <div className="absolute left-[10%] top-1/2 h-[2px] w-[80%] rounded-full bg-slate-300" />}
             </div>
             {showDate && <span className="absolute -bottom-5 whitespace-nowrap text-[8px] text-slate-400 sm:text-[9px]">{shortDate(date)}</span>}
             <div className="pointer-events-none absolute bottom-[calc(100%+2px)] z-10 hidden whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-[10px] font-semibold text-white shadow-lg group-hover:block">{money(value)}</div>
           </div>;
         })}
       </div>
-    </div>
-    <div className="mt-7 flex items-center justify-between gap-2 text-[10px] text-slate-500"><span>30 jours calendaires · jours sans trade à zéro</span><span className="font-semibold text-slate-700">P&amp;L par jour de clôture</span></div>
+    </div>}
+    <div className="mt-7 flex items-center justify-between gap-2 text-[10px] text-slate-500"><span>{days.length} jours tradés sur les 30 derniers jours</span><span className="font-semibold text-slate-700">P&amp;L par jour de clôture</span></div>
   </div>;
 }
 export function Performance({ trades }: PerformanceProps) {
