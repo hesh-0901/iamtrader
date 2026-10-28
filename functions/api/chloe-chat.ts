@@ -151,8 +151,8 @@ export async function onRequest(context: { request: Request; env: Env }) {
       responseJson: true,
       temperature: 0.2,
       maxTokens: 1000,
-      timeoutMs: 12000,
-      globalTimeoutMs: 25000,
+      timeoutMs: 20000,
+      globalTimeoutMs: 45000,
     },
   );
 
