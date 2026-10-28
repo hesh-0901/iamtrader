@@ -76,7 +76,7 @@ function RadarProfile({ metrics }: { metrics: ReturnType<typeof calculatePerform
     { label: 'Espérance', value: Math.max(0, Math.min(100, metrics.avgWin > 0 ? (metrics.expectancy / metrics.avgWin) * 100 : 0)) },
     { label: 'Maîtrise du DD', value: Math.max(0, 100 - Math.min(100, metrics.maxDrawdownPercent * 5)) },
   ];
-  const cx = 200, cy = 145, radius = 88;
+  const cx = 230, cy = 160, radius = 108;
   const point = (index: number, value: number, extra = 0) => {
     const angle = -Math.PI / 2 + index * (Math.PI * 2 / dimensions.length);
     const r = radius * value / 100 + extra;
@@ -85,24 +85,23 @@ function RadarProfile({ metrics }: { metrics: ReturnType<typeof calculatePerform
   const polygon = (factor: number) => dimensions.map((_, i) => { const p = point(i, factor); return p.x + ',' + p.y; }).join(' ');
   const values = dimensions.map((d, i) => { const p = point(i, d.value); return p.x + ',' + p.y; }).join(' ');
   return <div className="flex min-w-0 flex-col items-center">
-    <svg viewBox="0 0 400 290" role="img" aria-label="Radar pentagonal du profil de performance avec les cinq axes nommés" className="mx-auto w-full max-w-[440px] overflow-visible">
+    <svg viewBox="0 0 460 330" role="img" aria-label="Radar agrandi du profil de performance avec le score affiché sous chaque axe" className="mx-auto w-full max-w-[540px] overflow-visible">
       <defs><linearGradient id="radarPremiumFill" x1="0" x2="1" y1="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity=".32" /><stop offset="100%" stopColor="#059669" stopOpacity=".10" /></linearGradient></defs>
       {[20, 40, 60, 80, 100].map(v => <polygon key={v} points={polygon(v)} fill="none" stroke="#cbd5e1" strokeOpacity=".8" strokeDasharray={v === 100 ? '0' : '3 4'} />)}
       {dimensions.map((d, i) => { const p = point(i, 100); return <line key={d.label} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke="#cbd5e1" />; })}
       <polygon points={values} fill="url(#radarPremiumFill)" stroke="#059669" strokeWidth="4" strokeLinejoin="round" />
-      {dimensions.map((d, i) => { const p = point(i, d.value); return <circle key={d.label} cx={p.x} cy={p.y} r="4.5" fill="#059669" stroke="white" strokeWidth="2" />; })}
+      {dimensions.map((d, i) => { const p = point(i, d.value); return <circle key={d.label} cx={p.x} cy={p.y} r="5" fill="#059669" stroke="white" strokeWidth="2" />; })}
       {dimensions.map((d, i) => {
-        const p = point(i, 100, 25);
         const angle = -Math.PI / 2 + i * (Math.PI * 2 / dimensions.length);
+        const p = point(i, 100, 30);
         const anchor = Math.cos(angle) > 0.35 ? 'start' : Math.cos(angle) < -0.35 ? 'end' : 'middle';
-        const labelY = p.y + (Math.sin(angle) > 0.55 ? 4 : Math.sin(angle) < -0.55 ? -2 : 4);
-        return <text key={d.label} x={p.x} y={labelY} fill="#475569" fontSize="11" fontWeight="600" textAnchor={anchor}>{d.label}</text>;
+        const labelY = p.y + (Math.sin(angle) > 0.55 ? 0 : Math.sin(angle) < -0.55 ? -2 : 0);
+        return <text key={d.label} x={p.x} y={labelY} fill="#334155" fontSize="12" fontWeight="600" textAnchor={anchor}>
+          <tspan x={p.x} dy="0">{d.label}</tspan>
+          <tspan x={p.x} dy="16" fill="#059669" fontSize="12" fontWeight="700">{Math.round(d.value)}/100</tspan>
+        </text>;
       })}
     </svg>
-    <div className="mt-1 flex w-full flex-wrap items-center justify-center gap-x-4 gap-y-2 border-t border-slate-100 pt-3">
-      {dimensions.map((d) => <div key={d.label} className="flex items-center gap-1.5 text-[10px] text-slate-500"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />{d.label}<span className="font-semibold tabular-nums text-slate-700">{Math.round(d.value)}/100</span></div>)}
-    </div>
-    <p className="mt-2 text-center text-[10px] leading-relaxed text-slate-400">Scores normalisés sur 100 pour comparer les cinq dimensions.</p>
   </div>;
 }
 function DailyBars({ trades }: { trades: Trade[] }) {
@@ -126,11 +125,11 @@ function DailyBars({ trades }: { trades: Trade[] }) {
   const maxAbs = Math.max(1, ...days.map(day => Math.abs(day.value)));
   return <div className="min-w-0">
     <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[10px] text-slate-500"><span className="inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Jour positif</span><span className="inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-rose-500" /> Jour négatif</span><span className="ml-auto text-slate-400">Survoler une barre pour le P&amp;L exact</span></div>
-    <div className="relative h-[150px] border-b border-slate-200">
+    <div className="relative h-[250px] border-b border-slate-200">
       <div className="absolute inset-x-0 top-1/2 border-t border-slate-300" />
       <div className="relative flex h-full items-stretch gap-[2px] sm:gap-1">
         {days.map(({ date, value, index }) => {
-          const barHeight = value === 0 ? 0 : Math.max(2, Math.abs(value) / maxAbs * 57);
+          const barHeight = value === 0 ? 0 : Math.max(2, Math.abs(value) / maxAbs * 112);
           const showDate = index % 5 === 0 || index === 29;
           return <div key={date} className="group relative flex min-w-0 flex-1 flex-col items-center" title={shortDate(date) + ' : ' + money(value)}>
             <div className="relative h-full w-full">
