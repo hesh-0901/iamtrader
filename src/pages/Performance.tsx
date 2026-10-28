@@ -32,26 +32,68 @@ function Panel({ title, subtitle, icon: Icon, children, className = '' }: { titl
 
 function EquityChart({ points }: { points: { date: string; balance: number; pnl: number; tradeIndex: number }[] }) {
   const chart = useMemo(() => {
-    const width = 760, height = 230, padX = 12, padY = 18;
-    const values = points.map(p => p.balance), min = Math.min(0, ...values), max = Math.max(0, ...values), range = max - min || 1;
-    const x = (i: number) => padX + (points.length <= 1 ? 0 : i / (points.length - 1) * (width - padX * 2));
-    const y = (v: number) => height - padY - ((v - min) / range) * (height - padY * 2);
+    const width = 820, height = 300, left = 76, right = 20, top = 22, bottom = 42;
+    const values = points.map(p => p.balance);
+    const minValue = Math.min(0, ...values), maxValue = Math.max(0, ...values);
+    const span = maxValue - minValue || 1;
+    const pad = span * 0.08;
+    const min = minValue - pad, max = maxValue + pad, range = max - min || 1;
+    const x = (i: number) => left + (points.length <= 1 ? 0 : i / (points.length - 1) * (width - left - right));
+    const y = (v: number) => top + (max - v) / range * (height - top - bottom);
     const line = points.map((p, i) => `${i ? 'L' : 'M'} ${x(i).toFixed(2)} ${y(p.balance).toFixed(2)}`).join(' ');
-    const zeroY = y(0), area = points.length ? `${line} L ${x(points.length - 1)} ${zeroY} L ${x(0)} ${zeroY} Z` : '';
-    return { width, height, line, area, zeroY, positive: (points.at(-1)?.balance ?? 0) >= 0, grid: [0, 1, 2, 3].map(i => ({ y: padY + i / 3 * (height - padY * 2), value: max - i / 3 * range })) };
+    const zeroY = y(0);
+    const area = points.length ? `${line} L ${x(points.length - 1)} ${zeroY} L ${x(0)} ${zeroY} Z` : '';
+    const ticks = Array.from({ length: 5 }, (_, i) => {
+      const value = max - i / 4 * range;
+      return { y: y(value), value };
+    });
+    const positive = (points.at(-1)?.balance ?? 0) >= 0;
+    return { width, height, left, right, top, bottom, line, area, zeroY, positive, ticks, x };
   }, [points]);
   if (points.length < 2) return <div className="flex h-48 items-center justify-center rounded-xl bg-slate-50 text-sm text-slate-500">Ajoute au moins deux trades clôturés pour afficher la courbe.</div>;
+  const color = chart.positive ? '#10b981' : '#f43f5e';
   return <div className="min-w-0">
-    <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-500"><span className="inline-flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-emerald-500" /> P&L cumulé</span><span className="inline-flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-slate-300" /> Ligne zéro</span><span className="ml-auto font-semibold text-slate-700">{points.length - 1} opérations clôturées</span></div>
-    <div className="w-full overflow-hidden"><svg viewBox={`0 0 ${chart.width} ${chart.height}`} role="img" aria-label="Courbe du profit et de la perte cumulés" className="h-auto max-h-[320px] w-full">
-      <defs><linearGradient id="equityFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor={chart.positive ? '#10b981' : '#f43f5e'} stopOpacity=".24" /><stop offset="100%" stopColor={chart.positive ? '#10b981' : '#f43f5e'} stopOpacity=".015" /></linearGradient></defs>
-      {chart.grid.map((g, i) => <g key={i}><line x1="8" x2={chart.width - 8} y1={g.y} y2={g.y} stroke="#e2e8f0" strokeDasharray="4 5" /><text x="12" y={g.y - 4} fill="#94a3b8" fontSize="10">{Math.round(g.value).toLocaleString('fr-FR')}</text></g>)}
-      <line x1="8" x2={chart.width - 8} y1={chart.zeroY} y2={chart.zeroY} stroke="#94a3b8" strokeWidth="1.2" /><path d={chart.area} fill="url(#equityFill)" /><path d={chart.line} fill="none" stroke={chart.positive ? '#059669' : '#e11d48'} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+    <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-500"><span className="inline-flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-emerald-500" /> P&L cumulé</span><span className="inline-flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-slate-300" /> Point de départ (0)</span><span className="ml-auto font-semibold text-slate-700">{points.length - 1} opérations clôturées</span></div>
+    <div className="w-full overflow-hidden rounded-xl bg-slate-950/[0.02] p-1 sm:p-2"><svg viewBox={`0 0 ${chart.width} ${chart.height}`} role="img" aria-label="Courbe du profit et de la perte cumulés avec échelles horizontale et verticale" className="h-auto max-h-[380px] w-full">
+      <defs><linearGradient id="equityPremiumFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor={color} stopOpacity=".22" /><stop offset="100%" stopColor={color} stopOpacity=".015" /></linearGradient><filter id="equityGlow"><feGaussianBlur stdDeviation="2.5" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter></defs>
+      {chart.ticks.map((g, i) => <g key={i}><line x1={chart.left} x2={chart.width - chart.right} y1={g.y} y2={g.y} stroke="#cbd5e1" strokeOpacity=".75" strokeDasharray="3 6" /><text x={chart.left - 12} y={g.y + 4} fill="#64748b" fontSize="11" textAnchor="end">{Math.round(g.value).toLocaleString('fr-FR')}</text></g>)}
+      <line x1={chart.left} x2={chart.width - chart.right} y1={chart.height - chart.bottom} y2={chart.height - chart.bottom} stroke="#94a3b8" strokeOpacity=".8" />
+      <line x1={chart.left} x2={chart.width - chart.right} y1={chart.zeroY} y2={chart.zeroY} stroke="#64748b" strokeWidth="1.4" strokeDasharray="5 4" />
+      <path d={chart.area} fill="url(#equityPremiumFill)" /><path d={chart.line} fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" filter="url(#equityGlow)" />
+      {points.map((p, i) => (i === points.length - 1 || i === 0) ? <g key={p.tradeIndex}><circle cx={chart.x(i)} cy={chart.ticks.length ? (chart.height - chart.bottom - ((p.balance - (Math.min(0, ...points.map(q => q.balance)) - (Math.max(0, ...points.map(q => q.balance)) - Math.min(0, ...points.map(q => q.balance))) * .08)) / ((Math.max(0, ...points.map(q => q.balance)) + (Math.max(0, ...points.map(q => q.balance)) - Math.min(0, ...points.map(q => q.balance)))*.08) - (Math.min(0, ...points.map(q => q.balance)) - (Math.max(0, ...points.map(q => q.balance) - Math.min(0, ...points.map(q => q.balance)))*.08))) * (chart.height - chart.top - chart.bottom)) : 0} r="4" fill={color} stroke="white" strokeWidth="2" /></g> : null)}
+      <text x={chart.left} y={chart.height - 12} fill="#64748b" fontSize="11" textAnchor="start">{shortDate(points[0].date.slice(0, 10))}</text><text x={chart.width - chart.right} y={chart.height - 12} fill="#64748b" fontSize="11" textAnchor="end">{shortDate(points[points.length - 1].date.slice(0, 10))}</text>
+      <text x={chart.left + (chart.width - chart.left - chart.right) / 2} y={chart.height - 1} fill="#94a3b8" fontSize="10" textAnchor="middle">Chronologie des trades →</text>
     </svg></div>
-    <div className="mt-2 flex justify-between text-[10px] font-medium text-slate-400"><span>{shortDate(points[0].date.slice(0, 10))}</span><span>{shortDate(points[points.length - 1].date.slice(0, 10))}</span></div>
+    <div className="mt-2 flex items-center justify-between gap-3 text-[10px] text-slate-400"><span>Axe vertical : P&L cumulé ($)</span><span>Axe horizontal : progression des opérations</span></div>
   </div>;
 }
 
+function RadarProfile({ metrics }: { metrics: ReturnType<typeof calculatePerformance> }) {
+  const dimensions = [
+    { label: 'Win rate', value: Math.max(0, Math.min(100, metrics.winRate)) },
+    { label: 'Profit factor', value: Math.max(0, Math.min(100, metrics.profitFactor / 2 * 100)) },
+    { label: 'Payoff', value: Math.max(0, Math.min(100, (metrics.avgLoss > 0 ? metrics.avgWin / metrics.avgLoss : 0) / 2 * 100)) },
+    { label: 'Espérance', value: Math.max(0, Math.min(100, metrics.avgWin > 0 ? (metrics.expectancy / metrics.avgWin) * 100 : 0)) },
+    { label: 'Maîtrise du DD', value: Math.max(0, 100 - Math.min(100, metrics.maxDrawdownPercent * 5)) },
+  ];
+  const cx = 160, cy = 132, radius = 88;
+  const point = (index: number, value: number) => {
+    const angle = -Math.PI / 2 + index * (Math.PI * 2 / dimensions.length);
+    const r = radius * value / 100;
+    return { x: cx + Math.cos(angle) * r, y: cy + Math.sin(angle) * r };
+  };
+  const polygon = (factor: number) => dimensions.map((_, i) => { const p = point(i, factor); return `${p.x},${p.y}`; }).join(' ');
+  const values = dimensions.map((d, i) => { const p = point(i, d.value); return `${p.x},${p.y}`; }).join(' ');
+  return <div className="grid grid-cols-1 items-center gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(150px,0.9fr)]">
+    <svg viewBox="0 0 320 264" role="img" aria-label="Radar pentagonal du profil de performance" className="mx-auto w-full max-w-[320px]">
+      {[20, 40, 60, 80, 100].map(v => <polygon key={v} points={polygon(v)} fill="none" stroke="#cbd5e1" strokeOpacity=".8" strokeDasharray={v === 100 ? '0' : '3 4'} />)}
+      {dimensions.map((d, i) => { const p = point(i, 100), label = point(i, 125); return <g key={d.label}><line x1={cx} y1={cy} x2={p.x} y2={p.y} stroke="#cbd5e1" /><text x={label.x} y={label.y} textAnchor={label.x < cx - 8 ? 'end' : label.x > cx + 8 ? 'start' : 'middle'} dominantBaseline="middle" fill="#64748b" fontSize="10">{d.label}</text></g>; })}
+      <polygon points={values} fill="#10b981" fillOpacity=".18" stroke="#059669" strokeWidth="2.5" strokeLinejoin="round" />
+      {dimensions.map((d, i) => { const p = point(i, d.value); return <circle key={d.label} cx={p.x} cy={p.y} r="3.5" fill="#059669" stroke="white" strokeWidth="1.5" />; })}
+    </svg>
+    <div className="space-y-2">{dimensions.map(d => <div key={d.label} className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2"><span className="text-xs text-slate-600">{d.label}</span><span className="text-xs font-bold tabular-nums text-slate-900">{Math.round(d.value)}/100</span></div>)}<p className="text-[10px] leading-relaxed text-slate-400">Indices visuels normalisés pour comparer les axes entre eux ; les valeurs brutes restent les références de l’analyse.</p></div>
+  </div>;
+}
 function DailyBars({ trades }: { trades: Trade[] }) {
   const days = useMemo(() => {
     const map = new Map<string, number>();
@@ -111,6 +153,7 @@ export function Performance({ trades }: PerformanceProps) {
       </Panel>
     </div>
     <Panel title="Performance journalière" subtitle="Repère les journées qui contribuent le plus à tes résultats." icon={BarChart3}><DailyBars trades={closedTrades} /></Panel>
+    <Panel title="Profil de performance" subtitle="Vue synthétique des forces et points de vigilance, sur cinq axes." icon={Activity}><RadarProfile metrics={metrics} /></Panel>
     <Panel title="Longs vs Shorts" subtitle="Identifie le sens de marché qui contribue le plus à tes résultats." icon={Target}>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">{([{ key: 'long', label: 'Achats (Longs)', data: directionStats.long, positive: true }, { key: 'short', label: 'Ventes (Shorts)', data: directionStats.short, positive: false }] as const).map(({ key, label, data, positive }) => <div key={key} className="rounded-xl border border-slate-200 p-4"><div className="mb-3 flex items-center justify-between gap-2"><span className={`flex items-center gap-1.5 text-sm font-bold ${positive ? 'text-emerald-700' : 'text-rose-700'}`}>{positive ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}{label}</span><span className="text-xs text-slate-500">{data.count} trades</span></div><div className={`text-2xl font-bold tracking-tight ${data.pnl >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{money(data.pnl)}</div><div className="mt-3 flex items-center justify-between text-xs text-slate-500"><span>Taux de réussite</span><strong className="text-slate-800">{data.wr.toFixed(1)}%</strong></div><div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-100"><div className={`h-full rounded-full ${positive ? 'bg-emerald-500' : 'bg-rose-500'}`} style={{ width: `${Math.max(0, Math.min(100, data.wr))}%` }} /></div></div>)}</div>
     </Panel>
