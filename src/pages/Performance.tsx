@@ -125,11 +125,11 @@ function DailyBars({ trades }: { trades: Trade[] }) {
   const maxAbs = Math.max(1, ...days.map(day => Math.abs(day.value)));
   return <div className="min-w-0">
     <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[10px] text-slate-500"><span className="inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Jour positif</span><span className="inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-rose-500" /> Jour négatif</span><span className="ml-auto text-slate-400">Survoler une barre pour le P&amp;L exact</span></div>
-    <div className="relative h-[204px] border-b border-slate-200">
+    <div className="relative h-[250px] border-b border-slate-200">
       <div className="absolute inset-x-0 top-1/2 border-t border-slate-300" />
       <div className="relative flex h-full items-stretch gap-[2px] sm:gap-1">
         {days.map(({ date, value, index }) => {
-          const barHeight = value === 0 ? 0 : Math.max(2, Math.abs(value) / maxAbs * 92);
+          const barHeight = value === 0 ? 0 : Math.max(2, Math.abs(value) / maxAbs * 112);
           const showDate = index % 5 === 0 || index === 29;
           return <div key={date} className="group relative flex min-w-0 flex-1 flex-col items-center" title={shortDate(date) + ' : ' + money(value)}>
             <div className="relative h-full w-full">
