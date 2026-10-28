@@ -76,25 +76,33 @@ function RadarProfile({ metrics }: { metrics: ReturnType<typeof calculatePerform
     { label: 'Espérance', value: Math.max(0, Math.min(100, metrics.avgWin > 0 ? (metrics.expectancy / metrics.avgWin) * 100 : 0)) },
     { label: 'Maîtrise du DD', value: Math.max(0, 100 - Math.min(100, metrics.maxDrawdownPercent * 5)) },
   ];
-  const cx = 160, cy = 116, radius = 78;
-  const point = (index: number, value: number) => {
+  const cx = 200, cy = 145, radius = 88;
+  const point = (index: number, value: number, extra = 0) => {
     const angle = -Math.PI / 2 + index * (Math.PI * 2 / dimensions.length);
-    const r = radius * value / 100;
+    const r = radius * value / 100 + extra;
     return { x: cx + Math.cos(angle) * r, y: cy + Math.sin(angle) * r };
   };
-  const polygon = (factor: number) => dimensions.map((_, i) => { const p = point(i, factor); return `${p.x},${p.y}`; }).join(' ');
-  const values = dimensions.map((d, i) => { const p = point(i, d.value); return `${p.x},${p.y}`; }).join(' ');
+  const polygon = (factor: number) => dimensions.map((_, i) => { const p = point(i, factor); return p.x + ',' + p.y; }).join(' ');
+  const values = dimensions.map((d, i) => { const p = point(i, d.value); return p.x + ',' + p.y; }).join(' ');
   return <div className="flex min-w-0 flex-col items-center">
-    <svg viewBox="0 0 320 232" role="img" aria-label="Radar pentagonal du profil de performance" className="mx-auto w-full max-w-[310px]">
+    <svg viewBox="0 0 400 290" role="img" aria-label="Radar pentagonal du profil de performance avec les cinq axes nommés" className="mx-auto w-full max-w-[440px] overflow-visible">
       <defs><linearGradient id="radarPremiumFill" x1="0" x2="1" y1="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity=".32" /><stop offset="100%" stopColor="#059669" stopOpacity=".10" /></linearGradient></defs>
       {[20, 40, 60, 80, 100].map(v => <polygon key={v} points={polygon(v)} fill="none" stroke="#cbd5e1" strokeOpacity=".8" strokeDasharray={v === 100 ? '0' : '3 4'} />)}
       {dimensions.map((d, i) => { const p = point(i, 100); return <line key={d.label} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke="#cbd5e1" />; })}
       <polygon points={values} fill="url(#radarPremiumFill)" stroke="#059669" strokeWidth="4" strokeLinejoin="round" />
-      {dimensions.map((d, i) => { const p = point(i, d.value); return <circle key={d.label} cx={p.x} cy={p.y} r="4" fill="#059669" stroke="white" strokeWidth="2" />; })}
+      {dimensions.map((d, i) => { const p = point(i, d.value); return <circle key={d.label} cx={p.x} cy={p.y} r="4.5" fill="#059669" stroke="white" strokeWidth="2" />; })}
+      {dimensions.map((d, i) => {
+        const p = point(i, 100, 25);
+        const angle = -Math.PI / 2 + i * (Math.PI * 2 / dimensions.length);
+        const anchor = Math.cos(angle) > 0.35 ? 'start' : Math.cos(angle) < -0.35 ? 'end' : 'middle';
+        const labelY = p.y + (Math.sin(angle) > 0.55 ? 4 : Math.sin(angle) < -0.55 ? -2 : 4);
+        return <text key={d.label} x={p.x} y={labelY} fill="#475569" fontSize="11" fontWeight="600" textAnchor={anchor}>{d.label}</text>;
+      })}
     </svg>
-    <div className="mt-1 flex w-full flex-wrap items-center justify-center gap-x-3 gap-y-2 border-t border-slate-100 pt-3">
-      {dimensions.map((d, i) => <div key={d.label} className="flex items-center gap-1.5 text-[10px] text-slate-500"><span className={`h-1.5 w-1.5 rounded-full ${i % 2 === 0 ? 'bg-emerald-500' : 'bg-slate-400'}`} />{d.label}</div>)}
+    <div className="mt-1 flex w-full flex-wrap items-center justify-center gap-x-4 gap-y-2 border-t border-slate-100 pt-3">
+      {dimensions.map((d) => <div key={d.label} className="flex items-center gap-1.5 text-[10px] text-slate-500"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />{d.label}<span className="font-semibold tabular-nums text-slate-700">{Math.round(d.value)}/100</span></div>)}
     </div>
+    <p className="mt-2 text-center text-[10px] leading-relaxed text-slate-400">Scores normalisés sur 100 pour comparer les cinq dimensions.</p>
   </div>;
 }
 function DailyBars({ trades }: { trades: Trade[] }) {
@@ -104,30 +112,39 @@ function DailyBars({ trades }: { trades: Trade[] }) {
       const key = dateKey(t);
       map.set(key, (map.get(key) || 0) + (Number(t.pnl) || 0));
     });
-    return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0])).slice(-7);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const calendarDays: { date: string; value: number; index: number }[] = [];
+    for (let i = 29; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(today.getDate() - i);
+      const key = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0') + '-' + String(date.getDate()).padStart(2, '0');
+      calendarDays.push({ date: key, value: map.get(key) || 0, index: 29 - i });
+    }
+    return calendarDays;
   }, [trades]);
-  const maxAbs = Math.max(1, ...days.map(([, value]) => Math.abs(value)));
-  if (!days.length) return <div className="flex h-28 items-center justify-center text-sm text-slate-500">Aucune performance journalière à afficher.</div>;
+  const maxAbs = Math.max(1, ...days.map(day => Math.abs(day.value)));
   return <div className="min-w-0">
-    <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[10px] text-slate-500"><span className="inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Jour positif</span><span className="inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-rose-500" /> Jour négatif</span></div>
-    <div className="relative h-[112px] border-b border-slate-200">
+    <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[10px] text-slate-500"><span className="inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Jour positif</span><span className="inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-rose-500" /> Jour négatif</span><span className="ml-auto text-slate-400">Survoler une barre pour le P&amp;L exact</span></div>
+    <div className="relative h-[150px] border-b border-slate-200">
       <div className="absolute inset-x-0 top-1/2 border-t border-slate-300" />
-      <div className="relative flex h-full items-stretch gap-2 sm:gap-3">
-        {days.map(([date, value]) => {
-          const barHeight = Math.max(2, Math.abs(value) / maxAbs * 42);
-          return <div key={date} className="group relative flex min-w-0 flex-1 flex-col items-center" title={`${shortDate(date)} : ${money(value)}`}>
+      <div className="relative flex h-full items-stretch gap-[2px] sm:gap-1">
+        {days.map(({ date, value, index }) => {
+          const barHeight = value === 0 ? 0 : Math.max(2, Math.abs(value) / maxAbs * 57);
+          const showDate = index % 5 === 0 || index === 29;
+          return <div key={date} className="group relative flex min-w-0 flex-1 flex-col items-center" title={shortDate(date) + ' : ' + money(value)}>
             <div className="relative h-full w-full">
-              {value > 0 && <div className="absolute bottom-1/2 left-[18%] w-[64%] rounded-t-sm bg-emerald-500 shadow-[0_3px_10px_rgba(16,185,129,0.12)] transition-colors group-hover:bg-emerald-600" style={{ height: `${barHeight}px` }} />}
-              {value < 0 && <div className="absolute left-[18%] top-1/2 w-[64%] rounded-b-sm bg-rose-400/80 transition-colors group-hover:bg-rose-500" style={{ height: `${barHeight}px` }} />}
-              {value === 0 && <div className="absolute left-[35%] top-1/2 h-[2px] w-[30%] rounded-full bg-slate-300" />}
+              {value > 0 && <div className="absolute bottom-1/2 left-[12%] w-[76%] rounded-t-sm bg-emerald-500 shadow-[0_3px_10px_rgba(16,185,129,0.10)] transition-colors group-hover:bg-emerald-600" style={{ height: barHeight + 'px' }} />}
+              {value < 0 && <div className="absolute left-[12%] top-1/2 w-[76%] rounded-b-sm bg-rose-400/90 transition-colors group-hover:bg-rose-500" style={{ height: barHeight + 'px' }} />}
+              {value === 0 && <div className="absolute left-[28%] top-1/2 h-[2px] w-[44%] rounded-full bg-slate-200" />}
             </div>
-            <span className="absolute -bottom-5 whitespace-nowrap text-[9px] text-slate-400">{shortDate(date)}</span>
+            {showDate && <span className="absolute -bottom-5 whitespace-nowrap text-[8px] text-slate-400 sm:text-[9px]">{shortDate(date)}</span>}
             <div className="pointer-events-none absolute bottom-[calc(100%+2px)] z-10 hidden whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-[10px] font-semibold text-white shadow-lg group-hover:block">{money(value)}</div>
           </div>;
         })}
       </div>
     </div>
-    <div className="mt-7 flex items-center justify-between gap-2 text-[10px] text-slate-500"><span>{days.length} jours actifs</span><span className="font-semibold text-slate-700">P&L par jour de clôture</span></div>
+    <div className="mt-7 flex items-center justify-between gap-2 text-[10px] text-slate-500"><span>30 jours calendaires · jours sans trade à zéro</span><span className="font-semibold text-slate-700">P&amp;L par jour de clôture</span></div>
   </div>;
 }
 export function Performance({ trades }: PerformanceProps) {
@@ -168,7 +185,7 @@ export function Performance({ trades }: PerformanceProps) {
         <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-slate-200 p-3.5"><div><div className="text-xs font-bold text-slate-700">Ratio gain / perte (Payoff)</div><div className="mt-1 text-[11px] text-slate-500">Gain moyen comparé à une perte moyenne</div></div><div className="whitespace-nowrap text-xl font-bold text-slate-950">{metrics.avgLoss > 0 ? (metrics.avgWin / metrics.avgLoss).toFixed(2) : '—'} : 1</div></div>
       </Panel>
     </div>
-    <div className="grid grid-cols-1 items-stretch gap-4 xl:grid-cols-2"><Panel title="Performance journalière" subtitle="Les 7 derniers jours actifs, avec une échelle de barres stable." icon={BarChart3} className="h-full"><DailyBars trades={closedTrades} /></Panel><Panel title="Profil de performance" subtitle="Radar synthétique des cinq axes de ton trading." icon={Activity} className="h-full"><RadarProfile metrics={metrics} /></Panel></div>
+    <div className="grid grid-cols-1 items-stretch gap-4 xl:grid-cols-2"><Panel title="Performance journalière" subtitle="Les 30 derniers jours calendaires, avec une échelle de barres stable." icon={BarChart3} className="h-full"><DailyBars trades={closedTrades} /></Panel><Panel title="Profil de performance" subtitle="Radar synthétique des cinq axes de ton trading." icon={Activity} className="h-full"><RadarProfile metrics={metrics} /></Panel></div>
     <Panel title="Longs vs Shorts" subtitle="Identifie le sens de marché qui contribue le plus à tes résultats." icon={Target}>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">{([{ key: 'long', label: 'Achats (Longs)', data: directionStats.long, positive: true }, { key: 'short', label: 'Ventes (Shorts)', data: directionStats.short, positive: false }] as const).map(({ key, label, data, positive }) => <div key={key} className="rounded-xl border border-slate-200 p-4"><div className="mb-3 flex items-center justify-between gap-2"><span className={`flex items-center gap-1.5 text-sm font-bold ${positive ? 'text-emerald-700' : 'text-rose-700'}`}>{positive ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}{label}</span><span className="text-xs text-slate-500">{data.count} trades</span></div><div className={`text-2xl font-bold tracking-tight ${data.pnl >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{money(data.pnl)}</div><div className="mt-3 flex items-center justify-between text-xs text-slate-500"><span>Taux de réussite</span><strong className="text-slate-800">{data.wr.toFixed(1)}%</strong></div><div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-100"><div className={`h-full rounded-full ${positive ? 'bg-emerald-500' : 'bg-rose-500'}`} style={{ width: `${Math.max(0, Math.min(100, data.wr))}%` }} /></div></div>)}</div>
     </Panel>
