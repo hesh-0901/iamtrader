@@ -131,15 +131,15 @@ export async function onRequest(context: { request: Request; env: Env }) {
     parts.push({ inlineData: { mimeType: file.mimeType, data: cleanData } });
   }
 
-  // Modèles Gemini choisis pour Chloé : Flash en principal, Pro en secours.
+  // Modèles Gemini : Flash stable en principal, Pro Preview en secours.
   const preferredModel =
     (context.env.GEMINI_CHLOE_MODEL || '').trim() ||
-    'gemini-2.5-flash';
+    'gemini-3.8-flash';
 
   const fallbackModels =
-    preferredModel === 'gemini-2.5-flash'
-      ? ['gemini-2.5-pro']
-      : ['gemini-2.5-flash'];
+    preferredModel === 'gemini-3.8-flash'
+      ? ['gemini-3.1-pro-preview']
+      : ['gemini-3.8-flash'];
 
   const result = await callGeminiUnified(
     [{ role: 'user', parts }],
