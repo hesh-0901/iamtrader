@@ -124,22 +124,20 @@ function DailyBars({ trades }: { trades: Trade[] }) {
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([date, value]) => ({ date, value }));
   }, [trades]);
-  const barHeight = 28;
+  const barHeight = 24;
   return <div className="min-w-0">
-    <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[10px] text-slate-500"><span className="inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Jour positif</span><span className="inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-rose-800" /> Jour négatif</span><span className="ml-auto text-slate-400">Survoler une barre pour le P&amp;L exact</span></div>
-    {days.length === 0 ? <div className="flex h-[112px] items-center justify-center rounded-xl bg-slate-50 text-sm text-slate-500">Aucun trade clôturé sur les 30 derniers jours.</div> : <div className="relative h-[112px] border-b border-slate-200">
+    <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[10px] text-slate-500"><span className="inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Jour positif</span><span className="inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-rose-900" /> Jour négatif</span><span className="ml-auto text-slate-400">Survoler une barre pour le P&amp;L exact</span></div>
+    {days.length === 0 ? <div className="flex h-[88px] items-center justify-center rounded-xl bg-slate-50 text-sm text-slate-500">Aucun trade clôturé sur les 30 derniers jours.</div> : <div className="relative h-[88px] border-b border-slate-200">
       <div className="absolute inset-x-0 top-1/2 border-t border-slate-300" />
-      <div className="relative flex h-full items-stretch gap-[3px]">
+      <div className="relative flex h-full items-stretch justify-start gap-2">
         {days.map(({ date, value }, index) => {
           const showDate = days.length <= 8 || index % Math.max(1, Math.ceil(days.length / 6)) === 0 || index === days.length - 1;
-          return <div key={date} className="group relative flex min-w-0 flex-1 flex-col items-center" title={shortDate(date) + ' : ' + money(value)}>
-            <div className="relative h-full w-full">
-              {value > 0 && <div className="absolute bottom-1/2 left-[15%] w-[70%] rounded-t-sm bg-emerald-500 transition-colors group-hover:bg-emerald-600" style={{ height: barHeight + 'px' }} />}
-              {value < 0 && <div className="absolute left-[15%] top-1/2 w-[70%] rounded-b-sm bg-rose-800 transition-colors group-hover:bg-rose-900" style={{ height: barHeight + 'px' }} />}
-              {value === 0 && <div className="absolute left-[15%] top-1/2 h-[2px] w-[70%] rounded-full bg-slate-400" />}
-            </div>
-            {showDate && <span className="absolute -bottom-5 whitespace-nowrap text-[8px] text-slate-400 sm:text-[9px]">{shortDate(date)}</span>}
-            <div className="pointer-events-none absolute bottom-[calc(100%+2px)] z-10 hidden whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-[10px] font-semibold text-white shadow-lg group-hover:block">{money(value)}</div>
+          return <div key={date} className="group relative h-full w-3 shrink-0" title={shortDate(date) + ' : ' + money(value)}>
+            {value > 0 && <div className="absolute bottom-1/2 left-0 w-3 rounded-t-sm bg-emerald-500 transition-colors group-hover:bg-emerald-600" style={{ height: barHeight + 'px' }} />}
+            {value < 0 && <div className="absolute left-0 top-1/2 w-3 rounded-b-sm bg-rose-900 transition-colors group-hover:bg-rose-950" style={{ height: barHeight + 'px' }} />}
+            {value === 0 && <div className="absolute left-0 top-1/2 h-[2px] w-3 rounded-full bg-slate-400" />}
+            {showDate && <span className="absolute -bottom-5 left-1/2 -translate-x-1/2 whitespace-nowrap text-[8px] text-slate-400 sm:text-[9px]">{shortDate(date)}</span>}
+            <div className="pointer-events-none absolute bottom-[calc(100%+2px)] left-1/2 z-10 hidden -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-[10px] font-semibold text-white shadow-lg group-hover:block">{money(value)}</div>
           </div>;
         })}
       </div>
@@ -185,7 +183,7 @@ export function Performance({ trades }: PerformanceProps) {
         <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-slate-200 p-3.5"><div><div className="text-xs font-bold text-slate-700">Ratio gain / perte (Payoff)</div><div className="mt-1 text-[11px] text-slate-500">Gain moyen comparé à une perte moyenne</div></div><div className="whitespace-nowrap text-xl font-bold text-slate-950">{metrics.avgLoss > 0 ? (metrics.avgWin / metrics.avgLoss).toFixed(2) : '—'} : 1</div></div>
       </Panel>
     </div>
-    <div className="grid grid-cols-1 items-stretch gap-4 xl:grid-cols-2"><Panel title="Performance journalière" subtitle="Les 30 derniers jours calendaires, avec une échelle de barres stable." icon={BarChart3} className="h-full"><DailyBars trades={closedTrades} /></Panel><Panel title="Profil de performance" subtitle="Radar synthétique des cinq axes de ton trading." icon={Activity} className="h-full"><RadarProfile metrics={metrics} /></Panel></div>
+    <div className="grid grid-cols-1 items-start gap-4 xl:grid-cols-2"><Panel title="Performance journalière" subtitle="Les 30 derniers jours calendaires, avec une échelle de barres stable." icon={BarChart3}><DailyBars trades={closedTrades} /></Panel><Panel title="Profil de performance" subtitle="Radar synthétique des cinq axes de ton trading." icon={Activity}><RadarProfile metrics={metrics} /></Panel></div>
     <Panel title="Longs vs Shorts" subtitle="Identifie le sens de marché qui contribue le plus à tes résultats." icon={Target}>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">{([{ key: 'long', label: 'Achats (Longs)', data: directionStats.long, positive: true }, { key: 'short', label: 'Ventes (Shorts)', data: directionStats.short, positive: false }] as const).map(({ key, label, data, positive }) => <div key={key} className="rounded-xl border border-slate-200 p-4"><div className="mb-3 flex items-center justify-between gap-2"><span className={`flex items-center gap-1.5 text-sm font-bold ${positive ? 'text-emerald-700' : 'text-rose-700'}`}>{positive ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}{label}</span><span className="text-xs text-slate-500">{data.count} trades</span></div><div className={`text-2xl font-bold tracking-tight ${data.pnl >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{money(data.pnl)}</div><div className="mt-3 flex items-center justify-between text-xs text-slate-500"><span>Taux de réussite</span><strong className="text-slate-800">{data.wr.toFixed(1)}%</strong></div><div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-100"><div className={`h-full rounded-full ${positive ? 'bg-emerald-500' : 'bg-rose-500'}`} style={{ width: `${Math.max(0, Math.min(100, data.wr))}%` }} /></div></div>)}</div>
     </Panel>
