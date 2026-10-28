@@ -76,7 +76,7 @@ function RadarProfile({ metrics }: { metrics: ReturnType<typeof calculatePerform
     { label: 'Espérance', value: Math.max(0, Math.min(100, metrics.avgWin > 0 ? (metrics.expectancy / metrics.avgWin) * 100 : 0)) },
     { label: 'Maîtrise du DD', value: Math.max(0, 100 - Math.min(100, metrics.maxDrawdownPercent * 5)) },
   ];
-  const cx = 160, cy = 132, radius = 88;
+  const cx = 160, cy = 116, radius = 78;
   const point = (index: number, value: number) => {
     const angle = -Math.PI / 2 + index * (Math.PI * 2 / dimensions.length);
     const r = radius * value / 100;
@@ -84,36 +84,52 @@ function RadarProfile({ metrics }: { metrics: ReturnType<typeof calculatePerform
   };
   const polygon = (factor: number) => dimensions.map((_, i) => { const p = point(i, factor); return `${p.x},${p.y}`; }).join(' ');
   const values = dimensions.map((d, i) => { const p = point(i, d.value); return `${p.x},${p.y}`; }).join(' ');
-  return <div className="grid grid-cols-1 items-center gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(150px,0.9fr)]">
-    <svg viewBox="0 0 320 264" role="img" aria-label="Radar pentagonal du profil de performance" className="mx-auto w-full max-w-[320px]">
+  return <div className="flex min-w-0 flex-col items-center">
+    <svg viewBox="0 0 320 232" role="img" aria-label="Radar pentagonal du profil de performance" className="mx-auto w-full max-w-[310px]">
+      <defs><linearGradient id="radarPremiumFill" x1="0" x2="1" y1="0" y2="1"><stop offset="0%" stopColor="#10b981" stopOpacity=".32" /><stop offset="100%" stopColor="#059669" stopOpacity=".10" /></linearGradient></defs>
       {[20, 40, 60, 80, 100].map(v => <polygon key={v} points={polygon(v)} fill="none" stroke="#cbd5e1" strokeOpacity=".8" strokeDasharray={v === 100 ? '0' : '3 4'} />)}
-      {dimensions.map((d, i) => { const p = point(i, 100), label = point(i, 125); return <g key={d.label}><line x1={cx} y1={cy} x2={p.x} y2={p.y} stroke="#cbd5e1" /><text x={label.x} y={label.y} textAnchor={label.x < cx - 8 ? 'end' : label.x > cx + 8 ? 'start' : 'middle'} dominantBaseline="middle" fill="#64748b" fontSize="10">{d.label}</text></g>; })}
-      <polygon points={values} fill="#10b981" fillOpacity=".18" stroke="#059669" strokeWidth="2.5" strokeLinejoin="round" />
-      {dimensions.map((d, i) => { const p = point(i, d.value); return <circle key={d.label} cx={p.x} cy={p.y} r="3.5" fill="#059669" stroke="white" strokeWidth="1.5" />; })}
+      {dimensions.map((d, i) => { const p = point(i, 100); return <line key={d.label} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke="#cbd5e1" />; })}
+      <polygon points={values} fill="url(#radarPremiumFill)" stroke="#059669" strokeWidth="4" strokeLinejoin="round" />
+      {dimensions.map((d, i) => { const p = point(i, d.value); return <circle key={d.label} cx={p.x} cy={p.y} r="4" fill="#059669" stroke="white" strokeWidth="2" />; })}
     </svg>
-    <div className="space-y-2">{dimensions.map(d => <div key={d.label} className="flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2"><span className="text-xs text-slate-600">{d.label}</span><span className="text-xs font-bold tabular-nums text-slate-900">{Math.round(d.value)}/100</span></div>)}<p className="text-[10px] leading-relaxed text-slate-400">Indices visuels normalisés pour comparer les axes entre eux ; les valeurs brutes restent les références de l’analyse.</p></div>
+    <div className="mt-1 flex w-full flex-wrap items-center justify-center gap-x-3 gap-y-2 border-t border-slate-100 pt-3">
+      {dimensions.map((d, i) => <div key={d.label} className="flex items-center gap-1.5 text-[10px] text-slate-500"><span className={`h-1.5 w-1.5 rounded-full ${i % 2 === 0 ? 'bg-emerald-500' : 'bg-slate-400'}`} />{d.label}</div>)}
+    </div>
   </div>;
 }
 function DailyBars({ trades }: { trades: Trade[] }) {
   const days = useMemo(() => {
     const map = new Map<string, number>();
-    trades.filter(t => t.result !== 'OPEN').forEach(t => map.set(dateKey(t), (map.get(dateKey(t)) || 0) + (Number(t.pnl) || 0)));
-    return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0])).slice(-18);
+    trades.filter(t => t.result !== 'OPEN').forEach(t => {
+      const key = dateKey(t);
+      map.set(key, (map.get(key) || 0) + (Number(t.pnl) || 0));
+    });
+    return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0])).slice(-7);
   }, [trades]);
   const maxAbs = Math.max(1, ...days.map(([, value]) => Math.abs(value)));
-  if (!days.length) return <div className="flex h-36 items-center justify-center text-sm text-slate-500">Aucune performance journalière à afficher.</div>;
+  if (!days.length) return <div className="flex h-28 items-center justify-center text-sm text-slate-500">Aucune performance journalière à afficher.</div>;
   return <div className="min-w-0">
-    <div className="mb-3 flex items-center gap-4 text-xs text-slate-500"><span className="inline-flex items-center gap-2"><span className="h-2 w-2 rounded-sm bg-emerald-500" /> Jour positif</span><span className="inline-flex items-center gap-2"><span className="h-2 w-2 rounded-sm bg-rose-500" /> Jour négatif</span></div>
-    <div className="flex h-44 items-stretch gap-1 border-b border-slate-200 sm:gap-2">
-      {days.map(([date, value]) => { const height = Math.max(3, Math.abs(value) / maxAbs * 100); return <div key={date} className="group relative flex min-w-0 flex-1 flex-col items-center justify-center" title={`${shortDate(date)} : ${money(value)}`}>
-        <div className="flex h-full w-full flex-col items-center justify-center">{value >= 0 ? <><div className="flex h-1/2 w-full items-end justify-center"><div className="w-[72%] rounded-t-sm bg-emerald-500 transition-colors group-hover:bg-emerald-600" style={{ height: `${height}%` }} /></div><div className="h-px w-full bg-slate-300" /><div className="h-1/2 w-full" /></> : <><div className="h-1/2 w-full" /><div className="h-px w-full bg-slate-300" /><div className="flex h-1/2 w-full items-start justify-center"><div className="w-[72%] rounded-b-sm bg-rose-500 transition-colors group-hover:bg-rose-600" style={{ height: `${height}%` }} /></div></>}</div>
-        <span className="absolute -bottom-5 whitespace-nowrap text-[9px] text-slate-400">{shortDate(date)}</span><div className="pointer-events-none absolute bottom-full z-10 mb-2 hidden whitespace-nowrap rounded-lg bg-slate-900 px-2.5 py-1.5 text-xs font-semibold text-white shadow-lg group-hover:block">{money(value)}</div>
-      </div>; })}
+    <div className="mb-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-[10px] text-slate-500"><span className="inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Jour positif</span><span className="inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-rose-500" /> Jour négatif</span></div>
+    <div className="relative h-[112px] border-b border-slate-200">
+      <div className="absolute inset-x-0 top-1/2 border-t border-slate-300" />
+      <div className="relative flex h-full items-stretch gap-2 sm:gap-3">
+        {days.map(([date, value]) => {
+          const barHeight = Math.max(2, Math.abs(value) / maxAbs * 42);
+          return <div key={date} className="group relative flex min-w-0 flex-1 flex-col items-center" title={`${shortDate(date)} : ${money(value)}`}>
+            <div className="relative h-full w-full">
+              {value > 0 && <div className="absolute bottom-1/2 left-[18%] w-[64%] rounded-t-sm bg-emerald-500 shadow-[0_3px_10px_rgba(16,185,129,0.12)] transition-colors group-hover:bg-emerald-600" style={{ height: `${barHeight}px` }} />}
+              {value < 0 && <div className="absolute left-[18%] top-1/2 w-[64%] rounded-b-sm bg-rose-400/80 transition-colors group-hover:bg-rose-500" style={{ height: `${barHeight}px` }} />}
+              {value === 0 && <div className="absolute left-[35%] top-1/2 h-[2px] w-[30%] rounded-full bg-slate-300" />}
+            </div>
+            <span className="absolute -bottom-5 whitespace-nowrap text-[9px] text-slate-400">{shortDate(date)}</span>
+            <div className="pointer-events-none absolute bottom-[calc(100%+2px)] z-10 hidden whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-[10px] font-semibold text-white shadow-lg group-hover:block">{money(value)}</div>
+          </div>;
+        })}
+      </div>
     </div>
-    <div className="mt-7 flex items-center justify-between text-xs text-slate-500"><span>{days.length} jours de trading</span><span className="font-semibold text-slate-700">P&L par jour de clôture</span></div>
+    <div className="mt-7 flex items-center justify-between gap-2 text-[10px] text-slate-500"><span>{days.length} jours actifs</span><span className="font-semibold text-slate-700">P&L par jour de clôture</span></div>
   </div>;
 }
-
 export function Performance({ trades }: PerformanceProps) {
   const metrics = useMemo(() => calculatePerformance(trades), [trades]);
   const closedTrades = useMemo(() => trades.filter(t => t.result !== 'OPEN'), [trades]);
@@ -152,8 +168,7 @@ export function Performance({ trades }: PerformanceProps) {
         <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-slate-200 p-3.5"><div><div className="text-xs font-bold text-slate-700">Ratio gain / perte (Payoff)</div><div className="mt-1 text-[11px] text-slate-500">Gain moyen comparé à une perte moyenne</div></div><div className="whitespace-nowrap text-xl font-bold text-slate-950">{metrics.avgLoss > 0 ? (metrics.avgWin / metrics.avgLoss).toFixed(2) : '—'} : 1</div></div>
       </Panel>
     </div>
-    <Panel title="Performance journalière" subtitle="Repère les journées qui contribuent le plus à tes résultats." icon={BarChart3}><DailyBars trades={closedTrades} /></Panel>
-    <Panel title="Profil de performance" subtitle="Vue synthétique des forces et points de vigilance, sur cinq axes." icon={Activity}><RadarProfile metrics={metrics} /></Panel>
+    <div className="grid grid-cols-1 items-stretch gap-4 xl:grid-cols-2"><Panel title="Performance journalière" subtitle="Les 7 derniers jours actifs, avec une échelle de barres stable." icon={BarChart3} className="h-full"><DailyBars trades={closedTrades} /></Panel><Panel title="Profil de performance" subtitle="Radar synthétique des cinq axes de ton trading." icon={Activity} className="h-full"><RadarProfile metrics={metrics} /></Panel></div>
     <Panel title="Longs vs Shorts" subtitle="Identifie le sens de marché qui contribue le plus à tes résultats." icon={Target}>
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">{([{ key: 'long', label: 'Achats (Longs)', data: directionStats.long, positive: true }, { key: 'short', label: 'Ventes (Shorts)', data: directionStats.short, positive: false }] as const).map(({ key, label, data, positive }) => <div key={key} className="rounded-xl border border-slate-200 p-4"><div className="mb-3 flex items-center justify-between gap-2"><span className={`flex items-center gap-1.5 text-sm font-bold ${positive ? 'text-emerald-700' : 'text-rose-700'}`}>{positive ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}{label}</span><span className="text-xs text-slate-500">{data.count} trades</span></div><div className={`text-2xl font-bold tracking-tight ${data.pnl >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{money(data.pnl)}</div><div className="mt-3 flex items-center justify-between text-xs text-slate-500"><span>Taux de réussite</span><strong className="text-slate-800">{data.wr.toFixed(1)}%</strong></div><div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-100"><div className={`h-full rounded-full ${positive ? 'bg-emerald-500' : 'bg-rose-500'}`} style={{ width: `${Math.max(0, Math.min(100, data.wr))}%` }} /></div></div>)}</div>
     </Panel>
