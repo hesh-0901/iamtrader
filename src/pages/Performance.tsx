@@ -48,7 +48,7 @@ function EquityChart({ points }: { points: { date: string; balance: number; pnl:
       return { y: y(value), value };
     });
     const positive = (points.at(-1)?.balance ?? 0) >= 0;
-    return { width, height, left, right, top, bottom, line, area, zeroY, positive, ticks, x };
+    return { width, height, left, right, top, bottom, line, area, zeroY, positive, ticks, x, y };
   }, [points]);
   if (points.length < 2) return <div className="flex h-48 items-center justify-center rounded-xl bg-slate-50 text-sm text-slate-500">Ajoute au moins deux trades clôturés pour afficher la courbe.</div>;
   const color = chart.positive ? '#10b981' : '#f43f5e';
@@ -60,7 +60,7 @@ function EquityChart({ points }: { points: { date: string; balance: number; pnl:
       <line x1={chart.left} x2={chart.width - chart.right} y1={chart.height - chart.bottom} y2={chart.height - chart.bottom} stroke="#94a3b8" strokeOpacity=".8" />
       <line x1={chart.left} x2={chart.width - chart.right} y1={chart.zeroY} y2={chart.zeroY} stroke="#64748b" strokeWidth="1.4" strokeDasharray="5 4" />
       <path d={chart.area} fill="url(#equityPremiumFill)" /><path d={chart.line} fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" filter="url(#equityGlow)" />
-      {points.map((p, i) => (i === points.length - 1 || i === 0) ? <g key={p.tradeIndex}><circle cx={chart.x(i)} cy={chart.ticks.length ? (chart.height - chart.bottom - ((p.balance - (Math.min(0, ...points.map(q => q.balance)) - (Math.max(0, ...points.map(q => q.balance)) - Math.min(0, ...points.map(q => q.balance))) * .08)) / ((Math.max(0, ...points.map(q => q.balance)) + (Math.max(0, ...points.map(q => q.balance)) - Math.min(0, ...points.map(q => q.balance)))*.08) - (Math.min(0, ...points.map(q => q.balance)) - (Math.max(0, ...points.map(q => q.balance) - Math.min(0, ...points.map(q => q.balance)))*.08))) * (chart.height - chart.top - chart.bottom)) : 0} r="4" fill={color} stroke="white" strokeWidth="2" /></g> : null)}
+      {points.map((p, i) => (i === points.length - 1 || i === 0) ? <g key={p.tradeIndex}><circle cx={chart.x(i)} cy={chart.y(p.balance)} r="4" fill={color} stroke="white" strokeWidth="2" /></g> : null)}
       <text x={chart.left} y={chart.height - 12} fill="#64748b" fontSize="11" textAnchor="start">{shortDate(points[0].date.slice(0, 10))}</text><text x={chart.width - chart.right} y={chart.height - 12} fill="#64748b" fontSize="11" textAnchor="end">{shortDate(points[points.length - 1].date.slice(0, 10))}</text>
       <text x={chart.left + (chart.width - chart.left - chart.right) / 2} y={chart.height - 1} fill="#94a3b8" fontSize="10" textAnchor="middle">Chronologie des trades →</text>
     </svg></div>
