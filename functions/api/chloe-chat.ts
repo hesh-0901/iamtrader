@@ -131,15 +131,13 @@ export async function onRequest(context: { request: Request; env: Env }) {
     parts.push({ inlineData: { mimeType: file.mimeType, data: cleanData } });
   }
 
-  // Modèles Gemini : Flash stable en principal, Pro Preview en secours.
+  // Utiliser Flash-Lite : le quota quotidien visible est plus élevé sur le projet actuel.
+  // Aucun fallback automatique vers les modèles dont le quota est déjà dépassé.
   const preferredModel =
     (context.env.GEMINI_CHLOE_MODEL || '').trim() ||
-    'gemini-3.8-flash';
+    'gemini-3.5-flash-lite';
 
-  const fallbackModels =
-    preferredModel === 'gemini-3.8-flash'
-      ? ['gemini-3.1-pro-preview']
-      : ['gemini-3.8-flash'];
+  const fallbackModels: string[] = [];
 
   const result = await callGeminiUnified(
     [{ role: 'user', parts }],
