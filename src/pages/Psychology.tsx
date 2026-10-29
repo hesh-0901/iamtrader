@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Trade, EmotionalState } from '../types';
 import { formatCurrency } from '../utils/calculations';
 import { EmptyState } from '../components/common/EmptyState';
@@ -76,6 +76,7 @@ export function Psychology({ trades }: PsychologyProps) {
     };
   }, [trades]);
 
+  const [selectedEmotion, setSelectedEmotion] = useState<EmotionalState | null>(null);
   const totalTrades = trades.length;
   const rationalRatio = totalTrades ? macroSplit.rational.count / totalTrades * 100 : 0;
   const hasEnoughData = totalTrades >= 6;
@@ -139,33 +140,33 @@ export function Psychology({ trades }: PsychologyProps) {
         </div>
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(280px,0.75fr)]">
+      <section className="space-y-4">
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_6px_24px_rgba(12,95,66,.035)] sm:p-5">
           <div className="mb-4 flex items-start justify-between gap-3"><div><h3 className="text-base font-bold tracking-tight text-slate-900">Performance par état émotionnel</h3><p className="mt-1 text-xs text-slate-500">Volume de trades et P&L observé pour chaque état renseigné.</p></div><Activity className="h-5 w-5 text-emerald-600" /></div>
-          {rankedEmotions.length === 0 ? <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-500">Aucun état émotionnel n’est renseigné dans les trades actuels.</p> : <div className="grid gap-5 lg:grid-cols-[220px_minmax(0,1fr)] lg:items-center">
-            <div className="flex flex-col items-center rounded-2xl border border-emerald-100 bg-gradient-to-b from-emerald-50/70 to-white p-4">
-              <div className="relative h-44 w-44">
+          {rankedEmotions.length === 0 ? <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-500">Aucun état émotionnel n’est renseigné dans les trades actuels.</p> : <div className="grid gap-6 xl:grid-cols-[minmax(280px,0.7fr)_minmax(0,1.8fr)] xl:items-center">
+            <div className="flex min-h-[330px] flex-col items-center justify-center rounded-2xl border border-emerald-100 bg-gradient-to-b from-emerald-50/70 to-white p-6">
+              <div className="relative h-60 w-60 max-w-full">
                 <svg viewBox="0 0 120 120" className="h-full w-full -rotate-90" role="img" aria-label="Diagramme en anneau de la répartition des trades par état émotionnel">
-                  <circle cx="60" cy="60" r="43" fill="none" stroke="#E8EEF2" strokeWidth="15" />
+                  <circle cx="60" cy="60" r="43" fill="none" stroke="#E8EEF2" strokeWidth="13" />
                   {rankedEmotions.map((emotion, index) => {
                     const circumference = 2 * Math.PI * 43;
                     const previousCount = rankedEmotions.slice(0, index).reduce((sum, item) => sum + emotionStats[item].count, 0);
                     const segmentLength = emotionStats[emotion].count / Math.max(1, emotionTaggedTrades) * circumference;
                     const color = POSITIVE_EMOTIONS.includes(emotion) ? '#08B77A' : emotion === 'Fear' || emotion === 'Hesitation' ? '#D97706' : '#E11D48';
-                    return <circle key={emotion} cx="60" cy="60" r="43" fill="none" stroke={color} strokeWidth="15" strokeLinecap="butt" strokeDasharray={`${Math.max(0, segmentLength - 1.5)} ${circumference}`} strokeDashoffset={-previousCount / Math.max(1, emotionTaggedTrades) * circumference} />;
+                    return <circle key={emotion} cx="60" cy="60" r="43" fill="none" stroke={color} strokeWidth={selectedEmotion === emotion ? 18 : 13} strokeLinecap="round" strokeDasharray={`${Math.max(0, segmentLength - 1.5)} ${circumference}`} strokeDashoffset={-previousCount / Math.max(1, emotionTaggedTrades) * circumference} className="cursor-pointer transition-[stroke-width,opacity] duration-200" opacity={selectedEmotion && selectedEmotion !== emotion ? 0.45 : 1} onMouseEnter={() => setSelectedEmotion(emotion)} onMouseLeave={() => setSelectedEmotion(null)} onClick={() => setSelectedEmotion(current => current === emotion ? null : emotion)} />;
                   })}
                 </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-center"><span className="text-4xl font-bold tracking-tight text-slate-900 tabular-nums">{emotionTaggedTrades}</span><span className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Trades</span><span className="mt-1 text-[10px] text-emerald-700">avec émotion</span></div>
+                <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center px-5"><span className="text-2xl font-bold leading-tight tracking-tight text-slate-900">{selectedEmotion ? EMOTION_LABELS[selectedEmotion] : emotionTaggedTrades}</span><span className="mt-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">{selectedEmotion ? `${emotionStats[selectedEmotion].count} trade${emotionStats[selectedEmotion].count === 1 ? "" : "s"}` : "Trades"}</span><span className="mt-1 text-[10px] text-emerald-700">{selectedEmotion ? `${(emotionStats[selectedEmotion].wins / Math.max(1, emotionStats[selectedEmotion].count) * 100).toFixed(0)}% gagnants` : "avec émotion"}</span></div>
               </div>
-              <div className="mt-2 text-center"><div className="text-xs font-semibold text-slate-800">Répartition émotionnelle</div><div className="mt-1 text-[10px] text-slate-500">Chaque part représente le volume de trades.</div></div>
+              <div className="mt-3 text-center"><div className="text-sm font-semibold text-slate-800">Répartition émotionnelle</div><div className="mt-1 max-w-xs text-xs text-slate-500">Survole ou sélectionne une part pour explorer cet état.</div></div>
             </div>
-            <div className="min-w-0 space-y-2">
+            <div className="min-w-0 grid gap-2 sm:grid-cols-2 2xl:grid-cols-3">
               {rankedEmotions.map(emotion => {
                 const stats = emotionStats[emotion];
                 const winRate = stats.count ? stats.wins / stats.count * 100 : 0;
                 const avgPnl = stats.count ? stats.pnl / stats.count : 0;
                 const color = POSITIVE_EMOTIONS.includes(emotion) ? '#08B77A' : emotion === 'Fear' || emotion === 'Hesitation' ? '#D97706' : '#E11D48';
-                return <div key={emotion} className="flex items-center gap-3 rounded-xl border border-slate-100 px-3 py-2.5 transition-colors hover:border-emerald-200 hover:bg-emerald-50/30">
+                return <button type="button" key={emotion} onClick={() => setSelectedEmotion(current => current === emotion ? null : emotion)} onMouseEnter={() => setSelectedEmotion(emotion)} onMouseLeave={() => setSelectedEmotion(null)} className={`flex min-w-0 items-center gap-3 rounded-xl border px-3 py-3 text-left transition-colors ${selectedEmotion === emotion ? "border-emerald-300 bg-emerald-50 shadow-sm" : "border-slate-100 bg-white hover:border-emerald-200 hover:bg-emerald-50/30"}`}>
                   <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
                   <div className="min-w-0 flex-1"><div className="truncate text-xs font-semibold text-slate-900">{EMOTION_LABELS[emotion]}</div><div className="mt-0.5 text-[10px] text-slate-500">{stats.count} trade{stats.count === 1 ? '' : 's'} · {winRate.toFixed(0)}% gagnants</div></div>
                   <div className="text-right"><div className={`text-xs font-bold tabular-nums ${stats.pnl >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>{stats.pnl > 0 ? '+' : ''}{formatCurrency(stats.pnl)}</div><div className="mt-0.5 text-[10px] text-slate-500">{formatCurrency(avgPnl)} / trade</div></div>
@@ -177,7 +178,7 @@ export function Psychology({ trades }: PsychologyProps) {
           {!hasEnoughData && <p className="mt-3 text-[11px] text-amber-700">Données descriptives uniquement : accumule davantage de trades avant d’interpréter ces écarts.</p>}
         </div>
 
-        <div className="space-y-4">
+        <div className="grid gap-4 md:grid-cols-2">
           <section className="rounded-2xl border border-emerald-100 bg-white p-4 shadow-[0_6px_24px_rgba(12,95,66,.035)] sm:p-5">
             <div className="flex items-center gap-2"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700"><TrendingUp className="h-4 w-4" /></span><div><h3 className="text-sm font-bold text-slate-900">État le plus performant</h3><p className="text-[11px] text-slate-500">Selon le P&L moyen par trade</p></div></div>
             {strongestEmotion ? <div className="mt-4 rounded-xl bg-emerald-50/80 p-3.5"><div className="text-sm font-bold text-slate-900">{EMOTION_LABELS[strongestEmotion]}</div><div className={`mt-1 text-2xl font-bold tabular-nums ${emotionStats[strongestEmotion].pnl / emotionStats[strongestEmotion].count >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>{formatCurrency(emotionStats[strongestEmotion].pnl / emotionStats[strongestEmotion].count)}<span className="ml-1 text-xs font-medium">/ trade</span></div><p className="mt-1.5 text-xs text-slate-600">{emotionStats[strongestEmotion].count} trades enregistrés dans cet état.</p></div> : <p className="mt-4 rounded-xl bg-slate-50 p-3.5 text-xs text-slate-500">Renseigne un état calme, concentré ou discipliné pour faire émerger ce repère.</p>}
