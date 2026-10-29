@@ -80,6 +80,7 @@ export function Psychology({ trades }: PsychologyProps) {
   const rationalRatio = totalTrades ? macroSplit.rational.count / totalTrades * 100 : 0;
   const hasEnoughData = totalTrades >= 6;
   const rankedEmotions = useMemo(() => [...EMOTIONS].filter(e => emotionStats[e].count > 0).sort((a, b) => emotionStats[b].count - emotionStats[a].count), [emotionStats]);
+  const emotionTaggedTrades = rankedEmotions.reduce((sum, emotion) => sum + emotionStats[emotion].count, 0);
   const strongestEmotion = useMemo(() => [...EMOTIONS].filter(e => POSITIVE_EMOTIONS.includes(e) && emotionStats[e].count > 0).sort((a, b) => (emotionStats[b].pnl / Math.max(1, emotionStats[b].count)) - (emotionStats[a].pnl / Math.max(1, emotionStats[a].count)))[0], [emotionStats]);
   const mainChallenge = useMemo(() => [...EMOTIONS].filter(e => !POSITIVE_EMOTIONS.includes(e) && emotionStats[e].count > 0).sort((a, b) => emotionStats[b].count - emotionStats[a].count)[0], [emotionStats]);
 
@@ -149,12 +150,12 @@ export function Psychology({ trades }: PsychologyProps) {
                   {rankedEmotions.map((emotion, index) => {
                     const circumference = 2 * Math.PI * 43;
                     const previousCount = rankedEmotions.slice(0, index).reduce((sum, item) => sum + emotionStats[item].count, 0);
-                    const segmentLength = emotionStats[emotion].count / Math.max(1, totalTrades) * circumference;
+                    const segmentLength = emotionStats[emotion].count / Math.max(1, emotionTaggedTrades) * circumference;
                     const color = POSITIVE_EMOTIONS.includes(emotion) ? '#08B77A' : emotion === 'Fear' || emotion === 'Hesitation' ? '#D97706' : '#E11D48';
-                    return <circle key={emotion} cx="60" cy="60" r="43" fill="none" stroke={color} strokeWidth="15" strokeLinecap="butt" strokeDasharray={`${Math.max(0, segmentLength - 1.5)} ${circumference}`} strokeDashoffset={-previousCount / Math.max(1, totalTrades) * circumference} />;
+                    return <circle key={emotion} cx="60" cy="60" r="43" fill="none" stroke={color} strokeWidth="15" strokeLinecap="butt" strokeDasharray={`${Math.max(0, segmentLength - 1.5)} ${circumference}`} strokeDashoffset={-previousCount / Math.max(1, emotionTaggedTrades) * circumference} />;
                   })}
                 </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center text-center"><span className="text-4xl font-bold tracking-tight text-slate-900 tabular-nums">{totalTrades}</span><span className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Trades</span><span className="mt-1 text-[10px] text-emerald-700">analysés</span></div>
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-center"><span className="text-4xl font-bold tracking-tight text-slate-900 tabular-nums">{emotionTaggedTrades}</span><span className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Trades</span><span className="mt-1 text-[10px] text-emerald-700">avec émotion</span></div>
               </div>
               <div className="mt-2 text-center"><div className="text-xs font-semibold text-slate-800">Répartition émotionnelle</div><div className="mt-1 text-[10px] text-slate-500">Chaque part représente le volume de trades.</div></div>
             </div>
