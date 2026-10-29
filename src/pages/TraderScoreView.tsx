@@ -1,267 +1,209 @@
 import React, { useMemo } from 'react';
 import { Trade } from '../types';
-import { calculateTraderScore } from '../utils/calculations';
-import { EmptyState } from '../components/common/EmptyState';
-import { 
-  Target, 
-  ShieldCheck, 
-  CheckCircle2, 
-  AlertTriangle, 
-  Info, 
-  Award, 
-  Zap, 
-  Compass, 
-  Activity, 
-  BarChart2, 
-  Brain,
-  ChevronRight,
-  TrendingUp,
-  Shield
+import { calculateTraderScore, calculatePerformance } from '../utils/calculations';
+import {
+  ShieldCheck, Compass, Activity, Zap, Brain, BarChart3,
+  ArrowUpRight, ArrowDownRight, Target, TrendingUp, AlertTriangle,
+  CheckCircle2, Info, Gauge, Crosshair
 } from 'lucide-react';
 
 interface TraderScoreViewProps {
   trades: Trade[];
 }
 
-export function TraderScoreView({ trades }: TraderScoreViewProps) {
-  const scoreReport = useMemo(() => {
-    return calculateTraderScore(trades);
-  }, [trades]);
+const dimensions = [
+  { key: 'riskManagementScore' as const, name: 'Gestion du risque', short: 'Risque', description: 'Stop loss et contrôle du drawdown.', icon: ShieldCheck },
+  { key: 'disciplineScore' as const, name: 'Discipline opérationnelle', short: 'Discipline', description: 'FOMO et revenge trading déclarés.', icon: Compass },
+  { key: 'consistencyScore' as const, name: 'Consistance', short: 'Consistance', description: 'Win rate et profit factor.', icon: Activity },
+  { key: 'executionScore' as const, name: 'Qualité d’exécution', short: 'Exécution', description: 'Ratio rendement/risque moyen.', icon: Zap },
+  { key: 'psychologyScore' as const, name: 'Maîtrise psychologique', short: 'Psychologie', description: 'État émotionnel renseigné au journal.', icon: Brain },
+  { key: 'profitabilityScore' as const, name: 'Rentabilité nette', short: 'Rentabilité', description: 'P&L cumulé et profit factor.', icon: BarChart3 },
+];
 
-  const scoreDimensions = [
-    { 
-      name: 'Gestion du Risque', 
-      score: scoreReport.riskManagementScore, 
-      weight: '25%', 
-      desc: 'Adhérence stricte au stop loss, contrôle rigoureux du drawdown maximum',
-      icon: ShieldCheck,
-      color: 'blue'
-    },
-    { 
-      name: 'Discipline Opérationnelle', 
-      score: scoreReport.disciplineScore, 
-      weight: '20%', 
-      desc: 'Absence d\'entrées impulsives FOMO ou Revenge trading suite à une perte',
-      icon: Compass,
-      color: 'blue'
-    },
-    { 
-      name: 'Consistance / Régularité', 
-      score: scoreReport.consistencyScore, 
-      weight: '15%', 
-      desc: 'Stabilité de l\'edge statistique et équilibre du taux de réussite dans le temps',
-      icon: Activity,
-      color: 'blue'
-    },
-    { 
-      name: 'Qualité d\'Exécution', 
-      score: scoreReport.executionScore, 
-      weight: '15%', 
-      desc: 'Ratio Multiple R moyen, respect des paliers de prise de bénéfices (TP)',
-      icon: Zap,
-      color: 'blue'
-    },
-    { 
-      name: 'Maîtrise Psychologique', 
-      score: scoreReport.psychologyScore, 
-      weight: '15%', 
-      desc: 'Proportion de trades pris avec un mental calme, concentré et sans anxiété',
-      icon: Brain,
-      color: 'blue'
-    },
-    { 
-      name: 'Rentabilité Nette', 
-      score: scoreReport.profitabilityScore, 
-      weight: '10%', 
-      desc: 'Profit Factor supérieur à 1.5 et espérance de gain mathématique positive',
-      icon: BarChart2,
-      color: 'emerald'
-    },
-  ];
+function scoreTone(score: number) {
+  if (score >= 80) return { text: 'text-emerald-700', bar: 'bg-emerald-500', label: 'Fort' };
+  if (score >= 60) return { text: 'text-amber-700', bar: 'bg-amber-500', label: 'À optimiser' };
+  return { text: 'text-rose-700', bar: 'bg-rose-500', label: 'Prioritaire' };
+}
 
-  if (trades.length === 0) {
-    return (
-      <div className="space-y-6">
-        <div className="pb-3 border-b border-slate-200/80">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded font-semibold">
-              Algorithme Quantitatif
-            </span>
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-            Trader Score Institutionnel
-          </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Mesure objective de maturité calculée sur votre comportement d'exécution réel.
-          </p>
-        </div>
-
-        <div className="rounded-xl card-premium overflow-hidden p-6 border-slate-200">
-          <EmptyState
-            icon={ShieldCheck}
-            title="Activez votre Trader Score"
-            description="Le Trader Score évalue votre profil selon les critères institutionnels et de prop firm : gestion du risque, discipline, stabilité et régularité."
-            accentColor="sky"
-          />
-        </div>
+function ScoreGauge({ score }: { score: number }) {
+  const radius = 54;
+  const circumference = 2 * Math.PI * radius;
+  const offset = circumference * (1 - Math.max(0, Math.min(100, score)) / 100);
+  return (
+    <div className="relative flex h-40 w-40 shrink-0 items-center justify-center sm:h-48 sm:w-48">
+      <svg viewBox="0 0 132 132" className="h-full w-full -rotate-90" aria-label={`Score ${score} sur 100`} role="img">
+        <circle cx="66" cy="66" r={radius} fill="none" stroke="#29445A" strokeWidth="9" />
+        <circle cx="66" cy="66" r={radius} fill="none" stroke="#08B77A" strokeWidth="9" strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round" className="transition-[stroke-dashoffset] duration-700 ease-out" />
+      </svg>
+      <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
+        <span className="text-5xl font-bold tracking-[-0.06em] text-white tabular-nums sm:text-6xl">{score}</span>
+        <span className="mt-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-300">sur 100</span>
       </div>
-    );
-  }
+    </div>
+  );
+}
+
+export function TraderScoreView({ trades }: TraderScoreViewProps) {
+  const scoreReport = useMemo(() => calculateTraderScore(trades), [trades]);
+  const performance = useMemo(() => calculatePerformance(trades), [trades]);
+  const scoreLabel = scoreReport.overallScore >= 90
+    ? 'Excellent niveau de maîtrise'
+    : scoreReport.overallScore >= 80
+      ? 'Profil solide'
+      : scoreReport.overallScore >= 65
+        ? 'Progression en cours'
+        : 'Axes prioritaires à travailler';
+  const strongest = scoreReport.isSufficientData
+    ? [...dimensions].sort((a, b) => scoreReport[b.key] - scoreReport[a.key])[0]
+    : null;
+  const weakest = scoreReport.isSufficientData
+    ? [...dimensions].sort((a, b) => scoreReport[a.key] - scoreReport[b.key])[0]
+    : null;
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="pb-3 border-b border-slate-200/80">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded font-semibold">
-            Évaluation Algorithmique IAMTRADER
-          </span>
-          <span className="text-slate-400">·</span>
-          <span className="text-[11px] text-slate-500 font-mono">Standard Prop Firm</span>
+    <div className="mx-auto w-full max-w-[1440px] space-y-5 px-3 pb-8 sm:px-5 xl:px-7">
+      <header className="flex flex-col gap-3 border-b border-slate-200 pb-5 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <div className="mb-1.5 inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-700">
+            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+            IAMTRADER · Analyse comportementale
+          </div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Trader Score</h1>
+          <p className="mt-1 max-w-2xl text-sm leading-relaxed text-slate-500">Comprends ce qui soutient tes performances et ce qui doit être amélioré.</p>
         </div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-          Trader Score Institutionnel
-        </h1>
-        <p className="text-xs text-slate-500 mt-0.5 max-w-2xl">
-          Mesure objective et dynamique de votre maturité financière. Calibré pour évaluer votre préparation aux comptes financés de 50 000$ à 200 000$.
-        </p>
-      </div>
+        <div className="inline-flex items-center gap-2 self-start rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 sm:self-auto">
+          <Crosshair className="h-4 w-4 text-emerald-600" />
+          {scoreReport.tradesAnalyzed} trades clôturés analysés
+        </div>
+      </header>
 
-      {/* If Insufficient Data (< 5 trades) */}
       {!scoreReport.isSufficientData ? (
-        <div className="p-8 rounded-xl card-premium text-center space-y-4 max-w-xl mx-auto my-6 border-slate-200">
-          <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center mx-auto">
-            <ShieldCheck className="w-6 h-6" />
-          </div>
-          <div>
-            <h3 className="text-base font-bold text-slate-900 tracking-tight">
-              Calibrage en cours de votre profil
-            </h3>
-            <p className="text-xs text-slate-500 mt-1.5 leading-relaxed max-w-md mx-auto">
-              Pour assurer une validité statistique et éviter tout score artificiel, notre algorithme requiert un minimum de <strong>5 transactions clôturées</strong>.
-            </p>
-          </div>
-
-          {/* Progress to 5 trades */}
-          <div className="space-y-2 max-w-xs mx-auto pt-2">
-            <div className="flex items-center justify-between text-xs font-mono">
-              <span className="text-slate-500">Progression :</span>
-              <span className="text-blue-400 font-bold">{scoreReport.tradesAnalyzed} / 5 trades</span>
+        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_8px_28px_rgba(11,31,53,.045)]">
+          <div className="grid gap-6 p-5 sm:p-8 md:grid-cols-[minmax(0,1fr)_220px] md:items-center">
+            <div>
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-amber-800">
+                <Info className="h-3.5 w-3.5" /> Échantillon en cours
+              </span>
+              <h2 className="mt-3 text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">Construisons une base fiable</h2>
+              <p className="mt-2 max-w-xl text-sm leading-relaxed text-slate-500">Le score se débloque à partir de 5 trades clôturés. Les opérations ouvertes ne sont pas comptées. Continue à renseigner tes résultats et tes émotions dans le journal pour améliorer la qualité de l’analyse.</p>
+              <div className="mt-5 max-w-lg">
+                <div className="mb-2 flex items-center justify-between text-xs">
+                  <span className="font-semibold text-slate-600">Progression du minimum requis</span>
+                  <span className="font-bold tabular-nums text-slate-900">{scoreReport.tradesAnalyzed}/5</span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+                  <div className="h-full rounded-full bg-emerald-500 transition-[width] duration-500" style={{ width: `${Math.min(100, scoreReport.tradesAnalyzed / 5 * 100)}%` }} />
+                </div>
+                <p className="mt-2 text-xs text-slate-400">{Math.max(0, 5 - scoreReport.tradesAnalyzed)} trade{5 - scoreReport.tradesAnalyzed === 1 ? '' : 's'} clôturé{5 - scoreReport.tradesAnalyzed === 1 ? '' : 's'} restant{5 - scoreReport.tradesAnalyzed === 1 ? '' : 's'} avant le calcul du score.</p>
+              </div>
             </div>
-            <div className="w-full h-2 rounded bg-slate-100 overflow-hidden">
-              <div 
-                style={{ width: `${(scoreReport.tradesAnalyzed / 5) * 100}%` }} 
-                className="bg-blue-500 h-full rounded transition-all duration-500"
-              />
+            <div className="flex items-center justify-center">
+              <div className="flex h-40 w-40 flex-col items-center justify-center rounded-full border-[10px] border-slate-100 bg-slate-50 text-center">
+                <Gauge className="mb-2 h-7 w-7 text-emerald-600" />
+                <span className="text-3xl font-bold tracking-tight text-slate-900">{scoreReport.tradesAnalyzed}<span className="text-base text-slate-400">/5</span></span>
+                <span className="mt-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">Trades clôturés</span>
+              </div>
             </div>
-            <span className="text-[11px] text-slate-500 block font-mono">
-              Encore {5 - scoreReport.tradesAnalyzed} trade{5 - scoreReport.tradesAnalyzed > 1 ? 's' : ''} pour débloquer votre score global.
-            </span>
           </div>
-        </div>
+          <div className="grid grid-cols-1 border-t border-slate-100 bg-slate-50/70 sm:grid-cols-3">
+            {[
+              ['Gestion du risque', 'Stop loss et drawdown'],
+              ['Discipline', 'FOMO et revenge trading déclarés'],
+              ['Résultats', 'P&L, régularité et ratio R'],
+            ].map(([title, subtitle], index) => (
+              <div key={title} className={`flex items-center gap-3 px-5 py-4 ${index > 0 ? 'border-t border-slate-200 sm:border-l sm:border-t-0' : ''}`}>
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white text-emerald-700 shadow-sm"><CheckCircle2 className="h-4 w-4" /></span>
+                <div><div className="text-xs font-semibold text-slate-800">{title}</div><div className="mt-0.5 text-[11px] text-slate-500">{subtitle}</div></div>
+              </div>
+            ))}
+          </div>
+        </section>
       ) : (
         <>
-          {/* Main Score Hero Card */}
-          <div className="p-6 rounded-xl card-premium flex flex-col md:flex-row items-center justify-between gap-6 border-slate-200">
-            <div className="space-y-3 text-center md:text-left max-w-xl">
-              <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded bg-blue-500/15 border border-blue-500/30 text-blue-400 text-xs font-semibold">
-                <ShieldCheck className="w-3.5 h-3.5" />
-                <span>Indice Global de Maturité FinTech</span>
-              </div>
-              <h2 className="text-2xl font-bold text-slate-900 tracking-tight leading-snug">
-                {scoreReport.overallScore >= 80 
-                  ? 'Profil Élite · Éligible Allocation Prop Firm' 
-                  : scoreReport.overallScore >= 60 
-                  ? 'Profil Solide · En Phase d\'Optimisation' 
-                  : 'Profil Vulnérable · Risques Prioritaires à Corriger'}
-              </h2>
-              <p className="text-xs text-slate-400 leading-relaxed font-normal">
-                Ce score synthétise 6 piliers quantitatifs. Il est recalculé en direct à chaque nouveau trade journalisé pour vous orienter vers la rentabilité pérenne.
-              </p>
-            </div>
-
-            {/* Circular Gauge Display */}
-            <div className="flex flex-col items-center justify-center p-5 rounded-lg bg-white border border-slate-200 min-w-[200px] shrink-0 text-center">
-              <div className="relative w-32 h-32 flex items-center justify-center">
-                <svg className="w-full h-full -rotate-90 transform" viewBox="0 0 100 100">
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="40"
-                    stroke="rgba(255,255,255,0.06)"
-                    strokeWidth="7"
-                    fill="transparent"
-                  />
-                  <circle
-                    cx="50"
-                    cy="50"
-                    r="40"
-                    stroke="#2563eb"
-                    strokeWidth="7"
-                    strokeDasharray={`${2 * Math.PI * 40}`}
-                    strokeDashoffset={`${2 * Math.PI * 40 * (1 - scoreReport.overallScore / 100)}`}
-                    strokeLinecap="round"
-                    fill="transparent"
-                    className="transition-all duration-700 ease-out"
-                  />
-                </svg>
-                <div className="absolute flex flex-col items-center">
-                  <span className="text-3xl font-bold font-mono text-slate-900 tabular-nums">
-                    {scoreReport.overallScore}
-                  </span>
-                  <span className="text-[9px] text-slate-500 font-mono uppercase tracking-wider">sur 100</span>
+          <section className="relative overflow-hidden rounded-2xl bg-[#0B1F35] text-white shadow-[0_16px_42px_rgba(11,31,53,.14)]">
+            <div className="pointer-events-none absolute -right-16 -top-24 h-72 w-72 rounded-full border border-white/[0.06]" />
+            <div className="pointer-events-none absolute -right-4 -top-12 h-48 w-48 rounded-full border border-emerald-400/10" />
+            <div className="relative grid gap-5 p-5 sm:p-7 md:grid-cols-[minmax(0,1fr)_220px] md:items-center">
+              <div className="min-w-0">
+                <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-emerald-300">
+                  <ShieldCheck className="h-3.5 w-3.5" /> Indice personnel de trading
+                </div>
+                <h2 className="mt-4 max-w-xl text-2xl font-bold leading-tight tracking-tight sm:text-3xl">{scoreLabel}</h2>
+                <p className="mt-2 max-w-xl text-sm leading-relaxed text-slate-300">Une lecture synthétique de six dimensions calculées à partir de tes trades clôturés et des informations renseignées dans ton journal.</p>
+                <div className="mt-5 flex flex-wrap gap-2">
+                  <span className="rounded-lg border border-white/10 bg-white/[0.06] px-3 py-2 text-xs text-slate-200"><span className="font-bold text-white">{performance.winRate.toFixed(1)}%</span> taux de réussite</span>
+                  <span className="rounded-lg border border-white/10 bg-white/[0.06] px-3 py-2 text-xs text-slate-200"><span className="font-bold text-white">{performance.profitFactor.toFixed(2)}</span> profit factor</span>
+                  <span className="rounded-lg border border-white/10 bg-white/[0.06] px-3 py-2 text-xs text-slate-200"><span className={performance.totalPnl >= 0 ? 'font-bold text-emerald-300' : 'font-bold text-rose-300'}>{performance.totalPnl > 0 ? '+' : ''}{performance.totalPnl.toLocaleString('fr-FR', { style: 'currency', currency: 'USD' })}</span> P&L net</span>
                 </div>
               </div>
-              <div className="text-[11px] font-semibold text-blue-400 mt-2 font-mono">
-                {scoreReport.tradesAnalyzed} trades analysés
+              <div className="flex items-center justify-center gap-4 md:flex-col">
+                <ScoreGauge score={scoreReport.overallScore} />
+                <div className="min-w-0 md:text-center">
+                  <div className="text-sm font-bold text-white">{scoreLabel}</div>
+                  <div className="mt-1 text-xs text-slate-400">{scoreReport.tradesAnalyzed} trades utilisés</div>
+                </div>
               </div>
             </div>
-          </div>
+            <div className="relative grid grid-cols-3 border-t border-white/10 bg-white/[0.035]">
+              <div className="px-3 py-3.5 text-center sm:px-5"><div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Piliers évalués</div><div className="mt-1 text-lg font-bold text-white">06</div></div>
+              <div className="border-x border-white/10 px-3 py-3.5 text-center sm:px-5"><div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Score maximum</div><div className="mt-1 text-lg font-bold text-white">100</div></div>
+              <div className="px-3 py-3.5 text-center sm:px-5"><div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Échantillon</div><div className="mt-1 text-lg font-bold text-white">{scoreReport.tradesAnalyzed}</div></div>
+            </div>
+          </section>
 
-          {/* 6 Sub-scores Progress Bars */}
-          <div className="p-5 rounded-xl card-premium space-y-4">
-            <div>
-              <h3 className="text-sm font-bold text-slate-900 tracking-tight">Décomposition par Pilier de Performance</h3>
-              <p className="text-[11px] text-slate-500 mt-0.5">Les 6 dimensions examinées par les gestionnaires de risque</p>
+          <section className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(280px,0.75fr)]">
+            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_6px_24px_rgba(11,31,53,.035)] sm:p-5">
+              <div className="mb-4 flex items-start justify-between gap-3">
+                <div><h3 className="text-base font-bold tracking-tight text-slate-900">Décomposition du score</h3><p className="mt-1 text-xs text-slate-500">Les six piliers, classés selon leur score actuel.</p></div>
+                <span className="rounded-lg bg-slate-50 px-2.5 py-1.5 text-[10px] font-semibold text-slate-500">Sur 100</span>
+              </div>
+              <div className="space-y-4">
+                {[...dimensions].sort((a, b) => scoreReport[b.key] - scoreReport[a.key]).map((dim, index) => {
+                  const Icon = dim.icon;
+                  const score = scoreReport[dim.key];
+                  const tone = scoreTone(score);
+                  return <div key={dim.key} className="group rounded-xl border border-slate-100 p-3.5 transition-colors hover:border-slate-200 hover:bg-slate-50/60">
+                    <div className="flex items-center gap-3">
+                      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-slate-600"><Icon className="h-4 w-4" /></span>
+                      <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-x-2 gap-y-1"><span className="text-sm font-semibold text-slate-800">{dim.name}</span>{index === 0 && <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-700">Meilleur pilier</span>}</div><p className="mt-0.5 text-[11px] text-slate-500">{dim.description}</p></div>
+                      <div className="shrink-0 text-right"><div className={`text-lg font-bold tabular-nums ${tone.text}`}>{score}</div><div className="text-[9px] text-slate-400">/100</div></div>
+                    </div>
+                    <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-100"><div className={`h-full rounded-full transition-[width] duration-500 ${tone.bar}`} style={{ width: `${score}%` }} /></div>
+                  </div>;
+                })}
+              </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5">
-              {scoreDimensions.map(dim => {
-                const Icon = dim.icon;
-                return (
-                  <div key={dim.name} className="p-3.5 rounded-lg bg-white border border-slate-200/80 space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2.5">
-                        <div className="w-7 h-7 rounded bg-white border border-slate-200 flex items-center justify-center text-slate-400">
-                          <Icon className="w-3.5 h-3.5" />
-                        </div>
-                        <div>
-                          <span className="font-semibold text-slate-900 text-xs block">{dim.name}</span>
-                          <span className="text-[10px] text-slate-500 font-mono">(Poids {dim.weight})</span>
-                        </div>
-                      </div>
-                      <span className="font-mono font-bold text-xs text-blue-400 tabular-nums">
-                        {dim.score} / 100
-                      </span>
-                    </div>
-
-                    <div className="w-full h-1.5 rounded bg-slate-100 overflow-hidden">
-                      <div 
-                        style={{ width: `${dim.score}%` }} 
-                        className="bg-blue-500 h-full rounded transition-all duration-700" 
-                      />
-                    </div>
-
-                    <p className="text-[11px] text-slate-500 leading-snug">
-                      {dim.desc}
-                    </p>
-                  </div>
-                );
-              })}
+            <div className="space-y-4">
+              <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_6px_24px_rgba(11,31,53,.035)] sm:p-5">
+                <div className="flex items-center gap-2"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700"><TrendingUp className="h-4 w-4" /></span><div><h3 className="text-sm font-bold text-slate-900">Point fort</h3><p className="text-[11px] text-slate-500">Ton meilleur pilier actuel</p></div></div>
+                {strongest && <div className="mt-4 rounded-xl bg-emerald-50/70 p-3.5"><div className="text-sm font-bold text-slate-900">{strongest.name}</div><div className="mt-1 flex items-baseline gap-2"><span className="text-2xl font-bold tabular-nums text-emerald-700">{scoreReport[strongest.key]}</span><span className="text-xs text-emerald-700">/100</span></div><p className="mt-1.5 text-xs leading-relaxed text-slate-600">{strongest.description}</p></div>}
+              </section>
+              <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_6px_24px_rgba(11,31,53,.035)] sm:p-5">
+                <div className="flex items-center gap-2"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-50 text-rose-700"><Target className="h-4 w-4" /></span><div><h3 className="text-sm font-bold text-slate-900">Axe à travailler</h3><p className="text-[11px] text-slate-500">Le pilier le plus faible</p></div></div>
+                {weakest && <div className="mt-4 rounded-xl bg-rose-50/70 p-3.5"><div className="text-sm font-bold text-slate-900">{weakest.name}</div><div className="mt-1 flex items-baseline gap-2"><span className="text-2xl font-bold tabular-nums text-rose-700">{scoreReport[weakest.key]}</span><span className="text-xs text-rose-700">/100</span></div><p className="mt-1.5 text-xs leading-relaxed text-slate-600">{weakest.description}</p></div>}
+              </section>
             </div>
-          </div>
+          </section>
+
+          {(scoreReport.strengths.length > 0 || scoreReport.weaknesses.length > 0) && <section className="grid gap-4 md:grid-cols-2">
+            <div className="rounded-2xl border border-emerald-100 bg-white p-4 shadow-[0_6px_24px_rgba(11,31,53,.03)] sm:p-5">
+              <div className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-emerald-600" /><h3 className="text-sm font-bold text-slate-900">Signaux positifs</h3><span className="ml-auto rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-700">{scoreReport.strengths.length}</span></div>
+              {scoreReport.strengths.length ? <ul className="mt-3 space-y-2">{scoreReport.strengths.map(item => <li key={item} className="flex gap-2 text-xs leading-relaxed text-slate-600"><span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-500" />{item}</li>)}</ul> : <p className="mt-3 text-xs text-slate-500">Aucun signal positif supplémentaire identifié sur cet échantillon.</p>}
+            </div>
+            <div className="rounded-2xl border border-rose-100 bg-white p-4 shadow-[0_6px_24px_rgba(11,31,53,.03)] sm:p-5">
+              <div className="flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-rose-600" /><h3 className="text-sm font-bold text-slate-900">Points de vigilance</h3><span className="ml-auto rounded-full bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700">{scoreReport.weaknesses.length}</span></div>
+              {scoreReport.weaknesses.length ? <ul className="mt-3 space-y-2">{scoreReport.weaknesses.map(item => <li key={item} className="flex gap-2 text-xs leading-relaxed text-slate-600"><span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-rose-500" />{item}</li>)}</ul> : <p className="mt-3 text-xs text-slate-500">Aucun point de vigilance supplémentaire identifié par les règles actuelles.</p>}
+            </div>
+          </section>}
         </>
       )}
+
+      <div className="flex items-start gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-[11px] leading-relaxed text-slate-500">
+        <Info className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+        <p>Le Trader Score est un indicateur interne basé sur les données enregistrées. Il ne garantit ni la rentabilité future ni l’obtention d’un compte financé. Les scores peuvent être limités par les informations manquantes dans le journal.</p>
+      </div>
     </div>
   );
 }
