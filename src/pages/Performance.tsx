@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Trade, TradingAccount } from '../types';
 import { calculatePerformance, formatCurrency } from '../utils/calculations';
 import { EmptyState } from '../components/common/EmptyState';
@@ -118,6 +118,7 @@ function RadarProfile({ metrics }: { metrics: ReturnType<typeof calculatePerform
   </div>;
 }
 function SetupDonutChart({ stats, totalTrades }: { stats: [string, { count: number; pnl: number; wins: number }][]; totalTrades: number }) {
+  const [showDetails, setShowDetails] = useState(false);
   const palette = ['#1264d8', '#35aee2', '#4bdce3', '#9be8eb', '#1d8ecb', '#73c8ee', '#64748b', '#a5b4fc'];
   const total = Math.max(1, stats.reduce((sum, [, data]) => sum + data.count, 0));
   const radius = 48;
@@ -130,20 +131,20 @@ function SetupDonutChart({ stats, totalTrades }: { stats: [string, { count: numb
     return segment;
   });
   return <div className="grid grid-cols-1 items-center gap-5 sm:grid-cols-[minmax(140px,0.8fr)_minmax(0,1.2fr)]">
-    <div className="relative mx-auto aspect-square w-full max-w-[210px]">
-      <svg viewBox="0 0 120 120" role="img" aria-label="Diagramme en anneau montrant la répartition des trades par setup" className="h-full w-full -rotate-90">
+    <button type="button" onClick={() => setShowDetails(value => !value)} aria-expanded={showDetails} aria-controls="setup-distribution-details" aria-label={showDetails ? "Masquer la légende et les détails des setups" : "Afficher la légende et les détails des setups"} title="Cliquer pour afficher ou masquer les détails" className="group relative mx-auto block aspect-square w-full max-w-[210px] cursor-pointer rounded-full outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-4">
+      <svg viewBox="0 0 120 120" role="img" aria-label="Diagramme en anneau montrant la répartition des trades par setup" className="h-full w-full -rotate-90 transition-transform duration-200 group-hover:scale-[1.03]">
         <circle cx="60" cy="60" r={radius} fill="none" stroke="#e8eef4" strokeWidth="16" />
         {segments.map(segment => <circle key={segment.name} cx="60" cy="60" r={radius} fill="none" stroke={segment.color} strokeWidth="16" strokeDasharray={segment.dash + ' ' + (circumference - segment.dash)} strokeDashoffset={-segment.offset} />)}
       </svg>
-      <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center"><span className="text-2xl font-bold tracking-tight text-slate-900">{totalTrades}</span><span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Trades</span></div>
-    </div>
-    <div className="min-w-0 space-y-3">
+      <span className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center"><span className="text-2xl font-bold tracking-tight text-slate-900">{totalTrades}</span><span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Trades</span><span className="mt-1 text-[10px] font-medium text-blue-600">{showDetails ? 'Masquer détails' : 'Voir détails'}</span></span>
+    </button>
+    {showDetails ? <div id="setup-distribution-details" className="min-w-0 space-y-3" aria-live="polite">
       {segments.map(segment => <div key={segment.name} className="flex items-center gap-2.5">
         <span className="h-3 w-3 shrink-0 rounded-[3px]" style={{ backgroundColor: segment.color }} />
         <div className="min-w-0 flex-1"><div className="truncate text-sm font-semibold text-slate-700">{segment.name}</div><div className="text-[11px] text-slate-500">{segment.count} trades · {segment.wins} gagnants</div></div>
         <div className="shrink-0 text-right"><div className="text-sm font-bold tabular-nums text-slate-800">{Math.round(segment.share * 100)}%</div><div className={"text-[10px] font-semibold tabular-nums " + (segment.pnl >= 0 ? 'text-emerald-600' : 'text-rose-600')}>{money(segment.pnl)}</div></div>
       </div>)}
-    </div>
+    </div> : <div className="flex items-center justify-center text-center text-xs text-slate-500">Clique sur le cercle pour afficher la légende et les détails de chaque setup.</div>}
   </div>;
 }
 
