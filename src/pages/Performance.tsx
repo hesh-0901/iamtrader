@@ -161,9 +161,9 @@ function SetupDonutChart({ stats, totalTrades }: { stats: [string, { count: numb
   const hovered = segments.find(segment => segment.name === hoveredName);
   return <div className="grid grid-cols-1 items-center gap-4 sm:grid-cols-[minmax(140px,0.8fr)_minmax(0,1.2fr)]">
     <div className="relative mx-auto aspect-square w-full max-w-[210px]">
-      <svg viewBox="0 0 120 120" role="img" aria-label="Répartition des trades par setup. Survole un segment pour ses détails." className="h-full w-full -rotate-90">
+      <svg viewBox="0 0 120 120" role="img" aria-label="Répartition des trades par setup. Survole un segment pour ses détails." className="h-full w-full -rotate-90" onMouseLeave={() => setHoveredName(null)}>
         <circle cx="60" cy="60" r={radius} fill="none" stroke="#e8eef4" strokeWidth="16" />
-        {segments.map(segment => <circle key={segment.name} cx="60" cy="60" r={radius} fill="none" stroke={segment.color} strokeWidth={hoveredName === segment.name ? 20 : 16} strokeDasharray={segment.dash + ' ' + (circumference - segment.dash)} strokeDashoffset={-segment.offset} className="cursor-pointer transition-all duration-150" onMouseEnter={() => setHoveredName(segment.name)} onMouseLeave={() => setHoveredName(null)} />)}
+        {segments.map(segment => <circle key={segment.name} cx="60" cy="60" r={radius} fill="none" stroke={segment.color} strokeOpacity={hoveredName === segment.name ? 1 : 0.86} strokeWidth={16} strokeDasharray={segment.dash + ' ' + (circumference - segment.dash)} strokeDashoffset={-segment.offset} className="cursor-pointer" onMouseEnter={() => setHoveredName(segment.name)} />)}
       </svg>
       <span className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center"><span className="text-2xl font-bold tracking-tight text-slate-900">{totalTrades}</span><span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Trades</span></span>
     </div>
