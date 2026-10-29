@@ -169,7 +169,7 @@ export function TraderScoreView({ trades }: TraderScoreViewProps) {
                       <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-x-2 gap-y-1"><span className="text-sm font-semibold text-slate-800">{dim.name}</span>{index === 0 && <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-700">Meilleur pilier</span>}</div><p className="mt-0.5 text-[11px] text-slate-500">{dim.description}</p></div>
                       <div className="shrink-0 text-right"><div className={`text-lg font-bold tabular-nums ${tone.text}`}>{score}</div><div className="text-[9px] text-slate-400">/100</div></div>
                     </div>
-                    <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full transition-[width] duration-500" style={{ width: `${score}%`, backgroundColor: tone.barColor }} /></div>
+                    <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full transition-[width] duration-500" style={{ width: `${score}%`, backgroundColor: tone.barColor }} /></div>
                   </div>;
                 })}
               </div>
