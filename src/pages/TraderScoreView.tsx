@@ -33,12 +33,12 @@ function ScoreGauge({ score }: { score: number }) {
   return (
     <div className="relative flex h-40 w-40 shrink-0 items-center justify-center sm:h-48 sm:w-48">
       <svg viewBox="0 0 132 132" className="h-full w-full -rotate-90" aria-label={`Score ${score} sur 100`} role="img">
-        <circle cx="66" cy="66" r={radius} fill="none" stroke="#29445A" strokeWidth="9" />
+        <circle cx="66" cy="66" r={radius} fill="none" stroke="#E2EEE8" strokeWidth="9" />
         <circle cx="66" cy="66" r={radius} fill="none" stroke="#08B77A" strokeWidth="9" strokeDasharray={circumference} strokeDashoffset={offset} strokeLinecap="round" className="transition-[stroke-dashoffset] duration-700 ease-out" />
       </svg>
       <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-        <span className="text-5xl font-bold tracking-[-0.06em] text-white tabular-nums sm:text-6xl">{score}</span>
-        <span className="mt-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-300">sur 100</span>
+        <span className="text-5xl font-bold tracking-[-0.06em] text-slate-950 tabular-nums sm:text-6xl">{score}</span>
+        <span className="mt-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">sur 100</span>
       </div>
     </div>
   );
@@ -121,34 +121,34 @@ export function TraderScoreView({ trades }: TraderScoreViewProps) {
         </section>
       ) : (
         <>
-          <section className="relative overflow-hidden rounded-2xl bg-[#0B1F35] text-white shadow-[0_16px_42px_rgba(11,31,53,.14)]">
-            <div className="pointer-events-none absolute -right-16 -top-24 h-72 w-72 rounded-full border border-white/[0.06]" />
-            <div className="pointer-events-none absolute -right-4 -top-12 h-48 w-48 rounded-full border border-emerald-400/10" />
+          <section className="relative overflow-hidden rounded-[28px] border border-emerald-100 bg-gradient-to-br from-white via-white to-emerald-50 text-slate-900 shadow-[0_18px_55px_rgba(12,95,66,.08)]">
+            <div className="pointer-events-none absolute -right-16 -top-24 h-72 w-72 rounded-full border border-emerald-200/50" />
+            <div className="pointer-events-none absolute -right-4 -top-12 h-48 w-48 rounded-full border border-emerald-300/40" />
             <div className="relative grid gap-5 p-5 sm:p-7 md:grid-cols-[minmax(0,1fr)_220px] md:items-center">
               <div className="min-w-0">
-                <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-400/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-emerald-300">
+                <div className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-emerald-800">
                   <ShieldCheck className="h-3.5 w-3.5" /> Indice personnel de trading
                 </div>
                 <h2 className="mt-4 max-w-xl text-2xl font-bold leading-tight tracking-tight sm:text-3xl">{scoreLabel}</h2>
-                <p className="mt-2 max-w-xl text-sm leading-relaxed text-slate-300">Une lecture synthétique de six dimensions calculées à partir de tes trades clôturés et des informations renseignées dans ton journal.</p>
+                <p className="mt-2 max-w-xl text-sm leading-relaxed text-slate-600">Une lecture synthétique de six dimensions calculées à partir de tes trades clôturés et des informations renseignées dans ton journal.</p>
                 <div className="mt-5 flex flex-wrap gap-2">
-                  <span className="rounded-lg border border-white/10 bg-white/[0.06] px-3 py-2 text-xs text-slate-200"><span className="font-bold text-white">{performance.winRate.toFixed(1)}%</span> taux de réussite</span>
-                  <span className="rounded-lg border border-white/10 bg-white/[0.06] px-3 py-2 text-xs text-slate-200"><span className="font-bold text-white">{performance.profitFactor.toFixed(2)}</span> profit factor</span>
-                  <span className="rounded-lg border border-white/10 bg-white/[0.06] px-3 py-2 text-xs text-slate-200"><span className={performance.totalPnl >= 0 ? 'font-bold text-emerald-300' : 'font-bold text-rose-300'}>{performance.totalPnl > 0 ? '+' : ''}{performance.totalPnl.toLocaleString('fr-FR', { style: 'currency', currency: 'USD' })}</span> P&L net</span>
+                  <span className="rounded-xl border border-emerald-100 bg-white/85 px-3 py-2.5 text-xs text-slate-600 shadow-sm"><span className="font-bold text-slate-900">{performance.winRate.toFixed(1)}%</span> taux de réussite</span>
+                  <span className="rounded-xl border border-emerald-100 bg-white/85 px-3 py-2.5 text-xs text-slate-600 shadow-sm"><span className="font-bold text-slate-900">{performance.profitFactor.toFixed(2)}</span> profit factor</span>
+                  <span className="rounded-xl border border-emerald-100 bg-white/85 px-3 py-2.5 text-xs text-slate-600 shadow-sm"><span className={performance.totalPnl >= 0 ? 'font-bold text-emerald-300' : 'font-bold text-rose-300'}>{performance.totalPnl > 0 ? '+' : ''}{performance.totalPnl.toLocaleString('fr-FR', { style: 'currency', currency: 'USD' })}</span> P&L net</span>
                 </div>
               </div>
               <div className="flex items-center justify-center gap-4 md:flex-col">
                 <ScoreGauge score={scoreReport.overallScore} />
                 <div className="min-w-0 md:text-center">
-                  <div className="text-sm font-bold text-white">{scoreLabel}</div>
-                  <div className="mt-1 text-xs text-slate-400">{scoreReport.tradesAnalyzed} trades utilisés</div>
+                  <div className="text-sm font-bold text-slate-900">{scoreLabel}</div>
+                  <div className="mt-1 text-xs text-slate-500">{scoreReport.tradesAnalyzed} trades utilisés</div>
                 </div>
               </div>
             </div>
-            <div className="relative grid grid-cols-3 border-t border-white/10 bg-white/[0.035]">
-              <div className="px-3 py-3.5 text-center sm:px-5"><div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Piliers évalués</div><div className="mt-1 text-lg font-bold text-white">06</div></div>
-              <div className="border-x border-white/10 px-3 py-3.5 text-center sm:px-5"><div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Score maximum</div><div className="mt-1 text-lg font-bold text-white">100</div></div>
-              <div className="px-3 py-3.5 text-center sm:px-5"><div className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Échantillon</div><div className="mt-1 text-lg font-bold text-white">{scoreReport.tradesAnalyzed}</div></div>
+            <div className="relative grid grid-cols-3 border-t border-emerald-100 bg-emerald-50/70">
+              <div className="px-3 py-3.5 text-center sm:px-5"><div className="text-[10px] font-semibold uppercase tracking-wider text-emerald-800/70">Piliers évalués</div><div className="mt-1 text-lg font-bold text-slate-900">06</div></div>
+              <div className="border-x border-emerald-100 px-3 py-3.5 text-center sm:px-5"><div className="text-[10px] font-semibold uppercase tracking-wider text-emerald-800/70">Score maximum</div><div className="mt-1 text-lg font-bold text-slate-900">100</div></div>
+              <div className="px-3 py-3.5 text-center sm:px-5"><div className="text-[10px] font-semibold uppercase tracking-wider text-emerald-800/70">Échantillon</div><div className="mt-1 text-lg font-bold text-slate-900">{scoreReport.tradesAnalyzed}</div></div>
             </div>
           </section>
 
