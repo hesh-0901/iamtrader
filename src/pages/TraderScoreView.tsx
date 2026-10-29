@@ -21,9 +21,9 @@ const dimensions = [
 ];
 
 function scoreTone(score: number) {
-  if (score >= 80) return { text: 'text-emerald-700', bar: 'bg-emerald-500', label: 'Fort' };
-  if (score >= 60) return { text: 'text-amber-700', bar: 'bg-amber-500', label: 'À optimiser' };
-  return { text: 'text-rose-700', bar: 'bg-rose-500', label: 'Prioritaire' };
+  if (score >= 80) return { text: 'text-emerald-700', barColor: '#08B77A', label: 'Fort' };
+  if (score >= 60) return { text: 'text-amber-700', barColor: '#D97706', label: 'À optimiser' };
+  return { text: 'text-rose-700', barColor: '#E11D48', label: 'Prioritaire' };
 }
 
 function ScoreGauge({ score }: { score: number }) {
@@ -169,7 +169,7 @@ export function TraderScoreView({ trades }: TraderScoreViewProps) {
                       <div className="min-w-0 flex-1"><div className="flex flex-wrap items-center gap-x-2 gap-y-1"><span className="text-sm font-semibold text-slate-800">{dim.name}</span>{index === 0 && <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-emerald-700">Meilleur pilier</span>}</div><p className="mt-0.5 text-[11px] text-slate-500">{dim.description}</p></div>
                       <div className="shrink-0 text-right"><div className={`text-lg font-bold tabular-nums ${tone.text}`}>{score}</div><div className="text-[9px] text-slate-400">/100</div></div>
                     </div>
-                    <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-100"><div className={`h-full rounded-full transition-[width] duration-500 ${tone.bar}`} style={{ width: `${score}%` }} /></div>
+                    <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full transition-[width] duration-500" style={{ width: `${score}%`, backgroundColor: tone.barColor }} /></div>
                   </div>;
                 })}
               </div>
