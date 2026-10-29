@@ -27,16 +27,6 @@ const EMOTION_LABELS: Record<EmotionalState, string> = {
 
 const POSITIVE_EMOTIONS: EmotionalState[] = ['Disciplined', 'Calm', 'Focused'];
 
-function emotionTone(emotion: EmotionalState) {
-  if (POSITIVE_EMOTIONS.includes(emotion)) {
-    return { color: '#08B77A', text: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-100' };
-  }
-  if (emotion === 'Fear' || emotion === 'Hesitation') {
-    return { color: '#D97706', text: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-100' };
-  }
-  return { color: '#E11D48', text: 'text-rose-700', bg: 'bg-rose-50', border: 'border-rose-100' };
-}
-
 export function Psychology({ trades }: PsychologyProps) {
   const emotionStats = useMemo(() => {
     const map: Record<EmotionalState, { count: number; pnl: number; wins: number; totalRisk: number; avgR: number; rCount: number }> = {
