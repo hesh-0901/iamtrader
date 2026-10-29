@@ -145,7 +145,6 @@ export function Psychology({ trades }: PsychologyProps) {
             <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-slate-400"><span>Perte nette</span><span>0 $</span><span>Gain net</span></div>
             {rankedEmotions.map(emotion => {
               const stats = emotionStats[emotion];
-              const tone = emotionTone(emotion);
               const maxAbsPnl = Math.max(1, ...rankedEmotions.map(e => Math.abs(emotionStats[e].pnl)));
               const avgPnl = stats.count ? stats.pnl / stats.count : 0;
               const barWidth = Math.min(50, Math.abs(stats.pnl) / maxAbsPnl * 50);
