@@ -132,7 +132,7 @@ function DailyBars({ trades }: { trades: Trade[] }) {
   }, [trades]);
   const maxAbs = Math.max(1, ...tradedDays.map(day => Math.abs(day.value)));
   const labelEvery = Math.max(1, Math.ceil(tradedDays.length / 7));
-  const slotWidth = 16; // fixed 8px bar + 8px gap
+  const slotWidth = 12; // fixed 8px bar + 4px gap
   const contentMinWidth = Math.max(1, tradedDays.length) * slotWidth;
   return <div className="flex min-h-0 flex-1 flex-col">
     <div className="mb-2 flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1.5 text-[10px] text-slate-500"><span className="inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> Jour positif</span><span className="inline-flex items-center gap-1.5"><span className="h-1.5 w-1.5 rounded-full" style={{ backgroundColor: '#800020' }} /> Jour négatif</span><span className="ml-auto text-slate-400">Survoler une barre pour le P&amp;L exact</span></div>
@@ -140,7 +140,7 @@ function DailyBars({ trades }: { trades: Trade[] }) {
       <div className="flex min-h-[280px] min-w-full flex-col" style={{ minWidth: contentMinWidth + 'px' }}>
         <div className="relative min-h-[250px] flex-1">
           <div className="absolute inset-x-0 top-1/2 border-t border-slate-300" />
-          <div className="absolute inset-0 flex items-stretch gap-2">
+          <div className="absolute inset-0 flex items-stretch gap-1">
             {tradedDays.map(({ date, value }) => {
               const barHeight = value === 0 ? 0 : Math.max(1.5, Math.abs(value) / maxAbs * 48);
               return <div key={date} className="group relative h-full w-2 shrink-0" title={shortDate(date) + ' : ' + money(value)}>
@@ -151,7 +151,7 @@ function DailyBars({ trades }: { trades: Trade[] }) {
             })}
           </div>
         </div>
-        <div className="flex h-7 shrink-0 items-end gap-2 border-b border-slate-200 text-center text-[8px] text-slate-400 sm:text-[9px]">
+        <div className="flex h-7 shrink-0 items-end gap-1 border-b border-slate-200 text-center text-[8px] text-slate-400 sm:text-[9px]">
           {tradedDays.map(({ date }, index) => <div key={date} className="relative w-2 shrink-0">
             {(index % labelEvery === 0 || index === tradedDays.length - 1) && <span className="absolute bottom-0 left-1/2 -translate-x-1/2 whitespace-nowrap">{shortDate(date)}</span>}
           </div>)}
