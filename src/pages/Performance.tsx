@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { Trade, TradingAccount } from '../types';
 import { calculatePerformance, formatCurrency } from '../utils/calculations';
 import { EmptyState } from '../components/common/EmptyState';
-import { TrendingUp, ShieldCheck, ArrowUpRight, ArrowDownRight, LineChart, Activity, BarChart3, Target, CalendarDays, Layers3, Crosshair, Zap, Waves, Brain, Compass, Sparkles } from 'lucide-react';
+import { TrendingUp, ShieldCheck, ArrowUpRight, ArrowDownRight, LineChart, Activity, BarChart3, Target, CalendarDays, Layers3, Crosshair, Zap, Waves, Brain, Compass, Sparkles, Gauge, Wallet, Trophy, CircleX, Scale } from 'lucide-react';
 
 interface PerformanceProps { trades: Trade[]; accounts: TradingAccount[]; }
 const money = (value: number) => formatCurrency(value);
@@ -197,8 +197,40 @@ export function Performance({ trades }: PerformanceProps) {
         <div className="min-h-0 flex-1"><EquityChart points={metrics.equityCurve} /></div>
       </Panel>
       <Panel title="Risque & robustesse" subtitle="Les pertes maximales et les extrêmes à surveiller." icon={ShieldCheck} className="flex h-full flex-col">
-        <div className="grid flex-1 grid-cols-2 content-between gap-3"><StatCard label="Max drawdown" value={`-${metrics.maxDrawdownPercent.toFixed(1)}%`} tone="negative" /><StatCard label="Drawdown ($)" value={`-${money(metrics.maxDrawdownAmount).replace(/^[+-]/, '')}`} tone="negative" /><StatCard label="Meilleur trade" value={money(metrics.bestTrade)} tone="positive" /><StatCard label="Pire trade" value={money(metrics.worstTrade)} tone="negative" /></div>
-        <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-slate-200 p-3.5"><div><div className="text-xs font-bold text-slate-700">Ratio gain / perte (Payoff)</div><div className="mt-1 text-[11px] text-slate-500">Gain moyen comparé à une perte moyenne</div></div><div className="whitespace-nowrap text-xl font-bold text-slate-950">{metrics.avgLoss > 0 ? (metrics.avgWin / metrics.avgLoss).toFixed(2) : '—'} : 1</div></div>
+        <div className="grid flex-1 grid-cols-2 auto-rows-fr gap-3">
+          <div className="flex flex-col justify-between rounded-xl border border-slate-200 p-3">
+            <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500"><Gauge className="h-3.5 w-3.5 text-rose-700" /> Max drawdown</div>
+            <div className="mt-2 text-xl font-bold tracking-tight text-rose-600">-{metrics.maxDrawdownPercent.toFixed(1)}%</div>
+            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-rose-50"><div className="h-full rounded-full bg-rose-700" style={{ width: `${Math.max(0, Math.min(100, metrics.maxDrawdownPercent))}%` }} /></div>
+            <div className="mt-1 text-[10px] text-slate-400">Amplitude du recul</div>
+          </div>
+          <div className="flex flex-col justify-between rounded-xl border border-slate-200 p-3">
+            <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500"><Wallet className="h-3.5 w-3.5 text-rose-700" /> Drawdown ($)</div>
+            <div className="mt-2 text-xl font-bold tracking-tight text-rose-600">-{money(metrics.maxDrawdownAmount).replace(/^[+-]/, '')}</div>
+            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-rose-50"><div className="h-full w-full rounded-full bg-rose-700" /></div>
+            <div className="mt-1 text-[10px] text-slate-400">Perte cumulée maximale</div>
+          </div>
+          <div className="flex flex-col justify-between rounded-xl border border-slate-200 p-3">
+            <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500"><Trophy className="h-3.5 w-3.5 text-emerald-600" /> Meilleur trade</div>
+            <div className="mt-2 text-xl font-bold tracking-tight text-emerald-600">{money(metrics.bestTrade)}</div>
+            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-emerald-50"><div className="h-full rounded-full bg-emerald-600" style={{ width: `${Math.max(0, Math.min(100, Math.abs(metrics.bestTrade) / Math.max(1, Math.abs(metrics.bestTrade), Math.abs(metrics.worstTrade)) * 100))}%` }} /></div>
+            <div className="mt-1 text-[10px] text-slate-400">Gain maximal enregistré</div>
+          </div>
+          <div className="flex flex-col justify-between rounded-xl border border-slate-200 p-3">
+            <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500"><CircleX className="h-3.5 w-3.5 text-rose-700" /> Pire trade</div>
+            <div className="mt-2 text-xl font-bold tracking-tight text-rose-600">-{money(Math.abs(metrics.worstTrade))}</div>
+            <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-rose-50"><div className="h-full rounded-full bg-rose-700" style={{ width: `${Math.max(0, Math.min(100, Math.abs(metrics.worstTrade) / Math.max(1, Math.abs(metrics.bestTrade), Math.abs(metrics.worstTrade)) * 100))}%` }} /></div>
+            <div className="mt-1 text-[10px] text-slate-400">Perte maximale enregistrée</div>
+          </div>
+        </div>
+        <div className="mt-3 rounded-xl border border-slate-200 p-3.5">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex min-w-0 items-center gap-2"><span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700"><Scale className="h-4 w-4" /></span><div><div className="text-xs font-bold text-slate-700">Ratio gain / perte (Payoff)</div><div className="mt-1 text-[11px] text-slate-500">Gain moyen comparé à une perte moyenne</div></div></div>
+            <div className="whitespace-nowrap text-xl font-bold text-slate-950">{metrics.avgLoss > 0 ? (metrics.avgWin / metrics.avgLoss).toFixed(2) : '—'} : 1</div>
+          </div>
+          <div className="mt-3 flex h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-l-full bg-emerald-500" style={{ width: `${metrics.avgWin + metrics.avgLoss > 0 ? metrics.avgWin / (metrics.avgWin + metrics.avgLoss) * 100 : 0}%` }} /><div className="h-full rounded-r-full bg-rose-700" style={{ width: `${metrics.avgWin + metrics.avgLoss > 0 ? metrics.avgLoss / (metrics.avgWin + metrics.avgLoss) * 100 : 0}%` }} /></div>
+          <div className="mt-1.5 flex justify-between text-[10px] text-slate-400"><span>Gain moyen {money(metrics.avgWin)}</span><span>Perte moyenne -{money(metrics.avgLoss)}</span></div>
+        </div>
       </Panel>
     </div>
     <div className="grid grid-cols-1 items-stretch gap-4 xl:grid-cols-2"><Panel title="Performance journalière" subtitle="Les 30 derniers jours calendaires, avec une échelle de barres stable." icon={BarChart3} className="h-full flex flex-col"><DailyBars trades={closedTrades} /></Panel><Panel title="Profil de performance" subtitle="Radar synthétique des cinq axes de ton trading." icon={Activity} className="h-full flex flex-col"><RadarProfile metrics={metrics} /></Panel></div>
