@@ -22,3 +22,4 @@ View your app in AI Studio: https://ai.studio/apps/b0220878-2085-4195-9cc9-adaeb
 <!-- Cloudflare deployment trigger: Git integration reset 2026-10-03 -->
 <!-- Cloudflare deployment retry: 2026-10-03 -->
 <!-- Cloudflare deployment retry: 2026-10-17 -->
+<!-- Deployment trigger: publish latest Performance page updates 2026-10-29 -->
