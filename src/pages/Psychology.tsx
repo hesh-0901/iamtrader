@@ -2,36 +2,54 @@ import React, { useMemo } from 'react';
 import { Trade, EmotionalState } from '../types';
 import { formatCurrency } from '../utils/calculations';
 import { EmptyState } from '../components/common/EmptyState';
-import { 
-  BrainCircuit, 
-  AlertTriangle, 
-  ShieldCheck, 
-  Info,
-  TrendingUp,
-  Compass,
-  Lightbulb,
-  Shield,
-  Activity
+import {
+  BrainCircuit, AlertTriangle, ShieldCheck, Info, TrendingUp, Compass,
+  Lightbulb, Shield, Activity, Target, HeartPulse, ArrowUpRight, ArrowDownRight
 } from 'lucide-react';
 
 interface PsychologyProps {
   trades: Trade[];
 }
 
+const EMOTIONS: EmotionalState[] = [
+  'Disciplined', 'Calm', 'Focused', 'FOMO', 'Fear', 'Revenge', 'Overconfidence', 'Hesitation'
+];
+
+const EMOTION_LABELS: Record<EmotionalState, string> = {
+  Disciplined: 'Discipline',
+  Calm: 'Sérénité',
+  Focused: 'Concentration',
+  FOMO: 'FOMO',
+  Fear: 'Peur',
+  Revenge: 'Revenge trading',
+  Overconfidence: 'Excès de confiance',
+  Hesitation: 'Hésitation'
+};
+
+const POSITIVE_EMOTIONS: EmotionalState[] = ['Disciplined', 'Calm', 'Focused'];
+
+function emotionTone(emotion: EmotionalState) {
+  if (POSITIVE_EMOTIONS.includes(emotion)) {
+    return { color: '#08B77A', text: 'text-emerald-700', bg: 'bg-emerald-50', border: 'border-emerald-100' };
+  }
+  if (emotion === 'Fear' || emotion === 'Hesitation') {
+    return { color: '#D97706', text: 'text-amber-700', bg: 'bg-amber-50', border: 'border-amber-100' };
+  }
+  return { color: '#E11D48', text: 'text-rose-700', bg: 'bg-rose-50', border: 'border-rose-100' };
+}
+
 export function Psychology({ trades }: PsychologyProps) {
-  // Aggregate trades by emotional state
   const emotionStats = useMemo(() => {
     const map: Record<EmotionalState, { count: number; pnl: number; wins: number; totalRisk: number; avgR: number; rCount: number }> = {
-      'Disciplined': { count: 0, pnl: 0, wins: 0, totalRisk: 0, avgR: 0, rCount: 0 },
-      'Calm': { count: 0, pnl: 0, wins: 0, totalRisk: 0, avgR: 0, rCount: 0 },
-      'Focused': { count: 0, pnl: 0, wins: 0, totalRisk: 0, avgR: 0, rCount: 0 },
-      'FOMO': { count: 0, pnl: 0, wins: 0, totalRisk: 0, avgR: 0, rCount: 0 },
-      'Fear': { count: 0, pnl: 0, wins: 0, totalRisk: 0, avgR: 0, rCount: 0 },
-      'Revenge': { count: 0, pnl: 0, wins: 0, totalRisk: 0, avgR: 0, rCount: 0 },
-      'Overconfidence': { count: 0, pnl: 0, wins: 0, totalRisk: 0, avgR: 0, rCount: 0 },
-      'Hesitation': { count: 0, pnl: 0, wins: 0, totalRisk: 0, avgR: 0, rCount: 0 },
+      Disciplined: { count: 0, pnl: 0, wins: 0, totalRisk: 0, avgR: 0, rCount: 0 },
+      Calm: { count: 0, pnl: 0, wins: 0, totalRisk: 0, avgR: 0, rCount: 0 },
+      Focused: { count: 0, pnl: 0, wins: 0, totalRisk: 0, avgR: 0, rCount: 0 },
+      FOMO: { count: 0, pnl: 0, wins: 0, totalRisk: 0, avgR: 0, rCount: 0 },
+      Fear: { count: 0, pnl: 0, wins: 0, totalRisk: 0, avgR: 0, rCount: 0 },
+      Revenge: { count: 0, pnl: 0, wins: 0, totalRisk: 0, avgR: 0, rCount: 0 },
+      Overconfidence: { count: 0, pnl: 0, wins: 0, totalRisk: 0, avgR: 0, rCount: 0 },
+      Hesitation: { count: 0, pnl: 0, wins: 0, totalRisk: 0, avgR: 0, rCount: 0 }
     };
-
     trades.forEach(t => {
       if (map[t.emotion]) {
         map[t.emotion].count++;
@@ -44,22 +62,14 @@ export function Psychology({ trades }: PsychologyProps) {
         }
       }
     });
-
     return map;
   }, [trades]);
 
-  // Rational vs Emotional trades aggregate
   const macroSplit = useMemo(() => {
-    let rationalCount = 0;
-    let rationalPnl = 0;
-    let rationalWins = 0;
-
-    let emotionalCount = 0;
-    let emotionalPnl = 0;
-    let emotionalWins = 0;
-
+    let rationalCount = 0, rationalPnl = 0, rationalWins = 0;
+    let emotionalCount = 0, emotionalPnl = 0, emotionalWins = 0;
     trades.forEach(t => {
-      const isRational = t.emotion === 'Disciplined' || t.emotion === 'Calm' || t.emotion === 'Focused';
+      const isRational = POSITIVE_EMOTIONS.includes(t.emotion);
       const pnl = Number(t.pnl) || 0;
       if (isRational) {
         rationalCount++;
@@ -71,207 +81,112 @@ export function Psychology({ trades }: PsychologyProps) {
         if (t.result === 'WIN') emotionalWins++;
       }
     });
-
     return {
-      rational: { count: rationalCount, pnl: rationalPnl, wr: rationalCount > 0 ? (rationalWins / rationalCount) * 100 : 0 },
-      emotional: { count: emotionalCount, pnl: emotionalPnl, wr: emotionalCount > 0 ? (emotionalWins / emotionalCount) * 100 : 0 }
+      rational: { count: rationalCount, pnl: rationalPnl, wr: rationalCount ? rationalWins / rationalCount * 100 : 0 },
+      emotional: { count: emotionalCount, pnl: emotionalPnl, wr: emotionalCount ? emotionalWins / emotionalCount * 100 : 0 }
     };
   }, [trades]);
 
-  const hasEnoughData = trades.length >= 6;
   const totalTrades = trades.length;
-  const rationalRatio = totalTrades > 0 ? (macroSplit.rational.count / totalTrades) * 100 : 100;
+  const rationalRatio = totalTrades ? macroSplit.rational.count / totalTrades * 100 : 0;
+  const hasEnoughData = totalTrades >= 6;
+  const rankedEmotions = useMemo(() => [...EMOTIONS].filter(e => emotionStats[e].count > 0).sort((a, b) => emotionStats[b].count - emotionStats[a].count), [emotionStats]);
+  const strongestEmotion = useMemo(() => [...EMOTIONS].filter(e => POSITIVE_EMOTIONS.includes(e) && emotionStats[e].count > 0).sort((a, b) => (emotionStats[b].pnl / Math.max(1, emotionStats[b].count)) - (emotionStats[a].pnl / Math.max(1, emotionStats[a].count)))[0], [emotionStats]);
+  const mainChallenge = useMemo(() => [...EMOTIONS].filter(e => !POSITIVE_EMOTIONS.includes(e) && emotionStats[e].count > 0).sort((a, b) => emotionStats[b].count - emotionStats[a].count)[0], [emotionStats]);
 
   if (trades.length === 0) {
     return (
-      <div className="space-y-6">
-        <div className="pb-3 border-b border-slate-200/80">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-[10px] font-mono uppercase tracking-wider text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded font-semibold">
-              Performance Mentale
-            </span>
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-            Matrice Psychologique & Biais Comportementaux
-          </h1>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Identifiez avec clarté la relation directe entre votre état d'esprit lors du clic et votre résultat net.
-          </p>
-        </div>
-
-        <div className="rounded-xl card-premium overflow-hidden p-6 border-slate-200">
-          <EmptyState
-            icon={BrainCircuit}
-            title="Votre psychologie de trading se construit ici"
-            description="Chaque transaction que vous journalisez avec son état émotionnel (Calme, FOMO, Discipline, etc.) viendra nourrir cette analyse pour éliminer vos biais."
-            accentColor="sky"
-          />
-        </div>
+      <div className="mx-auto w-full max-w-[1440px] space-y-5 px-3 pb-8 sm:px-5 xl:px-7">
+        <header className="border-b border-slate-200 pb-5">
+          <div className="mb-1.5 inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-700"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> IAMTRADER · Performance mentale</div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Psychologie du trader</h1>
+          <p className="mt-1 max-w-2xl text-sm leading-relaxed text-slate-500">Comprends comment ton état mental influence tes décisions et tes résultats.</p>
+        </header>
+        <section className="rounded-[24px] border border-emerald-100 bg-gradient-to-br from-white to-emerald-50 p-5 shadow-[0_18px_55px_rgba(12,95,66,.06)] sm:p-8">
+          <EmptyState icon={BrainCircuit} title="Ta matrice psychologique commence ici" description="Renseigne ton état émotionnel dans le journal. Tes trades alimenteront progressivement l’analyse de la discipline, de la sérénité, du FOMO, de la peur et des autres comportements." accentColor="sky" />
+        </section>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="pb-3 border-b border-slate-200/80">
-        <div className="flex items-center gap-2 mb-1">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded font-semibold">
-            Performance Mentale
-          </span>
-          <span className="text-slate-400">·</span>
-          <span className="text-[11px] text-slate-500 font-mono">Corrélations Comportementales</span>
+    <div className="mx-auto w-full max-w-[1440px] space-y-5 px-3 pb-8 sm:px-5 xl:px-7">
+      <header className="flex flex-col gap-3 border-b border-slate-200 pb-5 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <div className="mb-1.5 inline-flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-700"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> IAMTRADER · Performance mentale</div>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Psychologie du trader</h1>
+          <p className="mt-1 max-w-2xl text-sm leading-relaxed text-slate-500">Observe les états qui accompagnent tes trades et leur lien avec tes résultats.</p>
         </div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">
-          Matrice Psychologique & Biais Comportementaux
-        </h1>
-        <p className="text-xs text-slate-500 mt-0.5 max-w-2xl">
-          Prenez conscience des schémas psychologiques qui influencent vos prises de décision. Les traders rentables maîtrisent avant tout leurs émotions.
-        </p>
-      </div>
+        <div className="inline-flex items-center gap-2 self-start rounded-xl border border-emerald-100 bg-white px-3 py-2 text-xs font-semibold text-slate-600 sm:self-auto"><BrainCircuit className="h-4 w-4 text-emerald-600" /> {totalTrades} trades analysés</div>
+      </header>
 
-      {/* Warning or Insufficient Data Alert if < 6 trades */}
-      {!hasEnoughData && (
-        <div className="p-4 rounded-lg bg-white border border-slate-200 text-xs text-slate-400 flex items-start gap-3">
-          <Info className="w-4 h-4 shrink-0 text-blue-400 mt-0.5" />
-          <div className="leading-relaxed">
-            <strong className="text-slate-900">Échantillon en cours d'accumulation :</strong>{' '}
-            Un minimum de 6 transactions avec étiquettes psychologiques permet de dégager des corrélations statistiques représentatives.
-          </div>
-        </div>
-      )}
+      {!hasEnoughData && <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50/80 p-4 text-sm text-amber-900"><Info className="mt-0.5 h-4 w-4 shrink-0" /><div><strong>Échantillon encore limité.</strong><p className="mt-1 text-xs leading-relaxed text-amber-800">Au moins 6 trades sont nécessaires pour commencer à interpréter les tendances. Les résultats actuels sont descriptifs et ne constituent pas encore des corrélations fiables.</p></div></div>}
 
-      {/* Macro Ratio Bar: Discipline vs Reactivity */}
-      <div className="p-5 rounded-xl card-premium space-y-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded bg-blue-500/10 text-blue-400 flex items-center justify-center">
-              <Compass className="w-3.5 h-3.5" />
-            </div>
-            <div>
-              <span className="text-sm font-bold text-slate-900">Équilibre Opérationnel Global</span>
-              <p className="text-[10px] text-slate-500 font-mono">Ratio de discipline sur exécutions</p>
+      <section className="relative overflow-hidden rounded-[28px] border border-emerald-100 bg-gradient-to-br from-white via-white to-emerald-50 shadow-[0_18px_55px_rgba(12,95,66,.08)]">
+        <div className="pointer-events-none absolute -right-12 -top-20 h-64 w-64 rounded-full border border-emerald-200/50" />
+        <div className="relative grid gap-6 p-5 sm:p-7 lg:grid-cols-[minmax(0,1fr)_300px] lg:items-center">
+          <div>
+            <span className="inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.15em] text-emerald-800"><HeartPulse className="h-3.5 w-3.5" /> Matrice psychologique</span>
+            <h2 className="mt-4 max-w-2xl text-2xl font-bold leading-tight tracking-tight text-slate-950 sm:text-3xl">Ton état mental fait partie de ta stratégie.</h2>
+            <p className="mt-2 max-w-2xl text-sm leading-relaxed text-slate-600">Compare la part de tes opérations prises dans un état calme et discipliné à celles associées à une réaction émotionnelle.</p>
+            <div className="mt-5 grid gap-3 sm:grid-cols-3">
+              <div className="rounded-xl border border-emerald-100 bg-white/90 p-3.5"><div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Trades sereins</div><div className="mt-1 text-2xl font-bold tabular-nums text-emerald-700">{macroSplit.rational.count}</div><div className="mt-1 text-xs text-slate-500">{macroSplit.rational.wr.toFixed(1)}% gagnants</div></div>
+              <div className="rounded-xl border border-rose-100 bg-white/90 p-3.5"><div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Trades réactifs</div><div className="mt-1 text-2xl font-bold tabular-nums text-rose-700">{macroSplit.emotional.count}</div><div className="mt-1 text-xs text-slate-500">{macroSplit.emotional.wr.toFixed(1)}% gagnants</div></div>
+              <div className="rounded-xl border border-slate-200 bg-white/90 p-3.5"><div className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">P&L total journalisé</div><div className={`mt-1 text-xl font-bold tabular-nums ${trades.reduce((sum, t) => sum + (Number(t.pnl) || 0), 0) >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>{formatCurrency(trades.reduce((sum, t) => sum + (Number(t.pnl) || 0), 0))}</div><div className="mt-1 text-xs text-slate-500">Toutes émotions confondues</div></div>
             </div>
           </div>
-          <span className="font-mono text-xs font-bold text-blue-400 bg-blue-500/10 px-2.5 py-0.5 rounded border border-blue-500/20">
-            {rationalRatio.toFixed(0)}% Sérénité
-          </span>
-        </div>
-
-        <div className="w-full h-2 rounded bg-white overflow-hidden flex">
-          <div 
-            style={{ width: `${rationalRatio}%` }} 
-            className="bg-blue-500 transition-all duration-700 rounded-l"
-            title={`${rationalRatio.toFixed(0)}% Rationnel / Calme`}
-          />
-          <div 
-            style={{ width: `${100 - rationalRatio}%` }} 
-            className="bg-rose-500 transition-all duration-700 rounded-r"
-            title={`${(100 - rationalRatio).toFixed(0)}% Réactif / FOMO`}
-          />
-        </div>
-
-        <div className="flex items-center justify-between text-xs font-mono pt-0.5">
-          <span className="flex items-center gap-1.5 text-blue-400 font-medium">
-            <span className="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
-            Discipline & Sérénité ({macroSplit.rational.count} trades)
-          </span>
-          <span className="flex items-center gap-1.5 text-rose-400 font-medium">
-            <span className="w-1.5 h-1.5 rounded-full bg-rose-400"></span>
-            Réactivité & Émotions ({macroSplit.emotional.count} trades)
-          </span>
-        </div>
-      </div>
-
-      {/* Comparison: Disciplined Mindset vs Emotional Impulses */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-        {/* Disciplined / Rational Box */}
-        <div className="p-5 rounded-xl card-premium border-blue-500/30 space-y-3.5">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-200">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center">
-                <ShieldCheck className="w-3.5 h-3.5 stroke-[2.5]" />
-              </div>
-              <div>
-                <span className="font-bold text-slate-900 text-xs block">Zone de Clarté & Discipline</span>
-                <p className="text-[10px] text-slate-500 font-mono">Calme · Concentré · Discipliné</p>
-              </div>
-            </div>
-            <span className="text-xs font-mono font-bold text-blue-400 px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/20">
-              {macroSplit.rational.count} trades
-            </span>
+          <div className="rounded-2xl border border-emerald-100 bg-white p-4 shadow-sm">
+            <div className="flex items-center justify-between gap-2"><div><h3 className="text-sm font-bold text-slate-900">Équilibre opérationnel</h3><p className="mt-1 text-xs text-slate-500">Part des trades sereins et disciplinés</p></div><Compass className="h-5 w-5 text-emerald-600" /></div>
+            <div className="mt-5 flex items-end justify-between"><span className="text-4xl font-bold tracking-tight text-emerald-700 tabular-nums">{rationalRatio.toFixed(0)}%</span><span className="pb-1 text-xs text-slate-500">{macroSplit.rational.count}/{totalTrades} trades</span></div>
+            <div className="mt-3 flex h-3 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-l-full transition-[width] duration-700" style={{ width: `${rationalRatio}%`, backgroundColor: '#08B77A' }} /><div className="h-full rounded-r-full transition-[width] duration-700" style={{ width: `${100 - rationalRatio}%`, backgroundColor: '#E11D48' }} /></div>
+            <div className="mt-3 flex flex-wrap gap-x-4 gap-y-2 text-[11px] text-slate-500"><span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-emerald-500" />Sérénité & discipline</span><span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-rose-500" />Réactivité émotionnelle</span></div>
           </div>
+        </div>
+        <div className="relative grid grid-cols-3 border-t border-emerald-100 bg-emerald-50/70">
+          <div className="px-3 py-3.5 text-center sm:px-5"><div className="text-[10px] font-semibold uppercase tracking-wider text-emerald-800/70">États suivis</div><div className="mt-1 text-lg font-bold text-slate-900">08</div></div>
+          <div className="border-x border-emerald-100 px-3 py-3.5 text-center sm:px-5"><div className="text-[10px] font-semibold uppercase tracking-wider text-emerald-800/70">États renseignés</div><div className="mt-1 text-lg font-bold text-slate-900">{rankedEmotions.length}</div></div>
+          <div className="px-3 py-3.5 text-center sm:px-5"><div className="text-[10px] font-semibold uppercase tracking-wider text-emerald-800/70">Trades documentés</div><div className="mt-1 text-lg font-bold text-slate-900">{totalTrades}</div></div>
+        </div>
+      </section>
 
-          <div className="grid grid-cols-2 gap-3 text-xs font-mono">
-            <div className="p-3 rounded-lg bg-white border border-slate-200/80">
-              <span className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">P&L Net Généré</span>
-              <span className={`text-lg font-bold tabular-nums ${macroSplit.rational.pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                {formatCurrency(macroSplit.rational.pnl)}
-              </span>
-            </div>
-
-            <div className="p-3 rounded-lg bg-white border border-slate-200/80">
-              <span className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">Win Rate</span>
-              <span className="text-lg font-bold text-slate-900 tabular-nums">
-                {macroSplit.rational.wr.toFixed(1)}%
-              </span>
-            </div>
-          </div>
-          <p className="text-[11px] text-slate-500 leading-relaxed font-normal">
-            Opérations alignées avec votre plan de trading, caractérisées par le respect des règles et du stop loss.
-          </p>
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(280px,0.75fr)]">
+        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_6px_24px_rgba(12,95,66,.035)] sm:p-5">
+          <div className="mb-4 flex items-start justify-between gap-3"><div><h3 className="text-base font-bold tracking-tight text-slate-900">Performance par état émotionnel</h3><p className="mt-1 text-xs text-slate-500">Volume de trades et P&L observé pour chaque état renseigné.</p></div><Activity className="h-5 w-5 text-emerald-600" /></div>
+          {rankedEmotions.length === 0 ? <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-500">Aucun état émotionnel n’est renseigné dans les trades actuels.</p> : <div className="space-y-3">{rankedEmotions.map(emotion => {
+            const stats = emotionStats[emotion];
+            const tone = emotionTone(emotion);
+            const maxCount = Math.max(1, ...rankedEmotions.map(e => emotionStats[e].count));
+            const avgPnl = stats.count ? stats.pnl / stats.count : 0;
+            return <div key={emotion} className={`rounded-xl border p-3.5 ${tone.border} bg-white`}>
+              <div className="flex flex-wrap items-center justify-between gap-3"><div className="min-w-0"><div className="text-sm font-semibold text-slate-900">{EMOTION_LABELS[emotion]}</div><div className="mt-0.5 text-[11px] text-slate-500">{stats.count} trade{stats.count === 1 ? '' : 's'} · {stats.count ? (stats.wins / stats.count * 100).toFixed(1) : '0.0'}% gagnants</div></div><div className="text-right"><div className={`text-base font-bold tabular-nums ${stats.pnl >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>{formatCurrency(stats.pnl)}</div><div className="text-[10px] text-slate-400">{formatCurrency(avgPnl)} / trade</div></div></div>
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full transition-[width] duration-500" style={{ width: `${stats.count / maxCount * 100}%`, backgroundColor: tone.color }} /></div>
+            </div>;
+          })}</div>}
+          {!hasEnoughData && <p className="mt-3 text-[11px] text-amber-700">Données descriptives uniquement : accumule davantage de trades avant d’interpréter ces écarts.</p>}
         </div>
 
-        {/* Reactive / Emotional Box */}
-        <div className="p-5 rounded-xl card-premium border-rose-500/30 space-y-3.5">
-          <div className="flex items-center justify-between pb-3 border-b border-slate-200">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded bg-rose-500/10 border border-rose-500/20 text-rose-400 flex items-center justify-center">
-                <AlertTriangle className="w-3.5 h-3.5 stroke-[2.5]" />
-              </div>
-              <div>
-                <span className="font-bold text-slate-900 text-xs block">Zone Réactive & Impulsive</span>
-                <p className="text-[10px] text-slate-500 font-mono">FOMO · Revenge · Hésitation</p>
-              </div>
-            </div>
-            <span className="text-xs font-mono font-bold text-rose-400 px-2 py-0.5 rounded bg-rose-500/10 border border-rose-500/20">
-              {macroSplit.emotional.count} trades
-            </span>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 text-xs font-mono">
-            <div className="p-3 rounded-lg bg-white border border-slate-200/80">
-              <span className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">Impact P&L</span>
-              <span className={`text-lg font-bold tabular-nums ${macroSplit.emotional.pnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                {formatCurrency(macroSplit.emotional.pnl)}
-              </span>
-            </div>
-
-            <div className="p-3 rounded-lg bg-white border border-slate-200/80">
-              <span className="text-[10px] text-slate-500 uppercase tracking-wider block mb-1">Win Rate</span>
-              <span className="text-lg font-bold text-slate-900 tabular-nums">
-                {macroSplit.emotional.wr.toFixed(1)}%
-              </span>
-            </div>
-          </div>
-          <p className="text-[11px] text-slate-500 leading-relaxed font-normal">
-            Transactions précipitées ou prises sous l'impulsion. Principale source de drawdown évitable.
-          </p>
+        <div className="space-y-4">
+          <section className="rounded-2xl border border-emerald-100 bg-white p-4 shadow-[0_6px_24px_rgba(12,95,66,.035)] sm:p-5">
+            <div className="flex items-center gap-2"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700"><TrendingUp className="h-4 w-4" /></span><div><h3 className="text-sm font-bold text-slate-900">État le plus performant</h3><p className="text-[11px] text-slate-500">Selon le P&L moyen par trade</p></div></div>
+            {strongestEmotion ? <div className="mt-4 rounded-xl bg-emerald-50/80 p-3.5"><div className="text-sm font-bold text-slate-900">{EMOTION_LABELS[strongestEmotion]}</div><div className={`mt-1 text-2xl font-bold tabular-nums ${emotionStats[strongestEmotion].pnl / emotionStats[strongestEmotion].count >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>{formatCurrency(emotionStats[strongestEmotion].pnl / emotionStats[strongestEmotion].count)}<span className="ml-1 text-xs font-medium">/ trade</span></div><p className="mt-1.5 text-xs text-slate-600">{emotionStats[strongestEmotion].count} trades enregistrés dans cet état.</p></div> : <p className="mt-4 rounded-xl bg-slate-50 p-3.5 text-xs text-slate-500">Renseigne un état calme, concentré ou discipliné pour faire émerger ce repère.</p>}
+          </section>
+          <section className="rounded-2xl border border-rose-100 bg-white p-4 shadow-[0_6px_24px_rgba(12,95,66,.035)] sm:p-5">
+            <div className="flex items-center gap-2"><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-50 text-rose-700"><Target className="h-4 w-4" /></span><div><h3 className="text-sm font-bold text-slate-900">Défi le plus fréquent</h3><p className="text-[11px] text-slate-500">État réactif le plus souvent déclaré</p></div></div>
+            {mainChallenge ? <div className="mt-4 rounded-xl bg-rose-50/80 p-3.5"><div className="text-sm font-bold text-slate-900">{EMOTION_LABELS[mainChallenge]}</div><div className="mt-1 text-2xl font-bold tabular-nums text-rose-700">{emotionStats[mainChallenge].count}<span className="ml-1 text-xs font-medium">trade{emotionStats[mainChallenge].count === 1 ? '' : 's'}</span></div><p className="mt-1.5 text-xs text-slate-600">Repère les situations qui déclenchent cet état avant ta prochaine session.</p></div> : <p className="mt-4 rounded-xl bg-slate-50 p-3.5 text-xs text-slate-500">Aucun état réactif n’a encore été déclaré.</p>}
+          </section>
         </div>
-      </div>
+      </section>
 
-      {/* Structured Guidance Box */}
-      <div className="p-4 rounded-xl card-premium border-slate-200 flex items-start gap-3">
-        <div className="w-8 h-8 rounded bg-blue-500/10 border border-blue-500/20 flex items-center justify-center text-blue-400 shrink-0">
-          <Shield className="w-4 h-4" />
+      <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_6px_24px_rgba(12,95,66,.035)] sm:p-5">
+        <div className="mb-4 flex items-start gap-3"><span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700"><ShieldCheck className="h-4 w-4" /></span><div><h3 className="text-base font-bold text-slate-900">Rituel de maîtrise</h3><p className="mt-1 text-xs text-slate-500">Une consigne simple pour préparer tes prochaines exécutions.</p></div></div>
+        <div className="grid gap-3 md:grid-cols-3">
+          <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3.5"><div className="text-xs font-bold text-slate-900">Avant le trade</div><p className="mt-1.5 text-xs leading-relaxed text-slate-600">Évalue ton état mental et ta confiance dans le setup avant de cliquer.</p></div>
+          <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3.5"><div className="text-xs font-bold text-slate-900">Pendant la session</div><p className="mt-1.5 text-xs leading-relaxed text-slate-600">Après une perte, évite la revanche immédiate. Attends une nouvelle confirmation de ton plan.</p></div>
+          <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3.5"><div className="text-xs font-bold text-slate-900">Après le trade</div><p className="mt-1.5 text-xs leading-relaxed text-slate-600">Note ton émotion, le respect du plan et le résultat sans confondre qualité de décision et P&L.</p></div>
         </div>
-        <div className="space-y-0.5">
-          <h4 className="text-xs font-bold text-slate-900">Discipline de Gestion Institutionnelle</h4>
-          <p className="text-xs text-slate-500 leading-relaxed">
-            Respectez systématiquement votre perte maximale autorisée par position. Si vous subissez une perte, évitez d'intervenir à nouveau immédiatement et attendez la confirmation technique de votre setup.
-          </p>
-        </div>
-      </div>
+      </section>
+
+      <div className="flex items-start gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3 text-[11px] leading-relaxed text-slate-500"><Info className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" /><p>Cette page décrit les données psychologiques renseignées dans le journal. Les liens observés ne prouvent pas à eux seuls une causalité. Avec moins de 6 trades, les résultats doivent rester considérés comme provisoires.</p></div>
     </div>
   );
 }
