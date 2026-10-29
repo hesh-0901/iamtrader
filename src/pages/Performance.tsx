@@ -44,6 +44,7 @@ function SetupMotifIcon({ name }: { name: string }) {
 }
 
 function EquityChart({ points }: { points: { date: string; balance: number; pnl: number; tradeIndex: number }[] }) {
+  const [activePoint, setActivePoint] = useState<number | null>(null);
   const chart = useMemo(() => {
     const width = 820, height = 300, left = 76, right = 20, top = 22, bottom = 42;
     const values = points.map(p => p.balance);
@@ -60,24 +61,42 @@ function EquityChart({ points }: { points: { date: string; balance: number; pnl:
       const value = max - i / 4 * range;
       return { y: y(value), value };
     });
-    const positive = (points.at(-1)?.balance ?? 0) >= 0;
-    return { width, height, left, right, top, bottom, line, area, zeroY, positive, ticks, x, y };
+    const zeroOffset = Math.max(0, Math.min(100, (zeroY - top) / (height - top - bottom) * 100));
+    return { width, height, left, right, top, bottom, line, area, zeroY, ticks, x, y, zeroOffset };
   }, [points]);
   if (points.length < 2) return <div className="flex h-48 items-center justify-center rounded-xl bg-slate-50 text-sm text-slate-500">Ajoute au moins deux trades clôturés pour afficher la courbe.</div>;
-  const color = chart.positive ? '#059669' : '#be123c';
+  const selected = activePoint === null ? null : points[activePoint];
   return <div className="min-w-0">
-    <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-500"><span className="inline-flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-emerald-500" /> P&L cumulé</span><span className="inline-flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-slate-300" /> Point de départ (0)</span><span className="ml-auto font-semibold text-slate-700">{points.length - 1} opérations clôturées</span></div>
-    <div className="w-full overflow-hidden rounded-xl bg-slate-950/[0.02] p-1 sm:p-2"><svg viewBox={`0 0 ${chart.width} ${chart.height}`} role="img" aria-label="Courbe du profit et de la perte cumulés avec échelles horizontale et verticale" className="h-auto max-h-[380px] w-full">
-      <defs><linearGradient id="equityPremiumFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor={color} stopOpacity=".13" /><stop offset="100%" stopColor={color} stopOpacity=".015" /></linearGradient></defs>
+    <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-500"><span className="inline-flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-emerald-500" /> P&L cumulé positif</span><span className="inline-flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-rose-600" /> P&L cumulé négatif</span><span className="ml-auto font-semibold text-slate-700">{points.length - 1} opérations clôturées</span></div>
+    {selected && <div className={`mb-3 grid grid-cols-2 gap-3 rounded-xl border p-3 text-xs sm:grid-cols-4 ${selected.balance < 0 ? 'border-rose-200 bg-rose-50' : 'border-emerald-200 bg-emerald-50'}`} aria-live="polite">
+      <div><div className="text-slate-500">Trade</div><div className="mt-1 font-bold text-slate-900">#{selected.tradeIndex}</div></div>
+      <div><div className="text-slate-500">Date</div><div className="mt-1 font-bold text-slate-900">{shortDate(selected.date.slice(0, 10))}</div></div>
+      <div><div className="text-slate-500">P&amp;L du trade</div><div className={`mt-1 font-bold ${selected.pnl < 0 ? 'text-rose-600' : 'text-emerald-700'}`}>{money(selected.pnl)}</div></div>
+      <div><div className="text-slate-500">P&amp;L cumulé</div><div className={`mt-1 font-bold ${selected.balance < 0 ? 'text-rose-600' : 'text-emerald-700'}`}>{money(selected.balance)}</div></div>
+    </div>}
+    <div className="w-full overflow-hidden rounded-xl bg-slate-950/[0.02] p-1 sm:p-2"><svg viewBox={`0 0 ${chart.width} ${chart.height}`} role="img" aria-label="Courbe interactive du profit et de la perte cumulés. Sélectionne un point pour voir les détails du trade." className="h-auto max-h-[380px] w-full">
+      <defs><linearGradient id="equityPremiumFill" x1="0" x2="0" y1="0" y2="1">
+        <stop offset="0%" stopColor="#059669" stopOpacity=".17" />
+        <stop offset={`${chart.zeroOffset}%`} stopColor="#059669" stopOpacity=".025" />
+        <stop offset={`${chart.zeroOffset}%`} stopColor="#e11d48" stopOpacity=".025" />
+        <stop offset="100%" stopColor="#e11d48" stopOpacity=".18" />
+      </linearGradient></defs>
       {chart.ticks.map((g, i) => <g key={i}><line x1={chart.left} x2={chart.width - chart.right} y1={g.y} y2={g.y} stroke="#cbd5e1" strokeOpacity=".75" strokeDasharray="3 6" /><text x={chart.left - 12} y={g.y + 4} fill="#64748b" fontSize="11" textAnchor="end">{Math.round(g.value).toLocaleString('fr-FR')}</text></g>)}
       <line x1={chart.left} x2={chart.width - chart.right} y1={chart.height - chart.bottom} y2={chart.height - chart.bottom} stroke="#94a3b8" strokeOpacity=".8" />
       <line x1={chart.left} x2={chart.width - chart.right} y1={chart.zeroY} y2={chart.zeroY} stroke="#64748b" strokeWidth="1.4" strokeDasharray="5 4" />
-      <path d={chart.area} fill="url(#equityPremiumFill)" /><path d={chart.line} fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-      {points.map((p, i) => <g key={p.tradeIndex}><circle cx={chart.x(i)} cy={chart.y(p.balance)} r={i === points.length - 1 ? 4 : 2.2} fill={i === points.length - 1 ? color : "white"} stroke={color} strokeWidth={i === points.length - 1 ? 2 : 1.3} /></g>)}
+      <path d={chart.area} fill="url(#equityPremiumFill)" />
+      {points.slice(1).map((p, i) => {
+        const previous = points[i];
+        const negative = (previous.balance + p.balance) / 2 < 0;
+        return <line key={p.tradeIndex} x1={chart.x(i)} y1={chart.y(previous.balance)} x2={chart.x(i + 1)} y2={chart.y(p.balance)} stroke={negative ? '#e11d48' : '#059669'} strokeWidth={activePoint === i || activePoint === i + 1 ? 3.5 : 2.5} strokeLinecap="round" />;
+      })}
+      {points.map((p, i) => <g key={p.tradeIndex} role="button" tabIndex={0} aria-label={`Trade ${p.tradeIndex}, ${shortDate(p.date.slice(0, 10))}, P&L ${money(p.pnl)}, cumulé ${money(p.balance)}. Cliquer pour afficher les détails.`} onClick={() => setActivePoint(activePoint === i ? null : i)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setActivePoint(activePoint === i ? null : i); } }} onMouseEnter={() => setActivePoint(i)}>
+        <circle cx={chart.x(i)} cy={chart.y(p.balance)} r={activePoint === i ? 5.5 : i === points.length - 1 ? 4 : 2.7} fill={p.balance < 0 ? '#e11d48' : '#059669'} stroke="white" strokeWidth={activePoint === i ? 2 : 1} className="cursor-pointer" />
+      </g>)}
       <text x={chart.left} y={chart.height - 12} fill="#64748b" fontSize="11" textAnchor="start">{shortDate(points[0].date.slice(0, 10))}</text><text x={chart.width - chart.right} y={chart.height - 12} fill="#64748b" fontSize="11" textAnchor="end">{shortDate(points[points.length - 1].date.slice(0, 10))}</text>
       <text x={chart.left + (chart.width - chart.left - chart.right) / 2} y={chart.height - 1} fill="#94a3b8" fontSize="10" textAnchor="middle">Chronologie des trades →</text>
     </svg></div>
-    <div className="mt-2 flex items-center justify-between gap-3 text-[10px] text-slate-400"><span>Axe vertical : P&L cumulé ($)</span><span>Axe horizontal : progression des opérations</span></div>
+    <div className="mt-2 flex items-center justify-between gap-3 text-[10px] text-slate-400"><span>Axe vertical : P&L cumulé ($)</span><span>Clique ou survole un point pour les détails</span></div>
   </div>;
 }
 
