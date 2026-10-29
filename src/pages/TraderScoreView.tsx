@@ -134,7 +134,7 @@ export function TraderScoreView({ trades }: TraderScoreViewProps) {
                 <div className="mt-5 flex flex-wrap gap-2">
                   <span className="rounded-xl border border-emerald-100 bg-white/85 px-3 py-2.5 text-xs text-slate-600 shadow-sm"><span className="font-bold text-slate-900">{performance.winRate.toFixed(1)}%</span> taux de réussite</span>
                   <span className="rounded-xl border border-emerald-100 bg-white/85 px-3 py-2.5 text-xs text-slate-600 shadow-sm"><span className="font-bold text-slate-900">{performance.profitFactor.toFixed(2)}</span> profit factor</span>
-                  <span className="rounded-xl border border-emerald-100 bg-white/85 px-3 py-2.5 text-xs text-slate-600 shadow-sm"><span className={performance.totalPnl >= 0 ? 'font-bold text-emerald-300' : 'font-bold text-rose-300'}>{performance.totalPnl > 0 ? '+' : ''}{performance.totalPnl.toLocaleString('fr-FR', { style: 'currency', currency: 'USD' })}</span> P&L net</span>
+                  <span className="rounded-xl border border-emerald-100 bg-white/85 px-3 py-2.5 text-xs text-slate-600 shadow-sm"><span className={performance.totalPnl >= 0 ? 'font-bold text-emerald-700' : 'font-bold text-rose-700'}>{performance.totalPnl > 0 ? '+' : ''}{performance.totalPnl.toLocaleString('fr-FR', { style: 'currency', currency: 'USD' })}</span> P&L net</span>
                 </div>
               </div>
               <div className="flex items-center justify-center gap-4 md:flex-col">
