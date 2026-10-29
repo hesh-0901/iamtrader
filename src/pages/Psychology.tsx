@@ -170,7 +170,7 @@ export function Psychology({ trades }: PsychologyProps) {
                   <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
                   <div className="min-w-0 flex-1"><div className="truncate text-xs font-semibold text-slate-900">{EMOTION_LABELS[emotion]}</div><div className="mt-0.5 text-[10px] text-slate-500">{stats.count} trade{stats.count === 1 ? '' : 's'} · {winRate.toFixed(0)}% gagnants</div></div>
                   <div className="text-right"><div className={`text-xs font-bold tabular-nums ${stats.pnl >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>{stats.pnl > 0 ? '+' : ''}{formatCurrency(stats.pnl)}</div><div className="mt-0.5 text-[10px] text-slate-500">{formatCurrency(avgPnl)} / trade</div></div>
-                </div>;
+                </button>;
               })}
               <div className="flex flex-wrap gap-x-4 gap-y-1 px-1 pt-1 text-[10px] text-slate-500"><span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-emerald-500" />États positifs</span><span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-amber-600" />Peur / hésitation</span><span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-rose-600" />États réactifs</span></div>
             </div>
