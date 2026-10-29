@@ -151,16 +151,26 @@ export function Psychology({ trades }: PsychologyProps) {
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(280px,0.75fr)]">
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_6px_24px_rgba(12,95,66,.035)] sm:p-5">
           <div className="mb-4 flex items-start justify-between gap-3"><div><h3 className="text-base font-bold tracking-tight text-slate-900">Performance par état émotionnel</h3><p className="mt-1 text-xs text-slate-500">Volume de trades et P&L observé pour chaque état renseigné.</p></div><Activity className="h-5 w-5 text-emerald-600" /></div>
-          {rankedEmotions.length === 0 ? <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-500">Aucun état émotionnel n’est renseigné dans les trades actuels.</p> : <div className="space-y-3">{rankedEmotions.map(emotion => {
-            const stats = emotionStats[emotion];
-            const tone = emotionTone(emotion);
-            const maxCount = Math.max(1, ...rankedEmotions.map(e => emotionStats[e].count));
-            const avgPnl = stats.count ? stats.pnl / stats.count : 0;
-            return <div key={emotion} className={`rounded-xl border p-3.5 ${tone.border} bg-white`}>
-              <div className="flex flex-wrap items-center justify-between gap-3"><div className="min-w-0"><div className="text-sm font-semibold text-slate-900">{EMOTION_LABELS[emotion]}</div><div className="mt-0.5 text-[11px] text-slate-500">{stats.count} trade{stats.count === 1 ? '' : 's'} · {stats.count ? (stats.wins / stats.count * 100).toFixed(1) : '0.0'}% gagnants</div></div><div className="text-right"><div className={`text-base font-bold tabular-nums ${stats.pnl >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>{formatCurrency(stats.pnl)}</div><div className="text-[10px] text-slate-400">{formatCurrency(avgPnl)} / trade</div></div></div>
-              <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full transition-[width] duration-500" style={{ width: `${stats.count / maxCount * 100}%`, backgroundColor: tone.color }} /></div>
-            </div>;
-          })}</div>}
+          {rankedEmotions.length === 0 ? <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-500">Aucun état émotionnel n’est renseigné dans les trades actuels.</p> : <div className="space-y-4">
+            <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-slate-400"><span>Perte nette</span><span>0 $</span><span>Gain net</span></div>
+            {rankedEmotions.map(emotion => {
+              const stats = emotionStats[emotion];
+              const tone = emotionTone(emotion);
+              const maxAbsPnl = Math.max(1, ...rankedEmotions.map(e => Math.abs(emotionStats[e].pnl)));
+              const avgPnl = stats.count ? stats.pnl / stats.count : 0;
+              const barWidth = Math.min(50, Math.abs(stats.pnl) / maxAbsPnl * 50);
+              return <div key={emotion} className="rounded-xl border border-slate-100 bg-white p-3.5 transition-colors hover:border-emerald-200">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="min-w-0"><div className="text-sm font-semibold text-slate-900">{EMOTION_LABELS[emotion]}</div><div className="mt-0.5 text-[11px] text-slate-500">{stats.count} trade{stats.count === 1 ? '' : 's'} · {stats.count ? (stats.wins / stats.count * 100).toFixed(1) : '0.0'}% gagnants</div></div>
+                  <div className="text-right"><div className={`text-base font-bold tabular-nums ${stats.pnl >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>{stats.pnl > 0 ? '+' : ''}{formatCurrency(stats.pnl)}</div><div className="text-[10px] text-slate-500">{formatCurrency(avgPnl)} / trade</div></div>
+                </div>
+                <div className="relative mt-3 h-3 overflow-hidden rounded-full bg-slate-100">
+                  <div className="absolute inset-y-0 left-1/2 w-px bg-slate-400/70" />
+                  <div className="absolute inset-y-0 rounded-full transition-[width] duration-500" style={{ width: `${barWidth}%`, left: stats.pnl >= 0 ? '50%' : `${50 - barWidth}%`, backgroundColor: stats.pnl >= 0 ? '#08B77A' : '#E11D48' }} />
+                </div>
+              </div>;
+            })}
+          </div>}
           {!hasEnoughData && <p className="mt-3 text-[11px] text-amber-700">Données descriptives uniquement : accumule davantage de trades avant d’interpréter ces écarts.</p>}
         </div>
 
