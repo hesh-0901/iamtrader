@@ -117,6 +117,36 @@ function RadarProfile({ metrics }: { metrics: ReturnType<typeof calculatePerform
     </svg>
   </div>;
 }
+function SetupDonutChart({ stats, totalTrades }: { stats: [string, { count: number; pnl: number; wins: number }][]; totalTrades: number }) {
+  const palette = ['#1264d8', '#35aee2', '#4bdce3', '#9be8eb', '#1d8ecb', '#73c8ee', '#64748b', '#a5b4fc'];
+  const total = Math.max(1, stats.reduce((sum, [, data]) => sum + data.count, 0));
+  const radius = 48;
+  const circumference = 2 * Math.PI * radius;
+  let offset = 0;
+  const segments = stats.map(([name, data], index) => {
+    const share = data.count / total;
+    const segment = { name, ...data, share, color: palette[index % palette.length], dash: share * circumference, offset };
+    offset += share * circumference;
+    return segment;
+  });
+  return <div className="grid grid-cols-1 items-center gap-5 sm:grid-cols-[minmax(140px,0.8fr)_minmax(0,1.2fr)]">
+    <div className="relative mx-auto aspect-square w-full max-w-[210px]">
+      <svg viewBox="0 0 120 120" role="img" aria-label="Diagramme en anneau montrant la répartition des trades par setup" className="h-full w-full -rotate-90">
+        <circle cx="60" cy="60" r={radius} fill="none" stroke="#e8eef4" strokeWidth="16" />
+        {segments.map(segment => <circle key={segment.name} cx="60" cy="60" r={radius} fill="none" stroke={segment.color} strokeWidth="16" strokeDasharray={segment.dash + ' ' + (circumference - segment.dash)} strokeDashoffset={-segment.offset} />)}
+      </svg>
+      <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center"><span className="text-2xl font-bold tracking-tight text-slate-900">{totalTrades}</span><span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Trades</span></div>
+    </div>
+    <div className="min-w-0 space-y-3">
+      {segments.map(segment => <div key={segment.name} className="flex items-center gap-2.5">
+        <span className="h-3 w-3 shrink-0 rounded-[3px]" style={{ backgroundColor: segment.color }} />
+        <div className="min-w-0 flex-1"><div className="truncate text-sm font-semibold text-slate-700">{segment.name}</div><div className="text-[11px] text-slate-500">{segment.count} trades · {segment.wins} gagnants</div></div>
+        <div className="shrink-0 text-right"><div className="text-sm font-bold tabular-nums text-slate-800">{Math.round(segment.share * 100)}%</div><div className={"text-[10px] font-semibold tabular-nums " + (segment.pnl >= 0 ? 'text-emerald-600' : 'text-rose-600')}>{money(segment.pnl)}</div></div>
+      </div>)}
+    </div>
+  </div>;
+}
+
 function DailyBars({ trades }: { trades: Trade[] }) {
   const tradedDays = useMemo(() => {
     const map = new Map<string, number>();
@@ -236,8 +266,8 @@ export function Performance({ trades }: PerformanceProps) {
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2">{([{ key: 'long', label: 'Achats (Longs)', data: directionStats.long, positive: true }, { key: 'short', label: 'Ventes (Shorts)', data: directionStats.short, positive: false }] as const).map(({ key, label, data, positive }) => <div key={key} className="rounded-xl border border-slate-200 p-4"><div className="mb-3 flex items-center justify-between gap-2"><span className={`flex items-center gap-1.5 text-sm font-bold ${positive ? 'text-emerald-700' : 'text-rose-700'}`}>{positive ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}{label}</span><span className="text-xs text-slate-500">{data.count} trades</span></div><div className={`text-2xl font-bold tracking-tight ${data.pnl >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{money(data.pnl)}</div><div className="mt-3 flex items-center justify-between text-xs text-slate-500"><span>Taux de réussite</span><strong className="text-slate-800">{data.wr.toFixed(1)}%</strong></div><div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-100"><div className={`h-full rounded-full ${positive ? 'bg-emerald-500' : 'bg-rose-500'}`} style={{ width: `${Math.max(0, Math.min(100, data.wr))}%` }} /></div></div>)}</div>
     </Panel>
     <div className="grid grid-cols-1 items-stretch gap-4 2xl:grid-cols-2">
-      <Panel title="Rentabilité par setup" subtitle="Classement par P&L : repère tes configurations les plus rentables." icon={Layers3} className="h-full">
-        <div className="space-y-3">{setupStats.map(([name, data]) => { const wr = data.count ? data.wins / data.count * 100 : 0, max = Math.max(1, ...setupStats.map(([, item]) => Math.abs(item.pnl))); return <div key={name} className="rounded-xl border border-slate-100 p-3 transition-colors hover:border-slate-200"><div className="mb-2 flex items-center justify-between gap-3"><div className="min-w-0"><div className="flex min-w-0 items-center gap-2"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600"><SetupMotifIcon name={name} /></span><div className="min-w-0"><div className="truncate text-sm font-bold text-slate-800">{name}</div><div className="mt-0.5 text-[11px] text-slate-500">{data.count} trades · {wr.toFixed(0)}% gagnants</div></div></div></div><div className={`whitespace-nowrap text-sm font-bold ${data.pnl >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{money(data.pnl)}</div></div><div className="h-1.5 overflow-hidden rounded-full bg-slate-100"><div className={`h-full rounded-full ${data.pnl >= 0 ? 'bg-emerald-500' : 'bg-rose-500'}`} style={{ width: `${Math.max(3, Math.abs(data.pnl) / max * 100)}%` }} /></div></div>; })}</div>
+      <Panel title="Répartition des setups" subtitle="Part de chaque configuration dans tes trades clôturés." icon={Layers3} className="h-full">
+        <SetupDonutChart stats={setupStats} totalTrades={closedTrades.length} />
         {(bestSetup || weakestSetup) && <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">{bestSetup && <div className="rounded-lg bg-emerald-50 p-3 text-xs"><div className="font-bold text-emerald-800">Setup le plus rentable</div><div className="mt-1 text-emerald-700">{bestSetup[0]} · {money(bestSetup[1].pnl)}</div></div>}{weakestSetup && <div className="rounded-lg bg-rose-50 p-3 text-xs"><div className="font-bold text-rose-800">Setup à réexaminer</div><div className="mt-1 text-rose-700">{weakestSetup[0]} · {money(weakestSetup[1].pnl)}</div></div>}</div>}
       </Panel>
       <Panel title="Distribution par timeframe" subtitle="Compare la contribution de chaque unité de temps." icon={BarChart3} className="h-full">
