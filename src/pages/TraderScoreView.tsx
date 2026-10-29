@@ -3,7 +3,7 @@ import { Trade } from '../types';
 import { calculateTraderScore, calculatePerformance } from '../utils/calculations';
 import {
   ShieldCheck, Compass, Activity, Zap, Brain, BarChart3,
-  ArrowUpRight, ArrowDownRight, Target, TrendingUp, AlertTriangle,
+  Target, TrendingUp, AlertTriangle,
   CheckCircle2, Info, Gauge, Crosshair
 } from 'lucide-react';
 
