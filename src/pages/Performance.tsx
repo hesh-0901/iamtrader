@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { Trade, TradingAccount } from '../types';
 import { calculatePerformance, formatCurrency } from '../utils/calculations';
 import { EmptyState } from '../components/common/EmptyState';
-import { TrendingUp, ShieldCheck, ArrowUpRight, ArrowDownRight, LineChart, Activity, BarChart3, Target, CalendarDays, Layers3 } from 'lucide-react';
+import { TrendingUp, ShieldCheck, ArrowUpRight, ArrowDownRight, LineChart, Activity, BarChart3, Target, CalendarDays, Layers3, Crosshair, Zap, Waves, Brain, Compass, Sparkles } from 'lucide-react';
 
 interface PerformanceProps { trades: Trade[]; accounts: TradingAccount[]; }
 const money = (value: number) => formatCurrency(value);
@@ -30,6 +30,19 @@ function Panel({ title, subtitle, icon: Icon, children, className = '' }: { titl
   </section>;
 }
 
+function SetupMotifIcon({ name }: { name: string }) {
+  const motif = name.toLowerCase();
+  const Icon = /fvg|imbalance|ifvg|gap/.test(motif) ? Waves
+    : /order block|breaker|ob\b|block/.test(motif) ? Layers3
+    : /sweep|liquid|smt|stop hunt/.test(motif) ? Compass
+    : /unicorn|ict|mss|structure/.test(motif) ? Crosshair
+    : /breakout|momentum|scalp/.test(motif) ? Zap
+    : /psych|mind|discipline/.test(motif) ? Brain
+    : /target|sniper|entry/.test(motif) ? Target
+    : Sparkles;
+  return <Icon className="h-3.5 w-3.5" aria-hidden="true" />;
+}
+
 function EquityChart({ points }: { points: { date: string; balance: number; pnl: number; tradeIndex: number }[] }) {
   const chart = useMemo(() => {
     const width = 820, height = 300, left = 76, right = 20, top = 22, bottom = 42;
@@ -51,16 +64,16 @@ function EquityChart({ points }: { points: { date: string; balance: number; pnl:
     return { width, height, left, right, top, bottom, line, area, zeroY, positive, ticks, x, y };
   }, [points]);
   if (points.length < 2) return <div className="flex h-48 items-center justify-center rounded-xl bg-slate-50 text-sm text-slate-500">Ajoute au moins deux trades clôturés pour afficher la courbe.</div>;
-  const color = chart.positive ? '#10b981' : '#f43f5e';
+  const color = chart.positive ? '#059669' : '#be123c';
   return <div className="min-w-0">
     <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-500"><span className="inline-flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-emerald-500" /> P&L cumulé</span><span className="inline-flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-slate-300" /> Point de départ (0)</span><span className="ml-auto font-semibold text-slate-700">{points.length - 1} opérations clôturées</span></div>
     <div className="w-full overflow-hidden rounded-xl bg-slate-950/[0.02] p-1 sm:p-2"><svg viewBox={`0 0 ${chart.width} ${chart.height}`} role="img" aria-label="Courbe du profit et de la perte cumulés avec échelles horizontale et verticale" className="h-auto max-h-[380px] w-full">
-      <defs><linearGradient id="equityPremiumFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor={color} stopOpacity=".22" /><stop offset="100%" stopColor={color} stopOpacity=".015" /></linearGradient><filter id="equityGlow"><feGaussianBlur stdDeviation="2.5" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge></filter></defs>
+      <defs><linearGradient id="equityPremiumFill" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor={color} stopOpacity=".13" /><stop offset="100%" stopColor={color} stopOpacity=".015" /></linearGradient></defs>
       {chart.ticks.map((g, i) => <g key={i}><line x1={chart.left} x2={chart.width - chart.right} y1={g.y} y2={g.y} stroke="#cbd5e1" strokeOpacity=".75" strokeDasharray="3 6" /><text x={chart.left - 12} y={g.y + 4} fill="#64748b" fontSize="11" textAnchor="end">{Math.round(g.value).toLocaleString('fr-FR')}</text></g>)}
       <line x1={chart.left} x2={chart.width - chart.right} y1={chart.height - chart.bottom} y2={chart.height - chart.bottom} stroke="#94a3b8" strokeOpacity=".8" />
       <line x1={chart.left} x2={chart.width - chart.right} y1={chart.zeroY} y2={chart.zeroY} stroke="#64748b" strokeWidth="1.4" strokeDasharray="5 4" />
-      <path d={chart.area} fill="url(#equityPremiumFill)" /><path d={chart.line} fill="none" stroke={color} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" filter="url(#equityGlow)" />
-      {points.map((p, i) => (i === points.length - 1 || i === 0) ? <g key={p.tradeIndex}><circle cx={chart.x(i)} cy={chart.y(p.balance)} r="4" fill={color} stroke="white" strokeWidth="2" /></g> : null)}
+      <path d={chart.area} fill="url(#equityPremiumFill)" /><path d={chart.line} fill="none" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+      {points.map((p, i) => <g key={p.tradeIndex}><circle cx={chart.x(i)} cy={chart.y(p.balance)} r={i === points.length - 1 ? 4 : 2.2} fill={i === points.length - 1 ? color : "white"} stroke={color} strokeWidth={i === points.length - 1 ? 2 : 1.3} /></g>)}
       <text x={chart.left} y={chart.height - 12} fill="#64748b" fontSize="11" textAnchor="start">{shortDate(points[0].date.slice(0, 10))}</text><text x={chart.width - chart.right} y={chart.height - 12} fill="#64748b" fontSize="11" textAnchor="end">{shortDate(points[points.length - 1].date.slice(0, 10))}</text>
       <text x={chart.left + (chart.width - chart.left - chart.right) / 2} y={chart.height - 1} fill="#94a3b8" fontSize="10" textAnchor="middle">Chronologie des trades →</text>
     </svg></div>
@@ -178,13 +191,13 @@ export function Performance({ trades }: PerformanceProps) {
   return <div className="mx-auto w-full max-w-[1440px] space-y-5 px-3 pb-8 sm:px-5 xl:px-7">
     <header className="flex flex-col gap-3 border-b border-slate-200 pb-5 sm:flex-row sm:items-end sm:justify-between"><div><span className="text-[10px] font-bold uppercase tracking-[.18em] text-emerald-600">Analytique & Performance</span><h1 className="mt-1 text-2xl font-bold tracking-tight text-slate-950 sm:text-3xl">Analyses & Edge</h1><p className="mt-1 text-sm text-slate-500">Ton état de performance, en un regard.</p></div><div className="flex items-center gap-2 self-start rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 sm:self-auto"><CalendarDays className="h-4 w-4 text-slate-400" /> {metrics.totalTrades} trades clôturés</div></header>
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4"><StatCard label="P&L total" value={money(metrics.totalPnl)} tone={metrics.totalPnl >= 0 ? 'positive' : 'negative'} hint="Net" /><StatCard label="Profit Factor" value={metrics.profitFactor.toFixed(2)} tone={metrics.profitFactor >= 1 ? 'positive' : 'negative'} hint="Gains / pertes" /><StatCard label="Gain moyen" value={money(metrics.avgWin)} tone="positive" /><StatCard label="Perte moyenne" value={`-${money(metrics.avgLoss).replace(/^[+-]/, '')}`} tone="negative" /></div>
-    <div className="grid grid-cols-1 items-start gap-4 2xl:grid-cols-[minmax(0,1.55fr)_minmax(360px,0.9fr)]">
-      <Panel title="Évolution du P&L" subtitle="La courbe monte quand tes résultats cumulés progressent." icon={Activity}>
+    <div className="grid grid-cols-1 items-stretch gap-4 2xl:grid-cols-[minmax(0,1.55fr)_minmax(360px,0.9fr)]">
+      <Panel title="Évolution du P&L" subtitle="La courbe monte quand tes résultats cumulés progressent." icon={Activity} className="flex h-full flex-col">
         <div className="mb-3 grid grid-cols-2 gap-3 sm:grid-cols-3"><div className="rounded-lg bg-slate-50 p-3"><span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Résultat cumulé</span><div className={`mt-1 text-lg font-bold ${metrics.totalPnl >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{money(metrics.totalPnl)}</div></div><div className="rounded-lg bg-slate-50 p-3"><span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Espérance / trade</span><div className={`mt-1 text-lg font-bold ${metrics.expectancy >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{money(metrics.expectancy)}</div></div><div className="col-span-2 rounded-lg bg-slate-50 p-3 sm:col-span-1"><span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Win rate</span><div className="mt-1 text-lg font-bold text-slate-900">{metrics.winRate.toFixed(1)}%</div></div></div>
-        <EquityChart points={metrics.equityCurve} />
+        <div className="min-h-0 flex-1"><EquityChart points={metrics.equityCurve} /></div>
       </Panel>
-      <Panel title="Risque & robustesse" subtitle="Les pertes maximales et les extrêmes à surveiller." icon={ShieldCheck}>
-        <div className="grid grid-cols-2 gap-3"><StatCard label="Max drawdown" value={`-${metrics.maxDrawdownPercent.toFixed(1)}%`} tone="negative" /><StatCard label="Drawdown ($)" value={`-${money(metrics.maxDrawdownAmount).replace(/^[+-]/, '')}`} tone="negative" /><StatCard label="Meilleur trade" value={money(metrics.bestTrade)} tone="positive" /><StatCard label="Pire trade" value={money(metrics.worstTrade)} tone="negative" /></div>
+      <Panel title="Risque & robustesse" subtitle="Les pertes maximales et les extrêmes à surveiller." icon={ShieldCheck} className="flex h-full flex-col">
+        <div className="grid flex-1 grid-cols-2 content-between gap-3"><StatCard label="Max drawdown" value={`-${metrics.maxDrawdownPercent.toFixed(1)}%`} tone="negative" /><StatCard label="Drawdown ($)" value={`-${money(metrics.maxDrawdownAmount).replace(/^[+-]/, '')}`} tone="negative" /><StatCard label="Meilleur trade" value={money(metrics.bestTrade)} tone="positive" /><StatCard label="Pire trade" value={money(metrics.worstTrade)} tone="negative" /></div>
         <div className="mt-3 flex items-center justify-between gap-3 rounded-xl border border-slate-200 p-3.5"><div><div className="text-xs font-bold text-slate-700">Ratio gain / perte (Payoff)</div><div className="mt-1 text-[11px] text-slate-500">Gain moyen comparé à une perte moyenne</div></div><div className="whitespace-nowrap text-xl font-bold text-slate-950">{metrics.avgLoss > 0 ? (metrics.avgWin / metrics.avgLoss).toFixed(2) : '—'} : 1</div></div>
       </Panel>
     </div>
@@ -194,7 +207,7 @@ export function Performance({ trades }: PerformanceProps) {
     </Panel>
     <div className="grid grid-cols-1 items-start gap-4 2xl:grid-cols-2">
       <Panel title="Rentabilité par setup" subtitle="Classement par P&L : repère tes configurations les plus rentables." icon={Layers3}>
-        <div className="space-y-3">{setupStats.map(([name, data]) => { const wr = data.count ? data.wins / data.count * 100 : 0, max = Math.max(1, ...setupStats.map(([, item]) => Math.abs(item.pnl))); return <div key={name} className="rounded-xl border border-slate-100 p-3 transition-colors hover:border-slate-200"><div className="mb-2 flex items-center justify-between gap-3"><div className="min-w-0"><div className="truncate text-sm font-bold text-slate-800">{name}</div><div className="mt-0.5 text-[11px] text-slate-500">{data.count} trades · {wr.toFixed(0)}% gagnants</div></div><div className={`whitespace-nowrap text-sm font-bold ${data.pnl >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{money(data.pnl)}</div></div><div className="h-1.5 overflow-hidden rounded-full bg-slate-100"><div className={`h-full rounded-full ${data.pnl >= 0 ? 'bg-emerald-500' : 'bg-rose-500'}`} style={{ width: `${Math.max(3, Math.abs(data.pnl) / max * 100)}%` }} /></div></div>; })}</div>
+        <div className="space-y-3">{setupStats.map(([name, data]) => { const wr = data.count ? data.wins / data.count * 100 : 0, max = Math.max(1, ...setupStats.map(([, item]) => Math.abs(item.pnl))); return <div key={name} className="rounded-xl border border-slate-100 p-3 transition-colors hover:border-slate-200"><div className="mb-2 flex items-center justify-between gap-3"><div className="min-w-0"><div className="flex min-w-0 items-center gap-2"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-slate-100 text-slate-600"><SetupMotifIcon name={name} /></span><div className="min-w-0"><div className="truncate text-sm font-bold text-slate-800">{name}</div><div className="mt-0.5 text-[11px] text-slate-500">{data.count} trades · {wr.toFixed(0)}% gagnants</div></div></div></div><div className={`whitespace-nowrap text-sm font-bold ${data.pnl >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{money(data.pnl)}</div></div><div className="h-1.5 overflow-hidden rounded-full bg-slate-100"><div className={`h-full rounded-full ${data.pnl >= 0 ? 'bg-emerald-500' : 'bg-rose-500'}`} style={{ width: `${Math.max(3, Math.abs(data.pnl) / max * 100)}%` }} /></div></div>; })}</div>
         {(bestSetup || weakestSetup) && <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">{bestSetup && <div className="rounded-lg bg-emerald-50 p-3 text-xs"><div className="font-bold text-emerald-800">Setup le plus rentable</div><div className="mt-1 text-emerald-700">{bestSetup[0]} · {money(bestSetup[1].pnl)}</div></div>}{weakestSetup && <div className="rounded-lg bg-rose-50 p-3 text-xs"><div className="font-bold text-rose-800">Setup à réexaminer</div><div className="mt-1 text-rose-700">{weakestSetup[0]} · {money(weakestSetup[1].pnl)}</div></div>}</div>}
       </Panel>
       <Panel title="Distribution par timeframe" subtitle="Compare la contribution de chaque unité de temps." icon={BarChart3}>
