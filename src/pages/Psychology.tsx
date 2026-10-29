@@ -3,8 +3,7 @@ import { Trade, EmotionalState } from '../types';
 import { formatCurrency } from '../utils/calculations';
 import { EmptyState } from '../components/common/EmptyState';
 import {
-  BrainCircuit, AlertTriangle, ShieldCheck, Info, TrendingUp, Compass,
-  Lightbulb, Shield, Activity, Target, HeartPulse, ArrowUpRight, ArrowDownRight
+  BrainCircuit, ShieldCheck, Info, TrendingUp, Compass, Activity, Target, HeartPulse
 } from 'lucide-react';
 
 interface PsychologyProps {
