@@ -141,22 +141,36 @@ export function Psychology({ trades }: PsychologyProps) {
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(280px,0.75fr)]">
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_6px_24px_rgba(12,95,66,.035)] sm:p-5">
           <div className="mb-4 flex items-start justify-between gap-3"><div><h3 className="text-base font-bold tracking-tight text-slate-900">Performance par état émotionnel</h3><p className="mt-1 text-xs text-slate-500">Volume de trades et P&L observé pour chaque état renseigné.</p></div><Activity className="h-5 w-5 text-emerald-600" /></div>
-          {rankedEmotions.length === 0 ? <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-500">Aucun état émotionnel n’est renseigné dans les trades actuels.</p> : <div className="overflow-hidden rounded-xl border border-slate-200">
-            <div className="grid grid-cols-[minmax(0,1.3fr)_70px_minmax(110px,1fr)_minmax(100px,1fr)] gap-3 bg-slate-50 px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-slate-500 max-sm:grid-cols-[minmax(0,1fr)_70px]">
-              <span>État émotionnel</span><span className="text-right">Trades</span><span className="max-sm:hidden">Taux de réussite</span><span className="text-right">P&L net</span>
+          {rankedEmotions.length === 0 ? <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-500">Aucun état émotionnel n’est renseigné dans les trades actuels.</p> : <div className="grid gap-5 lg:grid-cols-[220px_minmax(0,1fr)] lg:items-center">
+            <div className="flex flex-col items-center rounded-2xl border border-emerald-100 bg-gradient-to-b from-emerald-50/70 to-white p-4">
+              <div className="relative h-44 w-44">
+                <svg viewBox="0 0 120 120" className="h-full w-full -rotate-90" role="img" aria-label="Diagramme en anneau de la répartition des trades par état émotionnel">
+                  <circle cx="60" cy="60" r="43" fill="none" stroke="#E8EEF2" strokeWidth="15" />
+                  {rankedEmotions.map((emotion, index) => {
+                    const circumference = 2 * Math.PI * 43;
+                    const previousCount = rankedEmotions.slice(0, index).reduce((sum, item) => sum + emotionStats[item].count, 0);
+                    const segmentLength = emotionStats[emotion].count / Math.max(1, totalTrades) * circumference;
+                    const color = POSITIVE_EMOTIONS.includes(emotion) ? '#08B77A' : emotion === 'Fear' || emotion === 'Hesitation' ? '#D97706' : '#E11D48';
+                    return <circle key={emotion} cx="60" cy="60" r="43" fill="none" stroke={color} strokeWidth="15" strokeLinecap="butt" strokeDasharray={`${Math.max(0, segmentLength - 1.5)} ${circumference}`} strokeDashoffset={-previousCount / Math.max(1, totalTrades) * circumference} />;
+                  })}
+                </svg>
+                <div className="absolute inset-0 flex flex-col items-center justify-center text-center"><span className="text-4xl font-bold tracking-tight text-slate-900 tabular-nums">{totalTrades}</span><span className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-500">Trades</span><span className="mt-1 text-[10px] text-emerald-700">analysés</span></div>
+              </div>
+              <div className="mt-2 text-center"><div className="text-xs font-semibold text-slate-800">Répartition émotionnelle</div><div className="mt-1 text-[10px] text-slate-500">Chaque part représente le volume de trades.</div></div>
             </div>
-            <div className="divide-y divide-slate-100">
+            <div className="min-w-0 space-y-2">
               {rankedEmotions.map(emotion => {
                 const stats = emotionStats[emotion];
                 const winRate = stats.count ? stats.wins / stats.count * 100 : 0;
                 const avgPnl = stats.count ? stats.pnl / stats.count : 0;
-                return <div key={emotion} className="grid grid-cols-[minmax(0,1.3fr)_70px_minmax(110px,1fr)_minmax(100px,1fr)] items-center gap-3 px-4 py-3.5 transition-colors hover:bg-emerald-50/40 max-sm:grid-cols-[minmax(0,1fr)_70px]">
-                  <div className="min-w-0"><div className="text-sm font-semibold text-slate-900">{EMOTION_LABELS[emotion]}</div><div className="mt-1 text-[11px] text-slate-500 sm:hidden">{winRate.toFixed(1)}% gagnants</div><div className="mt-1 text-[11px] text-slate-500 max-sm:hidden">{formatCurrency(avgPnl)} en moyenne par trade</div></div>
-                  <div className="text-right text-sm font-semibold tabular-nums text-slate-700">{stats.count}</div>
-                  <div className="max-sm:hidden"><div className="mb-1.5 flex items-center justify-between text-[11px]"><span className="font-semibold tabular-nums text-slate-700">{winRate.toFixed(1)}%</span><span className="text-slate-400">{stats.wins}/{stats.count}</span></div><div className="h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full" style={{ width: `${winRate}%`, backgroundColor: '#08B77A' }} /></div></div>
-                  <div className="text-right"><div className={`text-sm font-bold tabular-nums ${stats.pnl >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>{stats.pnl > 0 ? '+' : ''}{formatCurrency(stats.pnl)}</div><div className="mt-1 text-[10px] text-slate-500 sm:hidden">{formatCurrency(avgPnl)} / trade</div></div>
+                const color = POSITIVE_EMOTIONS.includes(emotion) ? '#08B77A' : emotion === 'Fear' || emotion === 'Hesitation' ? '#D97706' : '#E11D48';
+                return <div key={emotion} className="flex items-center gap-3 rounded-xl border border-slate-100 px-3 py-2.5 transition-colors hover:border-emerald-200 hover:bg-emerald-50/30">
+                  <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: color }} />
+                  <div className="min-w-0 flex-1"><div className="truncate text-xs font-semibold text-slate-900">{EMOTION_LABELS[emotion]}</div><div className="mt-0.5 text-[10px] text-slate-500">{stats.count} trade{stats.count === 1 ? '' : 's'} · {winRate.toFixed(0)}% gagnants</div></div>
+                  <div className="text-right"><div className={`text-xs font-bold tabular-nums ${stats.pnl >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>{stats.pnl > 0 ? '+' : ''}{formatCurrency(stats.pnl)}</div><div className="mt-0.5 text-[10px] text-slate-500">{formatCurrency(avgPnl)} / trade</div></div>
                 </div>;
               })}
+              <div className="flex flex-wrap gap-x-4 gap-y-1 px-1 pt-1 text-[10px] text-slate-500"><span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-emerald-500" />États positifs</span><span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-amber-600" />Peur / hésitation</span><span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-rose-600" />États réactifs</span></div>
             </div>
           </div>}
           {!hasEnoughData && <p className="mt-3 text-[11px] text-amber-700">Données descriptives uniquement : accumule davantage de trades avant d’interpréter ces écarts.</p>}
