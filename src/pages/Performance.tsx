@@ -44,37 +44,28 @@ function SetupMotifIcon({ name }: { name: string }) {
 }
 
 function EquityChart({ points }: { points: { date: string; balance: number; pnl: number; tradeIndex: number }[] }) {
-  const [activePoint, setActivePoint] = useState<number | null>(null);
+  const [hoverPoint, setHoverPoint] = useState<number | null>(null);
   const chart = useMemo(() => {
     const width = 820, height = 300, left = 76, right = 20, top = 22, bottom = 42;
     const values = points.map(p => p.balance);
     const minValue = Math.min(0, ...values), maxValue = Math.max(0, ...values);
-    const span = maxValue - minValue || 1;
-    const pad = span * 0.08;
+    const span = maxValue - minValue || 1, pad = span * 0.08;
     const min = minValue - pad, max = maxValue + pad, range = max - min || 1;
     const x = (i: number) => left + (points.length <= 1 ? 0 : i / (points.length - 1) * (width - left - right));
     const y = (v: number) => top + (max - v) / range * (height - top - bottom);
     const line = points.map((p, i) => `${i ? 'L' : 'M'} ${x(i).toFixed(2)} ${y(p.balance).toFixed(2)}`).join(' ');
-    const zeroY = y(0);
-    const area = points.length ? `${line} L ${x(points.length - 1)} ${zeroY} L ${x(0)} ${zeroY} Z` : '';
-    const ticks = Array.from({ length: 5 }, (_, i) => {
-      const value = max - i / 4 * range;
-      return { y: y(value), value };
-    });
+    const zeroY = y(0), area = points.length ? `${line} L ${x(points.length - 1)} ${zeroY} L ${x(0)} ${zeroY} Z` : '';
+    const ticks = Array.from({ length: 5 }, (_, i) => { const value = max - i / 4 * range; return { y: y(value), value }; });
     const zeroOffset = Math.max(0, Math.min(100, (zeroY - top) / (height - top - bottom) * 100));
     return { width, height, left, right, top, bottom, line, area, zeroY, ticks, x, y, zeroOffset };
   }, [points]);
   if (points.length < 2) return <div className="flex h-48 items-center justify-center rounded-xl bg-slate-50 text-sm text-slate-500">Ajoute au moins deux trades clôturés pour afficher la courbe.</div>;
-  const selected = activePoint === null ? null : points[activePoint];
+  const hovered = hoverPoint === null ? null : points[hoverPoint];
+  const tipX = hovered && hoverPoint !== null ? Math.max(chart.left + 4, Math.min(chart.width - 164, chart.x(hoverPoint) + 12)) : 0;
+  const tipY = hovered && hoverPoint !== null ? Math.max(chart.top + 2, Math.min(chart.height - chart.bottom - 74, chart.y(hovered.balance) - 48)) : 0;
   return <div className="min-w-0">
-    <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-500"><span className="inline-flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-emerald-500" /> P&L cumulé positif</span><span className="inline-flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-rose-600" /> P&L cumulé négatif</span><span className="ml-auto font-semibold text-slate-700">{points.length - 1} opérations clôturées</span></div>
-    {selected && <div className={`mb-3 grid grid-cols-2 gap-3 rounded-xl border p-3 text-xs sm:grid-cols-4 ${selected.balance < 0 ? 'border-rose-200 bg-rose-50' : 'border-emerald-200 bg-emerald-50'}`} aria-live="polite">
-      <div><div className="text-slate-500">Trade</div><div className="mt-1 font-bold text-slate-900">#{selected.tradeIndex}</div></div>
-      <div><div className="text-slate-500">Date</div><div className="mt-1 font-bold text-slate-900">{shortDate(selected.date.slice(0, 10))}</div></div>
-      <div><div className="text-slate-500">P&amp;L du trade</div><div className={`mt-1 font-bold ${selected.pnl < 0 ? 'text-rose-600' : 'text-emerald-700'}`}>{money(selected.pnl)}</div></div>
-      <div><div className="text-slate-500">P&amp;L cumulé</div><div className={`mt-1 font-bold ${selected.balance < 0 ? 'text-rose-600' : 'text-emerald-700'}`}>{money(selected.balance)}</div></div>
-    </div>}
-    <div className="w-full overflow-hidden rounded-xl bg-slate-950/[0.02] p-1 sm:p-2"><svg viewBox={`0 0 ${chart.width} ${chart.height}`} role="img" aria-label="Courbe interactive du profit et de la perte cumulés. Sélectionne un point pour voir les détails du trade." className="h-auto max-h-[380px] w-full">
+    <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-500"><span className="inline-flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-emerald-500" /> P&amp;L cumulé positif</span><span className="inline-flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-rose-600" /> P&amp;L cumulé négatif</span><span className="ml-auto font-semibold text-slate-700">{points.length - 1} opérations clôturées</span></div>
+    <div className="w-full overflow-hidden rounded-xl bg-slate-950/[0.02] p-1 sm:p-2"><svg viewBox={`0 0 ${chart.width} ${chart.height}`} role="img" aria-label="Courbe du P&amp;L cumulé. Survole un point pour voir ses propriétés." className="h-auto max-h-[380px] w-full" onMouseLeave={() => setHoverPoint(null)}>
       <defs><linearGradient id="equityPremiumFill" x1="0" x2="0" y1="0" y2="1">
         <stop offset="0%" stopColor="#059669" stopOpacity=".17" />
         <stop offset={`${chart.zeroOffset}%`} stopColor="#059669" stopOpacity=".025" />
@@ -86,20 +77,22 @@ function EquityChart({ points }: { points: { date: string; balance: number; pnl:
       <line x1={chart.left} x2={chart.width - chart.right} y1={chart.zeroY} y2={chart.zeroY} stroke="#64748b" strokeWidth="1.4" strokeDasharray="5 4" />
       <path d={chart.area} fill="url(#equityPremiumFill)" />
       {points.slice(1).map((p, i) => {
-        const previous = points[i];
-        const negative = (previous.balance + p.balance) / 2 < 0;
-        return <line key={p.tradeIndex} x1={chart.x(i)} y1={chart.y(previous.balance)} x2={chart.x(i + 1)} y2={chart.y(p.balance)} stroke={negative ? '#e11d48' : '#059669'} strokeWidth={activePoint === i || activePoint === i + 1 ? 3.5 : 2.5} strokeLinecap="round" />;
+        const previous = points[i], negative = (previous.balance + p.balance) / 2 < 0;
+        return <line key={p.tradeIndex} x1={chart.x(i)} y1={chart.y(previous.balance)} x2={chart.x(i + 1)} y2={chart.y(p.balance)} stroke={negative ? '#e11d48' : '#059669'} strokeWidth={hoverPoint === i || hoverPoint === i + 1 ? 3.5 : 2.5} strokeLinecap="round" />;
       })}
-      {points.map((p, i) => <g key={p.tradeIndex} role="button" tabIndex={0} aria-label={`Trade ${p.tradeIndex}, ${shortDate(p.date.slice(0, 10))}, P&L ${money(p.pnl)}, cumulé ${money(p.balance)}. Cliquer pour afficher les détails.`} onClick={() => setActivePoint(activePoint === i ? null : i)} onKeyDown={event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); setActivePoint(activePoint === i ? null : i); } }} onMouseEnter={() => setActivePoint(i)}>
-        <circle cx={chart.x(i)} cy={chart.y(p.balance)} r={activePoint === i ? 5.5 : i === points.length - 1 ? 4 : 2.7} fill={p.balance < 0 ? '#e11d48' : '#059669'} stroke="white" strokeWidth={activePoint === i ? 2 : 1} className="cursor-pointer" />
-      </g>)}
+      {points.map((p, i) => <circle key={p.tradeIndex} cx={chart.x(i)} cy={chart.y(p.balance)} r={hoverPoint === i ? 5 : i === points.length - 1 ? 3.8 : 2.4} fill={p.balance < 0 ? '#e11d48' : '#059669'} stroke="white" strokeWidth={hoverPoint === i ? 2 : 1} className="cursor-crosshair transition-all" onMouseEnter={() => setHoverPoint(i)} />)}
+      {hovered && hoverPoint !== null && <g pointerEvents="none">
+        <rect x={tipX} y={tipY} width="158" height="66" rx="7" fill="#0f172a" fillOpacity=".94" />
+        <text x={tipX + 10} y={tipY + 15} fill="#cbd5e1" fontSize="10">Trade #{hovered.tradeIndex} · {shortDate(hovered.date.slice(0, 10))}</text>
+        <text x={tipX + 10} y={tipY + 33} fill="#e2e8f0" fontSize="10">Trade : {money(hovered.pnl)}</text>
+        <text x={tipX + 10} y={tipY + 51} fill={hovered.balance < 0 ? '#fda4af' : '#6ee7b7'} fontSize="11" fontWeight="700">Cumulé : {money(hovered.balance)}</text>
+      </g>}
       <text x={chart.left} y={chart.height - 12} fill="#64748b" fontSize="11" textAnchor="start">{shortDate(points[0].date.slice(0, 10))}</text><text x={chart.width - chart.right} y={chart.height - 12} fill="#64748b" fontSize="11" textAnchor="end">{shortDate(points[points.length - 1].date.slice(0, 10))}</text>
       <text x={chart.left + (chart.width - chart.left - chart.right) / 2} y={chart.height - 1} fill="#94a3b8" fontSize="10" textAnchor="middle">Chronologie des trades →</text>
     </svg></div>
-    <div className="mt-2 flex items-center justify-between gap-3 text-[10px] text-slate-400"><span>Axe vertical : P&L cumulé ($)</span><span>Clique ou survole un point pour les détails</span></div>
+    <div className="mt-2 flex items-center justify-between gap-3 text-[10px] text-slate-400"><span>Axe vertical : P&amp;L cumulé ($)</span><span>Survole un point pour ses détails</span></div>
   </div>;
 }
-
 function RadarProfile({ metrics }: { metrics: ReturnType<typeof calculatePerformance> }) {
   const dimensions = [
     { label: 'Win rate', value: Math.max(0, Math.min(100, metrics.winRate)) },
@@ -137,11 +130,10 @@ function RadarProfile({ metrics }: { metrics: ReturnType<typeof calculatePerform
   </div>;
 }
 function SetupDonutChart({ stats, totalTrades }: { stats: [string, { count: number; pnl: number; wins: number }][]; totalTrades: number }) {
-  const [showDetails, setShowDetails] = useState(false);
+  const [hoveredName, setHoveredName] = useState<string | null>(null);
   const palette = ['#1264d8', '#35aee2', '#4bdce3', '#9be8eb', '#1d8ecb', '#73c8ee', '#64748b', '#a5b4fc'];
   const total = Math.max(1, stats.reduce((sum, [, data]) => sum + data.count, 0));
-  const radius = 48;
-  const circumference = 2 * Math.PI * radius;
+  const radius = 48, circumference = 2 * Math.PI * radius;
   let offset = 0;
   const segments = stats.map(([name, data], index) => {
     const share = data.count / total;
@@ -149,24 +141,23 @@ function SetupDonutChart({ stats, totalTrades }: { stats: [string, { count: numb
     offset += share * circumference;
     return segment;
   });
-  return <div className="grid grid-cols-1 items-center gap-5 sm:grid-cols-[minmax(140px,0.8fr)_minmax(0,1.2fr)]">
-    <button type="button" onClick={() => setShowDetails(value => !value)} aria-expanded={showDetails} aria-controls="setup-distribution-details" aria-label={showDetails ? "Masquer la légende et les détails des setups" : "Afficher la légende et les détails des setups"} title="Cliquer pour afficher ou masquer les détails" className="group relative mx-auto block aspect-square w-full max-w-[210px] cursor-pointer rounded-full outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-4">
-      <svg viewBox="0 0 120 120" role="img" aria-label="Diagramme en anneau montrant la répartition des trades par setup" className="h-full w-full -rotate-90 transition-transform duration-200 group-hover:scale-[1.03]">
+  const hovered = segments.find(segment => segment.name === hoveredName);
+  return <div className="grid grid-cols-1 items-center gap-4 sm:grid-cols-[minmax(140px,0.8fr)_minmax(0,1.2fr)]">
+    <div className="relative mx-auto aspect-square w-full max-w-[210px]">
+      <svg viewBox="0 0 120 120" role="img" aria-label="Répartition des trades par setup. Survole un segment pour ses détails." className="h-full w-full -rotate-90">
         <circle cx="60" cy="60" r={radius} fill="none" stroke="#e8eef4" strokeWidth="16" />
-        {segments.map(segment => <circle key={segment.name} cx="60" cy="60" r={radius} fill="none" stroke={segment.color} strokeWidth="16" strokeDasharray={segment.dash + ' ' + (circumference - segment.dash)} strokeDashoffset={-segment.offset} />)}
+        {segments.map(segment => <circle key={segment.name} cx="60" cy="60" r={radius} fill="none" stroke={segment.color} strokeWidth={hoveredName === segment.name ? 20 : 16} strokeDasharray={segment.dash + ' ' + (circumference - segment.dash)} strokeDashoffset={-segment.offset} className="cursor-pointer transition-all duration-150" onMouseEnter={() => setHoveredName(segment.name)} onMouseLeave={() => setHoveredName(null)} />)}
       </svg>
-      <span className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center"><span className="text-2xl font-bold tracking-tight text-slate-900">{totalTrades}</span><span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Trades</span><span className="mt-1 text-[10px] font-medium text-blue-600">{showDetails ? 'Masquer détails' : 'Voir détails'}</span></span>
-    </button>
-    {showDetails ? <div id="setup-distribution-details" className="min-w-0 space-y-3" aria-live="polite">
-      {segments.map(segment => <div key={segment.name} className="flex items-center gap-2.5">
-        <span className="h-3 w-3 shrink-0 rounded-[3px]" style={{ backgroundColor: segment.color }} />
-        <div className="min-w-0 flex-1"><div className="truncate text-sm font-semibold text-slate-700">{segment.name}</div><div className="text-[11px] text-slate-500">{segment.count} trades · {segment.wins} gagnants</div></div>
-        <div className="shrink-0 text-right"><div className="text-sm font-bold tabular-nums text-slate-800">{Math.round(segment.share * 100)}%</div><div className={"text-[10px] font-semibold tabular-nums " + (segment.pnl >= 0 ? 'text-emerald-600' : 'text-rose-600')}>{money(segment.pnl)}</div></div>
-      </div>)}
-    </div> : <div className="flex items-center justify-center text-center text-xs text-slate-500">Clique sur le cercle pour afficher la légende et les détails de chaque setup.</div>}
+      <span className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center"><span className="text-2xl font-bold tracking-tight text-slate-900">{totalTrades}</span><span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Trades</span></span>
+    </div>
+    <div className="min-w-0 min-h-[70px]">
+      {hovered ? <div className="rounded-lg border border-slate-200/80 bg-white/95 p-3 shadow-sm transition-opacity" aria-live="polite">
+        <div className="mb-2 flex items-center gap-2"><span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ backgroundColor: hovered.color }} /><span className="truncate text-xs font-semibold text-slate-800">{hovered.name}</span><span className="ml-auto text-xs font-bold tabular-nums text-slate-600">{Math.round(hovered.share * 100)}%</span></div>
+        <div className="grid grid-cols-3 gap-2 text-[10px]"><div><div className="text-slate-400">Trades</div><div className="mt-0.5 font-semibold text-slate-700">{hovered.count}</div></div><div><div className="text-slate-400">Gagnants</div><div className="mt-0.5 font-semibold text-slate-700">{hovered.wins}</div></div><div><div className="text-slate-400">P&amp;L</div><div className={`mt-0.5 font-semibold ${hovered.pnl < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>{money(hovered.pnl)}</div></div></div>
+      </div> : <div className="flex h-full min-h-[70px] items-center justify-center text-center text-[11px] text-slate-400">Survole un segment pour voir ses propriétés.</div>}
+    </div>
   </div>;
 }
-
 function DailyBars({ trades }: { trades: Trade[] }) {
   const tradedDays = useMemo(() => {
     const map = new Map<string, number>();
