@@ -53,11 +53,31 @@ function EquityChart({ points }: { points: { date: string; balance: number; pnl:
     const min = minValue - pad, max = maxValue + pad, range = max - min || 1;
     const x = (i: number) => left + (points.length <= 1 ? 0 : i / (points.length - 1) * (width - left - right));
     const y = (v: number) => top + (max - v) / range * (height - top - bottom);
-    const line = points.map((p, i) => `${i ? 'L' : 'M'} ${x(i).toFixed(2)} ${y(p.balance).toFixed(2)}`).join(' ');
-    const zeroY = y(0), area = points.length ? `${line} L ${x(points.length - 1)} ${zeroY} L ${x(0)} ${zeroY} Z` : '';
+    const coords = points.map((p, i) => ({ x: x(i), y: y(p.balance) }));
+    const smoothPath = (coords: { x: number; y: number }[]) => {
+      if (!coords.length) return '';
+      if (coords.length === 1) return `M ${coords[0].x} ${coords[0].y}`;
+      let d = `M ${coords[0].x} ${coords[0].y}`;
+      for (let i = 0; i < coords.length - 1; i++) {
+        const p0 = coords[Math.max(0, i - 1)], p1 = coords[i], p2 = coords[i + 1], p3 = coords[Math.min(coords.length - 1, i + 2)];
+        const c1x = p1.x + (p2.x - p0.x) / 6, c1y = p1.y + (p2.y - p0.y) / 6;
+        const c2x = p2.x - (p3.x - p1.x) / 6, c2y = p2.y - (p3.y - p1.y) / 6;
+        d += ` C ${c1x} ${c1y}, ${c2x} ${c2y}, ${p2.x} ${p2.y}`;
+      }
+      return d;
+    };
+    const line = smoothPath(coords);
+    const zeroY = y(0);
+    const area = coords.length ? `${line} L ${coords[coords.length - 1].x} ${zeroY} L ${coords[0].x} ${zeroY} Z` : '';
     const ticks = Array.from({ length: 5 }, (_, i) => { const value = max - i / 4 * range; return { y: y(value), value }; });
     const zeroOffset = Math.max(0, Math.min(100, (zeroY - top) / (height - top - bottom) * 100));
-    return { width, height, left, right, top, bottom, line, area, zeroY, ticks, x, y, zeroOffset };
+    const segments = coords.slice(1).map((p2, i) => {
+      const p0 = coords[Math.max(0, i - 1)], p1 = coords[i], p3 = coords[Math.min(coords.length - 1, i + 2)];
+      const c1x = p1.x + (p2.x - p0.x) / 6, c1y = p1.y + (p2.y - p0.y) / 6;
+      const c2x = p2.x - (p3.x - p1.x) / 6, c2y = p2.y - (p3.y - p1.y) / 6;
+      return { d: `M ${p1.x} ${p1.y} C ${c1x} ${c1y}, ${c2x} ${c2y}, ${p2.x} ${p2.y}`, negative: (points[i].balance + points[i + 1].balance) / 2 < 0 };
+    });
+    return { width, height, left, right, top, bottom, line, area, zeroY, ticks, x, y, zeroOffset, segments };
   }, [points]);
   if (points.length < 2) return <div className="flex h-48 items-center justify-center rounded-xl bg-slate-50 text-sm text-slate-500">Ajoute au moins deux trades clôturés pour afficher la courbe.</div>;
   const hovered = hoverPoint === null ? null : points[hoverPoint];
@@ -65,7 +85,7 @@ function EquityChart({ points }: { points: { date: string; balance: number; pnl:
   const tipY = hovered && hoverPoint !== null ? Math.max(chart.top + 2, Math.min(chart.height - chart.bottom - 74, chart.y(hovered.balance) - 48)) : 0;
   return <div className="min-w-0">
     <div className="mb-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-slate-500"><span className="inline-flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-emerald-500" /> P&amp;L cumulé positif</span><span className="inline-flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-rose-600" /> P&amp;L cumulé négatif</span><span className="ml-auto font-semibold text-slate-700">{points.length - 1} opérations clôturées</span></div>
-    <div className="w-full overflow-hidden rounded-xl bg-slate-950/[0.02] p-1 sm:p-2"><svg viewBox={`0 0 ${chart.width} ${chart.height}`} role="img" aria-label="Courbe du P&amp;L cumulé. Survole un point pour voir ses propriétés." className="h-auto max-h-[380px] w-full" onMouseLeave={() => setHoverPoint(null)}>
+    <div className="w-full overflow-hidden rounded-xl bg-slate-950/[0.02] p-1 sm:p-2"><svg viewBox={`0 0 ${chart.width} ${chart.height}`} role="img" aria-label="Courbe lissée du P&amp;L cumulé. Survole un point pour voir ses propriétés." className="h-auto max-h-[380px] w-full" onMouseLeave={() => setHoverPoint(null)}>
       <defs><linearGradient id="equityPremiumFill" x1="0" x2="0" y1="0" y2="1">
         <stop offset="0%" stopColor="#059669" stopOpacity=".17" />
         <stop offset={`${chart.zeroOffset}%`} stopColor="#059669" stopOpacity=".025" />
@@ -76,10 +96,7 @@ function EquityChart({ points }: { points: { date: string; balance: number; pnl:
       <line x1={chart.left} x2={chart.width - chart.right} y1={chart.height - chart.bottom} y2={chart.height - chart.bottom} stroke="#94a3b8" strokeOpacity=".8" />
       <line x1={chart.left} x2={chart.width - chart.right} y1={chart.zeroY} y2={chart.zeroY} stroke="#64748b" strokeWidth="1.4" strokeDasharray="5 4" />
       <path d={chart.area} fill="url(#equityPremiumFill)" />
-      {points.slice(1).map((p, i) => {
-        const previous = points[i], negative = (previous.balance + p.balance) / 2 < 0;
-        return <line key={p.tradeIndex} x1={chart.x(i)} y1={chart.y(previous.balance)} x2={chart.x(i + 1)} y2={chart.y(p.balance)} stroke={negative ? '#e11d48' : '#059669'} strokeWidth={hoverPoint === i || hoverPoint === i + 1 ? 3.5 : 2.5} strokeLinecap="round" />;
-      })}
+      {chart.segments.map((segment, i) => <path key={points[i + 1].tradeIndex} d={segment.d} fill="none" stroke={segment.negative ? '#e11d48' : '#059669'} strokeWidth={hoverPoint === i || hoverPoint === i + 1 ? 3.5 : 2.7} strokeLinecap="round" strokeLinejoin="round" />)}
       {points.map((p, i) => <circle key={p.tradeIndex} cx={chart.x(i)} cy={chart.y(p.balance)} r={hoverPoint === i ? 5 : i === points.length - 1 ? 3.8 : 2.4} fill={p.balance < 0 ? '#e11d48' : '#059669'} stroke="white" strokeWidth={hoverPoint === i ? 2 : 1} className="cursor-crosshair transition-all" onMouseEnter={() => setHoverPoint(i)} />)}
       {hovered && hoverPoint !== null && <g pointerEvents="none">
         <rect x={tipX} y={tipY} width="158" height="66" rx="7" fill="#0f172a" fillOpacity=".94" />
@@ -150,11 +167,15 @@ function SetupDonutChart({ stats, totalTrades }: { stats: [string, { count: numb
       </svg>
       <span className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center"><span className="text-2xl font-bold tracking-tight text-slate-900">{totalTrades}</span><span className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Trades</span></span>
     </div>
-    <div className="min-w-0 min-h-[70px]">
-      {hovered ? <div className="rounded-lg border border-slate-200/80 bg-white/95 p-3 shadow-sm transition-opacity" aria-live="polite">
-        <div className="mb-2 flex items-center gap-2"><span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ backgroundColor: hovered.color }} /><span className="truncate text-xs font-semibold text-slate-800">{hovered.name}</span><span className="ml-auto text-xs font-bold tabular-nums text-slate-600">{Math.round(hovered.share * 100)}%</span></div>
-        <div className="grid grid-cols-3 gap-2 text-[10px]"><div><div className="text-slate-400">Trades</div><div className="mt-0.5 font-semibold text-slate-700">{hovered.count}</div></div><div><div className="text-slate-400">Gagnants</div><div className="mt-0.5 font-semibold text-slate-700">{hovered.wins}</div></div><div><div className="text-slate-400">P&amp;L</div><div className={`mt-0.5 font-semibold ${hovered.pnl < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>{money(hovered.pnl)}</div></div></div>
-      </div> : <div className="flex h-full min-h-[70px] items-center justify-center text-center text-[11px] text-slate-400">Survole un segment pour voir ses propriétés.</div>}
+    <div className="min-w-0 space-y-2">
+      {segments.map(segment => <div key={segment.name} className={`flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors ${hoveredName === segment.name ? 'bg-slate-50' : ''}`} onMouseEnter={() => setHoveredName(segment.name)} onMouseLeave={() => setHoveredName(null)}>
+        <span className="h-2.5 w-2.5 shrink-0 rounded-sm" style={{ backgroundColor: segment.color }} />
+        <div className="min-w-0 flex-1"><div className="truncate text-xs font-medium text-slate-700">{segment.name}</div><div className="text-[10px] text-slate-400">{segment.count} trades · {segment.wins} gagnants</div></div>
+        <div className="shrink-0 text-right"><div className="text-xs font-semibold tabular-nums text-slate-700">{Math.round(segment.share * 100)}%</div><div className={`text-[10px] font-medium tabular-nums ${segment.pnl < 0 ? 'text-rose-600' : 'text-emerald-600'}`}>{money(segment.pnl)}</div></div>
+      </div>)}
+      {hovered && <div className="rounded-lg border border-slate-200/70 bg-white/90 px-3 py-2 text-[10px] text-slate-500 shadow-sm">
+        <span className="font-semibold text-slate-700">{hovered.name}</span> · {hovered.count} trades · {Math.round(hovered.share * 100)}% · <span className={hovered.pnl < 0 ? 'font-semibold text-rose-600' : 'font-semibold text-emerald-600'}>{money(hovered.pnl)}</span>
+      </div>}
     </div>
   </div>;
 }
