@@ -143,11 +143,11 @@ export function Psychology({ trades }: PsychologyProps) {
       <section className="space-y-4">
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_6px_24px_rgba(12,95,66,.035)] sm:p-5">
           <div className="mb-4 flex items-start justify-between gap-3"><div><h3 className="text-base font-bold tracking-tight text-slate-900">Performance par état émotionnel</h3><p className="mt-1 text-xs text-slate-500">Volume de trades et P&L observé pour chaque état renseigné.</p></div><Activity className="h-5 w-5 text-emerald-600" /></div>
-          {rankedEmotions.length === 0 ? <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-500">Aucun état émotionnel n’est renseigné dans les trades actuels.</p> : <div className="grid gap-6 xl:grid-cols-[minmax(280px,0.7fr)_minmax(0,1.8fr)] xl:items-center">
-            <div className="flex min-h-[330px] flex-col items-center justify-center rounded-2xl border border-emerald-100 bg-gradient-to-b from-emerald-50/70 to-white p-6">
-              <div className="relative h-60 w-60 max-w-full">
+          {rankedEmotions.length === 0 ? <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-500">Aucun état émotionnel n’est renseigné dans les trades actuels.</p> : <div className="grid gap-6 xl:grid-cols-[minmax(390px,0.9fr)_minmax(0,2.1fr)] xl:items-center">
+            <div className="flex min-h-[440px] flex-col items-center justify-center rounded-2xl border border-emerald-100 bg-gradient-to-b from-emerald-50/70 to-white p-6">
+              <div className="relative h-[340px] w-[340px] max-w-full">
                 <svg viewBox="0 0 120 120" className="h-full w-full -rotate-90" role="img" aria-label="Diagramme en anneau de la répartition des trades par état émotionnel">
-                  <circle cx="60" cy="60" r="43" fill="none" stroke="#E8EEF2" strokeWidth="13" />
+                  <circle cx="60" cy="60" r="48" fill="none" stroke="#E8EEF2" strokeWidth="13" />
                   {rankedEmotions.map((emotion, index) => {
                     const circumference = 2 * Math.PI * 43;
                     const previousCount = rankedEmotions.slice(0, index).reduce((sum, item) => sum + emotionStats[item].count, 0);
