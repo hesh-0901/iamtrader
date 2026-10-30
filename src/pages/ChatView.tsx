@@ -145,7 +145,7 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
       }
     })();
     return () => { cancelled = true; };
-  }, [uid, currentDisplayName]);
+  }, [uid, userProfile?.displayName]);
 
   useEffect(() => {
     if (!initialConversationId) return;
