@@ -6,7 +6,7 @@ export function Modal({isOpen,onClose,title,subtitle,children,maxWidth='max-w-2x
   if(!isOpen)return null;
   return <div className={`fixed inset-0 z-50 flex overflow-hidden ${rightPanel ? "justify-end" : "items-center justify-center overflow-y-auto p-4 sm:p-6"}`}>
     <div className="fixed inset-0 bg-[#030604]/82 backdrop-blur-md" onClick={onClose} aria-hidden="true"/>
-    <div className={`relative z-10 flex flex-col overflow-hidden border border-[#D7E2EA] bg-white shadow-[0_30px_100px_rgba(10,25,47,.20)] animate-in duration-300 ${rightPanel ? "h-[100dvh] w-full rounded-none border-y-0 border-r-0 border-l sm:w-1/2 sm:rounded-l-[28px] sm:rounded-r-none slide-in-from-right" : `my-8 max-h-[90vh] w-full ${maxWidth} rounded-[26px] fade-in ${slideFromRight ? "slide-in-from-left" : "zoom-in-95"}`}`}>
+    <div className={`relative z-10 flex flex-col overflow-hidden border border-[#D7E2EA] bg-white shadow-[0_30px_100px_rgba(10,25,47,.20)] animate-in duration-300 ${rightPanel ? "h-[calc(100dvh-2rem)] w-[calc(100%-1rem)] my-4 mr-4 rounded-[28px] sm:h-[calc(100dvh-2rem)] sm:w-1/2 sm:my-4 sm:mr-4 sm:rounded-[28px] slide-in-from-right" : `my-8 max-h-[90vh] w-full ${maxWidth} rounded-[26px] fade-in ${slideFromRight ? "slide-in-from-left" : "zoom-in-95"}`}`}>
       <div className="flex items-start justify-between px-6 py-5 border-b border-[#E6EDF2] bg-[#F8FBFD] shrink-0">
         <div><h3 className="text-lg font-bold text-[#0A192F] tracking-tight">{title}</h3>{subtitle&&<p className="text-[11px] text-[#60758D] mt-1">{subtitle}</p>}</div>
         <button onClick={onClose} className="p-2 text-[#60758D] hover:text-[#0A192F] rounded-xl hover:bg-[#EAF4F1] transition-all cursor-pointer" aria-label="Fermer"><X className="w-5 h-5"/></button>
