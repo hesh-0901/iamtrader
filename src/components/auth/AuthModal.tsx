@@ -69,6 +69,11 @@ const COUNTRIES = [
   { name: 'Zimbabwe', code: '+263', flag: '🇿🇼' }
 ];
 
+const flagImageUrl = (flag: string) => {
+  const iso = Array.from(flag).map(char => String.fromCharCode(char.codePointAt(0)! - 0x1F1E6 + 65)).join('').toLowerCase();
+  return `https://flagcdn.com/w40/${iso}.png`;
+};
+
 const fieldClass = 'w-full rounded-xl border border-[#DCE5EC] bg-white px-3 py-2.5 !text-[#0B1F35] placeholder:!text-[#9AA9B8] outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10';
 
 export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) {
@@ -243,7 +248,7 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
                 <div className="relative">
                   <span className="mb-1.5 block font-semibold text-neutral-500">Pays de résidence *</span>
                   <button type="button" onClick={() => setCountryOpen(open => !open)} aria-expanded={countryOpen} className={`${fieldClass} flex items-center justify-between text-left`}>
-                    {selectedCountry ? <span className="flex min-w-0 items-center gap-2"><span className="text-2xl leading-none">{selectedCountry.flag}</span><span className="truncate">{selectedCountry.name}</span></span> : <span className="text-[#9AA9B8]">Choisir un pays</span>}
+                    {selectedCountry ? <span className="flex min-w-0 items-center gap-2"><img src={flagImageUrl(selectedCountry.flag)} alt="" className="h-5 w-7 rounded-sm object-cover" /><span className="truncate">{selectedCountry.name}</span></span> : <span className="text-[#9AA9B8]">Choisir un pays</span>}
                     <span className="ml-2 text-slate-400">▾</span>
                   </button>
                   {countryOpen && <div className="absolute left-0 right-0 top-full z-[80] mt-1 max-h-64 overflow-y-auto rounded-xl border border-[#DCE5EC] bg-white p-1 shadow-2xl">
@@ -253,15 +258,15 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
                       setWhatsapp(item.code + (previousLocal ? ' ' + previousLocal : ''));
                       setCountryOpen(false);
                     }} className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm text-[#0B1F35] hover:bg-emerald-50 ${country === item.name ? 'bg-emerald-50' : ''}`}>
-                      <span className="w-8 text-center text-2xl leading-none">{item.flag}</span><span className="flex-1">{item.name}</span><span className="text-xs text-slate-500">{item.code}</span>
+                      <img src={flagImageUrl(item.flag)} alt="" className="h-5 w-7 rounded-sm object-cover" /><span className="flex-1">{item.name}</span><span className="text-xs text-slate-500">{item.code}</span>
                     </button>)}
                   </div>}
                 </div>
                 <label className="block">
                   <span className="mb-1.5 block font-semibold text-neutral-500">Numéro WhatsApp *</span>
                   <span className="flex min-w-0 overflow-hidden rounded-xl border border-[#DCE5EC] bg-white transition focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/10">
-                    <span className="flex shrink-0 items-center border-r border-[#DCE5EC] bg-slate-50 px-3 text-sm font-semibold text-[#0B1F35]">{selectedCountry ? selectedCountry.flag + ' ' + phoneCode : <Phone className="h-4 w-4 text-neutral-500" />}</span>
-                    <input type="tel" autoComplete="tel-national" placeholder="Numéro sans indicatif" value={localWhatsapp} onChange={e => setWhatsapp((phoneCode ? phoneCode + ' ' : '') + e.target.value.replace(/^\+?\d{1,4}\s*/, '').replace(/[^\d\s()-]/g, ''))} className="w-full min-w-0 bg-transparent px-3 py-2.5 text-[#0B1F35] outline-none placeholder:text-[#9AA9B8]" required />
+                    <span className="flex shrink-0 items-center border-r border-[#DCE5EC] bg-slate-50 px-3 text-sm font-semibold text-[#0B1F35]">{selectedCountry ? <><img src={flagImageUrl(selectedCountry.flag)} alt="" className="mr-2 h-5 w-7 rounded-sm object-cover" />{phoneCode}</> : <Phone className="h-4 w-4 text-neutral-500" />}</span>
+                    <input type="tel" autoComplete="tel-national" placeholder="Numéro sans indicatif" value={localWhatsapp} onChange={e => setWhatsapp((phoneCode ? phoneCode + ' ' : '') + e.target.value.replace(/\D/g, ''))} className="w-full min-w-0 bg-transparent px-3 py-2.5 text-[#0B1F35] outline-none placeholder:text-[#9AA9B8]" required />
                   </span>
                 </label>
               </div>
