@@ -12,7 +12,7 @@ interface AuthModalProps {
 
 const REGISTER_AVATARS = Array.from({ length: 50 }, (_, index) => {
   const number = String(index + 1).padStart(3, '0');
-  return { id: `avatar-${number}`, url: `/avatars/avatar-${number}.webp` };
+  return { id: `avatar-${number}`, url: `/avatars/avatar-${number}.svg` };
 });
 
 const fieldClass = 'w-full rounded-xl border border-[#DCE5EC] bg-white px-3 py-2.5 !text-[#0B1F35] placeholder:!text-[#9AA9B8] outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10';
@@ -220,7 +220,7 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
 
       {avatarModalOpen && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center bg-[#030604]/85 p-3 backdrop-blur-md sm:p-6" role="dialog" aria-modal="true" aria-label="Choisir un avatar">
-          <div className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl animate-in slide-in-from-right duration-300">
+          <div className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl animate-in slide-in-from-left duration-300">
             <header className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
               <div><h3 className="text-base font-black text-[#0B1F35]">Bibliothèque d’avatars</h3><p className="mt-1 text-xs text-slate-500">Sélectionnez un seul avatar pour votre compte.</p></div>
               <button type="button" onClick={() => setAvatarModalOpen(false)} className="rounded-xl p-2 text-slate-500 hover:bg-slate-100" aria-label="Fermer"><X className="h-5 w-5" /></button>
