@@ -81,6 +81,7 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [country, setCountry] = useState('');
+  const [countryOpen, setCountryOpen] = useState(false);
   const [whatsapp, setWhatsapp] = useState('');
   const selectedCountry = COUNTRIES.find(item => item.name === country);
   const phoneCode = selectedCountry?.code || '';
@@ -239,18 +240,23 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
                 </span>
               </label>
               <div className="grid gap-3 sm:grid-cols-2">
-                <label className="block">
+                <div className="relative">
                   <span className="mb-1.5 block font-semibold text-neutral-500">Pays de résidence *</span>
-                  <select autoComplete="country-name" value={country} onChange={e => {
-                    const nextCountry = COUNTRIES.find(item => item.name === e.target.value);
-                    const previousLocal = phoneCode && whatsapp.startsWith(phoneCode) ? whatsapp.slice(phoneCode.length).trim() : whatsapp;
-                    setCountry(e.target.value);
-                    setWhatsapp(nextCountry ? nextCountry.code + (previousLocal ? ' ' + previousLocal : '') : previousLocal);
-                  }} className={fieldClass} required>
-                    <option value="">Choisir un pays</option>
-                    {COUNTRIES.map(item => <option key={item.name} value={item.name}>{item.flag} {item.name}</option>)}
-                  </select>
-                </label>
+                  <button type="button" onClick={() => setCountryOpen(open => !open)} aria-expanded={countryOpen} className={`${fieldClass} flex items-center justify-between text-left`}>
+                    {selectedCountry ? <span className="flex min-w-0 items-center gap-2"><span className="text-2xl leading-none">{selectedCountry.flag}</span><span className="truncate">{selectedCountry.name}</span></span> : <span className="text-[#9AA9B8]">Choisir un pays</span>}
+                    <span className="ml-2 text-slate-400">▾</span>
+                  </button>
+                  {countryOpen && <div className="absolute left-0 right-0 top-full z-[80] mt-1 max-h-64 overflow-y-auto rounded-xl border border-[#DCE5EC] bg-white p-1 shadow-2xl">
+                    {COUNTRIES.map(item => <button key={item.name} type="button" onClick={() => {
+                      const previousLocal = phoneCode && whatsapp.startsWith(phoneCode) ? whatsapp.slice(phoneCode.length).trim() : whatsapp;
+                      setCountry(item.name);
+                      setWhatsapp(item.code + (previousLocal ? ' ' + previousLocal : ''));
+                      setCountryOpen(false);
+                    }} className={`flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm text-[#0B1F35] hover:bg-emerald-50 ${country === item.name ? 'bg-emerald-50' : ''}`}>
+                      <span className="w-8 text-center text-2xl leading-none">{item.flag}</span><span className="flex-1">{item.name}</span><span className="text-xs text-slate-500">{item.code}</span>
+                    </button>)}
+                  </div>}
+                </div>
                 <label className="block">
                   <span className="mb-1.5 block font-semibold text-neutral-500">Numéro WhatsApp *</span>
                   <span className="flex min-w-0 overflow-hidden rounded-xl border border-[#DCE5EC] bg-white transition focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/10">
