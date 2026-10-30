@@ -7,7 +7,6 @@ import {
 } from 'lucide-react';
 import { resetUserPassword, updateTraderProfile, logoutUser } from '../services/auth';
 import { subscribeDeviceSessions, revokeDeviceSession, getDeviceSessionId, endCurrentDeviceSession, DeviceSession } from '../services/deviceSessions';
-import { AvatarStudio } from '../components/settings/AvatarStudio';
 import { useToast } from '../components/common/Toast';
 import { TradingJournalSettings } from '../components/settings/TradingJournalSettings';
 import { PaymentHistory } from './PaymentHistory';
@@ -98,7 +97,6 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
   const [socialNetwork, setSocialNetwork] = useState('Instagram');
   const [socialUsername, setSocialUsername] = useState('');
   const [isProfileSaving, setIsProfileSaving] = useState(false);
-  const [isAvatarModalOpen, setIsAvatarModalOpen] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(!userProfile?.traderProfile);
   const [defaultCurrency, setDefaultCurrency] = useState(userProfile?.settings?.defaultCurrency || 'USD');
   const [theme, setTheme] = useState<'light'>('light');
@@ -716,20 +714,10 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
-                    <button type="button" onClick={() => setIsAvatarModalOpen(true)} className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"><Sparkles className="h-4 w-4" /> Avatar</button>
                     <button type="button" onClick={() => setIsEditingProfile(true)} className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-emerald-700"><User className="h-4 w-4" /> Modifier le profil</button>
                   </div>
                 </div>
               </section>
-
-              {isAvatarModalOpen && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/60 p-3 backdrop-blur-sm sm:p-6" onMouseDown={event => { if (event.target === event.currentTarget) setIsAvatarModalOpen(false); }}>
-                  <div role="dialog" aria-modal="true" aria-label="Studio de création d’avatar" className="relative max-h-[92vh] w-full max-w-5xl overflow-y-auto rounded-[26px] bg-white shadow-2xl">
-                    <button type="button" aria-label="Fermer le studio d’avatar" onClick={() => setIsAvatarModalOpen(false)} className="sticky top-3 z-10 ml-auto mr-3 mt-3 flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:bg-slate-50 hover:text-slate-900"><X className="h-4 w-4" /></button>
-                    <div className="px-3 pb-3 sm:px-5 sm:pb-5"><AvatarStudio userProfile={userProfile} onSaved={() => setIsAvatarModalOpen(false)} /></div>
-                  </div>
-                </div>
-              )}
 
               <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
                 <div className="mb-5 flex items-center justify-between gap-3">
