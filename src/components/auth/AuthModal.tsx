@@ -199,7 +199,7 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
         onClose={onClose}
         title={mode === 'login' ? 'Connexion à IAMTRADER' : mode === 'register' ? 'Créer un compte IAMTRADER' : 'Réinitialiser le mot de passe'}
         subtitle="Espace sécurisé Firebase Authentication"
-        maxWidth={mode === 'register' ? 'max-w-2xl' : 'max-w-md'}
+        maxWidth="max-w-2xl"
         slideFromRight
       >
         <form onSubmit={handleSubmit} className="space-y-4 text-xs text-neutral-300">
