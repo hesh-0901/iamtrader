@@ -98,6 +98,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
   const [socialUsername, setSocialUsername] = useState('');
   const [isProfileSaving, setIsProfileSaving] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(!userProfile?.traderProfile);
+  const [isAvatarPreviewOpen, setIsAvatarPreviewOpen] = useState(false);
   const [defaultCurrency, setDefaultCurrency] = useState(userProfile?.settings?.defaultCurrency || 'USD');
   const [theme, setTheme] = useState<'light'>('light');
   const [dashboardMode, setDashboardMode] = useState<'standard' | 'focus' | 'analysis' | 'compact'>(() => (localStorage.getItem('iamtrader-dashboard-mode') as any) || 'standard');
@@ -703,9 +704,9 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                 <div className="h-2 bg-gradient-to-r from-emerald-500 via-teal-400 to-emerald-100" />
                 <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-center sm:justify-between sm:p-7">
                   <div className="flex min-w-0 items-center gap-4">
-                    <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-emerald-50 text-xl font-black text-emerald-700 ring-1 ring-emerald-100">
-                      {(userProfile?.avatarURL || userProfile?.photoURL) ? <img src={userProfile?.avatarURL || userProfile?.photoURL || ''} alt="Avatar" className="h-full w-full object-cover" /> : (displayName || [firstName, lastName].filter(Boolean).join(' ') || 'T').charAt(0).toUpperCase()}
-                    </div>
+                    <button type="button" onClick={() => (userProfile?.avatarURL || userProfile?.photoURL) && setIsAvatarPreviewOpen(true)} disabled={!(userProfile?.avatarURL || userProfile?.photoURL)} aria-label="Agrandir la photo de profil" title={(userProfile?.avatarURL || userProfile?.photoURL) ? "Agrandir la photo" : "Aucune photo de profil"} className={`group relative flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-emerald-50 text-xl font-black text-emerald-700 ring-1 ring-emerald-100 ${(userProfile?.avatarURL || userProfile?.photoURL) ? "cursor-zoom-in" : "cursor-default"}`}>
+                      {(userProfile?.avatarURL || userProfile?.photoURL) ? <><img src={userProfile?.avatarURL || userProfile?.photoURL || ''} alt="Avatar" className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105" /><span className="absolute inset-0 flex items-center justify-center bg-slate-950/0 text-white opacity-0 transition group-hover:bg-slate-950/25 group-hover:opacity-100"><span className="rounded-full bg-slate-950/55 px-2 py-1 text-[9px] font-bold">Agrandir</span></span></> : (displayName || [firstName, lastName].filter(Boolean).join(' ') || 'T').charAt(0).toUpperCase()}
+                    </button>
                     <div className="min-w-0">
                       <p className="text-xs font-semibold uppercase tracking-wider text-emerald-700">Profil trader</p>
                       <h2 className="mt-1 truncate text-2xl font-black tracking-tight text-slate-950">{displayName || [firstName, lastName].filter(Boolean).join(' ') || 'Trader IAMTRADER'}</h2>
@@ -1024,6 +1025,13 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
             </div>
             </section>
           </div>
+        </div>
+      )}
+      {isAvatarPreviewOpen && (userProfile?.avatarURL || userProfile?.photoURL) && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/90 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Photo de profil agrandie" onClick={() => setIsAvatarPreviewOpen(false)}>
+          <button type="button" onClick={() => setIsAvatarPreviewOpen(false)} className="absolute right-5 top-5 rounded-full bg-white/10 p-3 text-white transition hover:bg-white/20" aria-label="Fermer l’aperçu"><X className="h-6 w-6" /></button>
+          <img src={userProfile?.avatarURL || userProfile?.photoURL || ''} alt="Photo de profil en grand format" className="max-h-[88vh] max-w-[min(90vw,900px)] rounded-2xl object-contain shadow-2xl" onClick={event => event.stopPropagation()} />
+          <p className="absolute bottom-5 text-xs font-medium text-white/65">Cliquez en dehors de la photo ou sur × pour fermer</p>
         </div>
       )}
     </div>
