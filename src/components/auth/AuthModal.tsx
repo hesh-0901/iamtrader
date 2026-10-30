@@ -202,8 +202,8 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
         rightPanel
         slideFromRight
       >
-        <form onSubmit={handleSubmit} className="space-y-4 text-xs text-neutral-300">
-          <div className="flex justify-center pb-1">
+        <form onSubmit={handleSubmit} className="mx-auto w-full max-w-[600px] space-y-4 text-xs text-neutral-300">
+          <div className="flex justify-center pb-2">
             <img src="/brand/logo-iamtrader-symbol.png" alt="IAMTRADER" className="h-10 w-10 object-contain" />
           </div>
 
@@ -303,11 +303,11 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
             </div>
           )}
 
-          <button type="submit" disabled={isLoading} className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-500 py-3 font-bold text-neutral-950 transition-colors hover:bg-emerald-400 disabled:opacity-50">
+          <button type="submit" disabled={isLoading} className="mx-auto mt-3 flex w-full max-w-[320px] items-center justify-center gap-2 rounded-xl bg-emerald-500 py-3 font-bold text-neutral-950 shadow-[0_8px_20px_rgba(16,185,129,.16)] transition-all hover:bg-emerald-400 hover:shadow-[0_10px_24px_rgba(16,185,129,.22)] disabled:opacity-50">
             {isLoading ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-neutral-950 border-t-transparent" /> : mode === 'login' ? 'Se connecter' : mode === 'register' ? 'Créer mon compte Trader' : 'Envoyer les instructions'}
           </button>
 
-          <div className="border-t border-neutral-800 pt-3 text-center text-neutral-400">
+          <div className="border-t border-slate-200 pt-4 text-center text-slate-500">
             {mode === 'login' && <p>Pas encore de compte ? <button type="button" onClick={() => switchMode('register')} className="ml-1 font-semibold text-emerald-400 hover:underline">Inscrivez-vous gratuitement</button></p>}
             {mode === 'register' && <p>Vous avez déjà un compte ? <button type="button" onClick={() => switchMode('login')} className="ml-1 font-semibold text-emerald-400 hover:underline">Connectez-vous</button></p>}
             {mode === 'forgot' && <p>Retour à la <button type="button" onClick={() => switchMode('login')} className="ml-1 font-semibold text-emerald-400 hover:underline">connexion</button></p>}
