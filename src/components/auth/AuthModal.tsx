@@ -202,9 +202,11 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
         rightPanel
         slideFromRight
       >
-        <form onSubmit={handleSubmit} className="mx-auto w-full max-w-[600px] space-y-4 text-xs text-neutral-300">
-          <div className="flex justify-center pb-2">
-            <img src="/brand/logo-iamtrader-symbol.png" alt="IAMTRADER" className="h-10 w-10 object-contain" />
+        <form onSubmit={handleSubmit} className={`mx-auto w-full space-y-5 text-xs text-neutral-300 ${mode === 'login' || mode === 'forgot' ? 'max-w-[440px] pt-4 sm:pt-8' : 'max-w-[600px]'}`}>
+          <div className="flex flex-col items-center gap-3 pb-2">
+            <img src="/brand/logo-iamtrader-symbol.png" alt="IAMTRADER" className="h-12 w-12 object-contain" />
+            {mode === 'login' && <div className="text-center"><h4 className="text-lg font-bold tracking-tight text-[#0B1F35]">Heureux de vous revoir</h4><p className="mt-1 text-xs text-slate-500">Connectez-vous à votre espace trader.</p></div>}
+            {mode === 'register' && <div className="text-center"><h4 className="text-lg font-bold tracking-tight text-[#0B1F35]">Rejoignez IAMTRADER</h4><p className="mt-1 text-xs text-slate-500">Créez votre espace et prenez le contrôle de vos performances.</p></div>}
           </div>
 
           {mode === 'register' && (
@@ -303,7 +305,7 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
             </div>
           )}
 
-          <button type="submit" disabled={isLoading} className="mx-auto mt-3 flex w-full max-w-[320px] items-center justify-center gap-2 rounded-xl bg-emerald-500 py-3 font-bold text-neutral-950 shadow-[0_8px_20px_rgba(16,185,129,.16)] transition-all hover:bg-emerald-400 hover:shadow-[0_10px_24px_rgba(16,185,129,.22)] disabled:opacity-50">
+          <button type="submit" disabled={isLoading} className="mt-2 flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3 font-bold text-white shadow-[0_8px_20px_rgba(5,150,105,.16)] transition-all hover:bg-emerald-700 hover:shadow-[0_10px_24px_rgba(5,150,105,.22)] disabled:opacity-50">
             {isLoading ? <span className="h-4 w-4 animate-spin rounded-full border-2 border-neutral-950 border-t-transparent" /> : mode === 'login' ? 'Se connecter' : mode === 'register' ? 'Créer mon compte Trader' : 'Envoyer les instructions'}
           </button>
 
