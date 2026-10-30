@@ -18,6 +18,8 @@ export async function loginWithEmail(email: string, pass: string): Promise<User>
 }
 
 export interface RegistrationProfile {
+  firstName: string;
+  lastName: string;
   country: string;
   whatsapp: string;
   avatarId: string;
