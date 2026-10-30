@@ -1148,10 +1148,12 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
       </div>
       <div className="pointer-events-none absolute bottom-4 left-1/2 max-w-[90vw] -translate-x-1/2 rounded-full border border-white/10 bg-black/55 px-4 py-2 text-xs text-white/85">{viewerImage.mediaName || "Image envoyée"} · Cliquez à côté pour fermer</div>
     </div>}
-  {viewerAvatar && <div className="fixed inset-0 z-[1200] flex items-center justify-center bg-slate-950/90 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label={`Photo de profil de ${viewerAvatar.name}`} onClick={() => setViewerAvatar(null)}>
-    <button type="button" onClick={() => setViewerAvatar(null)} className="absolute right-5 top-5 rounded-full bg-white/10 p-3 text-white transition hover:bg-white/20" aria-label="Fermer l’aperçu"><X className="h-6 w-6" /></button>
-    <img src={viewerAvatar.url} alt={`Photo de profil de ${viewerAvatar.name}`} className="max-h-[88vh] max-w-[min(90vw,900px)] rounded-2xl object-contain shadow-2xl" onClick={event => event.stopPropagation()} />
-    <p className="absolute bottom-5 text-xs font-medium text-white/65">{viewerAvatar.name} · Cliquez à côté pour fermer</p>
+  {viewerAvatar && <div className="fixed inset-0 z-[1200] flex items-center justify-center bg-slate-950/25 p-3 backdrop-blur-xl" role="dialog" aria-modal="true" aria-label={`Photo de profil de ${viewerAvatar.name}`} onClick={() => setViewerAvatar(null)}>
+    <div className="relative flex max-h-[76vh] max-w-[min(78vw,680px)] flex-col items-center rounded-3xl border border-white/25 bg-white/10 p-2.5 shadow-[0_20px_70px_rgba(0,0,0,0.22)] backdrop-blur-2xl" onClick={event => event.stopPropagation()}>
+      <button type="button" onClick={() => setViewerAvatar(null)} className="absolute right-3 top-3 z-10 rounded-full border border-white/25 bg-slate-900/30 p-2 text-white shadow-lg backdrop-blur-md transition hover:bg-slate-900/50" aria-label="Fermer l’aperçu"><X className="h-5 w-5" /></button>
+      <img src={viewerAvatar.url} alt={`Photo de profil de ${viewerAvatar.name}`} className="max-h-[68vh] max-w-full rounded-2xl object-contain" />
+      <p className="px-3 pt-2 text-xs font-medium text-white drop-shadow">{viewerAvatar.name}</p>
+    </div>
   </div>}
   </div></>;
 }
