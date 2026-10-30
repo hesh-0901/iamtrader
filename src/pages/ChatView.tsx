@@ -15,7 +15,7 @@ import {
 
 type ChatConversation = {
   id: string; members: string[]; memberNames?: Record<string, string>;
-  group?: boolean; title?: string; description?: string; avatarURL?: string; systemGroup?: boolean; lastMessage?: string; createdBy?: string; admins?: string[]; mentors?: string[]; closed?: boolean;
+  group?: boolean; title?: string; description?: string; avatarURL?: string; systemGroup?: boolean; lastMessage?: string; createdBy?: string; admins?: string[]; mentors?: string[]; closed?: boolean; inviteCode?: string; inviteEnabled?: boolean;
   updatedAt?: Timestamp | null; createdAt?: Timestamp | null;
 };
 type ChatMessage = {
