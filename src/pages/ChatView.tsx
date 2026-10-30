@@ -5,7 +5,7 @@ import { FriendsView } from './FriendsView';
 import { auth, db, app } from '../firebase/config';
 import { enablePipTalkPush, notifyPipTalkRecipients } from '../services/pushNotifications';
 import {
-  addDoc, collection, deleteDoc, doc, getDoc, getDocs, limit, onSnapshot, orderBy, query,
+  addDoc, arrayRemove, arrayUnion, collection, deleteDoc, doc, getDoc, getDocs, limit, onSnapshot, orderBy, query,
   serverTimestamp, setDoc, updateDoc, where, Timestamp
 } from 'firebase/firestore';
 import {
@@ -859,6 +859,35 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
     setError('');
   };
 
+  const updateGroupMemberRole = async (memberUid: string, role: 'admin' | 'mentor', enabled: boolean) => {
+    if (!active || !canManageGroup || memberUid === uid && role === 'admin' && !enabled && (active.admins || []).length <= 1) return;
+    try {
+      const field = role === 'admin' ? 'admins' : 'mentors';
+      await updateDoc(doc(db, 'conversations', active.id), {
+        [field]: enabled ? arrayUnion(memberUid) : arrayRemove(memberUid),
+        updatedAt: serverTimestamp()
+      });
+    } catch (err: any) {
+      setError(err?.message || 'Impossible de modifier le rôle du membre.');
+    }
+  };
+
+  const removeGroupMember = async (memberUid: string) => {
+    if (!active || !canManageGroup || memberUid === uid || memberUid === active.createdBy) return;
+    const memberName = active.memberNames?.[memberUid] || publicProfiles.find(item => item.uid === memberUid)?.displayName || 'ce membre';
+    if (!window.confirm(`Retirer ${memberName} de ce groupe ?`)) return;
+    try {
+      await updateDoc(doc(db, 'conversations', active.id), {
+        members: arrayRemove(memberUid),
+        admins: arrayRemove(memberUid),
+        mentors: arrayRemove(memberUid),
+        updatedAt: serverTimestamp()
+      });
+    } catch (err: any) {
+      setError(err?.message || 'Impossible de retirer ce membre.');
+    }
+  };
+
   const saveGroupSettings = async () => {
     if (!active || (!active.group && active.id !== 'community-hub') || !canManageGroup) return;
     const title = groupTitleDraft.trim();
@@ -1015,10 +1044,23 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
                     const memberName = active.memberNames?.[memberUid] || profile?.displayName || (memberUid === uid ? currentDisplayName : 'Trader');
                     const memberAvatar = profile?.avatarURL || profile?.photoURL;
                     const memberIsAdmin = (active.admins || []).includes(memberUid);
-                    return <div key={memberUid} className="flex items-center gap-3 py-3">
+                    const memberIsMentor = (active.mentors || []).includes(memberUid);
+                    const isCreator = memberUid === active.createdBy;
+                    return <div key={memberUid} className="flex flex-wrap items-center gap-3 py-3">
                       <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#d9fdd3] text-xs font-bold text-[#075e54]">{memberAvatar ? <img src={memberAvatar} alt="" className="h-full w-full object-cover" onError={event => { event.currentTarget.onerror = null; event.currentTarget.src = '/brand/logo-iamtrader-symbol.png'; }} /> : memberName.slice(0, 2).toUpperCase()}</div>
-                      <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-slate-800">{memberName}{memberUid === uid ? ' (vous)' : ''}</p><p className="mt-0.5 text-[11px] text-slate-500">{memberIsAdmin ? 'Administrateur du groupe' : 'Membre'}</p></div>
-                      {memberIsAdmin && <span className="rounded-full bg-[#d9fdd3] px-2.5 py-1 text-[10px] font-bold text-[#075e54]">Admin</span>}
+                      <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-slate-800">{memberName}{memberUid === uid ? ' (vous)' : ''}</p><p className="mt-0.5 text-[11px] text-slate-500">{isCreator ? 'Créateur du groupe' : memberIsAdmin ? 'Administrateur' : memberIsMentor ? 'Mentor' : 'Membre'}</p></div>
+                      <div className="flex items-center gap-1.5">
+                        {memberIsAdmin && <span className="rounded-full bg-[#d9fdd3] px-2 py-1 text-[10px] font-bold text-[#075e54]">Admin</span>}
+                        {memberIsMentor && <span className="rounded-full bg-sky-100 px-2 py-1 text-[10px] font-bold text-sky-700">Mentor</span>}
+                        {canManageGroup && memberUid !== uid && !isCreator && <details className="relative">
+                          <summary className="flex h-8 w-8 cursor-pointer list-none items-center justify-center rounded-full text-slate-500 hover:bg-slate-100" aria-label={`Actions pour ${memberName}`}><MoreVertical className="h-4 w-4" /></summary>
+                          <div className="absolute right-0 top-9 z-30 min-w-48 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+                            <button type="button" onClick={() => void updateGroupMemberRole(memberUid, 'mentor', !memberIsMentor)} className="w-full rounded-lg px-3 py-2 text-left text-xs font-medium text-slate-700 hover:bg-slate-50">{memberIsMentor ? 'Retirer le rôle mentor' : 'Nommer mentor'}</button>
+                            <button type="button" onClick={() => void updateGroupMemberRole(memberUid, 'admin', !memberIsAdmin)} className="w-full rounded-lg px-3 py-2 text-left text-xs font-medium text-slate-700 hover:bg-slate-50">{memberIsAdmin ? 'Retirer les droits admin' : 'Promouvoir administrateur'}</button>
+                            <button type="button" onClick={() => void removeGroupMember(memberUid)} className="w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-rose-600 hover:bg-rose-50">Retirer du groupe</button>
+                          </div>
+                        </details>}
+                      </div>
                     </div>;
                   })}
                 </div>
