@@ -89,6 +89,9 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
   const [groupDescriptionDraft, setGroupDescriptionDraft] = useState('');
   const [groupAvatarDraft, setGroupAvatarDraft] = useState('');
   const [groupAvatarFile, setGroupAvatarFile] = useState<File | null>(null);
+  const [selectedGroupInvitees, setSelectedGroupInvitees] = useState<string[]>([]);
+  const [groupInviteLink, setGroupInviteLink] = useState('');
+  const [addingGroupMembers, setAddingGroupMembers] = useState(false);
   const [savingGroupSettings, setSavingGroupSettings] = useState(false);
   const [viewerImage, setViewerImage] = useState<ChatMessage | null>(null);
   const [viewerAvatar, setViewerAvatar] = useState<{ url: string; name: string } | null>(null);
@@ -109,6 +112,40 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
       console.warn('PipTalk mentions: impossible de charger les profils publics.', err);
     });
   }, [uid]);
+
+  useEffect(() => {
+    if (!uid) return;
+    const params = new URLSearchParams(window.location.search);
+    const groupId = params.get('piptalkGroup');
+    const inviteCode = params.get('piptalkInvite');
+    if (!groupId || !inviteCode) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const groupRef = doc(db, 'conversations', groupId);
+        const snapshot = await getDoc(groupRef);
+        if (!snapshot.exists()) throw new Error("Ce groupe n'existe plus.");
+        const groupData = snapshot.data() as ChatConversation & { inviteCode?: string; inviteEnabled?: boolean };
+        if (!groupData.group || !groupData.inviteEnabled || groupData.inviteCode !== inviteCode) throw new Error("Ce lien d'invitation est invalide ou désactivé.");
+        if (!(groupData.members || []).includes(uid)) {
+          await updateDoc(groupRef, { members: arrayUnion(uid), memberNames: { ...(groupData.memberNames || {}), [uid]: currentDisplayName }, updatedAt: serverTimestamp() });
+        }
+        if (cancelled) return;
+        setActiveId(groupId);
+        setMobileChatOpen(true);
+        setShowGroupSettings(false);
+        setError('');
+      } catch (err: any) { if (!cancelled) setError(err?.message || "Impossible de rejoindre ce groupe."); }
+      finally {
+        if (!cancelled) {
+          params.delete('piptalkGroup'); params.delete('piptalkInvite');
+          const cleanUrl = window.location.pathname + (params.toString() ? `?${params.toString()}` : '') + window.location.hash;
+          window.history.replaceState({}, document.title, cleanUrl);
+        }
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [uid, currentDisplayName]);
 
   useEffect(() => {
     if (!initialConversationId) return;
@@ -859,6 +896,38 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
     setError('');
   };
 
+  const addGroupMembers = async () => {
+    if (!active || !canManageGroup || selectedGroupInvitees.length === 0 || addingGroupMembers) return;
+    const additions = selectedGroupInvitees.filter(memberUid => !(active.members || []).includes(memberUid));
+    if (!additions.length) { setSelectedGroupInvitees([]); return; }
+    setAddingGroupMembers(true);
+    try {
+      const names: Record<string, string> = {};
+      additions.forEach(memberUid => { names[memberUid] = publicProfiles.find(profile => profile.uid === memberUid)?.displayName || 'Trader'; });
+      await updateDoc(doc(db, 'conversations', active.id), {
+        members: arrayUnion(...additions),
+        memberNames: { ...(active.memberNames || {}), ...names },
+        updatedAt: serverTimestamp()
+      });
+      setSelectedGroupInvitees([]);
+    } catch (err: any) {
+      setError(err?.message || "Impossible d'ajouter les membres.");
+    } finally { setAddingGroupMembers(false); }
+  };
+
+  const createGroupInviteLink = async () => {
+    if (!active || !canManageGroup) return;
+    try {
+      const code = active.inviteCode || (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID().replace(/-/g, '') : `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`);
+      await updateDoc(doc(db, 'conversations', active.id), { inviteCode: code, inviteEnabled: true, updatedAt: serverTimestamp() });
+      const url = new URL(window.location.href);
+      url.searchParams.set('piptalkGroup', active.id);
+      url.searchParams.set('piptalkInvite', code);
+      setGroupInviteLink(url.toString());
+      await navigator.clipboard.writeText(url.toString());
+    } catch (err: any) { setError(err?.message || "Impossible de créer le lien d'invitation."); }
+  };
+
   const updateGroupMemberRole = async (memberUid: string, role: 'admin' | 'mentor', enabled: boolean) => {
     if (!active || !canManageGroup || memberUid === uid && role === 'admin' && !enabled && (active.admins || []).length <= 1) return;
     try {
@@ -1035,6 +1104,24 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
                   <textarea value={groupDescriptionDraft} onChange={e => setGroupDescriptionDraft(e.target.value)} disabled={!canManageGroup} maxLength={300} rows={3} placeholder="Ajoutez une description au groupe" className="mt-2 w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-normal text-slate-800 outline-none transition focus:border-emerald-400 focus:bg-white" />
                 </label>
                 {!canManageGroup && <p className="mt-2 text-xs text-slate-400">Seuls les administrateurs peuvent modifier les informations et la photo du groupe.</p>}
+              </div>
+              <div className="mt-2 bg-white px-4 py-4">
+                <h3 className="mb-2 text-sm font-bold text-slate-800">Ajouter des membres</h3>
+                {canManageGroup ? <>
+                  <div className="max-h-44 overflow-y-auto rounded-xl border border-slate-200 p-1">
+                    {publicProfiles.filter(profile => profile.uid !== uid && !(active.members || []).includes(profile.uid)).map(profile => <label key={profile.uid} className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 hover:bg-slate-50">
+                      <input type="checkbox" checked={selectedGroupInvitees.includes(profile.uid)} onChange={event => setSelectedGroupInvitees(previous => event.target.checked ? [...previous, profile.uid] : previous.filter(id => id !== profile.uid))} className="h-4 w-4 accent-emerald-600" />
+                      {profile.avatarURL || profile.photoURL ? <img src={profile.avatarURL || profile.photoURL} alt="" className="h-8 w-8 rounded-full object-cover" /> : <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-50 text-xs font-bold text-emerald-700">{profile.displayName.slice(0,1).toUpperCase()}</span>}
+                      <span className="min-w-0 flex-1 truncate text-xs font-medium text-slate-700">{profile.displayName}</span>
+                    </label>)}
+                    {publicProfiles.filter(profile => profile.uid !== uid && !(active.members || []).includes(profile.uid)).length === 0 && <p className="p-3 text-xs text-slate-400">Aucun autre utilisateur disponible.</p>}
+                  </div>
+                  <button type="button" onClick={() => void addGroupMembers()} disabled={!selectedGroupInvitees.length || addingGroupMembers} className="mt-3 w-full rounded-xl bg-[#075e54] px-3 py-2.5 text-xs font-bold text-white disabled:opacity-50">{addingGroupMembers ? 'Ajout…' : `Ajouter ${selectedGroupInvitees.length || ''} membre(s)`}</button>
+                </> : <p className="text-xs text-slate-500">Seuls les administrateurs peuvent ajouter des membres.</p>}
+              </div>
+              <div className="mt-2 bg-white px-4 py-4">
+                <div className="mb-2 flex items-center justify-between"><h3 className="text-sm font-bold text-slate-800">Lien d’invitation</h3><span className="text-[10px] text-slate-400">Partageable</span></div>
+                {canManageGroup ? <><p className="mb-3 text-xs text-slate-500">Générez un lien pour permettre à un utilisateur connecté de rejoindre ce groupe.</p><button type="button" onClick={() => void createGroupInviteLink()} className="w-full rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-xs font-bold text-emerald-800">Générer et copier le lien</button>{groupInviteLink && <div className="mt-2 break-all rounded-lg bg-slate-50 p-2 text-[10px] text-slate-500">{groupInviteLink}</div>}</> : <p className="text-xs text-slate-500">Demandez un lien à un administrateur du groupe.</p>}
               </div>
               <div className="mt-2 bg-white px-4 py-4">
                 <div className="mb-3 flex items-center justify-between"><h3 className="text-sm font-bold text-slate-800">Membres du groupe</h3><span className="text-xs text-slate-400">{(active.members || []).length}</span></div>
