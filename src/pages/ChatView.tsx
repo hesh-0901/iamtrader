@@ -88,6 +88,7 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
   const [groupTitleDraft, setGroupTitleDraft] = useState('Community Hub');
   const [groupDescriptionDraft, setGroupDescriptionDraft] = useState('');
   const [groupAvatarDraft, setGroupAvatarDraft] = useState('');
+  const [groupAvatarFile, setGroupAvatarFile] = useState<File | null>(null);
   const [savingGroupSettings, setSavingGroupSettings] = useState(false);
   const [viewerImage, setViewerImage] = useState<ChatMessage | null>(null);
   const [viewerAvatar, setViewerAvatar] = useState<{ url: string; name: string } | null>(null);
@@ -849,10 +850,11 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
     finally { setCreatingGroup(false); }
   };
   const openGroupSettings = () => {
-    if (!active || (!active.group && active.id !== 'community-hub') || !canManageGroup) return;
+    if (!active || (!active.group && active.id !== 'community-hub')) return;
     setGroupTitleDraft(active.title || 'Community Hub');
     setGroupDescriptionDraft(active.description || '');
     setGroupAvatarDraft(active.avatarURL || '');
+    setGroupAvatarFile(null);
     setShowGroupSettings(true);
     setError('');
   };
@@ -864,9 +866,21 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
     setSavingGroupSettings(true);
     setError('');
     try {
+      let avatarURL = groupAvatarDraft.trim();
+      if (groupAvatarFile) {
+        const form = new FormData();
+        form.append('file', groupAvatarFile, groupAvatarFile.name.replace(/[^a-zA-Z0-9._-]/g, '_'));
+        form.append('upload_preset', 'piptalk_media');
+        form.append('folder', `piptalk/groups/${active.id}`);
+        const response = await fetch('https://api.cloudinary.com/v1_1/ocgef9bk/image/upload', { method: 'POST', body: form });
+        const uploaded = await response.json() as { secure_url?: string; error?: { message?: string } };
+        if (!response.ok || !uploaded.secure_url) throw new Error(uploaded.error?.message || 'Impossible de téléverser la photo du groupe.');
+        avatarURL = uploaded.secure_url;
+      }
       await updateDoc(doc(db, 'conversations', active.id), {
-        title, description: groupDescriptionDraft.trim().slice(0, 300),
-        avatarURL: groupAvatarDraft.trim(), updatedAt: serverTimestamp()
+        ...(canManageGroup ? { title, description: groupDescriptionDraft.trim().slice(0, 300) } : {}),
+        ...(canManageGroup && (groupAvatarFile || avatarURL !== (active.avatarURL || '')) ? { avatarURL } : {}),
+        updatedAt: serverTimestamp()
       });
       setShowGroupSettings(false);
     } catch (err: any) { setError('Paramètres du groupe : ' + (err?.message || 'permission refusée')); }
@@ -969,12 +983,12 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
         </div>
       </aside>
       <section className={`${mobileChatOpen ? 'flex' : 'hidden md:flex'} min-w-0 flex-1 flex-col bg-[#f7faf9]`}>
-        {active && <header className="flex items-center gap-3 border-b border-slate-200 bg-white px-3 py-3 sm:px-5"><button onClick={closeMobileChat} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 md:hidden" aria-label="Retour"><ArrowLeft className="h-4 w-4" /></button><div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-emerald-100 text-xs font-black text-emerald-700">{active ? (active.id === 'community-hub' ? (active.avatarURL || '') : avatarForConversation(active, otherUid)) ? <button type="button" onClick={() => { const url = active.id === 'community-hub' ? (active.avatarURL || '') : avatarForConversation(active, otherUid); if (url) setViewerAvatar({ url, name: activeName }); }} className="h-full w-full cursor-zoom-in" aria-label="Agrandir la photo de la conversation"><img src={active.id === 'community-hub' ? (active.avatarURL || '') : avatarForConversation(active, otherUid)} alt={activeName} className="h-full w-full object-cover" onError={event => { event.currentTarget.onerror = null; event.currentTarget.src = '/brand/logo-iamtrader-symbol.png'; }} /></button> : activeName.slice(0, 2).toUpperCase() : <MessageCircle className="h-4 w-4" />}</div><div className="min-w-0 flex-1"><h3 className="truncate text-sm font-extrabold text-[#0b1f35]">{activeName}</h3><p className="text-[10px] text-slate-500">{active?.description || (active ? (active.group ? 'Groupe communautaire' : 'Conversation privée') : 'Sélectionnez une discussion')}</p></div>{active?.group && canManageGroup && <button onClick={openGroupSettings} className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"><Settings className="h-4 w-4" /><span className="hidden sm:inline">Paramètres</span></button>}</header>}
+        {active && <header className="flex items-center gap-3 border-b border-slate-200 bg-white px-3 py-3 sm:px-5"><button onClick={closeMobileChat} className="rounded-lg p-1.5 text-slate-500 hover:bg-slate-100 md:hidden" aria-label="Retour"><ArrowLeft className="h-4 w-4" /></button><div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-emerald-100 text-xs font-black text-emerald-700">{active ? (active.id === 'community-hub' ? (active.avatarURL || '') : avatarForConversation(active, otherUid)) ? <button type="button" onClick={() => { const url = active.id === 'community-hub' ? (active.avatarURL || '') : avatarForConversation(active, otherUid); if (url) setViewerAvatar({ url, name: activeName }); }} className="h-full w-full cursor-zoom-in" aria-label="Agrandir la photo de la conversation"><img src={active.id === 'community-hub' ? (active.avatarURL || '') : avatarForConversation(active, otherUid)} alt={activeName} className="h-full w-full object-cover" onError={event => { event.currentTarget.onerror = null; event.currentTarget.src = '/brand/logo-iamtrader-symbol.png'; }} /></button> : activeName.slice(0, 2).toUpperCase() : <MessageCircle className="h-4 w-4" />}</div><div className="min-w-0 flex-1"><h3 className="truncate text-sm font-extrabold text-[#0b1f35]">{activeName}</h3><p className="text-[10px] text-slate-500">{active?.description || (active ? (active.group ? 'Groupe communautaire' : 'Conversation privée') : 'Sélectionnez une discussion')}</p></div>{active?.group && <button onClick={openGroupSettings} className="flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-50"><Settings className="h-4 w-4" /><span className="hidden sm:inline">Paramètres</span></button>}</header>}
         {showGroupSettings && active && createPortal(<div role="dialog" aria-modal="true" aria-label="Paramètres du groupe" className="fixed inset-0 z-[2147482000] flex justify-end bg-slate-950/55 backdrop-blur-[2px]" onMouseDown={event => { if (event.target === event.currentTarget) setShowGroupSettings(false); }}>
           <section className="flex h-full w-full max-w-[520px] flex-col bg-[#f7f8fa] shadow-2xl animate-[piptalk-drawer-in_260ms_cubic-bezier(0.2,0.8,0.2,1)] sm:border-l sm:border-white/30" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
             <header className="flex shrink-0 items-center gap-3 bg-[#075e54] px-4 py-4 text-white">
               <button type="button" onClick={() => setShowGroupSettings(false)} aria-label="Fermer les paramètres" className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white/90 transition hover:bg-white/10"><ArrowLeft className="h-5 w-5" /></button>
-              <div className="min-w-0 flex-1"><h2 className="truncate text-base font-bold">Infos du groupe</h2><p className="mt-0.5 text-[11px] text-white/75">Gérer les informations et les membres</p></div>
+              <div className="min-w-0 flex-1"><h2 className="truncate text-base font-bold">Infos du groupe</h2><p className="mt-0.5 text-[11px] text-white/75">Consulter les membres et les informations</p></div>
               <button type="button" onClick={() => setShowGroupSettings(false)} aria-label="Fermer" className="flex h-9 w-9 items-center justify-center rounded-full text-white/85 hover:bg-white/10"><X className="h-5 w-5" /></button>
             </header>
             <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain">
@@ -982,17 +996,16 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
                 <div className="mx-auto flex h-24 w-24 items-center justify-center overflow-hidden rounded-full bg-[#d9fdd3] text-2xl font-bold text-[#075e54] ring-1 ring-slate-200">
                   {groupAvatarDraft.trim() ? <img src={groupAvatarDraft.trim()} alt="Photo du groupe" className="h-full w-full object-cover" onError={event => { event.currentTarget.style.display = 'none'; }} /> : <Users className="h-10 w-10" />}
                 </div>
+                {canManageGroup && <label className="mt-3 inline-flex cursor-pointer items-center gap-2 rounded-full bg-slate-100 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-200"><ImageIcon className="h-4 w-4" />Changer la photo du groupe<input type="file" accept="image/*" className="hidden" onChange={event => { const file = event.target.files?.[0]; if (file) { setGroupAvatarFile(file); setGroupAvatarDraft(URL.createObjectURL(file)); } }} /></label>}
                 <p className="mt-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-slate-400">Nom du groupe</p>
-                <input value={groupTitleDraft} onChange={e => setGroupTitleDraft(e.target.value)} maxLength={60} aria-label="Nom du groupe" className="mt-1 w-full border-0 bg-transparent text-center text-xl font-bold text-slate-900 outline-none focus:ring-0" />
+                <input value={groupTitleDraft} onChange={e => setGroupTitleDraft(e.target.value)} disabled={!canManageGroup} maxLength={60} aria-label="Nom du groupe" className="mt-1 w-full border-0 bg-transparent text-center text-xl font-bold text-slate-900 outline-none focus:ring-0 disabled:opacity-100" />
                 <p className="mt-1 text-xs text-slate-500">{(active.members || []).length} membre(s)</p>
               </div>
               <div className="mt-2 bg-white px-4 py-4">
                 <label className="block text-xs font-semibold text-slate-500">Description du groupe
-                  <textarea value={groupDescriptionDraft} onChange={e => setGroupDescriptionDraft(e.target.value)} maxLength={300} rows={3} placeholder="Ajoutez une description au groupe" className="mt-2 w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-normal text-slate-800 outline-none transition focus:border-emerald-400 focus:bg-white" />
+                  <textarea value={groupDescriptionDraft} onChange={e => setGroupDescriptionDraft(e.target.value)} disabled={!canManageGroup} maxLength={300} rows={3} placeholder="Ajoutez une description au groupe" className="mt-2 w-full resize-none rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-normal text-slate-800 outline-none transition focus:border-emerald-400 focus:bg-white" />
                 </label>
-                <label className="mt-4 block text-xs font-semibold text-slate-500">URL de la photo du groupe
-                  <input value={groupAvatarDraft} onChange={e => setGroupAvatarDraft(e.target.value)} placeholder="https://..." className="mt-2 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-3 text-sm font-normal text-slate-800 outline-none transition focus:border-emerald-400 focus:bg-white" />
-                </label>
+                {!canManageGroup && <p className="mt-2 text-xs text-slate-400">Seuls les administrateurs peuvent modifier les informations et la photo du groupe.</p>}
               </div>
               <div className="mt-2 bg-white px-4 py-4">
                 <div className="mb-3 flex items-center justify-between"><h3 className="text-sm font-bold text-slate-800">Membres du groupe</h3><span className="text-xs text-slate-400">{(active.members || []).length}</span></div>
@@ -1013,16 +1026,16 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
               <div className="mt-2 bg-white px-4 py-4">
                 <h3 className="mb-3 text-sm font-bold text-slate-800">Autorisations du groupe</h3>
                 <div className="flex items-start gap-3 border-b border-slate-100 py-3"><ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-[#075e54]" /><div className="min-w-0 flex-1"><p className="text-sm font-semibold text-slate-800">Modifier les informations du groupe</p><p className="mt-1 text-xs leading-5 text-slate-500">Réservé aux administrateurs. Votre rôle actuel vous autorise à gérer ces paramètres.</p></div><span className="text-xs font-semibold text-slate-500">Admins</span></div>
-                <div className="flex items-start gap-3 py-3"><MessageCircle className="mt-0.5 h-5 w-5 shrink-0 text-[#075e54]" /><div className="min-w-0 flex-1"><p className="text-sm font-semibold text-slate-800">Envoyer des messages</p><p className="mt-1 text-xs leading-5 text-slate-500">{active.closed ? 'Groupe fermé : seuls les admins et les mentors peuvent publier.' : 'Groupe ouvert : les membres peuvent publier.'}</p></div><button type="button" onClick={async () => { if (!canManageGroup) return; try { await updateDoc(doc(db, 'conversations', active.id), { closed: !active.closed, updatedAt: serverTimestamp() }); } catch (err: any) { setError(err?.message || 'Impossible de modifier les autorisations.'); } }} className={`shrink-0 rounded-full px-3 py-1.5 text-[11px] font-bold ${active.closed ? 'bg-amber-100 text-amber-800' : 'bg-[#d9fdd3] text-[#075e54]'}`}>{active.closed ? 'Admins seuls' : 'Tous les membres'}</button></div>
+                <div className="flex items-start gap-3 py-3"><MessageCircle className="mt-0.5 h-5 w-5 shrink-0 text-[#075e54]" /><div className="min-w-0 flex-1"><p className="text-sm font-semibold text-slate-800">Envoyer des messages</p><p className="mt-1 text-xs leading-5 text-slate-500">{active.closed ? 'Groupe fermé : seuls les admins et les mentors peuvent publier.' : 'Groupe ouvert : les membres peuvent publier.'}</p></div><button type="button" disabled={!canManageGroup} onClick={async () => { if (!canManageGroup) return; try { await updateDoc(doc(db, 'conversations', active.id), { closed: !active.closed, updatedAt: serverTimestamp() }); } catch (err: any) { setError(err?.message || 'Impossible de modifier les autorisations.'); } }} className={`shrink-0 rounded-full px-3 py-1.5 text-[11px] font-bold ${active.closed ? 'bg-amber-100 text-amber-800' : 'bg-[#d9fdd3] text-[#075e54]'}`}>{active.closed ? 'Admins seuls' : 'Tous les membres'}</button></div>
               </div>
               <div className="mx-4 my-3 rounded-xl border border-rose-100 bg-white">
                 <button type="button" onClick={() => setShowGroupSettings(false)} className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-rose-600"><X className="h-4 w-4" />Fermer les paramètres</button>
               </div>
             </div>
-            <footer className="flex shrink-0 gap-3 border-t border-slate-200 bg-white px-4 py-3 shadow-[0_-4px_14px_rgba(15,23,42,0.04)]">
+            {canManageGroup && <footer className="flex shrink-0 gap-3 border-t border-slate-200 bg-white px-4 py-3 shadow-[0_-4px_14px_rgba(15,23,42,0.04)]">
               <button type="button" onClick={() => setShowGroupSettings(false)} className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600">Annuler</button>
               <button type="button" onClick={() => void saveGroupSettings()} disabled={savingGroupSettings || !groupTitleDraft.trim()} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#00a982] px-4 py-3 text-sm font-bold text-white disabled:opacity-50"><Save className="h-4 w-4" />{savingGroupSettings ? 'Enregistrement…' : 'Enregistrer'}</button>
-            </footer>
+            </footer>}
           </section>
         </div>, document.body)}
         {error && <div className="flex items-start gap-2 border-b border-rose-100 bg-rose-50 px-4 py-2 text-[10px] text-rose-700"><span className="flex-1 break-words">{error}</span><button onClick={() => setError('')} aria-label="Fermer"><X className="h-3.5 w-3.5" /></button></div>}
