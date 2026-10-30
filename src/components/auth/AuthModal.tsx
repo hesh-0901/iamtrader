@@ -10,9 +10,9 @@ interface AuthModalProps {
   defaultMode?: 'login' | 'register';
 }
 
-const REGISTER_AVATARS = Array.from({ length: 50 }, (_, index) => {
+const INITIAL_AVATARS = Array.from({ length: 28 }, (_, index) => {
   const number = String(index + 1).padStart(3, '0');
-  return { id: `avatar-${number}`, url: `/avatars/avatar-${number}.svg` };
+  return { id: number, url: `/avatars/${number}.png` };
 });
 
 const fieldClass = 'w-full rounded-xl border border-[#DCE5EC] bg-white px-3 py-2.5 !text-[#0B1F35] placeholder:!text-[#9AA9B8] outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10';
@@ -28,14 +28,38 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
   const [confirmPassword, setConfirmPassword] = useState('');
   const [country, setCountry] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
-  const [selectedAvatar, setSelectedAvatar] = useState<(typeof REGISTER_AVATARS)[number] | null>(null);
+  const [availableAvatars, setAvailableAvatars] = useState(INITIAL_AVATARS);
+  const [selectedAvatar, setSelectedAvatar] = useState<(typeof INITIAL_AVATARS)[number] | null>(null);
   const [avatarModalOpen, setAvatarModalOpen] = useState(false);
-  const [pendingAvatar, setPendingAvatar] = useState<(typeof REGISTER_AVATARS)[number] | null>(null);
+  const [pendingAvatar, setPendingAvatar] = useState<(typeof INITIAL_AVATARS)[number] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     if (isOpen) setMode(defaultMode);
   }, [isOpen, defaultMode]);
+
+  // Read the current avatar inventory from this repository so newly uploaded PNGs
+  // appear automatically without changing the registration form again.
+  useEffect(() => {
+    let cancelled = false;
+    fetch('https://api.github.com/repos/hesh-0901/iamtrader/contents/public/avatars?ref=main')
+      .then(response => {
+        if (!response.ok) throw new Error('Unable to load avatar inventory');
+        return response.json();
+      })
+      .then((files: Array<{ name?: string; type?: string }>) => {
+        const avatars = files
+          .filter(file => file.type === 'file' && /^\\d{3}\\.png$/i.test(file.name || ''))
+          .map(file => {
+            const id = (file.name || '').replace(/\\.png$/i, '');
+            return { id, url: '/avatars/' + id + '.png' };
+          })
+          .sort((a, b) => a.id.localeCompare(b.id));
+        if (!cancelled && avatars.length) setAvailableAvatars(avatars);
+      })
+      .catch(error => console.warn('Avatar inventory fallback:', error));
+    return () => { cancelled = true; };
+  }, []);
 
   const switchMode = (nextMode: 'login' | 'register' | 'forgot') => {
     setMode(nextMode);
@@ -131,7 +155,7 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
                   </button>
                   <div className="min-w-0 flex-1">
                     <p className="font-bold text-[#0B1F35]">Photo de profil / Avatar *</p>
-                    <p className="mt-1 text-[11px] leading-4 text-slate-500">{selectedAvatar ? `Avatar ${selectedAvatar.id.replace('avatar-', '#')} sélectionné` : 'Touchez l’icône photo pour ouvrir la galerie et choisir un avatar.'}</p>
+                    <p className="mt-1 text-[11px] leading-4 text-slate-500">{selectedAvatar ? `Avatar ${('#' + selectedAvatar.id)} sélectionné` : 'Touchez l’icône photo pour ouvrir la galerie et choisir un avatar.'}</p>
                     <button type="button" onClick={() => { setPendingAvatar(selectedAvatar); setAvatarModalOpen(true); }} className="mt-2 text-[11px] font-bold text-emerald-700 hover:underline">
                       {selectedAvatar ? 'Modifier mon choix avant inscription' : 'Choisir un avatar'}
                     </button>
@@ -227,11 +251,11 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
             </header>
             <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto p-4 sm:grid-cols-[minmax(0,1fr)_220px] sm:p-5">
               <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 md:grid-cols-5">
-                {REGISTER_AVATARS.map(avatar => {
+                {availableAvatars.map(avatar => {
                   const active = pendingAvatar?.id === avatar.id;
                   return <button key={avatar.id} type="button" onClick={() => setPendingAvatar(avatar)} aria-pressed={active} className={`relative overflow-hidden rounded-2xl border-2 bg-white p-1.5 transition ${active ? 'border-emerald-500 ring-2 ring-emerald-100 shadow-lg' : 'border-slate-200 hover:border-emerald-300'}`}>
                     <img src={avatar.url} alt={avatar.id} loading="lazy" className="aspect-square w-full rounded-xl object-cover" />
-                    <span className="block py-1 text-center text-[10px] font-bold text-slate-600">{avatar.id.replace('avatar-', '#')}</span>
+                    <span className="block py-1 text-center text-[10px] font-bold text-slate-600">{('#' + avatar.id)}</span>
                     {active && <span className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500 text-white"><Check className="h-3.5 w-3.5" /></span>}
                   </button>;
                 })}
