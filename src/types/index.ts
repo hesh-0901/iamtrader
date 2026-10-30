@@ -145,6 +145,7 @@ export interface UserProfile {
   displayName: string;
   photoURL?: string;
   avatarURL?: string;
+  avatarId?: string;
   avatarConfig?: Record<string, string>;
   traderProfile?: {
     firstName?: string;
