@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Modal } from '../common/Modal';
 import { loginWithEmail, registerWithEmail, resetUserPassword } from '../../services/auth';
 import { useToast } from '../common/Toast';
@@ -29,6 +29,10 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
   const [selectedAvatar, setSelectedAvatar] = useState(REGISTER_AVATARS[0]);
   const [isLoading, setIsLoading] = useState(false);
   const avatarRailRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (isOpen) setMode(defaultMode);
+  }, [isOpen, defaultMode]);
 
   const switchMode = (nextMode: 'login' | 'register' | 'forgot') => {
     setMode(nextMode);
