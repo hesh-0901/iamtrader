@@ -45,7 +45,9 @@ export async function registerWithEmail(email: string, pass: string, displayName
       avatarURL: registration.avatarURL,
       photoURL: registration.avatarURL,
       traderProfile: {
-        firstName: registration.firstName,\n        lastName: registration.lastName,\n        country: registration.country,
+        firstName: registration.firstName,
+        lastName: registration.lastName,
+        country: registration.country,
         whatsapp: registration.whatsapp
       },
       plan: 'free',
