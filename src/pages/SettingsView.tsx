@@ -81,7 +81,7 @@ const detectCountryCode = () => {
 
 export function SettingsView({ userProfile, accounts, trades, selectedAccountId, onRequestPlan, pendingPaymentReference }: SettingsViewProps) {
   const { showToast } = useToast();
-  const [activeTab, setActiveTab] = useState<'profile' | 'certificates' | 'subscription' | 'security' | 'preferences' | 'journal' | 'history'>('subscription');
+  const [activeTab, setActiveTab] = useState<'profile' | 'certificates' | 'subscription' | 'security' | 'preferences' | 'journal' | 'history'>('profile');
   const [displayName, setDisplayName] = useState(userProfile?.displayName || '');
   const [firstName, setFirstName] = useState(userProfile?.traderProfile?.firstName || '');
   const [lastName, setLastName] = useState(userProfile?.traderProfile?.lastName || '');
