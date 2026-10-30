@@ -15,6 +15,60 @@ const INITIAL_AVATARS = Array.from({ length: 28 }, (_, index) => {
   return { id: number, url: `/avatars/${number}.png` };
 });
 
+const COUNTRIES = [
+  { name: 'Afrique du Sud', code: '+27', flag: '🇿🇦' },
+  { name: 'Algérie', code: '+213', flag: '🇩🇿' },
+  { name: 'Allemagne', code: '+49', flag: '🇩🇪' },
+  { name: 'Angola', code: '+244', flag: '🇦🇴' },
+  { name: 'Arabie saoudite', code: '+966', flag: '🇸🇦' },
+  { name: 'Argentine', code: '+54', flag: '🇦🇷' },
+  { name: 'Australie', code: '+61', flag: '🇦🇺' },
+  { name: 'Belgique', code: '+32', flag: '🇧🇪' },
+  { name: 'Bénin', code: '+229', flag: '🇧🇯' },
+  { name: 'Botswana', code: '+267', flag: '🇧🇼' },
+  { name: 'Brésil', code: '+55', flag: '🇧🇷' },
+  { name: 'Burkina Faso', code: '+226', flag: '🇧🇫' },
+  { name: 'Burundi', code: '+257', flag: '🇧🇮' },
+  { name: 'Cameroun', code: '+237', flag: '🇨🇲' },
+  { name: 'Canada', code: '+1', flag: '🇨🇦' },
+  { name: 'Chine', code: '+86', flag: '🇨🇳' },
+  { name: 'Congo (Brazzaville)', code: '+242', flag: '🇨🇬' },
+  { name: 'Congo (RDC)', code: '+243', flag: '🇨🇩' },
+  { name: 'Côte d’Ivoire', code: '+225', flag: '🇨🇮' },
+  { name: 'Égypte', code: '+20', flag: '🇪🇬' },
+  { name: 'Émirats arabes unis', code: '+971', flag: '🇦🇪' },
+  { name: 'Espagne', code: '+34', flag: '🇪🇸' },
+  { name: 'États-Unis', code: '+1', flag: '🇺🇸' },
+  { name: 'Éthiopie', code: '+251', flag: '🇪🇹' },
+  { name: 'France', code: '+33', flag: '🇫🇷' },
+  { name: 'Gabon', code: '+241', flag: '🇬🇦' },
+  { name: 'Ghana', code: '+233', flag: '🇬🇭' },
+  { name: 'Guinée', code: '+224', flag: '🇬🇳' },
+  { name: 'Inde', code: '+91', flag: '🇮🇳' },
+  { name: 'Italie', code: '+39', flag: '🇮🇹' },
+  { name: 'Japon', code: '+81', flag: '🇯🇵' },
+  { name: 'Kenya', code: '+254', flag: '🇰🇪' },
+  { name: 'Madagascar', code: '+261', flag: '🇲🇬' },
+  { name: 'Maroc', code: '+212', flag: '🇲🇦' },
+  { name: 'Mozambique', code: '+258', flag: '🇲🇿' },
+  { name: 'Namibie', code: '+264', flag: '🇳🇦' },
+  { name: 'Nigéria', code: '+234', flag: '🇳🇬' },
+  { name: 'Ouganda', code: '+256', flag: '🇺🇬' },
+  { name: 'Pakistan', code: '+92', flag: '🇵🇰' },
+  { name: 'Pays-Bas', code: '+31', flag: '🇳🇱' },
+  { name: 'Portugal', code: '+351', flag: '🇵🇹' },
+  { name: 'Royaume-Uni', code: '+44', flag: '🇬🇧' },
+  { name: 'Rwanda', code: '+250', flag: '🇷🇼' },
+  { name: 'Sénégal', code: '+221', flag: '🇸🇳' },
+  { name: 'Singapour', code: '+65', flag: '🇸🇬' },
+  { name: 'Suisse', code: '+41', flag: '🇨🇭' },
+  { name: 'Tanzanie', code: '+255', flag: '🇹🇿' },
+  { name: 'Togo', code: '+228', flag: '🇹🇬' },
+  { name: 'Turquie', code: '+90', flag: '🇹🇷' },
+  { name: 'Zambie', code: '+260', flag: '🇿🇲' },
+  { name: 'Zimbabwe', code: '+263', flag: '🇿🇼' }
+];
+
 const fieldClass = 'w-full rounded-xl border border-[#DCE5EC] bg-white px-3 py-2.5 !text-[#0B1F35] placeholder:!text-[#9AA9B8] outline-none transition focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10';
 
 export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalProps) {
@@ -28,6 +82,9 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
   const [confirmPassword, setConfirmPassword] = useState('');
   const [country, setCountry] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
+  const selectedCountry = COUNTRIES.find(item => item.name === country);
+  const phoneCode = selectedCountry?.code || '';
+  const localWhatsapp = phoneCode && whatsapp.startsWith(phoneCode) ? whatsapp.slice(phoneCode.length).trim() : whatsapp;
   const [availableAvatars, setAvailableAvatars] = useState(INITIAL_AVATARS);
   const [selectedAvatar, setSelectedAvatar] = useState<(typeof INITIAL_AVATARS)[number] | null>(null);
   const [avatarModalOpen, setAvatarModalOpen] = useState(false);
@@ -184,16 +241,21 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="block">
                   <span className="mb-1.5 block font-semibold text-neutral-500">Pays de résidence *</span>
-                  <span className="relative block">
-                    <Globe2 className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500" />
-                    <input type="text" autoComplete="country-name" placeholder="Votre pays" value={country} onChange={e => setCountry(e.target.value)} className={`${fieldClass} pl-9`} required />
-                  </span>
+                  <select autoComplete="country-name" value={country} onChange={e => {
+                    const nextCountry = COUNTRIES.find(item => item.name === e.target.value);
+                    const previousLocal = phoneCode && whatsapp.startsWith(phoneCode) ? whatsapp.slice(phoneCode.length).trim() : whatsapp;
+                    setCountry(e.target.value);
+                    setWhatsapp(nextCountry ? nextCountry.code + (previousLocal ? ' ' + previousLocal : '') : previousLocal);
+                  }} className={fieldClass} required>
+                    <option value="">Choisir un pays</option>
+                    {COUNTRIES.map(item => <option key={item.name} value={item.name}>{item.flag} {item.name}</option>)}
+                  </select>
                 </label>
                 <label className="block">
                   <span className="mb-1.5 block font-semibold text-neutral-500">Numéro WhatsApp *</span>
-                  <span className="relative block">
-                    <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500" />
-                    <input type="tel" autoComplete="tel" placeholder="Ex. +243..." value={whatsapp} onChange={e => setWhatsapp(e.target.value)} className={`${fieldClass} pl-9`} required />
+                  <span className="flex min-w-0 overflow-hidden rounded-xl border border-[#DCE5EC] bg-white transition focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/10">
+                    <span className="flex shrink-0 items-center border-r border-[#DCE5EC] bg-slate-50 px-3 text-sm font-semibold text-[#0B1F35]">{selectedCountry ? selectedCountry.flag + ' ' + phoneCode : <Phone className="h-4 w-4 text-neutral-500" />}</span>
+                    <input type="tel" autoComplete="tel-national" placeholder="Numéro sans indicatif" value={localWhatsapp} onChange={e => setWhatsapp((phoneCode ? phoneCode + ' ' : '') + e.target.value.replace(/^\+?\d{1,4}\s*/, '').replace(/[^\d\s()-]/g, ''))} className="w-full min-w-0 bg-transparent px-3 py-2.5 text-[#0B1F35] outline-none placeholder:text-[#9AA9B8]" required />
                   </span>
                 </label>
               </div>
