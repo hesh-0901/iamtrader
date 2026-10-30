@@ -49,9 +49,9 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
       })
       .then((files: Array<{ name?: string; type?: string }>) => {
         const avatars = files
-          .filter(file => file.type === 'file' && /^\\d{3}\\.png$/i.test(file.name || ''))
+          .filter(file => file.type === 'file' && /^\d{3}\.png$/i.test(file.name || ''))
           .map(file => {
-            const id = (file.name || '').replace(/\\.png$/i, '');
+            const id = (file.name || '').replace(/\.png$/i, '');
             return { id, url: '/avatars/' + id + '.png' };
           })
           .sort((a, b) => a.id.localeCompare(b.id));
