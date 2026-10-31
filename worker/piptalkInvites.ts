@@ -36,7 +36,7 @@ export async function handlePipTalkInviteJoin(request: Request, env: InviteEnv):
     const body = await request.json() as { code?: string; displayName?: string };
     const code = String(body.code || '').trim();
     const displayName = String(body.displayName || identity.users?.[0]?.displayName || 'Trader').trim().slice(0, 80) || 'Trader';
-    if (!/^[A-Za-z0-9]{10}$/.test(code)) return json({ success: false, message: 'Ce lien d’invitation est invalide.' }, 400);
+    if (!/^(?:[A-Za-z0-9]{6}|[A-Za-z0-9]{10})$/.test(code)) return json({ success: false, message: 'Ce lien d’invitation est invalide.' }, 400);
 
     const matches = await firestoreQueryByField(env as any, 'conversations', 'inviteCode', code, 2, 'updatedAt');
     const group = matches[0] as Record<string, unknown> & { id?: string } | undefined;
