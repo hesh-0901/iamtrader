@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { auth } from '../../services/firebase';
+import { auth } from '../../firebase/config';
 
 type ReferralStats = { code: string; link: string; invited: number; paid: number; target: number; credit: number; currency: string; rewardStatus: string };
 export function AffiliationSettings() {
