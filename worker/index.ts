@@ -15,6 +15,7 @@ import { refreshIamtraderEconomicCalendar } from './iamtraderEconomicCalendar';
 import { handleEconomicEventAnalysis } from './economicEventAnalysis';
 import { handlePushConfig, handlePushRegister, handlePipTalkPush } from './pushNotifications';
 import { handlePipTalkInviteJoin } from './piptalkInvites';
+import { handleReferralRequest } from './referrals';
 
 interface Env {
   ASSETS: Fetcher;
@@ -65,6 +66,8 @@ export default {
       appUrl.searchParams.set('piptalkInvite', invitePath[1]);
       return env.ASSETS.fetch(new Request(appUrl.toString(), request));
     }
+
+    if (url.pathname === '/api/referrals') return handleReferralRequest(request, env);
 
     if (url.pathname === '/api/push/config') return handlePushConfig(request, env);
 
