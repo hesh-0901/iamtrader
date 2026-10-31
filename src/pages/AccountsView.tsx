@@ -83,6 +83,13 @@ export function AccountsView({
             const totalPnl = accTrades.reduce((sum, t) => sum + (Number(t.pnl) || 0), 0);
             const currentBal = acc.initialBalance + totalPnl;
             const isSelected = selectedAccountId === acc.id;
+            const palette = acc.type.includes('Funded')
+              ? { card: 'from-emerald-50/90 via-white to-white', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', accent: 'text-emerald-600', bar: 'bg-emerald-500', ring: 'ring-emerald-500/20 border-emerald-300' }
+              : acc.type.includes('Challenge')
+                ? { card: 'from-blue-50/90 via-white to-white', badge: 'bg-blue-50 text-blue-700 border-blue-200', accent: 'text-blue-600', bar: 'bg-blue-500', ring: 'ring-blue-500/20 border-blue-300' }
+                : acc.type.includes('Demo')
+                  ? { card: 'from-violet-50/90 via-white to-white', badge: 'bg-violet-50 text-violet-700 border-violet-200', accent: 'text-violet-600', bar: 'bg-violet-500', ring: 'ring-violet-500/20 border-violet-300' }
+                  : { card: 'from-amber-50/90 via-white to-white', badge: 'bg-amber-50 text-amber-700 border-amber-200', accent: 'text-amber-600', bar: 'bg-amber-500', ring: 'ring-amber-500/20 border-amber-300' };
 
             const progressTarget = acc.targetProfit ? Math.min(100, Math.max(0, (totalPnl / acc.targetProfit) * 100)) : null;
 
@@ -90,16 +97,14 @@ export function AccountsView({
               <div
                 key={acc.id}
                 onClick={() => onSelectAccount(acc.id)}
-                className={`p-5 rounded-xl card-premium cursor-pointer flex flex-col justify-between space-y-4 hover:border-slate-700 transition-all ${
-                  isSelected ? 'border-blue-500/70 ring-1 ring-blue-500/40 bg-white/80' : ''
-                }`}
+                className={`group relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br ${palette.card} p-4 sm:p-5 shadow-[0_8px_28px_rgba(15,23,42,0.05)] cursor-pointer flex flex-col justify-between space-y-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(15,23,42,0.10)] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${isSelected ? `ring-2 ${palette.ring}` : 'hover:border-slate-300'}`}
               >
                 <div>
                   {/* Account Header */}
                   <div className="flex items-start justify-between">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider text-blue-400 bg-blue-500/10 border border-blue-500/20 px-2 py-0.5 rounded">
+                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider border px-2.5 py-1 rounded-md ${palette.badge}">
                           {acc.type}
                         </span>
                         {isSelected && (
@@ -119,7 +124,7 @@ export function AccountsView({
 
                     <button
                       onClick={(e) => handleDelete(acc.id, e)}
-                      className="p-1.5 text-slate-500 hover:text-rose-400 hover:bg-slate-100 rounded-lg transition-colors cursor-pointer"
+                      className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
                       title="Supprimer ce compte"
                     >
                       <Trash2 className="w-4 h-4" />
@@ -127,7 +132,7 @@ export function AccountsView({
                   </div>
 
                   {/* Balance Display */}
-                  <div className="mt-3.5 p-3 rounded-lg bg-white border border-slate-200 font-mono">
+                  <div className="mt-3.5 p-3.5 rounded-xl bg-white/85 border border-slate-200/80 shadow-inner font-mono">
                     <div className="flex items-center justify-between text-xs mb-1">
                       <span className="text-slate-500 font-sans">Solde Actuel :</span>
                       <span className="font-bold text-slate-900 text-sm tabular-nums">
@@ -136,7 +141,7 @@ export function AccountsView({
                     </div>
                     <div className="flex items-center justify-between text-xs pt-1 border-t border-slate-200/80">
                       <span className="text-slate-500 font-sans">P&L Réalisé :</span>
-                      <span className={`font-bold tabular-nums ${totalPnl >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      <span className={`font-bold tabular-nums ${totalPnl >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>
                         {totalPnl >= 0 ? `+${formatCurrency(totalPnl, acc.currency)}` : formatCurrency(totalPnl, acc.currency)}
                       </span>
                     </div>
@@ -161,7 +166,7 @@ export function AccountsView({
                       <div className="w-full h-1.5 rounded bg-slate-100 overflow-hidden">
                         <div
                           style={{ width: `${progressTarget}%` }}
-                          className="bg-blue-500 h-full rounded transition-all duration-500"
+                          className={`${palette.bar} h-full rounded transition-all duration-500`}
                         />
                       </div>
                       <div className="text-[10px] text-slate-500 text-right font-mono">
@@ -172,7 +177,7 @@ export function AccountsView({
                 </div>
 
                 {/* Footer specs */}
-                <div className="pt-2.5 border-t border-slate-200/80 flex items-center justify-between text-xs text-slate-500 font-mono">
+                <div className="pt-3 border-t border-slate-200/80 flex items-center justify-between text-xs text-slate-500 font-mono">
                   <span>{accTrades.length} trade{accTrades.length > 1 ? 's' : ''}</span>
                   <span className="flex items-center gap-1 text-slate-500">
                     <CheckCircle2 className="w-3 h-3 text-emerald-400" />
