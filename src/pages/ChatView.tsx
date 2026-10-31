@@ -121,11 +121,13 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
   useEffect(() => {
     if (!uid) return;
     const params = new URLSearchParams(window.location.search);
-    const inviteCode = params.get('piptalkInvite');
+    const pathMatch = window.location.pathname.match(/^\/i\/([A-Za-z0-9]{6})\/?$/);
+    const inviteCode = pathMatch?.[1] || params.get('piptalkInvite');
     if (!inviteCode) return;
     setPendingInviteCode(inviteCode);
     params.delete('piptalkInvite');
-    const cleanUrl = window.location.pathname + (params.toString() ? `?${params.toString()}` : '') + window.location.hash;
+    const cleanPath = pathMatch ? '/' : window.location.pathname;
+    const cleanUrl = cleanPath + (params.toString() ? `?${params.toString()}` : '') + window.location.hash;
     window.history.replaceState({}, document.title, cleanUrl);
   }, [uid]);
 
@@ -135,14 +137,13 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
     setError('');
     try {
       const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
-      const bytes = new Uint8Array(10);
+      const bytes = new Uint8Array(6);
       crypto.getRandomValues(bytes);
       const code = Array.from(bytes, byte => alphabet[byte % alphabet.length]).join('');
       await updateDoc(doc(db, 'conversations', active.id), {
         inviteCode: code, inviteEnabled: true, updatedAt: serverTimestamp()
       });
-      const url = new URL(window.location.origin + '/');
-      url.searchParams.set('piptalkInvite', code);
+      const url = new URL(`/i/${code}`, window.location.origin);
       setGroupInviteLink(url.toString());
       setGroupInviteVisible(false);
     } catch (err: any) {
@@ -933,7 +934,7 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
     setGroupDescriptionDraft(active.description || '');
     setGroupAvatarDraft(active.avatarURL || '');
     setGroupAvatarFile(null);
-    setGroupInviteLink(active.inviteEnabled && active.inviteCode ? `${window.location.origin}/?piptalkInvite=${encodeURIComponent(active.inviteCode)}` : '');
+    setGroupInviteLink(active.inviteEnabled && active.inviteCode ? `${window.location.origin}/i/${encodeURIComponent(active.inviteCode)}` : '');
     setGroupInviteVisible(false);
     setShowGroupSettings(true);
     setError('');
