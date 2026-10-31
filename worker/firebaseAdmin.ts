@@ -170,7 +170,10 @@ export async function firestoreQueryByField(
       }
     })
   });
-  if (!response.ok) throw new Error(`Firestore QUERY failed: ${response.status}`);
+  if (!response.ok) {
+    const details = (await response.text()).slice(0, 1200);
+    throw new Error(`Firestore QUERY failed: HTTP ${response.status} ${details}`);
+  }
   const rows = await response.json() as Array<{ document?: any }>;
   return rows.filter(row => row.document).map(row => ({
     id: String(row.document.name || '').split('/').pop(),
