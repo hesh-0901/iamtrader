@@ -614,6 +614,16 @@ export async function handlePaymentRequest(request: Request, env: CinetPayEnv) {
   }
 }
 
+async function markReferralFirstPayment(env: CinetPayEnv | SasPayEnv, referredUid: string, paidAt: string) {
+  const referral = await firestoreGet(env, 'referrals/' + encodeURIComponent(referredUid));
+  if (!referral || referral.firstPaidAt) return;
+  await firestorePatch(env, 'referrals/' + encodeURIComponent(referredUid), {
+    status: 'paid',
+    firstPaidAt: paidAt,
+    updatedAt: paidAt
+  }, ['status', 'firstPaidAt', 'updatedAt']);
+}
+
 export async function handleCinetPayNotification(request: Request, env: CinetPayEnv) {
   if (request.method === 'GET') return json({ received: true });
   if (request.method !== 'POST') return json({ received: false }, 405);
@@ -715,6 +725,7 @@ export async function handleCinetPayNotification(request: Request, env: CinetPay
         ),
         ['plan', 'paymentDate', 'subscriptionStartAt', 'subscriptionExpiresAt', 'subscriptionStatus', 'paymentStatus', 'planChangeConfirmedAt', 'pendingPlan', 'planChangeRequestedAt', 'scheduledPlan', 'scheduledStartAt', 'scheduledExpiresAt', 'updatedAt']
       );
+      await markReferralFirstPayment(env, String(payment.uid), paidAt);
 
       return json({ received: true });
     }
@@ -919,6 +930,7 @@ export async function handleSasPayWebhook(
         subscriptionFields(profile, planKey, subscriptionAction, activationStartAt, activationExpiresAt, paidAt),
         ['plan', 'paymentDate', 'subscriptionStartAt', 'subscriptionExpiresAt', 'subscriptionStatus', 'paymentStatus', 'planChangeConfirmedAt', 'pendingPlan', 'planChangeRequestedAt', 'scheduledPlan', 'scheduledStartAt', 'scheduledExpiresAt', 'updatedAt']
       );
+      await markReferralFirstPayment(env, String(payment.uid), paidAt);
       return json({ received: true });
     }
 
