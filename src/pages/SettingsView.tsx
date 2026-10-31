@@ -2,13 +2,14 @@ import React, { useMemo, useState } from 'react';
 import { UserProfile, SubscriptionPlan, TradingAccount, Trade } from '../types';
 import { PlanBadge } from '../components/common/Badge';
 import {
-  User, Shield, CreditCard, Sliders, Lock, Mail, Check, ArrowRight,
+  User, Shield, CreditCard, Sliders, Lock, Mail, Check, ArrowRight, Users, Copy,
   Activity, CalendarDays, Clock3, WalletCards, Sparkles, ChevronRight, Phone, X, Crown, Target, Coins, TrendingUp, Star, Receipt, Tag, Download, Smartphone, Monitor, LogOut
 } from 'lucide-react';
 import { resetUserPassword, updateTraderProfile, logoutUser } from '../services/auth';
 import { subscribeDeviceSessions, revokeDeviceSession, getDeviceSessionId, endCurrentDeviceSession, DeviceSession } from '../services/deviceSessions';
 import { useToast } from '../components/common/Toast';
 import { TradingJournalSettings } from '../components/settings/TradingJournalSettings';
+import { AffiliationSettings } from '../components/settings/AffiliationSettings';
 import { PaymentHistory } from './PaymentHistory';
 import { PromotionBanners } from '../components/promotions/PromotionBanners';
 import { calculateTraderRating, formatCurrency } from '../utils/calculations';
@@ -81,7 +82,7 @@ const detectCountryCode = () => {
 
 export function SettingsView({ userProfile, accounts, trades, selectedAccountId, onRequestPlan, pendingPaymentReference }: SettingsViewProps) {
   const { showToast } = useToast();
-  const [activeTab, setActiveTab] = useState<'profile' | 'certificates' | 'subscription' | 'security' | 'preferences' | 'journal' | 'history'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'certificates' | 'subscription' | 'security' | 'preferences' | 'journal' | 'history' | 'affiliation'>('profile');
   const [displayName, setDisplayName] = useState(userProfile?.displayName || '');
   const [firstName, setFirstName] = useState(userProfile?.traderProfile?.firstName || '');
   const [lastName, setLastName] = useState(userProfile?.traderProfile?.lastName || '');
@@ -577,6 +578,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
     ['preferences', 'Préférences Interface', Sliders],
     ['journal', 'Journal & Calculs', Activity],
     ['history', 'Historique des paiements', Receipt],
+    ['affiliation', 'Affiliation', Users],
   ] as const;
 
   return (
@@ -596,6 +598,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
       </div>
 
       {activeTab === 'history' && <PaymentHistory />}
+      {activeTab === 'affiliation' && <AffiliationSettings />}
 
       {activeTab === 'subscription' && (
         <div className="space-y-5">
