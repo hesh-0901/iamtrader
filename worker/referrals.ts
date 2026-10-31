@@ -32,8 +32,43 @@ export async function handleReferralRequest(request: Request, env: PaymentEnv) {
       const code = await ensureCode(env, uid, profile);
       const referrals = await firestoreQueryByField(env, 'referrals', 'referrerUid', uid, 500, null);
       const paid = referrals.filter((r: any) => r.firstPaidAt).length;
+      const referralUsers = await Promise.all(referrals.map(async (referral: any) => {
+        const referredUid = String(referral.referredUid || referral.id || '');
+        if (!referredUid) return null;
+        try {
+          const referredProfile = await firestoreGet(env, 'users/' + encodeURIComponent(referredUid));
+          if (!referredProfile) return {
+            uid: referredUid,
+            displayName: 'Profil indisponible',
+            createdAt: referral.createdAt || null,
+            plan: null,
+            status: referral.firstPaidAt ? 'paid' : 'registered',
+            firstPaidAt: referral.firstPaidAt || null
+          };
+          const traderProfile = referredProfile.traderProfile || {};
+          const fullName = [traderProfile.firstName, traderProfile.lastName].filter(Boolean).join(' ').trim();
+          return {
+            uid: referredUid,
+            displayName: String(fullName || referredProfile.displayName || referredProfile.email || 'Trader IAMTRADER'),
+            createdAt: referral.createdAt || referredProfile.createdAt || null,
+            plan: referredProfile.plan || null,
+            status: referral.firstPaidAt ? 'paid' : 'registered',
+            firstPaidAt: referral.firstPaidAt || null
+          };
+        } catch (profileError) {
+          console.error('Could not load referred user profile:', referredUid, profileError instanceof Error ? profileError.message : String(profileError));
+          return {
+            uid: referredUid,
+            displayName: 'Trader IAMTRADER',
+            createdAt: referral.createdAt || null,
+            plan: null,
+            status: referral.firstPaidAt ? 'paid' : 'registered',
+            firstPaidAt: referral.firstPaidAt || null
+          };
+        }
+      }));
       const credit = Number(profile.referralCreditAvailable || 0);
-      return json({ success: true, code, link: 'https://iamtrader.trade/?ref=' + code, invited: referrals.length, paid, target: 7, credit, currency: 'USD', rewardStatus: paid >= 7 ? 'eligible' : 'in_progress' });
+      return json({ success: true, code, link: 'https://iamtrader.trade/?ref=' + code, invited: referrals.length, paid, target: 7, credit, currency: 'USD', rewardStatus: paid >= 7 ? 'eligible' : 'in_progress', referrals: referralUsers.filter(Boolean) });
     }
     if (request.method === 'POST') {
       const body = await request.json() as { code?: string };
