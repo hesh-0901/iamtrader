@@ -8,7 +8,9 @@ import {
   deleteDoc, 
   doc, 
   getDocs,
+  getDoc,
   setDoc,
+  writeBatch,
   orderBy,
   limit,
   deleteField,
@@ -159,6 +161,85 @@ export async function deleteAccount(accountId: string): Promise<void> {
 
   const accountRef = doc(db, 'accounts', accountId);
   await deleteDoc(accountRef);
+}
+
+// ==========================================
+// ACCOUNT MOVEMENTS
+// ==========================================
+
+export type AccountMovementType = 'deposit' | 'withdrawal' | 'fee' | 'payout' | 'adjustment';
+
+export interface AccountMovement {
+  id: string;
+  accountId: string;
+  userId: string;
+  type: AccountMovementType;
+  amount: number;
+  signedAmount: number;
+  note: string;
+  createdAt: string;
+}
+
+export function subscribeAccountMovements(
+  accountId: string,
+  callback: (movements: AccountMovement[], error?: Error) => void
+) {
+  if (!accountId || !auth.currentUser) {
+    callback([]);
+    return () => {};
+  }
+  const movementsRef = collection(db, 'accounts', accountId, 'movements');
+  return onSnapshot(movementsRef, (snapshot) => {
+    const movements = snapshot.docs.map(item => ({
+      id: item.id,
+      accountId,
+      ...item.data()
+    } as AccountMovement));
+    movements.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    callback(movements);
+  }, (error) => {
+    console.warn('Account movements subscription notice:', error.message);
+    callback([], error);
+  });
+}
+
+export async function addAccountMovement(
+  accountId: string,
+  type: AccountMovementType,
+  amount: number,
+  note = ''
+): Promise<void> {
+  if (!auth.currentUser) throw new Error('Utilisateur non authentifié');
+  if (!Number.isFinite(amount) || amount <= 0) throw new Error('Le montant doit être supérieur à zéro.');
+  const accountRef = doc(db, 'accounts', accountId);
+  const accountSnapshot = await getDoc(accountRef);
+  if (!accountSnapshot.exists() || accountSnapshot.data().userId !== auth.currentUser.uid) {
+    throw new Error('Compte introuvable ou accès non autorisé.');
+  }
+  const currentBalance = Number(accountSnapshot.data().currentBalance ?? accountSnapshot.data().initialBalance ?? 0);
+  const signedAmount = type === 'deposit' || type === 'payout'
+    ? amount
+    : type === 'withdrawal' || type === 'fee'
+      ? -amount
+      : amount - currentBalance;
+  if (currentBalance + signedAmount < 0) throw new Error('Solde insuffisant pour effectuer cette opération.');
+  const movementRef = doc(collection(db, 'accounts', accountId, 'movements'));
+  const batch = writeBatch(db);
+  const createdAt = new Date().toISOString();
+  batch.set(movementRef, {
+    accountId,
+    userId: auth.currentUser.uid,
+    type,
+    amount,
+    signedAmount,
+    note: note.trim(),
+    createdAt
+  });
+  batch.update(accountRef, {
+    currentBalance: currentBalance + signedAmount,
+    updatedAt: createdAt
+  });
+  await batch.commit();
 }
 
 // ==========================================
