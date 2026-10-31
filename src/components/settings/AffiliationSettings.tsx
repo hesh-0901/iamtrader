@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { auth } from '../../firebase/config';
 
-type ReferralStats = { code: string; link: string; invited: number; paid: number; target: number; credit: number; currency: string; rewardStatus: string };
+type ReferralEntry = { uid: string; displayName: string; createdAt?: string | null; plan?: string | null; status: 'paid' | 'registered'; firstPaidAt?: string | null };
+type ReferralStats = { code: string; link: string; invited: number; paid: number; target: number; credit: number; currency: string; rewardStatus: string; referrals: ReferralEntry[] };
 export function AffiliationSettings() {
   const [stats, setStats] = useState<ReferralStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -38,6 +39,42 @@ export function AffiliationSettings() {
         <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs text-slate-500">Crédit disponible</p><p className="mt-1 text-2xl font-black text-slate-900">{stats.credit.toFixed(2)} {stats.currency}</p></div>
       </div>
       <div className="mt-5"><div className="mb-2 flex justify-between text-xs font-semibold text-slate-600"><span>Progression vers le seuil de récompense</span><span>{stats.paid} / {stats.target}</span></div><div className="h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: progress + '%' }} /></div></div>
+    </section>
+    <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <h3 className="text-lg font-extrabold text-slate-900">Mes filleuls</h3>
+          <p className="mt-1 text-sm text-slate-500">Les traders inscrits avec votre code de parrainage.</p>
+        </div>
+        <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">{stats.invited} invitation{stats.invited > 1 ? 's' : ''}</span>
+      </div>
+      {stats.referrals.length === 0 ? (
+        <div className="mt-5 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center">
+          <p className="text-sm font-semibold text-slate-700">Aucun filleul pour le moment</p>
+          <p className="mt-1 text-xs text-slate-500">Partagez votre lien pour inviter vos premiers traders.</p>
+        </div>
+      ) : (
+        <div className="mt-5 divide-y divide-slate-100">
+          {stats.referrals.map((referral) => (
+            <div key={referral.uid} className="flex flex-wrap items-center gap-3 py-4 first:pt-0 last:pb-0">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-extrabold text-slate-600">
+                {referral.displayName.split(' ').filter(Boolean).slice(0, 2).map(part => part[0]?.toUpperCase()).join('') || 'T'}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-bold text-slate-900">{referral.displayName}</p>
+                <p className="mt-1 text-xs text-slate-500">
+                  Inscription : {referral.createdAt ? new Date(referral.createdAt).toLocaleDateString('fr-FR') : 'Date indisponible'}
+                  {referral.plan ? ' · Offre : ' + referral.plan : ''}
+                  {referral.firstPaidAt ? ' · Paiement : ' + new Date(referral.firstPaidAt).toLocaleDateString('fr-FR') : ''}
+                </p>
+              </div>
+              <span className={referral.status === 'paid' ? 'rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700' : 'rounded-full bg-amber-50 px-3 py-1 text-xs font-bold text-amber-700'}>
+                {referral.status === 'paid' ? 'Abonnement payé' : 'Inscrit'}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </section>
     <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
       <h3 className="text-sm font-extrabold text-slate-900">Votre code personnel</h3>
