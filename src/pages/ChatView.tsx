@@ -1198,7 +1198,7 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
                       ? <button type="button" onClick={() => setViewerImage(message)} aria-label="Ouvrir l’image dans PipTalk" className="mb-1 block max-w-full cursor-zoom-in overflow-hidden rounded-xl text-left focus:outline-none focus:ring-2 focus:ring-emerald-400"><img src={message.mediaUrl} alt={message.mediaName || "Image envoyée"} loading="lazy" className="max-h-72 max-w-full rounded-xl object-contain" /></button>
                       : message.type === 'voice' && message.mediaUrl
                         ? <VoiceMessagePlayer src={message.mediaUrl} mine={mine} duration={message.duration || 0} />
-                        : <p className="whitespace-pre-wrap break-words text-[14px] leading-[1.5] sm:text-[15px] sm:leading-[1.55]">{message.text}</p>}
+                        : <MessageText text={message.text} mine={mine} />}
 
                   <div className="mt-0.5 flex items-center justify-end gap-1"><span className="text-[10px] leading-4 text-slate-500">{message.edited ? 'modifié · ' : ''}{formatTime(message.createdAt)}</span>{mine && (() => { const sentAt = message.createdAt?.toMillis?.() || 0; const readBySomeone = sentAt > 0 && (active?.members || []).some(memberUid => memberUid !== uid && (readReceiptsByUser[memberUid] || 0) >= sentAt); return readBySomeone ? <CheckCheck title="Lu" aria-label="Lu" className="h-3 w-3 text-emerald-600" /> : null; })()}</div>
                   {active?.group && <span aria-hidden="true" className={`pointer-events-none absolute bottom-3 h-2.5 w-2.5 rotate-45 ${mine ? '-right-[5px] border-b border-r border-emerald-200 bg-[#bbf7d0]' : '-left-[5px] border-b border-l border-slate-200 bg-[#f1f5f9]'}`} />}
@@ -1379,4 +1379,50 @@ function VoiceMessagePlayer({ src, mine, duration }: { src: string; mine: boolea
       </div>
     </div>
   );
+}
+
+function MessageText({ text, mine }: { text: string; mine: boolean }) {
+  const urlPattern = /(https?:\/\/[^\s<>]+|www\.[^\s<>]+|(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,}(?:\/[^\s<>]*)?)/gi;
+  const parts: React.ReactNode[] = [];
+  let lastIndex = 0;
+  let match: RegExpExecArray | null;
+
+  while ((match = urlPattern.exec(text)) !== null) {
+    let rawUrl = match[0];
+    let trailing = '';
+    while (/[),.!?;:]}]$/.test(rawUrl)) {
+      trailing = rawUrl.slice(-1) + trailing;
+      rawUrl = rawUrl.slice(0, -1);
+    }
+    if (!rawUrl) continue;
+
+    if (match.index > lastIndex) parts.push(text.slice(lastIndex, match.index));
+    const href = /^https?:\/\//i.test(rawUrl) ? rawUrl : `https://${rawUrl}`;
+    try {
+      const parsed = new URL(href);
+      if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+        parts.push(
+          <a
+            key={`link-${match.index}`}
+            href={parsed.href}
+            target="_blank"
+            rel="noopener noreferrer nofollow"
+            className={`break-all font-semibold underline underline-offset-2 ${mine ? 'text-emerald-800 hover:text-emerald-950' : 'text-sky-700 hover:text-sky-900'}`}
+            onClick={event => event.stopPropagation()}
+          >
+            {rawUrl}
+          </a>
+        );
+      } else {
+        parts.push(rawUrl);
+      }
+    } catch {
+      parts.push(rawUrl);
+    }
+    if (trailing) parts.push(trailing);
+    lastIndex = match.index + match[0].length;
+  }
+
+  if (lastIndex < text.length) parts.push(text.slice(lastIndex));
+  return <p className="whitespace-pre-wrap break-words text-[14px] leading-[1.5] sm:text-[15px] sm:leading-[1.55]">{parts}</p>;
 }
