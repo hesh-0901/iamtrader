@@ -14,6 +14,7 @@ import { handleEconomicCalendar } from './economicCalendar';
 import { refreshIamtraderEconomicCalendar } from './iamtraderEconomicCalendar';
 import { handleEconomicEventAnalysis } from './economicEventAnalysis';
 import { handlePushConfig, handlePushRegister, handlePipTalkPush } from './pushNotifications';
+import { handlePipTalkInviteJoin } from './piptalkInvites';
 
 interface Env {
   ASSETS: Fetcher;
@@ -62,6 +63,8 @@ export default {
     if (url.pathname === '/api/push/register') return handlePushRegister(request, env);
 
     if (url.pathname === '/api/piptalk/push') return handlePipTalkPush(request, env);
+
+    if (url.pathname === '/api/piptalk/invite/join') return handlePipTalkInviteJoin(request, env);
 
     if (url.pathname === '/api/economic-calendar/analysis') {
       return handleEconomicEventAnalysis(request, env);
