@@ -155,7 +155,7 @@ export async function firestoreQueryByField(
   fieldName: string,
   fieldValue: string,
   limit = 100,
-  orderByField = 'createdAt'
+  orderByField: string | null = 'createdAt'
 ) {
   const token = await accessToken(env);
   const response = await fetch(`${FIRESTORE_BASE}:runQuery`, {
@@ -165,7 +165,7 @@ export async function firestoreQueryByField(
       structuredQuery: {
         from: [{ collectionId: collectionName }],
         where: { fieldFilter: { field: { fieldPath: fieldName }, op: 'EQUAL', value: firestoreValue(fieldValue) } },
-        orderBy: [{ field: { fieldPath: orderByField }, direction: 'DESCENDING' }],
+        ...(orderByField ? { orderBy: [{ field: { fieldPath: orderByField }, direction: 'DESCENDING' }] } : {}),
         limit
       }
     })
