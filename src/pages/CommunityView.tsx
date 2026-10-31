@@ -11,7 +11,7 @@ type CommunityTab = 'home' | 'chat' | 'friends' | 'calendar' | 'courses' | 'anal
 
 export function CommunityView({ userProfile }: { userProfile: UserProfile | null }) {
   const [activeTab, setActiveTab] = useState<CommunityTab>(() =>
-    typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('piptalkInvite') ? 'chat' : 'home'
+    typeof window !== 'undefined' && (new URLSearchParams(window.location.search).has('piptalkInvite') || /^\/i\/[A-Za-z0-9]{6}\/?$/.test(window.location.pathname)) ? 'chat' : 'home'
   );
   const [pendingChatId, setPendingChatId] = useState('');
   const [unreadChatCount, setUnreadChatCount] = useState(0);
