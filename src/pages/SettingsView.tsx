@@ -582,7 +582,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
   ] as const;
 
   return (
-    <div className={`w-full ${activeTab === 'affiliation' ? 'max-w-none' : 'max-w-6xl'} min-w-0 space-y-4 sm:space-y-6 overflow-x-hidden`}>
+    <div className="w-full max-w-6xl min-w-0 space-y-4 sm:space-y-6 overflow-x-hidden">
       <div className="pb-3 border-b border-slate-200/80">
         <span className="text-[10px] font-mono uppercase tracking-wider text-[#168c73] bg-[#e5faf5] border border-[#ccefe5] px-2 py-0.5 rounded font-semibold">Configuration Station</span>
         <h1 className="text-2xl font-bold tracking-tight text-slate-900 mt-2">Paramètres & Compte</h1>
