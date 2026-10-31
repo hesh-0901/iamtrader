@@ -48,7 +48,10 @@ function MainAppContent() {
 
   // Domain Data State
   const [accounts, setAccounts] = useState<TradingAccount[]>([]);
-  const [trades, setTrades] = useState<Trade[]>([]);
+  const [allTrades, setAllTrades] = useState<Trade[]>([]);
+  const trades = selectedAccountId && selectedAccountId !== 'all'
+    ? allTrades.filter(trade => trade.accountId === selectedAccountId)
+    : allTrades;
   const [selectedAccountId, setSelectedAccountId] = useState<string>('all');
   const [isLoadingData, setIsLoadingData] = useState<boolean>(false);
 
@@ -122,7 +125,7 @@ function MainAppContent() {
       } else {
         setUserProfile(null);
         setAccounts([]);
-        setTrades([]);
+        setAllTrades([]);
       }
       setIsAuthLoading(false);
       });
@@ -182,16 +185,16 @@ function MainAppContent() {
       if (err) {
         console.warn("Trades subscription notice:", err.message);
       }
-      setTrades(fetchedTrades);
-    }, selectedAccountId);
+      setAllTrades(fetchedTrades);
+    });
 
     return () => {
       unsubAccounts();
       unsubTrades();
     };
-  }, [currentUser, selectedAccountId]);
+  }, [currentUser]);
 
-  const currentMonthTradeCount = trades.filter((trade) => {
+  const currentMonthTradeCount = allTrades.filter((trade) => {
     const date = new Date(trade.entryDate);
     const now = new Date();
     return date.getFullYear() === now.getFullYear() && date.getMonth() === now.getMonth();
@@ -529,7 +532,7 @@ function MainAppContent() {
           {currentPage === 'accounts' && (
             <AccountsView
               accounts={accounts}
-              trades={trades}
+              trades={allTrades}
               onOpenNewAccount={handleOpenNewAccount}
               selectedAccountId={selectedAccountId}
               onSelectAccount={(id) => setSelectedAccountId(id)}
