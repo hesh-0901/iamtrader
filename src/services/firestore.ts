@@ -155,9 +155,13 @@ export async function deleteAccount(accountId: string): Promise<void> {
     where('accountId', '==', accountId)
   );
   const tradesSnapshot = await getDocs(tradesQuery);
+  const movementsSnapshot = await getDocs(collection(db, 'accounts', accountId, 'movements'));
 
-  // Delete related trades first, then remove the account itself.
-  await Promise.all(tradesSnapshot.docs.map((tradeDoc) => deleteDoc(tradeDoc.ref)));
+  // Remove child records before deleting the account document.
+  await Promise.all([
+    ...tradesSnapshot.docs.map((tradeDoc) => deleteDoc(tradeDoc.ref)),
+    ...movementsSnapshot.docs.map((movementDoc) => deleteDoc(movementDoc.ref))
+  ]);
 
   const accountRef = doc(db, 'accounts', accountId);
   await deleteDoc(accountRef);
