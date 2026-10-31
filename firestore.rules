@@ -114,7 +114,7 @@ service cloud.firestore {
             (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['lastMessage', 'updatedAt', 'memberNames'])
               && request.resource.data.members == resource.data.members)
             || (groupAdmin(cid)
-              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title', 'description', 'avatarURL', 'updatedAt', 'closed', 'admins', 'mentors', 'members', 'memberNames'])
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['title', 'description', 'avatarURL', 'updatedAt', 'closed', 'admins', 'mentors', 'members', 'memberNames', 'inviteCode', 'inviteEnabled'])
               && request.resource.data.members is list
               && request.auth.uid in request.resource.data.members
               && resource.data.createdBy in request.resource.data.members
