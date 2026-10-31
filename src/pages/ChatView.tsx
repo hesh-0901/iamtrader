@@ -15,7 +15,7 @@ import {
 
 type ChatConversation = {
   id: string; members: string[]; memberNames?: Record<string, string>;
-  group?: boolean; title?: string; description?: string; avatarURL?: string; systemGroup?: boolean; lastMessage?: string; createdBy?: string; admins?: string[]; mentors?: string[]; closed?: boolean; inviteCode?: string; inviteEnabled?: boolean;
+  group?: boolean; title?: string; description?: string; avatarURL?: string; systemGroup?: boolean; lastMessage?: string; createdBy?: string; admins?: string[]; mentors?: string[]; mutedMembers?: string[]; closed?: boolean; inviteCode?: string; inviteEnabled?: boolean;
   updatedAt?: Timestamp | null; createdAt?: Timestamp | null;
 };
 type ChatMessage = {
@@ -926,7 +926,9 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
   const isGroupAdmin = !!uid && !!active && (active.admins || []).includes(uid);
   const isMentor = !!uid && !!active && (active.mentors || []).includes(uid);
   const canManageGroup = isPrimaryAdmin || isGroupAdmin;
-  const canSendInActive = !!active && (!active.closed || isPrimaryAdmin || isGroupAdmin || isMentor);
+  const canModerateGroup = canManageGroup || isMentor;
+  const isMutedInActive = !!uid && !!active && (active.mutedMembers || []).includes(uid);
+  const canSendInActive = !!active && !isMutedInActive && (!active.closed || isPrimaryAdmin || isGroupAdmin || isMentor);
   const createGroup = async () => {
     if (!uid || !isPrimaryAdmin || creatingGroup) return;
     const title = newGroupTitle.trim();
@@ -1000,6 +1002,19 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
     }
   };
 
+  const setGroupMemberMuted = async (memberUid: string, muted: boolean) => {
+    if (!active || !canModerateGroup || memberUid === uid || memberUid === active.createdBy
+      || (active.admins || []).includes(memberUid)) return;
+    try {
+      await updateDoc(doc(db, 'conversations', active.id), {
+        mutedMembers: muted ? arrayUnion(memberUid) : arrayRemove(memberUid),
+        updatedAt: serverTimestamp()
+      });
+    } catch (err: any) {
+      setError(err?.message || (muted ? 'Impossible de mettre ce membre en sourdine.' : 'Impossible de rétablir les messages de ce membre.'));
+    }
+  };
+
   const removeGroupMember = async (memberUid: string) => {
     if (!active || !canManageGroup || memberUid === uid || memberUid === active.createdBy) return;
     const memberName = active.memberNames?.[memberUid] || publicProfiles.find(item => item.uid === memberUid)?.displayName || 'ce membre';
@@ -1009,6 +1024,7 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
         members: arrayRemove(memberUid),
         admins: arrayRemove(memberUid),
         mentors: arrayRemove(memberUid),
+        mutedMembers: arrayRemove(memberUid),
         updatedAt: serverTimestamp()
       });
     } catch (err: any) {
@@ -1195,17 +1211,18 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
                     const memberAvatar = profile?.avatarURL || profile?.photoURL;
                     const memberIsAdmin = (active.admins || []).includes(memberUid);
                     const memberIsMentor = (active.mentors || []).includes(memberUid);
+                    const memberIsMuted = (active.mutedMembers || []).includes(memberUid);
                     const isCreator = memberUid === active.createdBy;
                     return <div key={memberUid} className="flex flex-wrap items-center gap-3 py-3">
                       <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#d9fdd3] text-xs font-bold text-[#075e54]">{memberAvatar ? <img src={memberAvatar} alt="" className="h-full w-full object-cover" onError={event => { event.currentTarget.onerror = null; event.currentTarget.src = '/brand/logo-iamtrader-symbol.png'; }} /> : memberName.slice(0, 2).toUpperCase()}</div>
                       <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold text-slate-800">{memberName}{memberUid === uid ? ' (vous)' : ''}</p><p className="mt-0.5 text-[11px] text-slate-500">{isCreator ? 'Créateur du groupe' : memberIsAdmin ? 'Administrateur' : memberIsMentor ? 'Mentor' : 'Membre'}</p></div>
                       <div className="flex items-center gap-1.5">
                         {memberIsAdmin && <span className="rounded-full bg-[#d9fdd3] px-2 py-1 text-[10px] font-bold text-[#075e54]">Admin</span>}
-                        {memberIsMentor && <span className="rounded-full bg-sky-100 px-2 py-1 text-[10px] font-bold text-sky-700">Mentor</span>}
-                        {canManageGroup && memberUid !== uid && !isCreator && <details className="relative">
+                        {memberIsMentor && <span className="rounded-full bg-sky-100 px-2 py-1 text-[10px] font-bold text-sky-700">Mentor</span>}{memberIsMuted && <span className="rounded-full bg-amber-100 px-2 py-1 text-[10px] font-bold text-amber-700">Muet</span>}
+                        {canModerateGroup && memberUid !== uid && !isCreator && !memberIsAdmin && <details className="relative">
                           <summary className="flex h-8 w-8 cursor-pointer list-none items-center justify-center rounded-full text-slate-500 hover:bg-slate-100" aria-label={`Actions pour ${memberName}`}><MoreVertical className="h-4 w-4" /></summary>
                           <div className="absolute right-0 top-9 z-30 min-w-48 rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
-                            <button type="button" onClick={() => void updateGroupMemberRole(memberUid, 'mentor', !memberIsMentor)} className="w-full rounded-lg px-3 py-2 text-left text-xs font-medium text-slate-700 hover:bg-slate-50">{memberIsMentor ? 'Retirer le rôle mentor' : 'Nommer mentor'}</button>
+                            <button type="button" onClick={() => void updateGroupMemberRole(memberUid, 'mentor', !memberIsMentor)} className="w-full rounded-lg px-3 py-2 text-left text-xs font-medium text-slate-700 hover:bg-slate-50">{memberIsMentor ? 'Retirer le rôle mentor' : 'Nommer mentor'}</button><button type="button" onClick={() => void setGroupMemberMuted(memberUid, !memberIsMuted)} className="w-full rounded-lg px-3 py-2 text-left text-xs font-semibold ${memberIsMuted ? 'text-emerald-700 hover:bg-emerald-50' : 'text-amber-700 hover:bg-amber-50'}">{memberIsMuted ? 'Autoriser à nouveau à écrire' : 'Mettre en sourdine'}</button>
                             <button type="button" onClick={() => void updateGroupMemberRole(memberUid, 'admin', !memberIsAdmin)} className="w-full rounded-lg px-3 py-2 text-left text-xs font-medium text-slate-700 hover:bg-slate-50">{memberIsAdmin ? 'Retirer les droits admin' : 'Promouvoir administrateur'}</button>
                             <button type="button" onClick={() => void removeGroupMember(memberUid)} className="w-full rounded-lg px-3 py-2 text-left text-xs font-semibold text-rose-600 hover:bg-rose-50">Retirer du groupe</button>
                           </div>
