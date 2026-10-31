@@ -7,6 +7,7 @@ export function AffiliationSettings() {
   const [stats, setStats] = useState<ReferralStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [previewPhoto, setPreviewPhoto] = useState<{ url: string; name: string } | null>(null);
   useEffect(() => {
     let active = true;
     (async () => {
@@ -91,13 +92,15 @@ export function AffiliationSettings() {
           {stats.referrals.map((referral, index) => (
             <div key={referral.uid} className="flex min-w-0 items-center gap-2.5 py-3 sm:gap-3">
               <span className="w-6 shrink-0 text-[11px] font-bold tabular-nums text-slate-400">{String(index + 1).padStart(2, '0')}</span>
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-slate-100 text-[10px] font-extrabold text-slate-600">
-                {referral.photoURL ? (
-                  <img src={referral.photoURL} alt={referral.displayName} loading="lazy" referrerPolicy="no-referrer" className="h-full w-full object-cover" onError={(event) => { event.currentTarget.style.display = 'none'; }} />
-                ) : (
-                  referral.displayName.split(' ').filter(Boolean).slice(0, 2).map(part => part[0]?.toUpperCase()).join('') || 'T'
-                )}
-              </div>
+              {referral.photoURL ? (
+                <button type="button" onClick={() => setPreviewPhoto({ url: referral.photoURL!, name: referral.displayName })} aria-label={`Agrandir la photo de ${referral.displayName}`} title="Agrandir la photo" className="h-9 w-9 shrink-0 overflow-hidden rounded-full border border-slate-200 bg-slate-100 transition hover:scale-105 hover:ring-2 hover:ring-emerald-400/50 focus:outline-none focus:ring-2 focus:ring-emerald-500">
+                  <img src={referral.photoURL} alt={referral.displayName} loading="lazy" referrerPolicy="no-referrer" className="h-full w-full object-cover" />
+                </button>
+              ) : (
+                <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-[10px] font-extrabold text-slate-600">
+                  {referral.displayName.split(' ').filter(Boolean).slice(0, 2).map(part => part[0]?.toUpperCase()).join('') || 'T'}
+                </div>
+              )}
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-bold text-slate-900">{referral.displayName}</p>
                 <p className="mt-0.5 text-[10px] leading-4 text-slate-500 sm:text-xs">
@@ -114,6 +117,14 @@ export function AffiliationSettings() {
         </div>
       )}
     </section>
-
+    {previewPhoto && (
+      <div role="dialog" aria-modal="true" aria-label={`Photo de profil de ${previewPhoto.name}`} onClick={() => setPreviewPhoto(null)} className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-sm">
+        <button type="button" aria-label="Fermer l'aperçu" onClick={() => setPreviewPhoto(null)} className="absolute right-4 top-4 flex h-10 w-10 items-center justify-center rounded-full bg-white/10 text-2xl text-white transition hover:bg-white/20">×</button>
+        <div className="max-h-[85vh] max-w-[min(90vw,560px)]" onClick={(event) => event.stopPropagation()}>
+          <img src={previewPhoto.url} alt={previewPhoto.name} className="max-h-[78vh] max-w-full rounded-2xl object-contain shadow-2xl" />
+          <p className="mt-3 text-center text-sm font-semibold text-white">{previewPhoto.name}</p>
+        </div>
+      </div>
+    )}
   </div>;
 }
