@@ -43,6 +43,25 @@ export function AffiliationSettings() {
   if (!stats) return null;
   const progress = Math.min(100, Math.round(stats.paid / stats.target * 100));
   return <div className="w-full min-w-0 space-y-2.5 sm:space-y-4">
+    <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm sm:p-4">
+      <div className="flex min-w-0 items-end gap-2.5 sm:gap-3">
+        <div className="min-w-0 w-[34%] flex-none sm:w-auto sm:flex-1">
+          <label className="mb-1.5 block truncate text-[9px] font-bold uppercase tracking-wide text-slate-500 sm:text-[10px]">Code personnel</label>
+          <div className="flex min-w-0 items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-2 py-1.5 sm:gap-2 sm:px-3 sm:py-2">
+            <code className="min-w-0 flex-1 truncate text-[11px] font-black tracking-wider text-slate-900 sm:text-sm sm:tracking-[0.16em]">{stats.code}</code>
+            <CopyButton value={stats.code} label="Copier le code" />
+          </div>
+        </div>
+        <div className="min-w-0 flex-1">
+          <label className="mb-1.5 block truncate text-[9px] font-bold uppercase tracking-wide text-slate-500 sm:text-[10px]">Lien de parrainage</label>
+          <div className="flex min-w-0 items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-2 py-1.5 sm:gap-2 sm:px-3 sm:py-2">
+            <span className="min-w-0 flex-1 truncate text-[10px] text-slate-700 sm:text-sm">{stats.link}</span>
+            <CopyButton value={stats.link} label="Copier le lien de parrainage" />
+          </div>
+        </div>
+      </div>
+      <p className="mt-3 text-xs leading-5 text-slate-500">Votre code reste permanent. Chaque filleul ne peut être attribué qu'une seule fois.</p>
+    </section>
     <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
       <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-700">Programme IAMTRADER</p>
       <h2 className="mt-1 text-xl font-extrabold tracking-tight text-slate-950 sm:text-2xl">Votre espace affiliation</h2>
@@ -91,24 +110,6 @@ export function AffiliationSettings() {
         </div>
       )}
     </section>
-    <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm sm:p-4">
-      <div className="flex min-w-0 items-end gap-2.5 sm:gap-3">
-        <div className="min-w-0 w-[34%] flex-none sm:w-auto sm:flex-1">
-          <label className="mb-1.5 block truncate text-[9px] font-bold uppercase tracking-wide text-slate-500 sm:text-[10px]">Code personnel</label>
-          <div className="flex min-w-0 items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-2 py-1.5 sm:gap-2 sm:px-3 sm:py-2">
-            <code className="min-w-0 flex-1 truncate text-[11px] font-black tracking-wider text-slate-900 sm:text-sm sm:tracking-[0.16em]">{stats.code}</code>
-            <CopyButton value={stats.code} label="Copier le code" />
-          </div>
-        </div>
-        <div className="min-w-0 flex-1">
-          <label className="mb-1.5 block truncate text-[9px] font-bold uppercase tracking-wide text-slate-500 sm:text-[10px]">Lien de parrainage</label>
-          <div className="flex min-w-0 items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-2 py-1.5 sm:gap-2 sm:px-3 sm:py-2">
-            <span className="min-w-0 flex-1 truncate text-[10px] text-slate-700 sm:text-sm">{stats.link}</span>
-            <CopyButton value={stats.link} label="Copier le lien de parrainage" />
-          </div>
-        </div>
-      </div>
-      <p className="mt-3 text-xs leading-5 text-slate-500">Votre code reste permanent. Chaque filleul ne peut être attribué qu'une seule fois.</p>
-    </section>
+
   </div>;
 }
