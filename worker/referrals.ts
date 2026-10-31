@@ -51,7 +51,7 @@ export async function handleReferralRequest(request: Request, env: PaymentEnv) {
     return json({ success: false, message: 'Méthode non autorisée.' }, 405);
   } catch (error) {
     if (error instanceof Error && error.message === 'UNAUTHORIZED') return json({ success: false, message: 'Authentification requise.' }, 401);
-    console.error('Referral request failed:', error);
+    console.error('Referral request failed:', error instanceof Error ? { name: error.name, message: error.message, stack: error.stack } : String(error));
     return json({ success: false, message: 'Service de parrainage indisponible.' }, 500);
   }
 }
