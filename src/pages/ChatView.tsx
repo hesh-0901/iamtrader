@@ -6,7 +6,7 @@ import { auth, db, app } from '../firebase/config';
 import { enablePipTalkPush, notifyPipTalkRecipients } from '../services/pushNotifications';
 import {
   addDoc, arrayRemove, arrayUnion, collection, deleteDoc, doc, getDoc, getDocs, limit, onSnapshot, orderBy, query,
-  serverTimestamp, setDoc, updateDoc, where, Timestamp
+  serverTimestamp, setDoc, updateDoc, where, Timestamp, writeBatch
 } from 'firebase/firestore';
 import {
   Search, MoreVertical, Send, Pin, Pencil, Trash2, X, CheckCheck, Copy, Forward, Link2, Eye, EyeOff, RefreshCw,
@@ -160,6 +160,12 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
     setDeletingGroup(true);
     setError('');
     try {
+      const messagesSnapshot = await getDocs(collection(db, 'conversations', active.id, 'messages'));
+      for (let offset = 0; offset < messagesSnapshot.docs.length; offset += 450) {
+        const batch = writeBatch(db);
+        messagesSnapshot.docs.slice(offset, offset + 450).forEach(messageDoc => batch.delete(messageDoc.ref));
+        await batch.commit();
+      }
       await deleteDoc(doc(db, 'conversations', active.id));
       setConversations(previous => previous.filter(item => item.id !== active.id));
       setMessages([]);
