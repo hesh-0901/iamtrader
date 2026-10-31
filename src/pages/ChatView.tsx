@@ -98,6 +98,8 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
   const [joiningInvite, setJoiningInvite] = useState(false);
   const [addingGroupMembers, setAddingGroupMembers] = useState(false);
   const [savingGroupSettings, setSavingGroupSettings] = useState(false);
+  const [showDeleteGroupConfirm, setShowDeleteGroupConfirm] = useState(false);
+  const [deletingGroup, setDeletingGroup] = useState(false);
   const [viewerImage, setViewerImage] = useState<ChatMessage | null>(null);
   const [viewerAvatar, setViewerAvatar] = useState<{ url: string; name: string } | null>(null);
   const [replyTo, setReplyTo] = useState<ChatMessage | null>(null);
@@ -150,6 +152,26 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
       setError(err?.message || "Impossible de créer le lien d'invitation.");
     } finally {
       setGroupInviteBusy(false);
+    }
+  };
+
+  const deleteGroup = async () => {
+    if (!active || !canManageGroup || active.systemGroup || deletingGroup) return;
+    setDeletingGroup(true);
+    setError('');
+    try {
+      await deleteDoc(doc(db, 'conversations', active.id));
+      setConversations(previous => previous.filter(item => item.id !== active.id));
+      setMessages([]);
+      setActiveId('');
+      setMobileChatOpen(false);
+      setShowDeleteGroupConfirm(false);
+      setShowGroupSettings(false);
+      setError('Le groupe a été supprimé.');
+    } catch (err: any) {
+      setError(err?.message || 'Impossible de supprimer le groupe.');
+    } finally {
+      setDeletingGroup(false);
     }
   };
 
@@ -1192,10 +1214,21 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
                 <div className="flex items-start gap-3 border-b border-slate-100 py-3"><ShieldCheck className="mt-0.5 h-5 w-5 shrink-0 text-[#075e54]" /><div className="min-w-0 flex-1"><p className="text-sm font-semibold text-slate-800">Modifier les informations du groupe</p><p className="mt-1 text-xs leading-5 text-slate-500">Réservé aux administrateurs. Votre rôle actuel vous autorise à gérer ces paramètres.</p></div><span className="text-xs font-semibold text-slate-500">Admins</span></div>
                 <div className="flex items-start gap-3 py-3"><MessageCircle className="mt-0.5 h-5 w-5 shrink-0 text-[#075e54]" /><div className="min-w-0 flex-1"><p className="text-sm font-semibold text-slate-800">Envoyer des messages</p><p className="mt-1 text-xs leading-5 text-slate-500">{active.closed ? 'Groupe fermé : seuls les admins et les mentors peuvent publier.' : 'Groupe ouvert : les membres peuvent publier.'}</p></div><button type="button" disabled={!canManageGroup} onClick={async () => { if (!canManageGroup) return; try { await updateDoc(doc(db, 'conversations', active.id), { closed: !active.closed, updatedAt: serverTimestamp() }); } catch (err: any) { setError(err?.message || 'Impossible de modifier les autorisations.'); } }} className={`shrink-0 rounded-full px-3 py-1.5 text-[11px] font-bold ${active.closed ? 'bg-amber-100 text-amber-800' : 'bg-[#d9fdd3] text-[#075e54]'}`}>{active.closed ? 'Admins seuls' : 'Tous les membres'}</button></div>
               </div>
-              <div className="mx-4 my-3 rounded-xl border border-rose-100 bg-white">
-                <button type="button" onClick={() => setShowGroupSettings(false)} className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm font-semibold text-rose-600"><X className="h-4 w-4" />Fermer les paramètres</button>
-              </div>
+              {canManageGroup && !active.systemGroup && <div className="mx-4 my-3 flex justify-start">
+                <button type="button" onClick={() => setShowDeleteGroupConfirm(true)} className="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-white px-4 py-2.5 text-xs font-semibold text-rose-600 transition hover:border-rose-300 hover:bg-rose-50"><Trash2 className="h-4 w-4" />Supprimer le groupe</button>
+              </div>}
             </div>
+            {showDeleteGroupConfirm && <div className="fixed inset-0 z-[2147483000] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm" role="alertdialog" aria-modal="true" aria-labelledby="piptalk-delete-group-title">
+              <div className="w-full max-w-sm rounded-2xl bg-white p-5 shadow-2xl">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-rose-50 text-rose-600"><Trash2 className="h-5 w-5" /></div>
+                <h3 id="piptalk-delete-group-title" className="mt-4 text-base font-bold text-slate-900">Supprimer ce groupe ?</h3>
+                <p className="mt-2 text-sm leading-5 text-slate-500">Le groupe « {active.title || 'Sans nom'} » sera supprimé et ne sera plus accessible à ses membres. Cette action est irréversible.</p>
+                <div className="mt-5 flex gap-2">
+                  <button type="button" disabled={deletingGroup} onClick={() => setShowDeleteGroupConfirm(false)} className="flex-1 rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold text-slate-600 disabled:opacity-50">Annuler</button>
+                  <button type="button" disabled={deletingGroup} onClick={() => void deleteGroup()} className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-rose-600 px-3 py-2.5 text-sm font-bold text-white hover:bg-rose-700 disabled:opacity-60">{deletingGroup && <Loader2 className="h-4 w-4 animate-spin" />}{deletingGroup ? 'Suppression…' : 'Confirmer'}</button>
+                </div>
+              </div>
+            </div>}
             {canManageGroup && <footer className="flex shrink-0 gap-3 border-t border-slate-200 bg-white px-4 py-3 shadow-[0_-4px_14px_rgba(15,23,42,0.04)]">
               <button type="button" onClick={() => setShowGroupSettings(false)} className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600">Annuler</button>
               <button type="button" onClick={() => void saveGroupSettings()} disabled={savingGroupSettings || !groupTitleDraft.trim()} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#00a982] px-4 py-3 text-sm font-bold text-white disabled:opacity-50"><Save className="h-4 w-4" />{savingGroupSettings ? 'Enregistrement…' : 'Enregistrer'}</button>
