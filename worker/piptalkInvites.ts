@@ -57,8 +57,7 @@ export async function handlePipTalkInviteJoin(request: Request, env: InviteEnv):
     await firestorePatch(env as any, `conversations/${group.id}`, {
       members: nextMembers,
       memberNames,
-      updatedAt: new Date().toISOString()
-    }, ['members', 'memberNames', 'updatedAt']);
+    }, ['members', 'memberNames']);
 
     return json({ success: true, groupId: group.id, groupTitle: String(group.title || 'Groupe'), alreadyMember: false });
   } catch (error) {
