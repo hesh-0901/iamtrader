@@ -50,6 +50,7 @@ export async function handleReferralRequest(request: Request, env: PaymentEnv) {
           return {
             uid: referredUid,
             displayName: String(fullName || referredProfile.displayName || referredProfile.email || 'Trader IAMTRADER'),
+            photoURL: String(referredProfile.avatarURL || referredProfile.photoURL || ''),
             createdAt: referral.createdAt || referredProfile.createdAt || null,
             plan: referredProfile.plan || null,
             status: referral.firstPaidAt ? 'paid' : 'registered',
@@ -60,6 +61,7 @@ export async function handleReferralRequest(request: Request, env: PaymentEnv) {
           return {
             uid: referredUid,
             displayName: 'Trader IAMTRADER',
+            photoURL: '',
             createdAt: referral.createdAt || null,
             plan: null,
             status: referral.firstPaidAt ? 'paid' : 'registered',
