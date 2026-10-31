@@ -185,6 +185,25 @@ service cloud.firestore {
       allow delete: if signedIn() && resource.data.userId == request.auth.uid;
     }
 
+    match /accounts/{accountId}/movements/{movementId} {
+      function ownsAccount() {
+        return signedIn()
+          && exists(/databases/$(database)/documents/accounts/$(accountId))
+          && get(/databases/$(database)/documents/accounts/$(accountId)).data.userId == request.auth.uid;
+      }
+      allow get, list: if ownsAccount();
+      allow create: if ownsAccount()
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.accountId == accountId
+        && request.resource.data.type in ['deposit', 'withdrawal', 'fee', 'payout', 'adjustment']
+        && request.resource.data.amount is number
+        && request.resource.data.amount > 0
+        && request.resource.data.signedAmount is number
+        && request.resource.data.note is string
+        && request.resource.data.createdAt is string;
+      allow update, delete: if false;
+    }
+
     match /trades/{id} {
       allow read: if admin() || (signedIn() && resource.data.userId == request.auth.uid);
       allow create: if signedIn() && request.resource.data.userId == request.auth.uid;
