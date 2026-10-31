@@ -30,7 +30,7 @@ export function AffiliationSettings() {
       onClick={() => copy(value)}
       aria-label={label}
       title={label}
-      className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+      className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
     >
       <svg viewBox="0 0 24 24" fill="none" className="h-4 w-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
         <rect x="8" y="8" width="12" height="12" rx="2" />
@@ -42,41 +42,41 @@ export function AffiliationSettings() {
   if (error) return <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-sm text-rose-700">{error}</div>;
   if (!stats) return null;
   const progress = Math.min(100, Math.round(stats.paid / stats.target * 100));
-  return <div className="space-y-5">
-    <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+  return <div className="w-full min-w-0 space-y-3 sm:space-y-4">
+    <section className="rounded-2xl border border-slate-200/80 bg-white p-4 sm:p-5">
       <p className="text-xs font-bold uppercase tracking-wider text-emerald-700">Programme IAMTRADER</p>
-      <h2 className="mt-2 text-2xl font-black text-slate-950">Votre espace affiliation</h2>
-      <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Invitez des traders à rejoindre IAMTRADER. Les conversions sont validées uniquement après confirmation effective du paiement de leur abonnement.</p>
-      <div className="mt-6 grid gap-3 sm:grid-cols-3">
-        <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs text-slate-500">Invitations attribuées</p><p className="mt-1 text-2xl font-black text-slate-900">{stats.invited}</p></div>
-        <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs text-slate-500">Abonnements payés</p><p className="mt-1 text-2xl font-black text-slate-900">{stats.paid} / {stats.target}</p></div>
-        <div className="rounded-2xl bg-slate-50 p-4"><p className="text-xs text-slate-500">Crédit disponible</p><p className="mt-1 text-2xl font-black text-slate-900">{stats.credit.toFixed(2)} {stats.currency}</p></div>
+      <h2 className="mt-1 text-xl font-extrabold tracking-tight text-slate-950 sm:text-2xl">Votre espace affiliation</h2>
+      <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-500 sm:text-sm">Invitez des traders à rejoindre IAMTRADER. Les conversions sont validées uniquement après confirmation effective du paiement de leur abonnement.</p>
+      <div className="mt-4 grid grid-cols-3 gap-2 sm:gap-3">
+        <div className="min-w-0 rounded-xl bg-slate-50 px-2.5 py-3 sm:p-4"><p className="text-[10px] leading-4 text-slate-500 sm:text-xs">Invitations attribuées</p><p className="mt-1 text-lg font-extrabold tabular-nums text-slate-900 sm:text-2xl">{stats.invited}</p></div>
+        <div className="min-w-0 rounded-xl bg-slate-50 px-2.5 py-3 sm:p-4"><p className="text-[10px] leading-4 text-slate-500 sm:text-xs">Abonnements payés</p><p className="mt-1 text-lg font-extrabold tabular-nums text-slate-900 sm:text-2xl">{stats.paid} / {stats.target}</p></div>
+        <div className="min-w-0 rounded-xl bg-slate-50 px-2.5 py-3 sm:p-4"><p className="text-[10px] leading-4 text-slate-500 sm:text-xs">Crédit disponible</p><p className="mt-1 text-lg font-extrabold tabular-nums text-slate-900 sm:text-2xl">{stats.credit.toFixed(2)} {stats.currency}</p></div>
       </div>
       <div className="mt-5"><div className="mb-2 flex justify-between text-xs font-semibold text-slate-600"><span>Progression vers le seuil de récompense</span><span>{stats.paid} / {stats.target}</span></div><div className="h-2 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: progress + '%' }} /></div></div>
     </section>
-    <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-7">
+    <section className="rounded-2xl border border-slate-200/80 bg-white p-4 sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h3 className="text-lg font-extrabold text-slate-900">Mes filleuls</h3>
-          <p className="mt-1 text-sm text-slate-500">Les traders inscrits avec votre code de parrainage.</p>
+          <h3 className="text-base font-extrabold text-slate-900">Mes filleuls</h3>
+          <p className="mt-0.5 text-xs text-slate-500">Traders inscrits avec votre code.</p>
         </div>
         <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">{stats.invited} invitation{stats.invited > 1 ? 's' : ''}</span>
       </div>
       {stats.referrals.length === 0 ? (
         <div className="mt-5 rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 py-8 text-center">
           <p className="text-sm font-semibold text-slate-700">Aucun filleul pour le moment</p>
-          <p className="mt-1 text-xs text-slate-500">Partagez votre lien pour inviter vos premiers traders.</p>
+          <p className="mt-1 text-[10px] leading-4 text-slate-500 sm:text-xs">Partagez votre lien pour inviter vos premiers traders.</p>
         </div>
       ) : (
-        <div className="mt-5 divide-y divide-slate-100">
+        <div className="mt-3 divide-y divide-slate-100">
           {stats.referrals.map((referral) => (
-            <div key={referral.uid} className="flex flex-wrap items-center gap-3 py-4 first:pt-0 last:pb-0">
-              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-sm font-extrabold text-slate-600">
+            <div key={referral.uid} className="flex min-w-0 items-center gap-2.5 py-3 first:pt-0 last:pb-0 sm:gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-extrabold text-slate-600">
                 {referral.displayName.split(' ').filter(Boolean).slice(0, 2).map(part => part[0]?.toUpperCase()).join('') || 'T'}
               </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-bold text-slate-900">{referral.displayName}</p>
-                <p className="mt-1 text-xs text-slate-500">
+                <p className="mt-1 text-[10px] leading-4 text-slate-500 sm:text-xs">
                   Inscription : {referral.createdAt ? new Date(referral.createdAt).toLocaleDateString('fr-FR') : 'Date indisponible'}
                   {referral.plan ? ' · Offre : ' + referral.plan : ''}
                   {referral.firstPaidAt ? ' · Paiement : ' + new Date(referral.firstPaidAt).toLocaleDateString('fr-FR') : ''}
@@ -90,19 +90,19 @@ export function AffiliationSettings() {
         </div>
       )}
     </section>
-    <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-        <div className="min-w-0 flex-1">
-          <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">Code personnel</label>
-          <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
-            <code className="min-w-0 flex-1 truncate text-sm font-black tracking-[0.16em] text-slate-900">{stats.code}</code>
+    <section className="rounded-2xl border border-slate-200/80 bg-white p-4 sm:p-5">
+      <div className="flex min-w-0 items-end gap-2.5 sm:gap-3">
+        <div className="min-w-0 w-[34%] flex-none sm:w-auto sm:flex-1">
+          <label className="mb-1.5 block truncate text-[9px] font-bold uppercase tracking-wide text-slate-500 sm:text-[10px]">Code personnel</label>
+          <div className="flex min-w-0 items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-2 py-1.5 sm:gap-2 sm:px-3 sm:py-2">
+            <code className="min-w-0 flex-1 truncate text-[11px] font-black tracking-wider text-slate-900 sm:text-sm sm:tracking-[0.16em]">{stats.code}</code>
             <CopyButton value={stats.code} label="Copier le code" />
           </div>
         </div>
-        <div className="min-w-0 flex-[2]">
-          <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-500">Lien de parrainage</label>
-          <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
-            <span className="min-w-0 flex-1 truncate text-sm text-slate-700">{stats.link}</span>
+        <div className="min-w-0 flex-1">
+          <label className="mb-1.5 block truncate text-[9px] font-bold uppercase tracking-wide text-slate-500 sm:text-[10px]">Lien de parrainage</label>
+          <div className="flex min-w-0 items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-2 py-1.5 sm:gap-2 sm:px-3 sm:py-2">
+            <span className="min-w-0 flex-1 truncate text-[10px] text-slate-700 sm:text-sm">{stats.link}</span>
             <CopyButton value={stats.link} label="Copier le lien de parrainage" />
           </div>
         </div>
