@@ -78,6 +78,7 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
   const [pendingVoiceDuration, setPendingVoiceDuration] = useState(0);
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const [showGroupSettings, setShowGroupSettings] = useState(false);
+  const [showAddGroupMembers, setShowAddGroupMembers] = useState(false);
   const [showCreateGroup, setShowCreateGroup] = useState(false);
   const [newGroupTitle, setNewGroupTitle] = useState('');
   const [newGroupDescription, setNewGroupDescription] = useState('');
@@ -1106,9 +1107,17 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
                 {!canManageGroup && <p className="mt-2 text-xs text-slate-400">Seuls les administrateurs peuvent modifier les informations et la photo du groupe.</p>}
               </div>
               <div className="mt-2 bg-white px-4 py-4">
-                <h3 className="mb-2 text-sm font-bold text-slate-800">Ajouter des membres</h3>
-                {canManageGroup ? <>
-                  <div className="max-h-44 overflow-y-auto rounded-xl border border-slate-200 p-1">
+                <div className="mb-2 flex items-center justify-between"><h3 className="text-sm font-bold text-slate-800">Lien d’invitation</h3><span className="text-[10px] text-slate-400">Partageable</span></div>
+                {canManageGroup ? <><p className="mb-3 text-xs text-slate-500">Générez un lien pour permettre à un utilisateur connecté de rejoindre ce groupe.</p><button type="button" onClick={() => void createGroupInviteLink()} className="w-full rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-xs font-bold text-emerald-800">Générer et copier le lien</button>{groupInviteLink && <div className="mt-2 break-all rounded-lg bg-slate-50 p-2 text-[10px] text-slate-500">{groupInviteLink}</div>}</> : <p className="text-xs text-slate-500">Demandez un lien à un administrateur du groupe.</p>}
+              </div>
+              <div className="mt-2 bg-white px-4 py-4">
+                <div className="mb-3 flex items-center justify-between gap-3">
+                  <div className="flex min-w-0 items-center gap-2"><h3 className="text-sm font-bold text-slate-800">Membres du groupe</h3><span className="text-xs text-slate-400">{(active.members || []).length}</span></div>
+                  {canManageGroup && <button type="button" onClick={() => setShowAddGroupMembers(value => !value)} aria-label={showAddGroupMembers ? "Fermer l'ajout de membres" : "Ajouter des membres"} title="Ajouter des membres" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#d9fdd3] text-[#075e54] transition hover:bg-[#b9f5ad] focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2"><Plus className="h-5 w-5" /></button>}
+                </div>
+                {showAddGroupMembers && canManageGroup && <div className="mb-4 rounded-xl border border-emerald-100 bg-emerald-50/50 p-3">
+                  <p className="mb-2 text-xs font-semibold text-slate-600">Sélectionnez les utilisateurs à ajouter</p>
+                  <div className="max-h-44 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1">
                     {publicProfiles.filter(profile => profile.uid !== uid && !(active.members || []).includes(profile.uid)).map(profile => <label key={profile.uid} className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 hover:bg-slate-50">
                       <input type="checkbox" checked={selectedGroupInvitees.includes(profile.uid)} onChange={event => setSelectedGroupInvitees(previous => event.target.checked ? [...previous, profile.uid] : previous.filter(id => id !== profile.uid))} className="h-4 w-4 accent-emerald-600" />
                       {profile.avatarURL || profile.photoURL ? <img src={profile.avatarURL || profile.photoURL} alt="" className="h-8 w-8 rounded-full object-cover" /> : <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-50 text-xs font-bold text-emerald-700">{profile.displayName.slice(0,1).toUpperCase()}</span>}
@@ -1116,15 +1125,11 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
                     </label>)}
                     {publicProfiles.filter(profile => profile.uid !== uid && !(active.members || []).includes(profile.uid)).length === 0 && <p className="p-3 text-xs text-slate-400">Aucun autre utilisateur disponible.</p>}
                   </div>
-                  <button type="button" onClick={() => void addGroupMembers()} disabled={!selectedGroupInvitees.length || addingGroupMembers} className="mt-3 w-full rounded-xl bg-[#075e54] px-3 py-2.5 text-xs font-bold text-white disabled:opacity-50">{addingGroupMembers ? 'Ajout…' : `Ajouter ${selectedGroupInvitees.length || ''} membre(s)`}</button>
-                </> : <p className="text-xs text-slate-500">Seuls les administrateurs peuvent ajouter des membres.</p>}
-              </div>
-              <div className="mt-2 bg-white px-4 py-4">
-                <div className="mb-2 flex items-center justify-between"><h3 className="text-sm font-bold text-slate-800">Lien d’invitation</h3><span className="text-[10px] text-slate-400">Partageable</span></div>
-                {canManageGroup ? <><p className="mb-3 text-xs text-slate-500">Générez un lien pour permettre à un utilisateur connecté de rejoindre ce groupe.</p><button type="button" onClick={() => void createGroupInviteLink()} className="w-full rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-xs font-bold text-emerald-800">Générer et copier le lien</button>{groupInviteLink && <div className="mt-2 break-all rounded-lg bg-slate-50 p-2 text-[10px] text-slate-500">{groupInviteLink}</div>}</> : <p className="text-xs text-slate-500">Demandez un lien à un administrateur du groupe.</p>}
-              </div>
-              <div className="mt-2 bg-white px-4 py-4">
-                <div className="mb-3 flex items-center justify-between"><h3 className="text-sm font-bold text-slate-800">Membres du groupe</h3><span className="text-xs text-slate-400">{(active.members || []).length}</span></div>
+                  <div className="mt-3 flex gap-2">
+                    <button type="button" onClick={() => { setShowAddGroupMembers(false); setSelectedGroupInvitees([]); }} className="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs font-semibold text-slate-600">Annuler</button>
+                    <button type="button" onClick={() => void addGroupMembers()} disabled={!selectedGroupInvitees.length || addingGroupMembers} className="flex-1 rounded-xl bg-[#075e54] px-3 py-2.5 text-xs font-bold text-white disabled:opacity-50">{addingGroupMembers ? 'Ajout…' : `Ajouter ${selectedGroupInvitees.length || ''} membre(s)`}</button>
+                  </div>
+                </div>}
                 <div className="divide-y divide-slate-100">
                   {(active.members || []).map(memberUid => {
                     const profile = publicProfiles.find(item => item.uid === memberUid);
