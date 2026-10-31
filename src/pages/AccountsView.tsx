@@ -12,6 +12,7 @@ import {
   ShieldCheck
 } from 'lucide-react';
 import { deleteAccount } from '../services/firestore';
+import { AccountDetailView } from '../components/accounts/AccountDetailView';
 import { useToast } from '../components/common/Toast';
 
 interface AccountsViewProps {
@@ -31,6 +32,8 @@ export function AccountsView({
 }: AccountsViewProps) {
   const { showToast } = useToast();
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [openedAccountId, setOpenedAccountId] = useState<string | null>(null);
+  const openedAccount = accounts.find(account => account.id === openedAccountId) || null;
 
   const handleDelete = async (accountId: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -75,13 +78,21 @@ export function AccountsView({
         </button>
       </div>
 
+      {openedAccount ? (
+        <AccountDetailView
+          account={openedAccount}
+          trades={trades}
+          onBack={() => setOpenedAccountId(null)}
+        />
+      ) : (
+      <>
       {/* Accounts Grid */}
       {accounts.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {accounts.map(acc => {
             const accTrades = trades.filter(t => t.accountId === acc.id);
             const totalPnl = accTrades.reduce((sum, t) => sum + (Number(t.pnl) || 0), 0);
-            const currentBal = acc.initialBalance + totalPnl;
+            const currentBal = Number(acc.currentBalance ?? acc.initialBalance) + totalPnl;
             const isSelected = selectedAccountId === acc.id;
             const palette = acc.type.includes('Funded')
               ? { card: 'from-emerald-50/90 via-white to-white', badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', accent: 'text-emerald-600', bar: 'bg-emerald-500', ring: 'ring-emerald-500/20 border-emerald-300' }
@@ -96,7 +107,7 @@ export function AccountsView({
             return (
               <div
                 key={acc.id}
-                onClick={() => onSelectAccount(acc.id)}
+                onClick={() => setOpenedAccountId(acc.id)}
                 className={`group relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br ${palette.card} p-4 sm:p-5 shadow-[0_8px_28px_rgba(15,23,42,0.05)] cursor-pointer flex flex-col justify-between space-y-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_34px_rgba(15,23,42,0.10)] focus:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 ${isSelected ? `ring-2 ${palette.ring}` : 'hover:border-slate-300'}`}
               >
                 <div>
@@ -199,6 +210,8 @@ export function AccountsView({
             accentColor="sky"
           />
         </div>
+      )}
+      </>
       )}
     </div>
   );
