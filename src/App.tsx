@@ -63,6 +63,13 @@ function MainAppContent() {
   const [isLogoutConfirmOpen, setIsLogoutConfirmOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
+  // Les liens d’invitation doivent reprendre dans Community après authentification.
+  useEffect(() => {
+    if (new URLSearchParams(window.location.search).has('piptalkInvite')) {
+      setCurrentPage('community');
+    }
+  }, []);
+
   // Capture le retour du checkout sans considérer les paramètres URL comme une preuve de paiement.
   useEffect(() => {
     const url = new URL(window.location.href);
