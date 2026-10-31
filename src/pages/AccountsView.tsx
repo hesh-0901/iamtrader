@@ -104,7 +104,7 @@ export function AccountsView({
                   <div className="flex items-start justify-between">
                     <div>
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-mono font-bold uppercase tracking-wider border px-2.5 py-1 rounded-md ${palette.badge}">
+                        <span className={`text-[10px] font-mono font-bold uppercase tracking-wider border px-2.5 py-1 rounded-md ${palette.badge}`}>
                           {acc.type}
                         </span>
                         {isSelected && (
