@@ -15,6 +15,7 @@ service cloud.firestore {
     function primaryAdmin() { return admin() && request.auth.token.email == 'henochshungu@gmail.com'; }
     function groupAdmin(cid) { return primaryAdmin() || (member(cid) && request.auth.uid in get(/databases/$(database)/documents/conversations/$(cid)).data.get('admins', [])); }
     function groupMentor(cid) { return member(cid) && request.auth.uid in get(/databases/$(database)/documents/conversations/$(cid)).data.get('mentors', []); }
+    function groupModerator(cid) { return groupAdmin(cid) || groupMentor(cid); }
     function member(cid) {
       return signedIn()
         && exists(/databases/$(database)/documents/conversations/$(cid))
@@ -125,7 +126,13 @@ service cloud.firestore {
               && request.resource.data.systemGroup == false
               && request.resource.data.get('avatarURL', '') is string
               && request.resource.data.get('title', '') is string
-              && request.resource.data.get('description', '') is string));
+              && request.resource.data.get('description', '') is string)
+            || (groupModerator(cid)
+              && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['mutedMembers', 'updatedAt'])
+              && request.resource.data.members == resource.data.members
+              && request.resource.data.get('mutedMembers', []) is list
+              && request.resource.data.get('mutedMembers', []).size() <= request.resource.data.members.size()
+              && request.resource.data.get('mutedMembers', []).hasOnly(request.resource.data.members));
       allow delete: if groupAdmin(cid) && resource.data.get('systemGroup', false) == false;
 
       match /readStates/{uid} {
@@ -142,7 +149,7 @@ service cloud.firestore {
       }
 
       match /messages/{messageId} {
-        function canChat() { return signedIn() && (cid == 'community-hub' ? member(cid) : member(cid) && (!get(/databases/$(database)/documents/conversations/$(cid)).data.get('closed', false) || groupAdmin(cid) || groupMentor(cid))); }
+        function canChat() { return signedIn() && (cid == 'community-hub' ? member(cid) : member(cid) && (!get(/databases/$(database)/documents/conversations/$(cid)).data.get('closed', false) || groupAdmin(cid) || groupMentor(cid)) && (!(request.auth.uid in get(/databases/$(database)/documents/conversations/$(cid)).data.get('mutedMembers', [])) || groupAdmin(cid) || groupMentor(cid))); }
         allow get, list: if canChat();
         allow create: if canChat()
           && request.resource.data.senderId == request.auth.uid
