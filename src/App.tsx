@@ -65,7 +65,7 @@ function MainAppContent() {
 
   // Les liens d’invitation doivent reprendre dans Community après authentification.
   useEffect(() => {
-    if (new URLSearchParams(window.location.search).has('piptalkInvite')) {
+    if (new URLSearchParams(window.location.search).has('piptalkInvite') || /^\/i\/[A-Za-z0-9]{6}\/?$/.test(window.location.pathname)) {
       setCurrentPage('community');
     }
   }, []);
