@@ -126,7 +126,7 @@ service cloud.firestore {
               && request.resource.data.get('avatarURL', '') is string
               && request.resource.data.get('title', '') is string
               && request.resource.data.get('description', '') is string));
-      allow delete: if false;
+      allow delete: if groupAdmin(cid) && resource.data.get('systemGroup', false) == false;
 
       match /readStates/{uid} {
         allow get: if signedIn() && request.auth.uid == uid
