@@ -38,7 +38,7 @@ export async function handlePipTalkInviteJoin(request: Request, env: InviteEnv):
     const displayName = String(body.displayName || identity.users?.[0]?.displayName || 'Trader').trim().slice(0, 80) || 'Trader';
     if (!/^(?:[A-Za-z0-9]{6}|[A-Za-z0-9]{10})$/.test(code)) return json({ success: false, message: 'Ce lien d’invitation est invalide.' }, 400);
 
-    const matches = await firestoreQueryByField(env as any, 'conversations', 'inviteCode', code, 2, 'updatedAt');
+    const matches = await firestoreQueryByField(env as any, 'conversations', 'inviteCode', code, 2, null);
     const group = matches[0] as Record<string, unknown> & { id?: string } | undefined;
     if (!group?.id || group.group !== true || group.systemGroup === true || group.inviteEnabled !== true || group.inviteCode !== code) {
       return json({ success: false, message: 'Ce lien est invalide, désactivé ou a été actualisé.' }, 404);
@@ -61,7 +61,7 @@ export async function handlePipTalkInviteJoin(request: Request, env: InviteEnv):
 
     return json({ success: true, groupId: group.id, groupTitle: String(group.title || 'Groupe'), alreadyMember: false });
   } catch (error) {
-    console.error('PipTalk invite join failed:', error);
+    console.error('PipTalk invite join failed:', error instanceof Error ? `${error.name}: ${error.message}` : String(error));
     return json({ success: false, message: 'Impossible de rejoindre ce groupe pour le moment.' }, 500);
   }
 }
