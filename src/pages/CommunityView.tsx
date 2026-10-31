@@ -10,7 +10,9 @@ import { AnalysisAdminPanel } from './AnalysisAdminPanel';
 type CommunityTab = 'home' | 'chat' | 'friends' | 'calendar' | 'courses' | 'analysis' | 'sentiment' | 'economic-data';
 
 export function CommunityView({ userProfile }: { userProfile: UserProfile | null }) {
-  const [activeTab, setActiveTab] = useState<CommunityTab>('home');
+  const [activeTab, setActiveTab] = useState<CommunityTab>(() =>
+    typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('piptalkInvite') ? 'chat' : 'home'
+  );
   const [pendingChatId, setPendingChatId] = useState('');
   const [unreadChatCount, setUnreadChatCount] = useState(0);
   const openChat = (conversationId: string) => {
