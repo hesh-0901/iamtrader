@@ -49,10 +49,10 @@ function MainAppContent() {
   // Domain Data State
   const [accounts, setAccounts] = useState<TradingAccount[]>([]);
   const [allTrades, setAllTrades] = useState<Trade[]>([]);
+  const [selectedAccountId, setSelectedAccountId] = useState<string>('all');
   const trades = selectedAccountId && selectedAccountId !== 'all'
     ? allTrades.filter(trade => trade.accountId === selectedAccountId)
     : allTrades;
-  const [selectedAccountId, setSelectedAccountId] = useState<string>('all');
   const [isLoadingData, setIsLoadingData] = useState<boolean>(false);
 
   // Modals State
