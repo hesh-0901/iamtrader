@@ -58,6 +58,14 @@ export default {
   async fetch(request: Request, env: EnvWithPayments): Promise<Response> {
     const url = new URL(request.url);
 
+    // Serve short PipTalk invite URLs through the SPA entry point without changing the visible URL.
+    const invitePath = url.pathname.match(/^\/i\/([A-Za-z0-9]{6})\/?$/);
+    if (invitePath && request.method === 'GET') {
+      const appUrl = new URL('/', url.origin);
+      appUrl.searchParams.set('piptalkInvite', invitePath[1]);
+      return env.ASSETS.fetch(new Request(appUrl.toString(), request));
+    }
+
     if (url.pathname === '/api/push/config') return handlePushConfig(request, env);
 
     if (url.pathname === '/api/push/register') return handlePushRegister(request, env);
