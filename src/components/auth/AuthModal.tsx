@@ -96,6 +96,7 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
   const [avatarModalOpen, setAvatarModalOpen] = useState(false);
   const [pendingAvatar, setPendingAvatar] = useState<(typeof INITIAL_AVATARS)[number] | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [referralCode] = useState(() => { const params = new URLSearchParams(window.location.search); const code = params.get('ref') || sessionStorage.getItem('iamtrader-referral-code') || ''; if (code) sessionStorage.setItem('iamtrader-referral-code', code.toUpperCase()); return code.toUpperCase(); });
 
   useEffect(() => {
     if (isOpen) setMode(defaultMode);
@@ -168,7 +169,8 @@ export function AuthModal({ isOpen, onClose, defaultMode = 'login' }: AuthModalP
           country: country.trim(),
           whatsapp: whatsapp.trim(),
           avatarId: selectedAvatar!.id,
-          avatarURL: selectedAvatar!.url
+          avatarURL: selectedAvatar!.url,
+          referralCode
         });
         showToast('Compte créé avec succès', 'success');
         onClose();
