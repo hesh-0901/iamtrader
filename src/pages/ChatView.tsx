@@ -9,7 +9,7 @@ import {
   serverTimestamp, setDoc, updateDoc, where, Timestamp
 } from 'firebase/firestore';
 import {
-  Search, MoreVertical, Send, Pin, Pencil, Trash2, X, CheckCheck, Copy, Forward,
+  Search, MoreVertical, Send, Pin, Pencil, Trash2, X, CheckCheck, Copy, Forward, Link2, Eye, EyeOff, RefreshCw,
   MessageCircle, Plus, ArrowLeft, Users, Loader2, Image as ImageIcon, Mic, Square, Settings, Save, Reply, FileAudio, BellRing, Smile, ShieldCheck
 } from 'lucide-react';
 
@@ -92,6 +92,10 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
   const [groupAvatarFile, setGroupAvatarFile] = useState<File | null>(null);
   const [selectedGroupInvitees, setSelectedGroupInvitees] = useState<string[]>([]);
   const [groupInviteLink, setGroupInviteLink] = useState('');
+  const [groupInviteVisible, setGroupInviteVisible] = useState(false);
+  const [groupInviteBusy, setGroupInviteBusy] = useState(false);
+  const [pendingInviteCode, setPendingInviteCode] = useState('');
+  const [joiningInvite, setJoiningInvite] = useState(false);
   const [addingGroupMembers, setAddingGroupMembers] = useState(false);
   const [savingGroupSettings, setSavingGroupSettings] = useState(false);
   const [viewerImage, setViewerImage] = useState<ChatMessage | null>(null);
@@ -117,36 +121,72 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
   useEffect(() => {
     if (!uid) return;
     const params = new URLSearchParams(window.location.search);
-    const groupId = params.get('piptalkGroup');
     const inviteCode = params.get('piptalkInvite');
-    if (!groupId || !inviteCode) return;
-    let cancelled = false;
-    void (async () => {
-      try {
-        const groupRef = doc(db, 'conversations', groupId);
-        const snapshot = await getDoc(groupRef);
-        if (!snapshot.exists()) throw new Error("Ce groupe n'existe plus.");
-        const groupData = snapshot.data() as ChatConversation & { inviteCode?: string; inviteEnabled?: boolean };
-        if (!groupData.group || !groupData.inviteEnabled || groupData.inviteCode !== inviteCode) throw new Error("Ce lien d'invitation est invalide ou désactivé.");
-        if (!(groupData.members || []).includes(uid)) {
-          await updateDoc(groupRef, { members: arrayUnion(uid), memberNames: { ...(groupData.memberNames || {}), [uid]: currentDisplayName }, updatedAt: serverTimestamp() });
-        }
-        if (cancelled) return;
-        setActiveId(groupId);
-        setMobileChatOpen(true);
-        setShowGroupSettings(false);
-        setError('');
-      } catch (err: any) { if (!cancelled) setError(err?.message || "Impossible de rejoindre ce groupe."); }
-      finally {
-        if (!cancelled) {
-          params.delete('piptalkGroup'); params.delete('piptalkInvite');
-          const cleanUrl = window.location.pathname + (params.toString() ? `?${params.toString()}` : '') + window.location.hash;
-          window.history.replaceState({}, document.title, cleanUrl);
-        }
-      }
-    })();
-    return () => { cancelled = true; };
-  }, [uid, userProfile?.displayName]);
+    if (!inviteCode) return;
+    setPendingInviteCode(inviteCode);
+    params.delete('piptalkInvite');
+    const cleanUrl = window.location.pathname + (params.toString() ? `?${params.toString()}` : '') + window.location.hash;
+    window.history.replaceState({}, document.title, cleanUrl);
+  }, [uid]);
+
+  const createGroupInviteLink = async () => {
+    if (!active || !canManageGroup || groupInviteBusy) return;
+    setGroupInviteBusy(true);
+    setError('');
+    try {
+      const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789';
+      const bytes = new Uint8Array(10);
+      crypto.getRandomValues(bytes);
+      const code = Array.from(bytes, byte => alphabet[byte % alphabet.length]).join('');
+      await updateDoc(doc(db, 'conversations', active.id), {
+        inviteCode: code, inviteEnabled: true, updatedAt: serverTimestamp()
+      });
+      const url = new URL(window.location.origin + '/');
+      url.searchParams.set('piptalkInvite', code);
+      setGroupInviteLink(url.toString());
+      setGroupInviteVisible(false);
+    } catch (err: any) {
+      setError(err?.message || "Impossible de créer le lien d'invitation.");
+    } finally {
+      setGroupInviteBusy(false);
+    }
+  };
+
+  const copyGroupInviteLink = async () => {
+    if (!groupInviteLink) return;
+    try {
+      await navigator.clipboard.writeText(groupInviteLink);
+      setError('Lien d’invitation copié.');
+    } catch {
+      setError('Copie impossible. Affichez le lien puis copiez-le manuellement.');
+      setGroupInviteVisible(true);
+    }
+  };
+
+  const confirmGroupInvite = async () => {
+    if (!pendingInviteCode || !auth.currentUser || joiningInvite) return;
+    setJoiningInvite(true);
+    setError('');
+    try {
+      const idToken = await auth.currentUser.getIdToken();
+      const response = await fetch('/api/piptalk/invite/join', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${idToken}` },
+        body: JSON.stringify({ code: pendingInviteCode, displayName: currentDisplayName })
+      });
+      const result = await response.json() as { success?: boolean; groupId?: string; groupTitle?: string; alreadyMember?: boolean; message?: string };
+      if (!response.ok || !result.success || !result.groupId) throw new Error(result.message || "Impossible de rejoindre ce groupe.");
+      setPendingInviteCode('');
+      setActiveId(result.groupId);
+      setMobileChatOpen(true);
+      setShowGroupSettings(false);
+      setError(result.alreadyMember ? 'Vous êtes déjà membre de ce groupe.' : `Vous avez rejoint « ${result.groupTitle || 'le groupe'} ».`);
+    } catch (err: any) {
+      setError(err?.message || "Impossible de rejoindre ce groupe.");
+    } finally {
+      setJoiningInvite(false);
+    }
+  };
 
   useEffect(() => {
     if (!initialConversationId) return;
@@ -1108,7 +1148,7 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
               </div>
               <div className="mt-2 bg-white px-4 py-4">
                 <div className="mb-2 flex items-center justify-between"><h3 className="text-sm font-bold text-slate-800">Lien d’invitation</h3><span className="text-[10px] text-slate-400">Partageable</span></div>
-                {canManageGroup ? <><p className="mb-3 text-xs text-slate-500">Générez un lien pour permettre à un utilisateur connecté de rejoindre ce groupe.</p><button type="button" onClick={() => void createGroupInviteLink()} className="w-full rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-xs font-bold text-emerald-800">Générer et copier le lien</button>{groupInviteLink && <div className="mt-2 break-all rounded-lg bg-slate-50 p-2 text-[10px] text-slate-500">{groupInviteLink}</div>}</> : <p className="text-xs text-slate-500">Demandez un lien à un administrateur du groupe.</p>}
+                {canManageGroup ? <><p className="mb-3 text-xs text-slate-500">Créez un lien court à partager. Chaque utilisateur devra confirmer son adhésion.</p><div className="flex items-center gap-2"><button type="button" onClick={() => void createGroupInviteLink()} disabled={groupInviteBusy} aria-label={groupInviteLink ? "Actualiser le lien d’invitation" : "Générer le lien d’invitation"} title={groupInviteLink ? "Actualiser le lien" : "Générer le lien"} className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#075e54] text-white shadow-sm transition hover:bg-[#064e46] disabled:opacity-50">{groupInviteBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : groupInviteLink ? <RefreshCw className="h-4 w-4" /> : <Link2 className="h-4 w-4" />}</button><div className="flex h-11 min-w-0 flex-1 items-center gap-1 rounded-xl border border-slate-200 bg-slate-50 px-2"><input readOnly value={groupInviteLink ? (groupInviteVisible ? groupInviteLink : '••••••••••••••••••••••••') : 'Aucun lien généré'} aria-label="Lien d’invitation" className="min-w-0 flex-1 bg-transparent text-[10px] text-slate-600 outline-none" /><button type="button" disabled={!groupInviteLink} onClick={() => setGroupInviteVisible(value => !value)} title={groupInviteVisible ? "Masquer le lien" : "Visualiser le lien"} aria-label={groupInviteVisible ? "Masquer le lien" : "Visualiser le lien"} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 hover:bg-white disabled:opacity-30">{groupInviteVisible ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button><button type="button" disabled={!groupInviteLink} onClick={() => void copyGroupInviteLink()} title="Copier le lien" aria-label="Copier le lien" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 hover:bg-white disabled:opacity-30"><Copy className="h-4 w-4" /></button></div></div><p className="mt-2 text-[10px] text-slate-400">{groupInviteLink ? 'Lien actif · Actualisez-le pour invalider l’ancien.' : 'Aucun lien actif pour le moment.'}</p></> : <p className="text-xs text-slate-500">Demandez un lien à un administrateur du groupe.</p>}
               </div>
               <div className="mt-2 bg-white px-4 py-4">
                 <div className="mb-3 flex items-center justify-between gap-3">
@@ -1295,6 +1335,7 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
       </div>
       <div className="pointer-events-none absolute bottom-4 left-1/2 max-w-[90vw] -translate-x-1/2 rounded-full border border-white/10 bg-black/55 px-4 py-2 text-xs text-white/85">{viewerImage.mediaName || "Image envoyée"} · Cliquez à côté pour fermer</div>
     </div>}
+    {pendingInviteCode && createPortal(<div role="dialog" aria-modal="true" aria-labelledby="piptalk-invite-title" className="fixed inset-0 z-[2147483000] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm"><section className="w-full max-w-sm overflow-hidden rounded-3xl border border-white/60 bg-white shadow-2xl"><div className="bg-gradient-to-br from-[#075e54] to-[#00a982] px-6 py-6 text-white"><div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15"><Users className="h-6 w-6" /></div><h2 id="piptalk-invite-title" className="mt-4 text-lg font-extrabold">Invitation à un groupe</h2><p className="mt-1 text-xs leading-5 text-white/80">Un membre de PipTalk vous invite à rejoindre un groupe IAMTRADER.</p></div><div className="p-5"><p className="text-sm leading-6 text-slate-600">Confirmez-vous votre adhésion ? En confirmant, vous deviendrez membre et pourrez accéder aux échanges du groupe selon ses autorisations.</p><div className="mt-5 flex gap-2"><button type="button" disabled={joiningInvite} onClick={() => setPendingInviteCode('')} className="flex-1 rounded-xl border border-slate-200 px-3 py-3 text-xs font-bold text-slate-600">Plus tard</button><button type="button" disabled={joiningInvite} onClick={() => void confirmGroupInvite()} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-[#075e54] px-3 py-3 text-xs font-bold text-white disabled:opacity-60">{joiningInvite ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCheck className="h-4 w-4" />}{joiningInvite ? 'Adhésion…' : 'Confirmer l’accès'}</button></div></div></section></div>, document.body)}
   {viewerAvatar && <div className="fixed inset-0 z-[1200] flex items-center justify-center bg-slate-950/25 p-3 backdrop-blur-xl" role="dialog" aria-modal="true" aria-label={`Photo de profil de ${viewerAvatar.name}`} onClick={() => setViewerAvatar(null)}>
     <div className="relative flex max-h-[76vh] max-w-[min(78vw,680px)] flex-col items-center rounded-3xl border border-white/25 bg-white/10 p-2.5 shadow-[0_20px_70px_rgba(0,0,0,0.22)] backdrop-blur-2xl" onClick={event => event.stopPropagation()}>
       <button type="button" onClick={() => setViewerAvatar(null)} className="absolute right-3 top-3 z-10 rounded-full border border-white/25 bg-slate-900/30 p-2 text-white shadow-lg backdrop-blur-md transition hover:bg-slate-900/50" aria-label="Fermer l’aperçu"><X className="h-5 w-5" /></button>
