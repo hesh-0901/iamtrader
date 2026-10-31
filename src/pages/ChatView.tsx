@@ -933,6 +933,8 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
     setGroupDescriptionDraft(active.description || '');
     setGroupAvatarDraft(active.avatarURL || '');
     setGroupAvatarFile(null);
+    setGroupInviteLink(active.inviteEnabled && active.inviteCode ? `${window.location.origin}/?piptalkInvite=${encodeURIComponent(active.inviteCode)}` : '');
+    setGroupInviteVisible(false);
     setShowGroupSettings(true);
     setError('');
   };
@@ -954,19 +956,6 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
     } catch (err: any) {
       setError(err?.message || "Impossible d'ajouter les membres.");
     } finally { setAddingGroupMembers(false); }
-  };
-
-  const createGroupInviteLink = async () => {
-    if (!active || !canManageGroup) return;
-    try {
-      const code = active.inviteCode || (typeof crypto !== 'undefined' && 'randomUUID' in crypto ? crypto.randomUUID().replace(/-/g, '') : `${Date.now().toString(36)}${Math.random().toString(36).slice(2)}`);
-      await updateDoc(doc(db, 'conversations', active.id), { inviteCode: code, inviteEnabled: true, updatedAt: serverTimestamp() });
-      const url = new URL(window.location.href);
-      url.searchParams.set('piptalkGroup', active.id);
-      url.searchParams.set('piptalkInvite', code);
-      setGroupInviteLink(url.toString());
-      await navigator.clipboard.writeText(url.toString());
-    } catch (err: any) { setError(err?.message || "Impossible de créer le lien d'invitation."); }
   };
 
   const updateGroupMemberRole = async (memberUid: string, role: 'admin' | 'mentor', enabled: boolean) => {
