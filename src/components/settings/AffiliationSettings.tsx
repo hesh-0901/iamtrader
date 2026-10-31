@@ -43,19 +43,19 @@ export function AffiliationSettings() {
   if (!stats) return null;
   const progress = Math.min(100, Math.round(stats.paid / stats.target * 100));
   return <div className="w-full min-w-0 space-y-2.5 sm:space-y-4">
-    <section className="min-w-0 pb-4 sm:pb-5">
+    <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
       <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-700">Programme IAMTRADER</p>
       <h2 className="mt-1 text-xl font-extrabold tracking-tight text-slate-950 sm:text-2xl">Votre espace affiliation</h2>
       <p className="mt-1 max-w-3xl text-xs leading-5 text-slate-500 sm:text-sm">Invitez des traders à rejoindre IAMTRADER. Les conversions sont validées après confirmation effective du paiement de leur abonnement.</p>
-      <div className="mt-4 grid grid-cols-3 divide-x divide-slate-200 border-y border-slate-200 py-3 sm:py-4">
-        <div className="min-w-0 px-2 first:pl-0 sm:px-4"><p className="text-[9px] leading-4 text-slate-500 sm:text-xs">Invitations</p><p className="mt-1 text-lg font-extrabold tabular-nums text-slate-900 sm:text-2xl">{stats.invited}</p></div>
-        <div className="min-w-0 px-2 sm:px-4"><p className="text-[9px] leading-4 text-slate-500 sm:text-xs">Payés</p><p className="mt-1 text-lg font-extrabold tabular-nums text-slate-900 sm:text-2xl">{stats.paid} / {stats.target}</p></div>
-        <div className="min-w-0 px-2 sm:px-4"><p className="text-[9px] leading-4 text-slate-500 sm:text-xs">Crédit disponible</p><p className="mt-1 truncate text-lg font-extrabold tabular-nums text-slate-900 sm:text-2xl">{stats.credit.toFixed(2)} {stats.currency}</p></div>
+      <div className="mt-4 grid grid-cols-3 gap-2 sm:gap-3">
+        <div className="min-w-0 rounded-xl bg-slate-50 px-2.5 py-3 sm:px-4"><p className="text-[9px] leading-4 text-slate-500 sm:text-xs">Invitations</p><p className="mt-1 text-lg font-extrabold tabular-nums text-slate-900 sm:text-2xl">{stats.invited}</p></div>
+        <div className="min-w-0 rounded-xl bg-slate-50 px-2.5 py-3 sm:px-4"><p className="text-[9px] leading-4 text-slate-500 sm:text-xs">Payés</p><p className="mt-1 text-lg font-extrabold tabular-nums text-slate-900 sm:text-2xl">{stats.paid} / {stats.target}</p></div>
+        <div className="min-w-0 rounded-xl bg-slate-50 px-2.5 py-3 sm:px-4"><p className="text-[9px] leading-4 text-slate-500 sm:text-xs">Crédit disponible</p><p className="mt-1 truncate text-lg font-extrabold tabular-nums text-slate-900 sm:text-2xl">{stats.credit.toFixed(2)} {stats.currency}</p></div>
       </div>
       <div className="mt-3"><div className="mb-1.5 flex justify-between text-[10px] font-semibold text-slate-500 sm:text-xs"><span>Progression vers la récompense</span><span>{stats.paid} / {stats.target}</span></div><div className="h-1.5 overflow-hidden rounded-full bg-slate-100"><div className="h-full rounded-full bg-emerald-500 transition-all" style={{ width: progress + '%' }} /></div></div>
     </section>
-    <section className="min-w-0 py-1">
-      <div className="flex items-center justify-between gap-3 border-b border-slate-200 pb-2.5">
+    <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+      <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-3">
         <div>
           <h3 className="text-base font-extrabold text-slate-900">Mes filleuls</h3>
           <p className="mt-0.5 text-[11px] text-slate-500">Traders inscrits avec votre code.</p>
@@ -91,7 +91,7 @@ export function AffiliationSettings() {
         </div>
       )}
     </section>
-    <section className="min-w-0 border-t border-slate-200 pt-3 sm:pt-4">
+    <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-sm sm:p-4">
       <div className="flex min-w-0 items-end gap-2.5 sm:gap-3">
         <div className="min-w-0 w-[34%] flex-none sm:w-auto sm:flex-1">
           <label className="mb-1.5 block truncate text-[9px] font-bold uppercase tracking-wide text-slate-500 sm:text-[10px]">Code personnel</label>
