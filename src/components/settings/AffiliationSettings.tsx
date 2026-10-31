@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { auth } from '../../firebase/config';
 
-type ReferralEntry = { uid: string; displayName: string; createdAt?: string | null; plan?: string | null; status: 'paid' | 'registered'; firstPaidAt?: string | null };
+type ReferralEntry = { uid: string; displayName: string; photoURL?: string; createdAt?: string | null; plan?: string | null; status: 'paid' | 'registered'; firstPaidAt?: string | null };
 type ReferralStats = { code: string; link: string; invited: number; paid: number; target: number; credit: number; currency: string; rewardStatus: string; referrals: ReferralEntry[] };
 export function AffiliationSettings() {
   const [stats, setStats] = useState<ReferralStats | null>(null);
@@ -91,8 +91,12 @@ export function AffiliationSettings() {
           {stats.referrals.map((referral, index) => (
             <div key={referral.uid} className="flex min-w-0 items-center gap-2.5 py-3 sm:gap-3">
               <span className="w-6 shrink-0 text-[11px] font-bold tabular-nums text-slate-400">{String(index + 1).padStart(2, '0')}</span>
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-100 text-[10px] font-extrabold text-slate-600">
-                {referral.displayName.split(' ').filter(Boolean).slice(0, 2).map(part => part[0]?.toUpperCase()).join('') || 'T'}
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-slate-100 text-[10px] font-extrabold text-slate-600">
+                {referral.photoURL ? (
+                  <img src={referral.photoURL} alt={referral.displayName} loading="lazy" referrerPolicy="no-referrer" className="h-full w-full object-cover" onError={(event) => { event.currentTarget.style.display = 'none'; }} />
+                ) : (
+                  referral.displayName.split(' ').filter(Boolean).slice(0, 2).map(part => part[0]?.toUpperCase()).join('') || 'T'
+                )}
               </div>
               <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-bold text-slate-900">{referral.displayName}</p>
