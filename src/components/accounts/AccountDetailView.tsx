@@ -3,13 +3,13 @@ import {
   ArrowLeft, ArrowDownLeft, ArrowUpRight, BadgeDollarSign, CalendarDays,
   Check, Clock3, Edit3, History, Landmark, Loader2, Plus, Save, Wallet, X
 } from 'lucide-react';
-import { TradingAccount, Trade } from '../types';
-import { formatCurrency } from '../utils/calculations';
+import { TradingAccount, Trade } from '../../types';
+import { formatCurrency } from '../../utils/calculations';
 import {
   AccountMovement, AccountMovementType, addAccountMovement,
   subscribeAccountMovements, updateAccount
-} from '../services/firestore';
-import { useToast } from '../components/common/Toast';
+} from '../../services/firestore';
+import { useToast } from '../common/Toast';
 
 interface AccountDetailViewProps {
   account: TradingAccount;
