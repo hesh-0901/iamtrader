@@ -201,7 +201,8 @@ service cloud.firestore {
         && request.resource.data.signedAmount is number
         && request.resource.data.note is string
         && request.resource.data.createdAt is string;
-      allow update, delete: if false;
+      allow update: if false;
+      allow delete: if ownsAccount();
     }
 
     match /trades/{id} {
