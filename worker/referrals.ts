@@ -30,7 +30,7 @@ export async function handleReferralRequest(request: Request, env: PaymentEnv) {
     if (!profile) return json({ success: false, message: 'Profil introuvable.' }, 404);
     if (request.method === 'GET') {
       const code = await ensureCode(env, uid, profile);
-      const referrals = await firestoreQueryByField(env, 'referrals', 'referrerUid', uid, 500);
+      const referrals = await firestoreQueryByField(env, 'referrals', 'referrerUid', uid, 500, null);
       const paid = referrals.filter((r: any) => r.firstPaidAt).length;
       const credit = Number(profile.referralCreditAvailable || 0);
       return json({ success: true, code, link: 'https://iamtrader.trade/?ref=' + code, invited: referrals.length, paid, target: 7, credit, currency: 'USD', rewardStatus: paid >= 7 ? 'eligible' : 'in_progress' });
