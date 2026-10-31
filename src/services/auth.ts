@@ -24,6 +24,7 @@ export interface RegistrationProfile {
   whatsapp: string;
   avatarId: string;
   avatarURL: string;
+  referralCode?: string;
 }
 
 export async function registerWithEmail(email: string, pass: string, displayName: string, registration: RegistrationProfile): Promise<User> {
@@ -64,6 +65,15 @@ export async function registerWithEmail(email: string, pass: string, displayName
       }
     };
     await setDoc(userRef, initialProfile, { merge: true });
+    const referralCode = String(registration.referralCode || '').trim().toUpperCase();
+    if (referralCode) {
+      try {
+        const idToken = await cred.user.getIdToken();
+        await fetch('/api/referrals', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + idToken }, body: JSON.stringify({ code: referralCode }) });
+      } catch (referralError) {
+        console.warn('Referral attribution deferred:', referralError);
+      }
+    }
   } catch (firestoreErr: any) {
     console.warn('Notice: Firestore profile initial write (rules check):', firestoreErr.message);
   }
