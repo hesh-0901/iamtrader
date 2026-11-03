@@ -106,7 +106,10 @@ function publicPayment(payment: Record<string, unknown>) {
     reference: payment.transactionReference || payment.reference,
     invoiceNumber: payment.invoiceNumber || null,
     createdAt: payment.createdAt,
-    paidAt: payment.paidAt || null
+    paidAt: payment.paidAt || null,
+    updatedAt: payment.updatedAt || null,
+    failureMessage: payment.failureMessage || null,
+    providerStatus: payment.cinetpayStatus || payment.saspayStatus || null
   };
 }
 
