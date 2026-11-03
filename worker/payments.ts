@@ -248,14 +248,14 @@ async function createSasPayCheckout(
     const transactionId = String(data?.id || data?.payment_id || data?.transaction_id || '').trim();
     const status = String(data?.status || 'PENDING').toUpperCase();
     if (!response.ok || !transactionId) {
-      await firestorePatch(env, 'payments/' + paymentId, { status: 'failed', failureMessage: result?.message || result?.detail || 'SasPay n’a pas pu initialiser le paiement.', saspayHttpStatus: response.status, updatedAt: new Date().toISOString() }, ['status', 'failureMessage', 'saspayHttpStatus', 'updatedAt']);
+      await firestorePatch(env, 'payments/' + paymentId, { status: 'failed', failureMessage: 'La demande Mobile Money n’a pas pu être initialisée.', saspayHttpStatus: response.status, updatedAt: new Date().toISOString() }, ['status', 'failureMessage', 'saspayHttpStatus', 'updatedAt']);
       console.error('SasPay Softpay initialization failed:', response.status, raw.slice(0, 400));
       return json({ success: false, message: result?.message || result?.detail || 'Impossible d’envoyer la demande Mobile Money. Réessayez.' }, 502);
     }
     await firestorePatch(env, 'payments/' + paymentId, { status: ['FAILED', 'FAILURE', 'CANCELLED', 'EXPIRED'].includes(status) ? 'failed' : 'processing', saspayTransactionId: transactionId, saspayStatus: status, saspayNetwork: network, updatedAt: new Date().toISOString() }, ['status', 'saspayTransactionId', 'saspayStatus', 'saspayNetwork', 'updatedAt']);
     return json({ success: true, payment: { id: paymentId, plan: planKey, planName: plan.name, amount, currency, status: 'processing', reference, message: 'Demande Mobile Money envoyée. Confirmez le paiement sur votre téléphone.', subscriptionAction: decision.action, activationStartAt: decision.start.toISOString(), activationExpiresAt: decision.expires.toISOString() } });
   } catch (error) {
-    await firestorePatch(env, 'payments/' + paymentId, { status: 'failed', failureMessage: 'Impossible de joindre SasPay.', updatedAt: new Date().toISOString() }, ['status', 'failureMessage', 'updatedAt']);
+    await firestorePatch(env, 'payments/' + paymentId, { status: 'failed', failureMessage: 'Impossible de joindre le service de paiement.', updatedAt: new Date().toISOString() }, ['status', 'failureMessage', 'updatedAt']);
     console.error('SasPay Softpay network error:', error);
     return json({ success: false, message: 'Impossible de joindre le service de paiement. Vérifiez votre connexion et réessayez.' }, 502);
   }
@@ -301,13 +301,13 @@ export async function handleSasPayVerifyRequest(request: Request, env: SasPayEnv
       const amountMatches = amountsMatchToCents(sessionAmount, Number(payment.amount)) || amountsMatchToCents(sessionAmount / 100, Number(payment.amount));
       if (!amountMatches) {
         await firestorePatch(env, 'payments/' + paymentId, {
-          status: 'failed', failureMessage: 'Montant SasPay différent du montant attendu.', saspayStatus: canonicalStatus, updatedAt: now
+          status: 'failed', failureMessage: 'Le montant payé ne correspond pas au montant attendu.', saspayStatus: canonicalStatus, updatedAt: now
         }, ['status', 'failureMessage', 'saspayStatus', 'updatedAt']);
         return json({ success: true, status: 'failed', payment: publicPayment({ ...payment, status: 'failed' }) });
       }
       if (String(session?.currency || '').toUpperCase() !== String(payment.currency || '').toUpperCase()) {
         await firestorePatch(env, 'payments/' + paymentId, {
-          status: 'failed', failureMessage: 'Devise SasPay différente de la commande.', saspayStatus: canonicalStatus, updatedAt: now
+          status: 'failed', failureMessage: 'La devise payée ne correspond pas à la commande.', saspayStatus: canonicalStatus, updatedAt: now
         }, ['status', 'failureMessage', 'saspayStatus', 'updatedAt']);
         return json({ success: true, status: 'failed', payment: publicPayment({ ...payment, status: 'failed' }) });
       }
@@ -343,7 +343,7 @@ export async function handleSasPayVerifyRequest(request: Request, env: SasPayEnv
 
     if (['FAILED', 'FAILURE', 'EXPIRED', 'CANCELLED', 'CANCELED'].includes(canonicalStatus)) {
       await firestorePatch(env, 'payments/' + paymentId, {
-        status: 'failed', failureMessage: 'Paiement SasPay ' + canonicalStatus + '.', saspayStatus: canonicalStatus, updatedAt: now
+        status: 'failed', failureMessage: 'Paiement mobile ' + canonicalStatus + '.', saspayStatus: canonicalStatus, updatedAt: now
       }, ['status', 'failureMessage', 'saspayStatus', 'updatedAt']);
       return json({ success: true, status: 'failed', payment: publicPayment({ ...payment, status: 'failed' }) });
     }
@@ -615,7 +615,7 @@ export async function handlePaymentRequest(request: Request, env: CinetPayEnv) {
       paymentStage = 'firestore-payment-update';
     await firestorePatch(env, `payments/${paymentId}`, {
         status: 'failed',
-        failureMessage: result?.description || result?.message || 'CinetPay a refusé la transaction.',
+        failureMessage: 'La demande de paiement a été refusée.',
         cinetpayCode: result?.code || null,
         updatedAt: new Date().toISOString()
       }, ['status', 'failureMessage', 'cinetpayCode', 'updatedAt']);
@@ -654,7 +654,7 @@ export async function handlePaymentRequest(request: Request, env: CinetPayEnv) {
         subscriptionAction: decision.action,
         activationStartAt: decision.start.toISOString(),
         activationExpiresAt: decision.expires.toISOString(),
-        message: 'Paiement initialisé. Vous allez être redirigé vers le guichet sécurisé CinetPay.'
+        message: 'Paiement initialisé. Vous allez être redirigé vers la page sécurisée.'
       }
     });
   } catch (error) {
@@ -731,7 +731,7 @@ export async function handleCinetPayNotification(request: Request, env: CinetPay
       if (Number(canonical?.amount) && Number(canonical.amount) !== Number(payment.amount)) {
         await firestorePatch(env, `payments/${merchantTransactionId}`, {
           status: 'failed',
-          failureMessage: 'Montant CinetPay différent de la commande.',
+          failureMessage: 'Le montant payé ne correspond pas à la commande.',
           updatedAt: new Date().toISOString()
         }, ['status', 'failureMessage', 'updatedAt']);
         return json({ received: true });
@@ -740,7 +740,7 @@ export async function handleCinetPayNotification(request: Request, env: CinetPay
       if (canonical?.currency && String(canonical.currency) !== String(payment.currency)) {
         await firestorePatch(env, `payments/${merchantTransactionId}`, {
           status: 'failed',
-          failureMessage: 'Devise CinetPay différente de la commande.',
+          failureMessage: 'La devise payée ne correspond pas à la commande.',
           updatedAt: new Date().toISOString()
         }, ['status', 'failureMessage', 'updatedAt']);
         return json({ received: true });
@@ -790,7 +790,7 @@ export async function handleCinetPayNotification(request: Request, env: CinetPay
     if ([2010, 2005].includes(Number(statusResult?.code)) || ['FAILED', 'INSUFFICIENT_BALANCE', 'EXPIRED'].includes(status)) {
       await firestorePatch(env, `payments/${merchantTransactionId}`, {
         status: 'failed',
-        failureMessage: statusResult?.description || statusResult?.message || `Paiement CinetPay ${status || 'échoué'}.`,
+        failureMessage: 'Le paiement a échoué.',
         cinetpayStatus: status || 'FAILED',
         updatedAt: new Date().toISOString()
       }, ['status', 'failureMessage', 'cinetpayStatus', 'updatedAt']);
@@ -938,7 +938,7 @@ export async function handleSasPayWebhook(
         if (payment.status === 'paid') return json({ received: false, message: 'Le montant de la transaction payée ne correspond plus au paiement.' }, 409);
         await patchDocument(env, 'payments/' + paymentId, {
           status: 'failed',
-          failureMessage: 'Montant SasPay différent du montant attendu.',
+          failureMessage: 'Le montant payé ne correspond pas au montant attendu.',
           updatedAt: now().toISOString()
         }, ['status', 'failureMessage', 'updatedAt']);
         return json({ received: true, rejected: 'amount_mismatch' });
@@ -947,7 +947,7 @@ export async function handleSasPayWebhook(
         if (payment.status === 'paid') return json({ received: false, message: 'La devise de la transaction payée ne correspond plus au paiement.' }, 409);
         await patchDocument(env, 'payments/' + paymentId, {
           status: 'failed',
-          failureMessage: 'Devise SasPay différente de la commande.',
+          failureMessage: 'La devise payée ne correspond pas à la commande.',
           updatedAt: now().toISOString()
         }, ['status', 'failureMessage', 'updatedAt']);
         return json({ received: true, rejected: 'currency_mismatch' });
@@ -994,7 +994,7 @@ export async function handleSasPayWebhook(
     if (['FAILED', 'FAILURE', 'CANCELLED', 'CANCELED', 'EXPIRED'].includes(canonicalStatus)) {
       await patchDocument(env, 'payments/' + paymentId, {
         status: 'failed',
-        failureMessage: 'Paiement SasPay ' + canonicalStatus + '.',
+        failureMessage: 'Paiement mobile ' + canonicalStatus + '.',
         saspayStatus: canonicalStatus,
         updatedAt: now().toISOString()
       }, ['status', 'failureMessage', 'saspayStatus', 'updatedAt']);
