@@ -99,6 +99,7 @@ function publicPayment(payment: Record<string, unknown>) {
     id: payment.id,
     plan: payment.plan,
     planName: payment.planName,
+    months: payment.months || 1,
     amount: payment.amount,
     currency: payment.currency,
     status: payment.status,
@@ -198,7 +199,7 @@ async function createSasPayCheckout(
   planKey: keyof typeof PLANS, plan: (typeof PLANS)[keyof typeof PLANS], phone: string,
   amounts: ReturnType<typeof calculatePaymentAmounts>, decision: any, payerName: string
 ) {
-  if (!env.SASPAY_API_KEY || !env.SASPAY_WEBHOOK_SECRET) return json({ success: false, message: 'SasPay n’est pas entièrement configuré côté serveur. Ajoutez SASPAY_API_KEY et SASPAY_WEBHOOK_SECRET au Worker.' }, 503);
+  if (!env.SASPAY_API_KEY || !env.SASPAY_WEBHOOK_SECRET) return json({ success: false, message: 'Le paiement mobile est temporairement indisponible. Réessayez ultérieurement.' }, 503);
   const idempotencyKey = String(body.idempotencyKey || '');
   if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(idempotencyKey)) return json({ success: false, message: 'Clé d’idempotence invalide. Réessayez le paiement.' }, 400);
   const countryCode = String(body.countryCode || 'CD').toUpperCase();
@@ -256,7 +257,7 @@ async function createSasPayCheckout(
   } catch (error) {
     await firestorePatch(env, 'payments/' + paymentId, { status: 'failed', failureMessage: 'Impossible de joindre SasPay.', updatedAt: new Date().toISOString() }, ['status', 'failureMessage', 'updatedAt']);
     console.error('SasPay Softpay network error:', error);
-    return json({ success: false, message: 'Impossible de joindre SasPay. Vérifiez votre connexion et réessayez.' }, 502);
+    return json({ success: false, message: 'Impossible de joindre le service de paiement. Vérifiez votre connexion et réessayez.' }, 502);
   }
 }
 
@@ -264,7 +265,7 @@ export async function handleSasPayVerifyRequest(request: Request, env: SasPayEnv
   if (request.method !== 'GET') return json({ success: false, message: 'Méthode non autorisée.' }, 405);
   const token = authHeader(request);
   if (!token) return json({ success: false, message: 'Authentification requise.' }, 401);
-  if (!env.SASPAY_API_KEY) return json({ success: false, message: 'SasPay n’est pas configuré côté serveur.' }, 503);
+  if (!env.SASPAY_API_KEY) return json({ success: false, message: 'Le service de paiement est temporairement indisponible.' }, 503);
 
   try {
     const user = await verifyFirebaseIdToken(env, token);
@@ -274,12 +275,12 @@ export async function handleSasPayVerifyRequest(request: Request, env: SasPayEnv
     const paymentId = reference.toLowerCase();
     const payment = await firestoreGet(env, 'payments/' + paymentId);
     if (!payment || payment.uid !== user.uid || payment.provider !== 'SASPAY') {
-      return json({ success: false, message: 'Paiement SasPay introuvable.' }, 404);
+      return json({ success: false, message: 'Paiement introuvable.' }, 404);
     }
     if (payment.status === 'paid') return json({ success: true, status: 'paid', payment: publicPayment(payment) });
 
     const checkoutId = String(payment.saspayCheckoutId || '');
-    if (!checkoutId) return json({ success: false, status: 'unknown', message: 'La session SasPay est introuvable pour cette référence.' }, 409);
+    if (!checkoutId) return json({ success: false, status: 'unknown', message: 'La session de paiement est introuvable pour cette référence.' }, 409);
     const response = await fetch('https://api.saspay.me/api/v1/checkout-sessions/' + encodeURIComponent(checkoutId) + '/', {
       method: 'GET',
       headers: { Authorization: 'Bearer ' + env.SASPAY_API_KEY, 'Content-Type': 'application/json' }
@@ -312,7 +313,7 @@ export async function handleSasPayVerifyRequest(request: Request, env: SasPayEnv
       }
       const metadataPaymentId = String(session?.metadata?.iamtrader_payment_id || '').trim().toLowerCase();
       if (metadataPaymentId && metadataPaymentId !== paymentId) {
-        return json({ success: false, status: 'unknown', message: 'La référence retournée par SasPay ne correspond pas à cette commande.' }, 409);
+        return json({ success: false, status: 'unknown', message: 'La référence retournée ne correspond pas à cette commande.' }, 409);
       }
 
       const planKey = payment.plan as keyof typeof PLANS;
@@ -352,7 +353,7 @@ export async function handleSasPayVerifyRequest(request: Request, env: SasPayEnv
     return json({ success: true, status: 'processing', payment: publicPayment({ ...payment, status: 'processing' }) });
   } catch (error) {
     console.error('SasPay verification error:', error);
-    return json({ success: false, message: error instanceof Error ? error.message : 'Impossible de vérifier le paiement SasPay.' }, 500);
+    return json({ success: false, message: error instanceof Error ? error.message : 'Impossible de vérifier le paiement.' }, 500);
   }
 }
 
@@ -453,11 +454,11 @@ export async function handlePaymentRequest(request: Request, env: CinetPayEnv) {
       console.error('CinetPay runtime configuration incomplete:', configState);
       return json({
         success: false,
-        message: 'Configuration CinetPay serveur incomplète (' + configState + '). Vérifiez les secrets du Worker de production.'
+        message: 'Le paiement mobile est temporairement indisponible. Réessayez ultérieurement.'
       }, 503);
     }
     if (paymentMethod === 'mobile_money' && !isSasPay && (env.CINETPAY_COUNTRY || 'CD') !== 'CD') {
-      return json({ success: false, message: 'La configuration CinetPay doit utiliser le pays CD (configuration actuelle: ' + env.CINETPAY_COUNTRY + ').' }, 503);
+      return json({ success: false, message: 'Le paiement mobile n’est pas disponible pour ce pays actuellement.' }, 503);
     }
 
     paymentStage = 'firestore-profile';
@@ -525,7 +526,7 @@ export async function handlePaymentRequest(request: Request, env: CinetPayEnv) {
       return await createSasPayCheckout(request, env, user, body, profile, planKey, plan, phone!, amounts, decision, payerName);
     }
     if (countryCode !== 'CD') {
-      return json({ success: false, message: 'Ce pays est disponible avec SasPay Mobile Money. Sélectionnez un réseau SasPay valide.' }, 400);
+      return json({ success: false, message: 'Sélectionnez un réseau Mobile Money pris en charge pour ce pays.' }, 400);
     }
 
     const configuredChargedAmount = cinetPayAmount(env, planKey);
@@ -701,7 +702,7 @@ export async function handleCinetPayNotification(request: Request, env: CinetPay
     if (payment.status === 'paid') return json({ received: true });
 
     if (!notifyToken || !payment.cinetpayNotifyToken || notifyToken !== String(payment.cinetpayNotifyToken)) {
-      return json({ received: false, message: 'Notification CinetPay invalide.' }, 401);
+      return json({ received: false, message: 'Notification de paiement invalide.' }, 401);
     }
 
     if (!env.CINETPAY_API_KEY || !env.CINETPAY_API_PASSWORD) return json({ received: false }, 503);
@@ -719,11 +720,11 @@ export async function handleCinetPayNotification(request: Request, env: CinetPay
     );
 
     if (canonicalMerchantId && canonicalMerchantId !== merchantTransactionId) {
-      return json({ received: false, message: 'Transaction CinetPay non correspondante.' }, 400);
+      return json({ received: false, message: 'Transaction non correspondante.' }, 400);
     }
 
     if (cinetpayTransactionId && canonical?.transaction_id && String(canonical.transaction_id) !== cinetpayTransactionId) {
-      return json({ received: false, message: 'Identifiant de transaction CinetPay non correspondant.' }, 400);
+      return json({ received: false, message: 'Identifiant de transaction non correspondant.' }, 400);
     }
 
     if (status === 'SUCCESS' || String(statusResult?.code) === '100') {
@@ -859,7 +860,7 @@ export async function handleSasPayWebhook(
   if (request.method !== 'POST') return json({ received: false, message: 'Méthode non autorisée.' }, 405);
   if (!env.SASPAY_WEBHOOK_SECRET || !env.SASPAY_API_KEY) {
     console.error('SasPay webhook rejected: webhook secret or API key is missing.');
-    return json({ received: false, message: 'Configuration SasPay incomplète.' }, 503);
+    return json({ received: false, message: 'Configuration du paiement mobile incomplète.' }, 503);
   }
 
   try {
@@ -868,7 +869,7 @@ export async function handleSasPayWebhook(
     const timestamp = request.headers.get('X-Webhook-Timestamp') || '';
     const headerEvent = request.headers.get('X-Webhook-Event') || '';
     const valid = await verifySasPayWebhookSignature(rawBody, signature, timestamp, env.SASPAY_WEBHOOK_SECRET, Math.floor(now().getTime() / 1000));
-    if (!valid) return json({ received: false, message: 'Signature SasPay invalide ou expirée.' }, 401);
+    if (!valid) return json({ received: false, message: 'Signature de notification invalide ou expirée.' }, 401);
 
     let payload: any;
     try {
@@ -878,14 +879,14 @@ export async function handleSasPayWebhook(
     }
     const event = String(payload?.event || '');
     const eventData = payload?.data || {};
-    if (!event || event !== headerEvent) return json({ received: false, message: 'Type d’événement SasPay incohérent.' }, 400);
+    if (!event || event !== headerEvent) return json({ received: false, message: 'Type de notification incohérent.' }, 400);
     if (!['transaction.success', 'transaction.failed', 'transaction.cancelled'].includes(event)) {
       return json({ received: true, ignored: true });
     }
 
     const transactionId = String(eventData?.id || '').trim();
     if (!/^[a-f0-9-]{20,}$/i.test(transactionId)) {
-      return json({ received: false, message: 'Identifiant de transaction SasPay invalide.' }, 400);
+      return json({ received: false, message: 'Identifiant de transaction invalide.' }, 400);
     }
 
     // Always verify against SasPay's canonical transaction record, not only the webhook payload.
@@ -902,7 +903,7 @@ export async function handleSasPayWebhook(
     const transaction = transactionResult?.data || transactionResult;
     if (!transactionResponse.ok || String(transaction?.id || '') !== transactionId) {
       console.error('SasPay canonical transaction lookup failed:', transactionResponse.status, transactionRaw.slice(0, 300));
-      return json({ received: false, message: 'Impossible de vérifier la transaction SasPay.' }, 502);
+      return json({ received: false, message: 'Impossible de vérifier la transaction.' }, 502);
     }
 
     // Correlate only from SasPay's canonical transaction response, never webhook fields.
@@ -924,7 +925,7 @@ export async function handleSasPayWebhook(
       (event === 'transaction.cancelled' && ['CANCELLED', 'CANCELED', 'EXPIRED'].includes(canonicalStatus));
     if (!eventMatchesStatus) {
       // Do not let a stale/mismatched event mark a canonical successful payment as failed.
-      return json({ received: false, message: 'L’événement SasPay ne correspond pas au statut canonique.' }, 409);
+      return json({ received: false, message: 'La notification ne correspond pas au statut réel de la transaction.' }, 409);
     }
     if (payment.status === 'paid' && event !== 'transaction.success') {
       return json({ received: true, duplicate: true });
@@ -932,7 +933,7 @@ export async function handleSasPayWebhook(
     if (event === 'transaction.success') {
       const amount = Number(transaction?.requested_amount ?? transaction?.amount ?? transaction?.total_amount);
       const currency = String(transaction?.currency || '').toUpperCase();
-      if (canonicalStatus !== 'SUCCESS') return json({ received: false, message: 'Le statut canonique SasPay ne confirme pas le paiement.' }, 409);
+      if (canonicalStatus !== 'SUCCESS') return json({ received: false, message: 'Le statut de la transaction ne confirme pas le paiement.' }, 409);
       if (!amountsMatchToCents(amount, Number(payment.amount))) {
         if (payment.status === 'paid') return json({ received: false, message: 'Le montant de la transaction payée ne correspond plus au paiement.' }, 409);
         await patchDocument(env, 'payments/' + paymentId, {
