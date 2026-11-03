@@ -803,7 +803,7 @@ export async function handleCinetPayNotification(request: Request, env: CinetPay
       return json({ received: true });
     }
 
-    if ([2010, 2005].includes(Number(statusResult?.code)) || ['FAILED', 'INSUFFICIENT_BALANCE', 'EXPIRED'].includes(status)) {
+    if ([2010, 2005].includes(Number(statusResult?.code)) || ['FAILED', 'FAILURE', 'REFUSED', 'REJECTED', 'ERROR', 'INSUFFICIENT_BALANCE', 'INSUFFICIENT_FUNDS', 'EXPIRED', 'CANCELLED', 'CANCELED', 'TIMEOUT'].includes(status)) {
       await firestorePatch(env, `payments/${merchantTransactionId}`, {
         status: 'failed',
         failureMessage: paymentFailureMessage(status || String(statusResult?.code || 'FAILED'), canonical?.message || canonical?.description || statusResult?.description || statusResult?.message),
