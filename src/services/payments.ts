@@ -87,6 +87,9 @@ export async function getPaymentStatus(id: string) {
     reference: string;
     createdAt: string;
     paidAt?: string | null;
+    updatedAt?: string | null;
+    failureMessage?: string | null;
+    providerStatus?: string | null;
   };
 }
 
