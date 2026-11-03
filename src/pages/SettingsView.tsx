@@ -507,6 +507,8 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
         if (cancelled) return;
         setPaymentLastCheckedAt(new Date().toISOString());
         setPaymentCheckError('');
+        if (result.plan === 'pro' || result.plan === 'community') setPaymentPlan(result.plan);
+        if (result.reference) setPaymentReference(result.reference);
         if (result.status === 'paid') {
           setPaymentStatus('paid');
           setPaymentMessage('Paiement confirmé. Votre abonnement est activé.');
@@ -530,30 +532,11 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
 
   React.useEffect(() => {
     if (!pendingPaymentReference) return;
-    let cancelled = false;
     setPaymentId(pendingPaymentReference);
     setPaymentStatus('processing');
     setPaymentMessage('Nous vérifions la confirmation auprès du prestataire de paiement.');
     setPaymentPollTimedOut(false);
     setPaymentCheckError('');
-    void getPaymentStatus(pendingPaymentReference).then(result => {
-      if (cancelled) return;
-      if (result.plan === 'pro' || result.plan === 'community') setPaymentPlan(result.plan);
-      setPaymentReference(result.reference || null);
-      setPaymentLastCheckedAt(new Date().toISOString());
-      if (result.status === 'paid') {
-        setPaymentStatus('paid');
-        setPaymentMessage('Paiement confirmé. Votre abonnement est activé.');
-      } else if (result.status === 'failed') {
-        setPaymentStatus('failed');
-        setPaymentMessage(result.failureMessage || 'Le paiement a été refusé. Vérifiez les informations de votre portefeuille et contactez votre opérateur si nécessaire.');
-      } else {
-        setPaymentStatus('processing');
-      }
-    }).catch((error: any) => {
-      if (!cancelled) setPaymentCheckError(error?.message || 'La vérification est momentanément indisponible.');
-    });
-    return () => { cancelled = true; };
   }, [pendingPaymentReference]);
 
   const saveTraderProfile = async () => {
