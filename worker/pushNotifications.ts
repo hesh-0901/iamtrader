@@ -52,14 +52,14 @@ export async function handlePipTalkPush(request: Request, env: PushEnv): Promise
     if (!conversationId || body.senderId !== sender.uid) return json({ success: false, error: 'Invalid message metadata' }, 400);
     const conversation = await firestoreGet(env, 'conversations/' + encodeURIComponent(conversationId)) as { members?: unknown; title?: string } | null;
     if (!conversation) return json({ success: false, error: 'Conversation not found' }, 404);
-    if (!Array.isArray(conversation.members) || !conversation.members.includes(sender.uid)) {
-      return json({ success: false, error: 'Forbidden' }, 403);
-    }
     let recipients: string[] = [];
     if (conversationId === 'community-hub') {
       const registered = await firestoreQueryCollection(env, 'pushTokens', 500, 'updatedAt');
       recipients = registered.map(item => String(item.uid || item.id || '')).filter(uid => uid && uid !== sender.uid);
     } else {
+      if (!Array.isArray(conversation.members) || !conversation.members.includes(sender.uid)) {
+        return json({ success: false, error: 'Forbidden' }, 403);
+      }
       const profile = await firestoreGet(env, 'users/' + encodeURIComponent(sender.uid)) as Record<string, unknown> | null;
       const paidAccess = profile
         && ['pro', 'community'].includes(String(profile.plan || 'free'))
