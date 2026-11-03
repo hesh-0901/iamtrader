@@ -154,6 +154,50 @@ export async function handleAdminMutation(request: Request, env: AdminEnv) {
       return json({ success: true });
     }
 
+    if (body.action === 'migrate-subscription-expiry') {
+      if (String(identity.email || '').trim().toLowerCase() !== 'henochshungu@gmail.com') {
+        return json({ error: 'Seul l’administrateur principal peut lancer cette migration.' }, 403);
+      }
+      const users = await firestoreQueryCollection(env, 'users', 500, 'createdAt');
+      const now = Date.now();
+      let migrated = 0;
+      let expired = 0;
+      let withoutExpiry = 0;
+      for (let offset = 0; offset < users.length; offset += 20) {
+        const batch = users.slice(offset, offset + 20);
+        const results = await Promise.all(batch.map(async profile => {
+          const uid = String(profile.uid || profile.id || '');
+          if (!uid || profile.role === 'admin') return null;
+          const rawExpiry = profile.subscriptionExpiresAt;
+          const expiryMs = rawExpiry ? new Date(String(rawExpiry)).getTime() : NaN;
+          if (!Number.isFinite(expiryMs)) {
+            if (['pro', 'community'].includes(String(profile.plan || ''))) withoutExpiry += 1;
+            return null;
+          }
+          const patch: Record<string, unknown> = {};
+          if (Number(profile.subscriptionExpiresAtMs) !== expiryMs) patch.subscriptionExpiresAtMs = expiryMs;
+          if (expiryMs <= now && String(profile.plan || 'free') !== 'free') {
+            patch.plan = 'free';
+            patch.subscriptionStatus = 'expired';
+            expired += 1;
+          }
+          if (!Object.keys(patch).length) return null;
+          await firestorePatch(env, 'users/' + encodeURIComponent(uid), patch, Object.keys(patch));
+          migrated += 1;
+          return uid;
+        }));
+      }
+      await firestoreSet(env, 'adminLogs/' + encodeURIComponent(crypto.randomUUID()), {
+        action: 'subscription-expiry-migration',
+        adminUid: identity.uid,
+        migrated,
+        expired,
+        withoutExpiry,
+        createdAt: new Date().toISOString()
+      });
+      return json({ success: true, scanned: users.length, migrated, expired, withoutExpiry, message: 'Migration des échéances terminée.' });
+    }
+
     if (body.action === 'update-user') {
       if (!body.uid || !body.data) return json({ error: 'Utilisateur ou données manquants.' }, 400);
 
@@ -169,6 +213,15 @@ export async function handleAdminMutation(request: Request, env: AdminEnv) {
 
       const allowed = ['role','plan','status','paymentDate','subscriptionStartAt','subscriptionExpiresAt','subscriptionStatus','paymentStatus','pendingPlan','planChangeRequestedAt','planChangeConfirmedAt'];
       const data = Object.fromEntries(Object.entries(body.data).filter(([key, value]) => allowed.includes(key) && value !== undefined));
+      const existingProfile = await firestoreGet(env, `users/${encodeURIComponent(body.uid)}`);
+      if (body.data.subscriptionExpiresAt !== undefined) {
+        const expiryMs = body.data.subscriptionExpiresAt ? new Date(String(body.data.subscriptionExpiresAt)).getTime() : 0;
+        if (!Number.isFinite(expiryMs)) return json({ error: 'Date d’expiration invalide.' }, 400);
+        data.subscriptionExpiresAtMs = expiryMs;
+      } else if (['plan', 'subscriptionStatus', 'paymentStatus'].some(key => body.data && Object.prototype.hasOwnProperty.call(body.data, key))) {
+        const expiryMs = existingProfile?.subscriptionExpiresAt ? new Date(String(existingProfile.subscriptionExpiresAt)).getTime() : 0;
+        data.subscriptionExpiresAtMs = Number.isFinite(expiryMs) ? expiryMs : 0;
+      }
       data.updatedAt = new Date().toISOString();
       await firestorePatch(env, `users/${encodeURIComponent(body.uid)}`, data, Object.keys(data));
       return json({ success: true });
