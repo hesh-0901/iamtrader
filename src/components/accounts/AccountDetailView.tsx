@@ -32,6 +32,7 @@ export function AccountDetailView({ account, trades, onBack }: AccountDetailView
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isMovementModalOpen, setIsMovementModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(account.name);
   const [broker, setBroker] = useState(account.broker);
@@ -60,6 +61,7 @@ export function AccountDetailView({ account, trades, onBack }: AccountDetailView
       await addAccountMovement(account.id, movementType, parsedAmount, note);
       setAmount('');
       setNote('');
+      setIsMovementModalOpen(false);
       showToast('Mouvement enregistré et solde actualisé.', 'success');
     } catch (error: any) {
       showToast(error?.message || 'Impossible d’enregistrer le mouvement.', 'error');
@@ -93,7 +95,7 @@ export function AccountDetailView({ account, trades, onBack }: AccountDetailView
   };
 
   return (
-    <div className="space-y-5">
+    <div className="mx-auto w-full max-w-6xl space-y-5 px-3 py-3 sm:px-6 sm:py-5 xl:px-8">
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
         <div className="flex min-w-0 items-center gap-3">
           <button type="button" onClick={onBack} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 transition hover:bg-slate-50" aria-label="Retour aux comptes">
@@ -125,63 +127,84 @@ export function AccountDetailView({ account, trades, onBack }: AccountDetailView
         </form>
       )}
 
-      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-slate-900 via-[#102b43] to-[#0b1f35] p-5 text-white shadow-lg sm:p-6">
+      <section className="overflow-hidden rounded-2xl border border-emerald-100 bg-gradient-to-br from-white via-emerald-50 to-teal-50 p-5 text-slate-900 shadow-sm sm:p-7">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-medium text-slate-300">Solde estimé du compte</p>
+            <p className="text-xs font-semibold text-slate-500">Solde estimé du compte</p>
             <p className="mt-1 text-3xl font-extrabold tracking-tight tabular-nums sm:text-4xl">{formatCurrency(currentBalance, account.currency)}</p>
           </div>
-          <span className="rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-emerald-200">{account.status}</span>
+          <span className="rounded-full border border-emerald-200 bg-white/80 px-3 py-1.5 text-[10px] font-bold uppercase tracking-wider text-emerald-700">{account.status}</span>
         </div>
-        <div className="mt-5 grid grid-cols-2 gap-3 border-t border-white/10 pt-4 sm:grid-cols-4">
-          <div><p className="text-[10px] text-slate-400">Capital initial</p><p className="mt-1 text-sm font-bold tabular-nums">{formatCurrency(account.initialBalance, account.currency)}</p></div>
+        <div className="mt-5 grid grid-cols-2 gap-4 border-t border-emerald-100 pt-4 sm:grid-cols-4">
+          <div><p className="text-[10px] font-medium text-slate-500">Capital initial</p><p className="mt-1 text-sm font-bold tabular-nums text-slate-900">{formatCurrency(account.initialBalance, account.currency)}</p></div>
           <div><p className="text-[10px] text-slate-400">P&L trading</p><p className={`mt-1 text-sm font-bold tabular-nums ${tradingPnl >= 0 ? 'text-emerald-300' : 'text-rose-300'}`}>{formatCurrency(tradingPnl, account.currency)}</p></div>
-          <div><p className="text-[10px] text-slate-400">Dépôts cumulés</p><p className="mt-1 text-sm font-bold tabular-nums">{formatCurrency(deposits, account.currency)}</p></div>
-          <div><p className="text-[10px] text-slate-400">Retraits cumulés</p><p className="mt-1 text-sm font-bold tabular-nums">{formatCurrency(withdrawals, account.currency)}</p></div>
+          <div><p className="text-[10px] text-slate-400">Dépôts cumulés</p><p className="mt-1 text-sm font-bold tabular-nums text-slate-900">{formatCurrency(deposits, account.currency)}</p></div>
+          <div><p className="text-[10px] text-slate-400">Retraits cumulés</p><p className="mt-1 text-sm font-bold tabular-nums text-slate-900">{formatCurrency(withdrawals, account.currency)}</p></div>
         </div>
       </section>
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
-        <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-          <div className="mb-4 flex items-center gap-2"><BadgeDollarSign className="h-5 w-5 text-emerald-600" /><div><h2 className="text-base font-extrabold text-slate-900">Mouvement de fonds</h2><p className="text-xs text-slate-500">Enregistrez une opération sur ce compte.</p></div></div>
-          <form onSubmit={submitMovement} className="space-y-3">
-            <label className="block text-xs font-semibold text-slate-600">Type d’opération
-              <select value={movementType} onChange={event => setMovementType(event.target.value as AccountMovementType)} className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-emerald-500">
-                <option value="deposit">Ajout de fonds</option><option value="withdrawal">Retrait de fonds</option><option value="payout">Payout reçu</option><option value="fee">Frais</option><option value="adjustment">Ajustement du solde</option>
-              </select>
-            </label>
-            <label className="block text-xs font-semibold text-slate-600">{movementType === 'adjustment' ? 'Nouveau solde souhaité' : 'Montant'} ({account.currency})
-              <input type="number" min="0.01" step="0.01" value={amount} onChange={event => setAmount(event.target.value)} placeholder="0.00" className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold tabular-nums text-slate-900 outline-none focus:border-emerald-500" required />
-            </label>
-            <label className="block text-xs font-semibold text-slate-600">Note / Référence <span className="font-normal text-slate-400">(facultatif)</span>
-              <input value={note} onChange={event => setNote(event.target.value)} maxLength={240} placeholder="Ex. dépôt bancaire, payout phase 1…" className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2.5 text-sm text-slate-900 outline-none focus:border-emerald-500" />
-            </label>
-            <button type="submit" disabled={isSubmitting} className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-wait disabled:opacity-60">
-              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Enregistrer le mouvement
-            </button>
-          </form>
-        </section>
-
-        <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
-          <div className="mb-3 flex items-center justify-between gap-3"><div className="flex items-center gap-2"><History className="h-5 w-5 text-blue-600" /><div><h2 className="text-base font-extrabold text-slate-900">Historique des mouvements</h2><p className="text-xs text-slate-500">Dépôts, retraits, frais et payouts.</p></div></div><span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-600">{movements.length}</span></div>
-          {movements.length ? (
-            <div className="divide-y divide-slate-100">
-              {movements.map(item => (
-                <div key={item.id} className="flex min-w-0 items-center gap-3 py-3 first:pt-1">
-                  <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${movementTone(item.type)}`}>
-                    {item.signedAmount >= 0 ? <ArrowDownLeft className="h-4 w-4" /> : <ArrowUpRight className="h-4 w-4" />}
-                  </div>
-                  <div className="min-w-0 flex-1"><p className="truncate text-sm font-bold text-slate-800">{movementLabels[item.type]}</p><p className="truncate text-[11px] text-slate-500">{item.note || new Date(item.createdAt).toLocaleString('fr-FR')}</p></div>
-                  <div className={`shrink-0 text-right text-sm font-extrabold tabular-nums ${item.signedAmount >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>{item.signedAmount > 0 ? '+' : ''}{formatCurrency(item.signedAmount, account.currency)}</div>
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="rounded-xl border border-dashed border-slate-200 px-4 py-8 text-center"><Clock3 className="mx-auto h-6 w-6 text-slate-300" /><p className="mt-2 text-sm font-semibold text-slate-600">Aucun mouvement enregistré</p><p className="mt-1 text-xs text-slate-400">Les opérations apparaîtront ici.</p></div>
-          )}
-        </section>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-base font-extrabold text-slate-900">Activité financière</h2>
+          <p className="mt-0.5 text-xs text-slate-500">Consultez l’historique ou enregistrez une opération.</p>
+        </div>
+        <button type="button" onClick={() => setIsMovementModalOpen(true)} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 sm:w-auto">
+          <Plus className="h-4 w-4" /> Enregistrer une opération
+        </button>
       </div>
 
+      <section className="min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+        <div className="mb-3 flex items-center justify-between gap-3"><div className="flex items-center gap-2"><History className="h-5 w-5 text-emerald-600" /><div><h2 className="text-base font-extrabold text-slate-900">Historique des mouvements</h2><p className="text-xs text-slate-500">Dépôts, retraits, frais et payouts.</p></div></div><span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700">{movements.length}</span></div>
+        {movements.length ? (
+          <div className="divide-y divide-slate-100">
+            {movements.map(item => (
+              <div key={item.id} className="flex min-w-0 items-center gap-3 py-3 first:pt-1">
+                <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${movementTone(item.type)}`}>
+                  {item.signedAmount >= 0 ? <ArrowDownLeft className="h-4 w-4" /> : <ArrowUpRight className="h-4 w-4" />}
+                </div>
+                <div className="min-w-0 flex-1"><p className="truncate text-sm font-bold text-slate-800">{movementLabels[item.type]}</p><p className="truncate text-[11px] text-slate-500">{item.note || new Date(item.createdAt).toLocaleString('fr-FR')}</p></div>
+                <div className={`shrink-0 text-right text-sm font-extrabold tabular-nums ${item.signedAmount >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>{item.signedAmount > 0 ? '+' : ''}{formatCurrency(item.signedAmount, account.currency)}</div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-xl border border-dashed border-slate-200 px-4 py-8 text-center"><Clock3 className="mx-auto h-6 w-6 text-slate-300" /><p className="mt-2 text-sm font-semibold text-slate-600">Aucun mouvement enregistré</p><p className="mt-1 text-xs text-slate-400">Les opérations apparaîtront ici.</p></div>
+        )}
+      </section>
+
+      {isMovementModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-end justify-center bg-slate-950/40 p-0 backdrop-blur-[2px] sm:items-center sm:p-5" onMouseDown={event => { if (event.target === event.currentTarget && !isSubmitting) setIsMovementModalOpen(false); }}>
+          <section role="dialog" aria-modal="true" aria-labelledby="movement-modal-title" className="max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-t-3xl border border-slate-200 bg-white p-5 shadow-2xl sm:rounded-3xl sm:p-6">
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700"><BadgeDollarSign className="h-5 w-5" /></span>
+                <div><h2 id="movement-modal-title" className="text-lg font-extrabold text-slate-900">Enregistrer une opération</h2><p className="mt-1 text-xs text-slate-500">Ajoutez un mouvement financier à ce compte.</p></div>
+              </div>
+              <button type="button" onClick={() => setIsMovementModalOpen(false)} disabled={isSubmitting} className="rounded-xl p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 disabled:opacity-50" aria-label="Fermer"><X className="h-5 w-5" /></button>
+            </div>
+            <form onSubmit={submitMovement} className="space-y-4">
+              <label className="block text-xs font-semibold text-slate-600">Type d’opération
+                <select value={movementType} onChange={event => setMovementType(event.target.value as AccountMovementType)} className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100">
+                  <option value="deposit">Ajout de fonds</option><option value="withdrawal">Retrait de fonds</option><option value="payout">Payout reçu</option><option value="fee">Frais</option><option value="adjustment">Ajustement du solde</option>
+                </select>
+              </label>
+              <label className="block text-xs font-semibold text-slate-600">{movementType === 'adjustment' ? 'Nouveau solde souhaité' : 'Montant'} ({account.currency})
+                <input type="number" min="0.01" step="0.01" value={amount} onChange={event => setAmount(event.target.value)} placeholder="0.00" className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm font-semibold tabular-nums text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100" required />
+              </label>
+              <label className="block text-xs font-semibold text-slate-600">Note / Référence <span className="font-normal text-slate-400">(facultatif)</span>
+                <input value={note} onChange={event => setNote(event.target.value)} maxLength={240} placeholder="Ex. dépôt bancaire, payout phase 1…" className="mt-1.5 w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100" />
+              </label>
+              <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
+                <button type="button" onClick={() => setIsMovementModalOpen(false)} disabled={isSubmitting} className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50">Annuler</button>
+                <button type="submit" disabled={isSubmitting} className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-wait disabled:opacity-60">
+                  {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Enregistrer le mouvement
+                </button>
+              </div>
+            </form>
+          </section>
+        </div>
+      )}
+      
       <section className="rounded-2xl border border-slate-200 bg-white p-4 sm:p-5">
         <div className="mb-3 flex items-center gap-2"><Wallet className="h-5 w-5 text-slate-500" /><h2 className="text-base font-extrabold text-slate-900">Synthèse financière</h2></div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
