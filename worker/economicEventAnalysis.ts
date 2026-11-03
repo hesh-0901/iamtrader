@@ -128,7 +128,7 @@ En 2 à 4 courts paragraphes maximum, résume uniquement les faits utiles et vé
       status: result.httpStatus,
       reason: result.error,
     });
-    return json({ error: 'La synthèse économique n’a pas pu être générée.' }, 502);
+    return json({ error: 'La synthèse économique n’a pas pu être générée.', providerStatus: result.httpStatus }, 502);
   }
 
   return json({
