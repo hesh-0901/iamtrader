@@ -74,8 +74,13 @@ type GeminiContent = {
 };
 
 function toOpenAIMessages(contents: unknown, systemInstruction?: string): Array<{ role: string; content: string }> | null {
-  if (!Array.isArray(contents)) return null;
   const messages: Array<{ role: string; content: string }> = [];
+  if (typeof contents === 'string') {
+    if (systemInstruction) messages.push({ role: 'system', content: systemInstruction });
+    messages.push({ role: 'user', content: contents });
+    return messages;
+  }
+  if (!Array.isArray(contents)) return null;
   if (systemInstruction) messages.push({ role: 'system', content: systemInstruction });
 
   for (const item of contents as GeminiContent[]) {
