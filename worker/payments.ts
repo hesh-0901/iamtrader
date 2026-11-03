@@ -572,7 +572,7 @@ export async function handlePaymentRequest(request: Request, env: CinetPayEnv) {
     const returnUrl = new URL('/?payment=' + encodeURIComponent(paymentId), origin).toString();
     const failedUrl = new URL('/?payment=failed&paymentId=' + encodeURIComponent(paymentId), origin).toString();
     const parts = payerName.split(/\s+/).filter(Boolean);
-    const paymentMethod = cinetPayPaymentMethod(String(body.paymentProvider || ''));
+    const cinetPayMethod = cinetPayPaymentMethod(String(body.paymentProvider || ''));
 
     paymentStage = 'cinetpay-init';
     const response = await cinetPayRequest(env, '/v1/payment', {
@@ -592,7 +592,7 @@ export async function handlePaymentRequest(request: Request, env: CinetPayEnv) {
         failed_url: failedUrl,
         notify_url: notifyUrl,
         channel: 'PUSH',
-        ...(paymentMethod ? { payment_method: paymentMethod } : {}),
+        ...(cinetPayMethod ? { payment_method: cinetPayMethod } : {}),
         direct_pay: false
       })
     });
