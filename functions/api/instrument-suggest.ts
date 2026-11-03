@@ -1,4 +1,4 @@
-import { callGeminiUnified } from './common/gemini-client';
+import { callAI } from './common/ai-core';
 
 interface Env {
   GEMINI_API_KEY?: string;
@@ -75,22 +75,7 @@ Tous les nombres doivent être strictement positifs.`;
 
   // Respect the model configured in Cloudflare. Use the current stable Flash model
   // when no explicit model is configured, and keep it as a fallback.
-  const configuredModel = (env.GEMINI_CHLOE_MODEL || env.GEMINI_MODEL || '').trim();
-  const fallbackModels = [
-    env.GEMINI_MODEL?.trim(),
-    'gemini-3.8-flash',
-  ].filter((model): model is string => Boolean(model));
-
-  const result = await callGeminiUnified(prompt, {
-    apiKey: env.GEMINI_API_KEY,
-    preferredModel: configuredModel || 'gemini-3.8-flash',
-    fallbackModels,
-    responseJson: true,
-    temperature: 0.1,
-    maxTokens: 300,
-    timeoutMs: 12000,
-    globalTimeoutMs: 20000,
-  });
+  const result = await callAI('instrument-suggest', prompt, env, { responseJson: true });
 
   if (!result.success || !result.text) {
     console.warn('[InstrumentSuggest] Gemini unavailable', {
