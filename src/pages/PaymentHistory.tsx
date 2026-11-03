@@ -33,8 +33,8 @@ function printInvoice(item: PaymentHistoryItem, number: number, onInvoiceReady: 
   const isPaid = item.status === 'paid';
   const documentTitle = isPaid ? 'FACTURE' : 'ÉTAT DE TRANSACTION';
   const invoiceStatus = isPaid ? 'Paiement confirmé' : item.status === 'pending' || item.status === 'processing' || item.status === 'initiated' ? 'Paiement en attente' : item.status === 'cancelled' ? 'Paiement annulé' : item.status === 'invalidated' ? 'Paiement invalidé' : 'Paiement échoué';
-  const invoiceAction = item.status === 'paid' ? 'Transaction réglée' : item.status === 'cancelled' ? 'Transaction annulée' : item.status === 'invalidated' ? 'Transaction invalidée' : item.status === 'processing' || item.status === 'initiated' ? 'Transaction en attente' : 'Transaction échouée';
-  const invoiceBadge = item.status === 'paid' ? 'PAYÉ' : item.status === 'cancelled' ? 'ANNULÉ' : item.status === 'invalidated' ? 'INVALIDÉ' : item.status === 'processing' || item.status === 'initiated' ? 'EN ATTENTE' : 'ÉCHEC';
+  const invoiceAction = item.status === 'paid' ? 'Transaction réglée' : item.status === 'cancelled' ? 'Transaction annulée' : item.status === 'invalidated' ? 'Transaction invalidée' : item.status === 'pending' || item.status === 'processing' || item.status === 'initiated' ? 'Transaction en attente' : 'Transaction échouée';
+  const invoiceBadge = item.status === 'paid' ? 'PAYÉ' : item.status === 'cancelled' ? 'ANNULÉ' : item.status === 'invalidated' ? 'INVALIDÉ' : item.status === 'pending' || item.status === 'processing' || item.status === 'initiated' ? 'EN ATTENTE' : 'ÉCHEC';
   const action = item.subscriptionAction === 'renewal' ? 'Renouvellement' : item.subscriptionAction === 'upgrade' ? 'Upgrade programmé' : 'Nouvelle souscription';
   const activation = item.activationStartAt ? date(item.activationStartAt) + ' → ' + date(item.activationExpiresAt) : '—';
   const total = money(item.amount, item.currency);
