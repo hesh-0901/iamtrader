@@ -13,7 +13,7 @@ import { AffiliationSettings } from '../components/settings/AffiliationSettings'
 import { PaymentHistory } from './PaymentHistory';
 import { PromotionBanners } from '../components/promotions/PromotionBanners';
 import { calculateTraderRating, formatCurrency } from '../utils/calculations';
-import { createPayment, getPaymentStatus, verifySasPayPayment, PaidPlan, PaymentDetails } from '../services/payments';
+import { createPayment, getPaymentStatus, PaidPlan, PaymentDetails } from '../services/payments';
 
 interface SettingsViewProps {
   userProfile: UserProfile | null;
@@ -531,39 +531,29 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
   React.useEffect(() => {
     if (!pendingPaymentReference) return;
     let cancelled = false;
-    let attempts = 0;
-    let timer: number | undefined;
     setPaymentId(pendingPaymentReference);
     setPaymentStatus('processing');
     setPaymentMessage('Nous vérifions la confirmation auprès du prestataire de paiement.');
     setPaymentPollTimedOut(false);
     setPaymentCheckError('');
-    const checkPending = async () => {
-      attempts += 1;
-      try {
-        const result = await getPaymentStatus(pendingPaymentReference);
-        if (cancelled) return;
-        if (result.plan === 'pro' || result.plan === 'community') setPaymentPlan(result.plan);
-        setPaymentReference(result.reference || null);
-        setPaymentLastCheckedAt(new Date().toISOString());
-        if (result.status === 'paid') {
-          setPaymentStatus('paid');
-          setPaymentMessage('Paiement confirmé. Votre abonnement est activé.');
-          return;
-        }
-        if (result.status === 'failed') {
-          setPaymentStatus('failed');
-          setPaymentMessage(result.failureMessage || 'Le paiement a été refusé. Vérifiez les informations de votre portefeuille et contactez votre opérateur si nécessaire.');
-          return;
-        }
-      } catch (error: any) {
-        if (!cancelled) setPaymentMessage(error?.message || 'Vérification temporairement indisponible.');
+    void getPaymentStatus(pendingPaymentReference).then(result => {
+      if (cancelled) return;
+      if (result.plan === 'pro' || result.plan === 'community') setPaymentPlan(result.plan);
+      setPaymentReference(result.reference || null);
+      setPaymentLastCheckedAt(new Date().toISOString());
+      if (result.status === 'paid') {
+        setPaymentStatus('paid');
+        setPaymentMessage('Paiement confirmé. Votre abonnement est activé.');
+      } else if (result.status === 'failed') {
+        setPaymentStatus('failed');
+        setPaymentMessage(result.failureMessage || 'Le paiement a été refusé. Vérifiez les informations de votre portefeuille et contactez votre opérateur si nécessaire.');
+      } else {
+        setPaymentStatus('processing');
       }
-      if (!cancelled && attempts < 90) timer = window.setTimeout(checkPending, 4000);
-      else if (!cancelled) setPaymentPollTimedOut(true);
-    };
-    void checkPending();
-    return () => { cancelled = true; if (timer !== undefined) window.clearTimeout(timer); };
+    }).catch((error: any) => {
+      if (!cancelled) setPaymentCheckError(error?.message || 'La vérification est momentanément indisponible.');
+    });
+    return () => { cancelled = true; };
   }, [pendingPaymentReference]);
 
   const saveTraderProfile = async () => {
