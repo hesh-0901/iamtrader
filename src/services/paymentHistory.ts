@@ -4,11 +4,12 @@ export interface PaymentHistoryItem {
   id: string;
   plan?: string;
   planName?: string;
+  months?: number;
   amount: number;
   baseAmount: number;
   paymentFee: number;
   currency: string;
-  status: 'initiated' | 'processing' | 'paid' | 'failed' | 'refunded' | 'cancelled' | 'invalidated';
+  status: 'pending' | 'initiated' | 'processing' | 'paid' | 'failed' | 'refunded' | 'cancelled' | 'invalidated';
   reference: string;
   invoiceNumber?: string | null;
   buyerUid?: string | null;
@@ -22,16 +23,12 @@ export interface PaymentHistoryItem {
   subscriptionAction?: 'initial' | 'renewal' | 'upgrade';
   activationStartAt?: string | null;
   activationExpiresAt?: string | null;
-  paymentProvider?: string | null;
   paymentMethod?: string | null;
-  provider?: string | null;
   originalAmount?: number;
   discountAmount?: number;
   promoCode?: string | null;
   promotionName?: string | null;
-  providerTransactionId?: string | null;
-  saspayTransactionId?: string | null;
-  cinetpayTransactionId?: string | null;
+  paymentReference?: string | null;
 }
 
 export async function getPaymentHistory(): Promise<PaymentHistoryItem[]> {
