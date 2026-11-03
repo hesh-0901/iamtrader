@@ -375,11 +375,12 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
   };
 
   const loadAutomaticPromotion = async (plan: PaidPlan, months = paymentMonths) => {
+    const selectedMonths = plan === 'community' ? 6 : Math.max(1, Math.min(12, Math.floor(months)));
     try {
       const response = await fetch('/api/promotions/quote', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan, months })
+        body: JSON.stringify({ plan, months: selectedMonths })
       });
       if (!response.ok) return;
       const result = await response.json() as { success?: boolean; promotion?: { baseAmount: number; discountAmount: number; finalAmount: number; promotionName: string; promoCode: string | null } };
@@ -401,7 +402,8 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
     const nationalDigits = digits.startsWith(dialDigits) ? digits.slice(dialDigits.length) : digits;
     setPaymentCountryCode(initialCountry.code);
     setPaymentPhone(nationalDigits.replace(/^0+/, '').slice(0, initialCountry.phoneLength));
-    setPaymentPlan(plan); setPaymentMonths(1); setPaymentMethod('mobile_money'); setPaymentStep('duration'); setPaymentBankDetails(null); setPromoCode(''); setPromoQuote(null); setPromoMessage(''); setIsPromoModalOpen(false); void loadAutomaticPromotion(plan, 1);
+    const initialMonths = plan === 'community' ? 6 : 1;
+    setPaymentPlan(plan); setPaymentMonths(initialMonths); setPaymentMethod('mobile_money'); setPaymentStep('duration'); setPaymentBankDetails(null); setPromoCode(''); setPromoQuote(null); setPromoMessage(''); setIsPromoModalOpen(false); void loadAutomaticPromotion(plan, initialMonths);
     setPaymentProvider(initialCountry.networks[0]?.value || '');
     setPaymentId(null); setPaymentReference(null); setPaymentStatus('idle'); setPaymentMessage('');
   };
@@ -417,7 +419,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
       const response = await fetch('/api/promotions/quote', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: paymentPlan, months: paymentMonths, code: promoCode.trim().toUpperCase() })
+        body: JSON.stringify({ plan: paymentPlan, months: paymentPlan === 'community' ? 6 : paymentMonths, code: promoCode.trim().toUpperCase() })
       });
       const result = await response.json() as { success?: boolean; message?: string; promotion?: { baseAmount: number; discountAmount: number; finalAmount: number; promotionName: string; promoCode: string | null } };
       if (!response.ok || !result.success || !result.promotion) {
@@ -442,7 +444,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
     setIsPaymentLoading(true); setPaymentMessage('');
     try {
       const details: PaymentDetails = {
-        months: paymentMonths,
+        months: paymentPlan === 'community' ? 6 : paymentMonths,
         phone: paymentMethod === 'mobile_money' ? paymentPhone.trim() : undefined,
         countryCode: paymentCountryCode,
         paymentMethod,
@@ -891,16 +893,23 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                         <p className="mt-1 text-xs leading-5 text-slate-500">{paymentPlan === 'pro' ? 'Accès complet aux outils de trading.' : 'Accès aux ressources et à la communauté.'}</p>
                       </div>
                       <div>
-                        <label className="mb-2 block text-sm font-bold text-slate-800">Durée de l’abonnement</label>
-                        <div className="flex items-center justify-center gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-4">
-                          <div className="flex flex-col items-center gap-1">
-                            <button type="button" aria-label="Augmenter la durée" disabled={paymentMonths >= 12} onClick={() => { const next = Math.min(12, paymentMonths + 1); setPaymentMonths(next); setPromoQuote(null); setPromoMessage(''); void loadAutomaticPromotion(paymentPlan, next); }} className="flex h-9 w-12 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:border-emerald-400 hover:bg-emerald-50 disabled:opacity-30"><span className="text-lg leading-none">▲</span></button>
-                            <span className="min-w-12 text-center text-3xl font-black tabular-nums">{paymentMonths}</span>
-                            <button type="button" aria-label="Diminuer la durée" disabled={paymentMonths <= 1} onClick={() => { const next = Math.max(1, paymentMonths - 1); setPaymentMonths(next); setPromoQuote(null); setPromoMessage(''); void loadAutomaticPromotion(paymentPlan, next); }} className="flex h-9 w-12 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:border-emerald-400 hover:bg-emerald-50 disabled:opacity-30"><span className="text-lg leading-none">▼</span></button>
-                          </div>
-                          <span className="text-sm font-semibold text-slate-500">{paymentMonths > 1 ? 'mois' : 'mois'}</span>
-                        </div>
-                        <p className="mt-2 text-center text-[11px] text-slate-500">Choisissez entre 1 et 12 mois.</p>
+                        {paymentPlan === 'pro' ? (
+                          <>
+                            <label className="mb-2 block text-sm font-bold text-slate-800">Durée de l’abonnement</label>
+                            <div className="flex items-center justify-center gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-4">
+                              <button type="button" aria-label="Diminuer la durée" disabled={paymentMonths <= 1} onClick={() => { const next = Math.max(1, paymentMonths - 1); setPaymentMonths(next); setPromoQuote(null); setPromoMessage(''); void loadAutomaticPromotion(paymentPlan, next); }} className="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 text-slate-600 transition hover:border-emerald-400 hover:bg-emerald-50 disabled:opacity-30"><span className="text-xl leading-none">−</span></button>
+                              <div className="min-w-24 text-center"><span className="text-3xl font-black tabular-nums">{paymentMonths}</span><span className="ml-2 text-sm font-semibold text-slate-500">mois</span></div>
+                              <button type="button" aria-label="Augmenter la durée" disabled={paymentMonths >= 12} onClick={() => { const next = Math.min(12, paymentMonths + 1); setPaymentMonths(next); setPromoQuote(null); setPromoMessage(''); void loadAutomaticPromotion(paymentPlan, next); }} className="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 text-slate-600 transition hover:border-emerald-400 hover:bg-emerald-50 disabled:opacity-30"><span className="text-xl leading-none">+</span></button>
+                            </div>
+                            <p className="mt-2 text-center text-[11px] text-slate-500">Choisissez entre 1 et 12 mois.</p>
+                          </>
+                        ) : (
+                          <>
+                            <label className="mb-2 block text-sm font-bold text-slate-800">Durée de l’abonnement</label>
+                            <div className="flex items-center justify-center rounded-2xl border border-emerald-100 bg-emerald-50/70 px-4 py-5"><span className="text-3xl font-black tabular-nums text-slate-950">6</span><span className="ml-2 text-sm font-semibold text-slate-600">mois</span></div>
+                            <p className="mt-2 text-center text-[11px] text-slate-500">La formule Community est proposée uniquement sur 6 mois.</p>
+                          </>
+                        )}
                       </div>
                       <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4">
                         <div className="flex items-center justify-between gap-3 text-sm"><span className="text-slate-600">Montant de l’abonnement</span><strong className="text-xl font-black text-slate-950">${getPaymentAmounts(paymentPlan, paymentMonths).total.toFixed(2)} USD</strong></div>
