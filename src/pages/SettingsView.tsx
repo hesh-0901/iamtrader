@@ -503,7 +503,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
     setPaymentMethod('mobile_money');
     setPaymentId(pendingPaymentReference);
     setPaymentStatus('processing');
-    setPaymentMessage('Vérification du paiement auprès de SasPay…');
+    setPaymentMessage('Vérification de votre paiement…');
     const checkPending = async () => {
       attempts += 1;
       try {
@@ -863,7 +863,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
       {activeTab === 'journal' && <TradingJournalSettings userProfile={userProfile} />}
 
       {paymentPlan && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-slate-950/45 px-3 py-4 backdrop-blur-sm sm:px-5 sm:py-6" role="dialog" aria-modal="true" aria-labelledby="payment-checkout-title">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-slate-950/45 px-4 py-4 backdrop-blur-sm sm:px-5 sm:py-6" role="dialog" aria-modal="true" aria-labelledby="payment-checkout-title">
           <div className="relative my-auto flex max-h-[calc(100dvh-2rem)] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-2xl sm:rounded-3xl">
             <header className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 px-4 py-4 sm:px-6 sm:py-5">
               <div className="min-w-0">
