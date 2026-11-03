@@ -50,7 +50,7 @@ export default {
 
   async scheduled(_controller: ScheduledController, env: EnvWithPayments, _ctx: ExecutionContext): Promise<void> {
     await Promise.all([
-      cleanupExpiredCloudinaryMedia(env),
+      cleanupPipTalkMediaQuota(env),
       refreshIamtraderEconomicCalendar(env),
       cleanupExpiredPromotions(env),
     ]);
@@ -190,45 +190,110 @@ export default {
 } satisfies ExportedHandler<Env>;
 
 
-/** Delete PipTalk Cloudinary assets after 72 hours. */
-async function cleanupExpiredCloudinaryMedia(env: EnvWithPayments): Promise<void> {
+/** Keep PipTalk message media below the 20 GiB quota by deleting the oldest assets first. */
+async function cleanupPipTalkMediaQuota(env: EnvWithPayments): Promise<void> {
   const cloud = env.CLOUDINARY_CLOUD_NAME;
   const key = env.CLOUDINARY_API_KEY;
   const secret = env.CLOUDINARY_API_SECRET;
   if (!cloud || !key || !secret) {
-    console.error('PipTalk cleanup skipped: Cloudinary Worker credentials are missing.');
+    console.error('PipTalk quota cleanup skipped: Cloudinary Worker credentials are missing.');
     return;
   }
 
-  const cutoff = Date.now() - 72 * 60 * 60 * 1000;
+  const quotaBytes = 20 * 1024 * 1024 * 1024;
+  const excludedPrefixes = [
+    'piptalk/groups/',
+    'piptalk/group-avatars/',
+    'piptalk/avatars/',
+    'piptalk/profiles/'
+  ];
   const auth = 'Basic ' + btoa(key + ':' + secret);
-  for (const resourceType of ['image', 'video', 'raw']) {
+  const assets: Array<{
+    public_id: string;
+    created_at: string;
+    bytes: number;
+    resource_type: 'image' | 'video' | 'raw';
+  }> = [];
+
+  // Read every page before deleting anything. If listing is incomplete, abort safely:
+  // an incomplete inventory must never be used to decide which assets to remove.
+  for (const resourceType of ['image', 'video', 'raw'] as const) {
     let cursor = '';
     let pages = 0;
     do {
       const params = new URLSearchParams({ prefix: 'piptalk/', max_results: '500' });
       if (cursor) params.set('next_cursor', cursor);
-      const listing = await fetch('https://api.cloudinary.com/v1_1/' + cloud + '/resources/' + resourceType + '/upload?' + params, {
-        headers: { Authorization: auth }
-      });
+      const listing = await fetch(
+        'https://api.cloudinary.com/v1_1/' + cloud + '/resources/' + resourceType + '/upload?' + params,
+        { headers: { Authorization: auth } }
+      );
       if (!listing.ok) {
-        console.error('Cloudinary listing failed:', resourceType, listing.status, (await listing.text()).slice(0, 300));
-        break;
+        console.error('PipTalk quota inventory failed:', resourceType, listing.status, (await listing.text()).slice(0, 300));
+        return;
       }
-      const data = await listing.json() as { resources?: Array<{ public_id: string; created_at: string }>; next_cursor?: string };
+      const data = await listing.json() as {
+        resources?: Array<{ public_id?: string; created_at?: string; bytes?: number }>;
+        next_cursor?: string;
+      };
       for (const asset of data.resources || []) {
-        if (!asset.public_id.startsWith('piptalk/') || !asset.created_at || new Date(asset.created_at).getTime() > cutoff) continue;
-        const body = new URLSearchParams({ public_id: asset.public_id, invalidate: 'true' });
-        const deletion = await fetch('https://api.cloudinary.com/v1_1/' + cloud + '/' + resourceType + '/destroy', {
-          method: 'POST',
-          headers: { Authorization: auth, 'Content-Type': 'application/x-www-form-urlencoded' },
-          body
+        const publicId = String(asset.public_id || '');
+        if (!publicId.startsWith('piptalk/') || excludedPrefixes.some(prefix => publicId.startsWith(prefix))) continue;
+        assets.push({
+          public_id: publicId,
+          created_at: String(asset.created_at || ''),
+          bytes: Math.max(0, Number(asset.bytes) || 0),
+          resource_type: resourceType
         });
-        if (!deletion.ok) console.error('Cloudinary deletion failed:', asset.public_id, deletion.status);
       }
       cursor = data.next_cursor || '';
       pages += 1;
-    } while (cursor && pages < 10);
+      if (cursor && pages >= 100) {
+        console.error('PipTalk quota cleanup aborted: Cloudinary inventory exceeds the safe 50,000-assets scan limit.');
+        return;
+      }
+    } while (cursor);
+  }
+
+  let usedBytes = assets.reduce((total, asset) => total + asset.bytes, 0);
+  console.log('PipTalk media storage inventory:', {
+    assets: assets.length,
+    usedBytes,
+    quotaBytes
+  });
+  if (usedBytes <= quotaBytes) return;
+
+  const oldestFirst = assets
+    .filter(asset => Number.isFinite(Date.parse(asset.created_at)))
+    .sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at));
+
+  let deletedCount = 0;
+  for (const asset of oldestFirst) {
+    if (usedBytes <= quotaBytes) break;
+    const deletion = await fetch(
+      'https://api.cloudinary.com/v1_1/' + cloud + '/' + asset.resource_type + '/destroy',
+      {
+        method: 'POST',
+        headers: { Authorization: auth, 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({ public_id: asset.public_id, invalidate: 'true' })
+      }
+    );
+    if (!deletion.ok) {
+      console.error('PipTalk Cloudinary deletion failed:', asset.public_id, deletion.status, (await deletion.text()).slice(0, 300));
+      continue;
+    }
+    const result = await deletion.json() as { result?: string };
+    if (result.result === 'ok' || result.result === 'not found') {
+      usedBytes = Math.max(0, usedBytes - asset.bytes);
+      deletedCount += 1;
+      console.log('PipTalk Cloudinary asset removed:', asset.public_id, result.result);
+    } else {
+      console.error('PipTalk Cloudinary deletion was not confirmed:', asset.public_id, result.result || 'unknown result');
+    }
+  }
+
+  console.log('PipTalk quota cleanup finished:', { deletedCount, remainingBytes: usedBytes, quotaBytes });
+  if (usedBytes > quotaBytes) {
+    console.error('PipTalk storage remains above quota; some assets could not be deleted or have no valid creation date.');
   }
 }
 
