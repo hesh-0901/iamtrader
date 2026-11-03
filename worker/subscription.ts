@@ -34,11 +34,13 @@ export function subscriptionFields(profile: Record<string, unknown>, planKey: ke
     fields.scheduledPlan = planKey;
     fields.scheduledStartAt = start;
     fields.scheduledExpiresAt = expires;
+    fields.scheduledExpiresAtMs = new Date(expires).getTime();
     fields.subscriptionStatus = 'scheduled';
   } else {
     fields.plan = planKey;
     fields.subscriptionStartAt = start;
     fields.subscriptionExpiresAt = expires;
+    fields.subscriptionExpiresAtMs = new Date(expires).getTime();
     fields.subscriptionStatus = 'active';
     fields.scheduledPlan = '';
     fields.scheduledStartAt = '';
@@ -51,11 +53,12 @@ export function lifecycleFields(profile: Record<string, unknown>, now: Date) {
   const scheduledPlan = String(profile.scheduledPlan || '');
   const scheduledStartAt = profile.scheduledStartAt ? new Date(String(profile.scheduledStartAt)) : null;
   const scheduledExpiresAt = profile.scheduledExpiresAt ? new Date(String(profile.scheduledExpiresAt)) : null;
-  if (scheduledPlan && scheduledStartAt && scheduledExpiresAt && scheduledExpiresAt.getTime() <= now.getTime()) return { plan: 'free', subscriptionStatus: 'expired', scheduledPlan: '', scheduledStartAt: '', scheduledExpiresAt: '', updatedAt: now.toISOString() };
+  if (scheduledPlan && scheduledStartAt && scheduledExpiresAt && scheduledExpiresAt.getTime() <= now.getTime()) return { plan: 'free', subscriptionStatus: 'expired', subscriptionExpiresAtMs: scheduledExpiresAt.getTime(), scheduledPlan: '', scheduledStartAt: '', scheduledExpiresAt: '', scheduledExpiresAtMs: 0, updatedAt: now.toISOString() };
   if (scheduledPlan && scheduledStartAt && scheduledExpiresAt && scheduledStartAt.getTime() <= now.getTime()) return {
     plan: scheduledPlan,
     subscriptionStartAt: scheduledStartAt.toISOString(),
     subscriptionExpiresAt: scheduledExpiresAt.toISOString(),
+    subscriptionExpiresAtMs: scheduledExpiresAt.getTime(),
     subscriptionStatus: 'active',
     scheduledPlan: '',
     scheduledStartAt: '',
@@ -65,7 +68,10 @@ export function lifecycleFields(profile: Record<string, unknown>, now: Date) {
 
   const expiry = profile.subscriptionExpiresAt ? new Date(String(profile.subscriptionExpiresAt)) : null;
   if (expiry && expiry.getTime() <= now.getTime() && String(profile.plan || 'free') !== 'free') {
-    return { plan: 'free', subscriptionStatus: 'expired', updatedAt: now.toISOString() };
+    return { plan: 'free', subscriptionStatus: 'expired', subscriptionExpiresAtMs: expiry.getTime(), updatedAt: now.toISOString() };
+  }
+  if (expiry && Number(profile.subscriptionExpiresAtMs) !== expiry.getTime()) {
+    return { subscriptionExpiresAtMs: expiry.getTime(), updatedAt: now.toISOString() };
   }
   return null;
 }
