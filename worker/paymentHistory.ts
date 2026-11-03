@@ -47,6 +47,7 @@ export async function handlePaymentHistory(request: Request, env: PaymentEnv) {
         id: payment.id,
         plan: payment.plan,
         planName: payment.planName,
+        months: Number(payment.months || 1),
         amount: Number(payment.amount || 0),
         baseAmount: Number(payment.baseAmount || 0),
         paymentFee: Number(payment.paymentFee || 0),
@@ -65,16 +66,12 @@ export async function handlePaymentHistory(request: Request, env: PaymentEnv) {
         subscriptionAction: payment.subscriptionAction || 'initial',
         activationStartAt: payment.activationStartAt || null,
         activationExpiresAt: payment.activationExpiresAt || null,
-        paymentProvider: payment.paymentProvider || payment.provider || null,
-        provider: payment.provider || null,
         paymentMethod: payment.paymentMethod || null,
         originalAmount: Number(payment.originalAmount ?? payment.baseAmount ?? 0),
         discountAmount: Number(payment.discountAmount || 0),
         promoCode: payment.promoCode || null,
         promotionName: payment.promotionName || null,
-        providerTransactionId: payment.providerTransactionId || payment.providerPaymentId || payment.saspayTransactionId || payment.cinetpayTransactionId || null,
-        saspayTransactionId: payment.saspayTransactionId || null,
-        cinetpayTransactionId: payment.cinetpayTransactionId || null
+        paymentReference: payment.transactionReference || payment.reference || null
       }))
     });
   } catch (error) {
