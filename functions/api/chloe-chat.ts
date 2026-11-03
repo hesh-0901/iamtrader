@@ -3,6 +3,7 @@ import { callAI } from './common/ai-core';
 interface Env {
   GEMINI_API_KEY?: string;
   GEMINI_MODEL?: string;
+  GEMINI_CHLOE_MODEL?: string;
 }
 
 type Message = { role: 'user' | 'assistant'; content: string };
