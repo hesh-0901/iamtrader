@@ -21,6 +21,10 @@ interface Env {
   ASSETS: Fetcher;
   GEMINI_API_KEY?: string;
   GEMINI_MODEL?: string;
+  GEMINI_CHLOE_MODEL?: string;
+  GEMINI_VYRA_MODEL?: string;
+  GEMINI_INSTRUMENT_MODEL?: string;
+  GEMINI_ECONOMIC_MODEL?: string;
   FINNHUB_API_KEY?: string;
   RESEND_API_KEY?: string;
   RESEND_FROM_EMAIL?: string;
