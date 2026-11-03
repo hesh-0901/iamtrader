@@ -69,11 +69,12 @@ export function lifecycleFields(profile: Record<string, unknown>, now: Date) {
   };
 
   const expiry = profile.subscriptionExpiresAt ? new Date(String(profile.subscriptionExpiresAt)) : null;
-  if (expiry && expiry.getTime() <= now.getTime() && String(profile.plan || 'free') !== 'free') {
-    return { plan: 'free', subscriptionStatus: 'expired', subscriptionExpiresAtMs: expiry.getTime(), updatedAt: now.toISOString() };
+  const expiryMs = expiry?.getTime() ?? NaN;
+  if (expiry && Number.isFinite(expiryMs) && expiryMs <= now.getTime() && String(profile.plan || 'free') !== 'free') {
+    return { plan: 'free', subscriptionStatus: 'expired', subscriptionExpiresAtMs: expiryMs, updatedAt: now.toISOString() };
   }
-  if (expiry && Number(profile.subscriptionExpiresAtMs) !== expiry.getTime()) {
-    return { subscriptionExpiresAtMs: expiry.getTime(), updatedAt: now.toISOString() };
+  if (expiry && Number.isFinite(expiryMs) && Number(profile.subscriptionExpiresAtMs) !== expiryMs) {
+    return { subscriptionExpiresAtMs: expiryMs, updatedAt: now.toISOString() };
   }
   return null;
 }
