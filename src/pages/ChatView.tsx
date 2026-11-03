@@ -1360,7 +1360,7 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
         <div className="border-t border-slate-100 bg-slate-50/70 px-5 py-3"><p className="text-[10px] text-slate-500">Le destinataire verra que ce message a été transféré ainsi que son origine.</p></div>
       </div>
     </div>}
-    {showFriendsModal && createPortal(<div role="dialog" aria-modal="true" aria-label="Traders et amis" className="fixed inset-0 z-[9999] flex items-stretch justify-center bg-slate-950/60 backdrop-blur-sm sm:items-center sm:p-6" onMouseDown={event => { if (event.target === event.currentTarget) setShowFriendsModal(false); }}>
+    {showFriendsModal && hasPaidPipTalk && createPortal(<div role="dialog" aria-modal="true" aria-label="Traders et amis" className="fixed inset-0 z-[9999] flex items-stretch justify-center bg-slate-950/60 backdrop-blur-sm sm:items-center sm:p-6" onMouseDown={event => { if (event.target === event.currentTarget) setShowFriendsModal(false); }}>
       <div className="relative flex h-[100dvh] max-h-[100dvh] w-full max-w-4xl translate-y-0 flex-col overflow-hidden border-0 bg-white shadow-2xl sm:h-[min(88dvh,820px)] sm:max-h-[88dvh] sm:rounded-2xl sm:border sm:border-slate-200">
         <div className="flex shrink-0 items-center justify-between border-b border-slate-100 px-4 py-3">
           <div><h2 className="text-sm font-extrabold text-slate-900">{showCreateGroup ? 'Créer un groupe' : 'Traders & amis'}</h2><p className="mt-0.5 text-[10px] text-slate-500">{showCreateGroup ? 'Nouvelle discussion de groupe' : 'Retrouvez vos amis, gérez les demandes et découvrez des traders.'}</p></div>
