@@ -31,12 +31,15 @@ service cloud.firestore {
 
     // PipTalk privé, amis et groupes ordinaires sont réservés aux abonnements payants actifs.
     function paidPipTalk() {
-      return signedIn()
-        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('plan', 'free') in ['pro', 'community']
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('subscriptionStatus', '') == 'active'
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('paymentStatus', '') == 'paid'
-        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('status', '') == 'active';
+      return admin()
+        || (
+          signedIn()
+          && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+          && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('plan', 'free') in ['pro', 'community']
+          && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('subscriptionStatus', '') == 'active'
+          && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('paymentStatus', '') == 'paid'
+          && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('status', '') == 'active'
+        );
     }
 
     function member(cid) {
