@@ -32,6 +32,12 @@ const formatDay = (value?: Timestamp | null) => value?.toDate
 
 export function ChatView({ userProfile, initialConversationId, onUnreadCountChange, isVisible = true }: { userProfile: UserProfile | null; initialConversationId?: string; onUnreadCountChange?: (count: number) => void; isVisible?: boolean }) {
   const uid = auth.currentUser?.uid || userProfile?.uid;
+  const hasPaidPipTalk = userProfile?.role === 'admin' || (
+    (userProfile?.plan === 'pro' || userProfile?.plan === 'community')
+    && userProfile?.subscriptionStatus === 'active'
+    && userProfile?.paymentStatus === 'paid'
+    && userProfile?.status === 'active'
+  );
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [unreadByConversation, setUnreadByConversation] = useState<Record<string, number>>({});
   const [acceptedFriends, setAcceptedFriends] = useState<Array<{ uid: string; name: string; avatarURL?: string }>>([]);
@@ -225,7 +231,7 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
 
   // Inclure tous les amis acceptés dans la colonne de gauche, même avant leur premier DM.
   useEffect(() => {
-    if (!uid) { setAcceptedFriends([]); return; }
+    if (!uid || !hasPaidPipTalk) { setAcceptedFriends([]); return; }
     const byRequestId = new Map<string, { id: string; senderId: string; receiverId: string; status: string; senderName?: string; receiverName?: string }>();
     let sentReady = false;
     let receivedReady = false;
@@ -251,11 +257,15 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
       receivedReady = true; publish();
     }, err => console.error('[PipTalk] Demandes reçues indisponibles', err));
     return () => { unsubSent(); unsubReceived(); };
-  }, [uid, publicProfiles]);
+  }, [uid, publicProfiles, hasPaidPipTalk]);
 
   // Community Hub is a system group available to every authenticated user.
   useEffect(() => {
-    if (!uid) { setLoadingChats(false); return; }
+    if (!uid || !hasPaidPipTalk) {
+      setConversations(previous => previous.filter(item => item.id === 'community-hub'));
+      setLoadingChats(false);
+      return;
+    }
     const q = query(collection(db, 'conversations'), where('members', 'array-contains', uid));
     return onSnapshot(q, snapshot => {
       const personal = snapshot.docs
@@ -269,7 +279,7 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
       setError('');
       setLoadingChats(false);
     }, err => { console.error('[PipTalk] Lecture des conversations refusée', { uid, code: err.code, message: err.message }); setError(err.message); setLoadingChats(false); });
-  }, [uid]);
+  }, [uid, hasPaidPipTalk]);
 
   useEffect(() => {
     if (!uid) return;
@@ -1112,7 +1122,7 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
     <div className={`flex min-h-0 ${mobileChatOpen ? 'h-full' : 'h-[calc(100dvh-112px)]'} sm:h-[min(760px,calc(100dvh-210px))] sm:min-h-[520px]`}>
       <aside className={`${mobileChatOpen ? 'hidden md:flex' : 'flex'} h-full min-h-0 w-full shrink-0 flex-col border-r border-slate-200 bg-white md:w-[310px] lg:w-[340px]`}>
         <div className="shrink-0 border-b border-slate-100 px-3 pb-3 pt-3 sm:px-4 sm:pb-4 sm:pt-5">
-          <div className="flex items-center justify-between"><div className="flex items-center gap-2"><div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#e7f8f2] text-[#00a982]"><MessageCircle className="h-5 w-5" /></div><div><div className="flex items-center gap-1.5"><h2 className="text-base font-black text-[#0b1f35]">PipTalk</h2>{totalUnread > 0 && <span aria-label={`${totalUnread} messages non lus`} className="inline-flex min-w-5 h-5 items-center justify-center rounded-full bg-emerald-500 px-1.5 text-[10px] font-extrabold text-white">{totalUnread > 99 ? '99+' : totalUnread}</span>}</div><p className="text-[10px] text-slate-400">Messagerie en temps réel</p></div></div><button onClick={() => { setShowFriendsModal(true); setShowNewChat(false); setError(''); }} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100" title="Ouvrir mes amis et démarrer une conversation"><Plus className="h-4 w-4" /></button></div>
+          <div className="flex items-center justify-between"><div className="flex items-center gap-2"><div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#e7f8f2] text-[#00a982]"><MessageCircle className="h-5 w-5" /></div><div><div className="flex items-center gap-1.5"><h2 className="text-base font-black text-[#0b1f35]">PipTalk</h2>{totalUnread > 0 && <span aria-label={`${totalUnread} messages non lus`} className="inline-flex min-w-5 h-5 items-center justify-center rounded-full bg-emerald-500 px-1.5 text-[10px] font-extrabold text-white">{totalUnread > 99 ? '99+' : totalUnread}</span>}</div><p className="text-[10px] text-slate-400">Messagerie en temps réel</p></div></div>{hasPaidPipTalk && <button onClick={() => { setShowFriendsModal(true); setShowNewChat(false); setError(''); }} className="rounded-lg p-2 text-slate-500 hover:bg-slate-100" title="Ouvrir mes amis et démarrer une conversation"><Plus className="h-4 w-4" /></button>}</div>
           {showNewChat && <div className="mt-3 rounded-xl border border-emerald-100 bg-emerald-50/60 p-3"><label className="text-[10px] font-bold text-slate-700">UID du trader destinataire</label><input value={targetUid} onChange={e => setTargetUid(e.target.value)} placeholder="Coller l’UID Firebase du trader" className="mt-1.5 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 outline-none focus:border-emerald-400" /><button onClick={startConversation} className="mt-2 w-full rounded-lg bg-[#00a982] px-3 py-2 text-xs font-bold text-white">Créer la discussion</button><p className="mt-2 text-[9px] leading-4 text-slate-500">L’UID doit appartenir à un autre compte IAMTRADER.</p></div>}
           <label className="mt-4 flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5"><Search className="h-4 w-4 text-slate-400" /><input value={queryText} onChange={e => setQueryText(e.target.value)} placeholder="Rechercher une discussion" className="w-full bg-transparent text-xs text-slate-700 outline-none placeholder:text-slate-400" /></label>
         </div>
