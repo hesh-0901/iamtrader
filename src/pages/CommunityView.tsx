@@ -27,6 +27,10 @@ export function CommunityView({ userProfile }: { userProfile: UserProfile | null
     && userProfile?.status === 'active'
   );
 
+  useEffect(() => {
+    if (!hasPaidPipTalk && activeTab === 'friends') setActiveTab('chat');
+  }, [hasPaidPipTalk, activeTab]);
+
   const tabs = [
     { id: 'chat' as const, label: 'PipTalk', icon: MessageCircle },
     ...(hasPaidPipTalk ? [{ id: 'friends' as const, label: 'Traders & amis', icon: Users }] : []),
