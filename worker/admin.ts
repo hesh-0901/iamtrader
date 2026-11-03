@@ -1,5 +1,5 @@
 import { firestoreGet, firestorePatch, firestoreDelete, firestoreSet, firestoreQueryCollection, verifyFirebaseIdToken, type PaymentEnv } from './firebaseAdmin';
-import { lifecycleFields } from './subscription';
+import { lifecycleFields, subscriptionFields, type SubscriptionAction } from './subscription';
 
 type AdminEnv = PaymentEnv;
 
@@ -142,6 +142,28 @@ export async function handleAdminMutation(request: Request, env: AdminEnv) {
       const allowed = ['status','paidAt','confirmedAt','invalidatedAt','cancelledAt'];
       const data = Object.fromEntries(Object.entries(body.data).filter(([key, value]) => allowed.includes(key) && value !== undefined));
       if (!Object.keys(data).length) return json({ error: 'Aucune modification autorisée.' }, 400);
+      const payment = await firestoreGet(env, `payments/${encodeURIComponent(body.paymentId)}`);
+      if (!payment) return json({ error: 'Paiement introuvable.' }, 404);
+      if (data.status === 'paid' && payment.paymentMethod === 'bank_transfer') {
+        if (payment.status === 'paid') return json({ success: true, alreadyConfirmed: true });
+        const planKey = payment.plan === 'community' ? 'community' : payment.plan === 'pro' ? 'pro' : null;
+        if (!planKey) return json({ error: 'Formule du paiement invalide.' }, 400);
+        const profile = await firestoreGet(env, `users/${encodeURIComponent(String(payment.uid || ''))}`);
+        if (!profile) return json({ error: 'Profil utilisateur introuvable.' }, 404);
+        const start = new Date(String(payment.activationStartAt || ''));
+        const expires = new Date(String(payment.activationExpiresAt || ''));
+        if (!Number.isFinite(start.getTime()) || !Number.isFinite(expires.getTime()) || expires <= start) {
+          return json({ error: 'Période d’abonnement enregistrée invalide.' }, 409);
+        }
+        const paidAt = String(body.data.paidAt || new Date().toISOString());
+        const action = ['initial', 'renewal', 'upgrade'].includes(String(payment.subscriptionAction))
+          ? payment.subscriptionAction as SubscriptionAction
+          : 'initial';
+        const subscription = subscriptionFields(profile, planKey, action, start.toISOString(), expires.toISOString(), paidAt);
+        await firestorePatch(env, `users/${encodeURIComponent(String(payment.uid))}`, subscription, Object.keys(subscription));
+        data.paidAt = paidAt;
+        data.confirmedAt = paidAt;
+      }
       data.updatedAt = new Date().toISOString();
       data.updatedBy = identity.uid;
       await firestorePatch(env, `payments/${encodeURIComponent(body.paymentId)}`, data, Object.keys(data));
