@@ -493,7 +493,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
     };
     void check();
     return () => { cancelled = true; if (timer !== undefined) window.clearTimeout(timer); };
-  }, [paymentReference, paymentStatus]);
+  }, [paymentReference, paymentStatus, paymentMethod]);
 
   React.useEffect(() => {
     if (!pendingPaymentReference) return;
