@@ -25,6 +25,7 @@ export function CommunityView({ userProfile }: { userProfile: UserProfile | null
     && userProfile?.subscriptionStatus === 'active'
     && userProfile?.paymentStatus === 'paid'
     && userProfile?.status === 'active'
+    && Number(userProfile?.subscriptionExpiresAtMs) > Date.now()
   );
 
   useEffect(() => {
