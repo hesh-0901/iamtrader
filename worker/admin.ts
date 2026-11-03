@@ -145,7 +145,7 @@ export async function handleAdminMutation(request: Request, env: AdminEnv) {
       const payment = await firestoreGet(env, `payments/${encodeURIComponent(body.paymentId)}`);
       if (!payment) return json({ error: 'Paiement introuvable.' }, 404);
       if (data.status === 'paid' && payment.paymentMethod === 'bank_transfer') {
-        if (payment.status === 'paid') return json({ success: true, alreadyConfirmed: true });
+        if (payment.status === 'paid' && payment.subscriptionActivatedAt) return json({ success: true, alreadyConfirmed: true });
         const planKey = payment.plan === 'community' ? 'community' : payment.plan === 'pro' ? 'pro' : null;
         if (!planKey) return json({ error: 'Formule du paiement invalide.' }, 400);
         const profile = await firestoreGet(env, `users/${encodeURIComponent(String(payment.uid || ''))}`);
@@ -163,6 +163,7 @@ export async function handleAdminMutation(request: Request, env: AdminEnv) {
         await firestorePatch(env, `users/${encodeURIComponent(String(payment.uid))}`, subscription, Object.keys(subscription));
         data.paidAt = paidAt;
         data.confirmedAt = paidAt;
+        data.subscriptionActivatedAt = paidAt;
       }
       data.updatedAt = new Date().toISOString();
       data.updatedBy = identity.uid;
