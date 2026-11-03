@@ -25,6 +25,13 @@ interface Env {
   RESEND_API_KEY?: string;
   RESEND_FROM_EMAIL?: string;
   RESEND_REPLY_TO?: string;
+  BANK_TRANSFER_BANK_NAME?: string;
+  BANK_TRANSFER_ACCOUNT_NAME?: string;
+  BANK_TRANSFER_ACCOUNT_NUMBER?: string;
+  BANK_TRANSFER_SWIFT?: string;
+  BANK_TRANSFER_BRANCH?: string;
+  BANK_TRANSFER_CURRENCY?: string;
+  BANK_TRANSFER_INSTRUCTIONS?: string;
   CINETPAY_API_KEY?: string;
   CINETPAY_API_PASSWORD?: string;
   CINETPAY_COUNTRY?: string;
@@ -112,10 +119,11 @@ export default {
     if (url.pathname === '/api/promotions/quote') {
       if (request.method !== 'POST') return new Response('Method not allowed', { status: 405 });
       try {
-        const body = await request.json() as { plan?: string; code?: string };
+        const body = await request.json() as { plan?: string; months?: number; code?: string };
         const plan = body.plan === 'community' ? 'community' : body.plan === 'pro' ? 'pro' : null;
         if (!plan) return new Response(JSON.stringify({ success: false, message: 'Forfait invalide.' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
-        const baseAmount = plan === 'pro' ? 9.99 : 89.99;
+        const months = Math.max(1, Math.min(12, Math.floor(Number(body.months) || 1)));
+        const baseAmount = plan === 'pro' ? Math.round(9.99 * months * 100) / 100 : Math.round((89.99 / 6 * months) * 100) / 100;
         const result = await resolvePromotion(env, plan, baseAmount, String(body.code || '').trim());
         if (!result.applied) return new Response(JSON.stringify({ success: false, message: result.message || 'Aucune réduction applicable.' }), { status: 400, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
         return new Response(JSON.stringify({ success: true, promotion: result.applied }), { headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' } });
