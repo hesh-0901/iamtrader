@@ -657,11 +657,10 @@ export async function handlePaymentRequest(request: Request, env: CinetPayEnv) {
       }
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Impossible d’initier le paiement.';
-    console.error('CinetPay payment initiation error:', paymentStage, message);
+    console.error('Payment initiation error:', paymentStage, error);
     return json({
       success: false,
-      message: `Échec du paiement à l’étape "${paymentStage}": ${message}`
+      message: 'Impossible d’initier le paiement. Vérifiez les informations et réessayez.'
     }, 500);
   }
 }
