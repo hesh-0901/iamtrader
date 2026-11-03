@@ -23,10 +23,25 @@ service cloud.firestore {
     }
 
     match /users/{uid} {
+      // A self-registered account must always start as Free and unpaid.
+      // Privileged subscription fields can only be written by trusted server code.
       allow create: if owner(uid)
+        && request.resource.data.keys().hasOnly([
+          'uid', 'email', 'displayName', 'avatarId', 'avatarURL', 'photoURL',
+          'traderProfile', 'plan', 'role', 'status', 'createdAt',
+          'subscriptionStatus', 'subscriptionStartAt', 'paymentStatus', 'settings'
+        ])
+        && request.resource.data.get('uid', '') == uid
         && request.resource.data.get('role', '') == 'trader'
         && request.resource.data.get('status', '') == 'active'
-        && request.resource.data.get('admin', false) == false;
+        && request.resource.data.get('admin', false) == false
+        && request.resource.data.get('plan', '') == 'free'
+        && request.resource.data.get('subscriptionStatus', '') == 'active'
+        && request.resource.data.get('paymentStatus', '') == 'unpaid'
+        && !('subscriptionExpiresAt' in request.resource.data)
+        && !('scheduledPlan' in request.resource.data)
+        && !('scheduledStartAt' in request.resource.data)
+        && !('scheduledExpiresAt' in request.resource.data);
       allow read: if owner(uid) || admin();
       allow update: if owner(uid)
         && request.resource.data.get('role', '') == resource.data.get('role', '')
