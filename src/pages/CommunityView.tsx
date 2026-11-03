@@ -20,10 +20,16 @@ export function CommunityView({ userProfile }: { userProfile: UserProfile | null
     setActiveTab('chat');
   };
   const isAdmin = userProfile?.role === 'admin';
+  const hasPaidPipTalk = isAdmin || (
+    (userProfile?.plan === 'pro' || userProfile?.plan === 'community')
+    && userProfile?.subscriptionStatus === 'active'
+    && userProfile?.paymentStatus === 'paid'
+    && userProfile?.status === 'active'
+  );
 
   const tabs = [
     { id: 'chat' as const, label: 'PipTalk', icon: MessageCircle },
-    { id: 'friends' as const, label: 'Traders & amis', icon: Users },
+    ...(hasPaidPipTalk ? [{ id: 'friends' as const, label: 'Traders & amis', icon: Users }] : []),
     { id: 'calendar' as const, label: 'Calendrier', icon: CalendarDays },
     { id: 'courses' as const, label: 'Cours', icon: BookOpen },
     { id: 'analysis' as const, label: 'Analyse', icon: BarChart3 },
