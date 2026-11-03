@@ -27,6 +27,7 @@ export async function handleSubscriptionStatus(request: Request, env: PaymentEnv
       subscriptionStatus: finalProfile.subscriptionStatus || 'expired',
       subscriptionStartAt: finalProfile.subscriptionStartAt || null,
       subscriptionExpiresAt: finalProfile.subscriptionExpiresAt || null,
+      subscriptionExpiresAtMs: finalProfile.subscriptionExpiresAtMs || null,
       scheduledPlan: finalProfile.scheduledPlan || null,
       scheduledStartAt: finalProfile.scheduledStartAt || null,
       scheduledExpiresAt: finalProfile.scheduledExpiresAt || null
