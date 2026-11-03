@@ -111,8 +111,9 @@ service cloud.firestore {
           'updatedAt'
         ]);
 
-      // Gestion administrative des rôles, abonnements et statuts.
-      allow update: if admin()
+      // Seul l'administrateur principal peut modifier les privilèges et abonnements directement.
+      // Les opérations de la console passent par le Worker authentifié.
+      allow update: if primaryAdmin()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'role',
           'admin',
