@@ -587,8 +587,8 @@ export async function handlePaymentRequest(request: Request, env: CinetPayEnv) {
 
     const origin = new URL(request.url).origin;
     const notifyUrl = new URL('/api/payments/cinetpay/notify', origin).toString();
-    const returnUrl = new URL('/?payment=' + encodeURIComponent(paymentId), origin).toString();
-    const failedUrl = new URL('/?payment=failed&paymentId=' + encodeURIComponent(paymentId), origin).toString();
+    const returnUrl = new URL('/?payment=callback&reference=' + encodeURIComponent(paymentId), origin).toString();
+    const failedUrl = new URL('/?payment=cancelled&reference=' + encodeURIComponent(paymentId), origin).toString();
     const parts = payerName.split(/\s+/).filter(Boolean);
     const cinetPayMethod = cinetPayPaymentMethod(String(body.paymentProvider || ''));
 
