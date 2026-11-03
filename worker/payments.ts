@@ -122,7 +122,6 @@ type CinetPayEnv = SasPayEnv & {
   BANK_TRANSFER_ACCOUNT_NUMBER?: string;
   BANK_TRANSFER_SWIFT?: string;
   BANK_TRANSFER_BRANCH?: string;
-  BANK_TRANSFER_CURRENCY?: string;
   BANK_TRANSFER_INSTRUCTIONS?: string;
   CINETPAY_API_KEY?: string;
   CINETPAY_API_PASSWORD?: string;
@@ -517,7 +516,7 @@ export async function handlePaymentRequest(request: Request, env: CinetPayEnv) {
           bankName, accountName, accountNumber,
           swift: String(env.BANK_TRANSFER_SWIFT || ''),
           branch: String(env.BANK_TRANSFER_BRANCH || ''),
-          currency: String(env.BANK_TRANSFER_CURRENCY || 'USD'),
+          currency: 'USD',
           instructions: String(env.BANK_TRANSFER_INSTRUCTIONS || '')
         }
       } });
