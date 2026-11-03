@@ -68,6 +68,7 @@ export async function handlePipTalkPush(request: Request, env: PushEnv): Promise
           && profile.subscriptionStatus === 'active'
           && profile.paymentStatus === 'paid'
           && profile.status === 'active'
+          && Number(profile.subscriptionExpiresAtMs) > Date.now()
         )
       );
       if (!paidAccess) return json({ success: false, error: 'Paid PipTalk access required' }, 403);
