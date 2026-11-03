@@ -1,10 +1,14 @@
 import { IAMTRADER_KNOWLEDGE } from './vyra-knowledge';
 import { VYRA_STYLE_INSTRUCTIONS } from './vyra-style';
-import { callGeminiUnified } from './common/gemini-client';
+import { callAI } from './common/ai-engine';
 
 interface Env {
   GEMINI_API_KEY?: string;
   GEMINI_MODEL?: string;
+  GEMINI_VYRA_MODEL?: string;
+  OPENAI_API_KEY?: string;
+  OPENAI_MODEL?: string;
+  AI_PRIMARY_PROVIDER?: string;
 }
 
 type ChatMessage = {
@@ -152,9 +156,7 @@ export async function onRequest(context: { request: Request; env: Env }) {
     return json({ error: 'Méthode non autorisée.' }, 405);
   }
 
-  const apiKey = context.env.GEMINI_API_KEY?.trim();
-
-  if (!apiKey) {
+  if (!context.env.GEMINI_API_KEY?.trim() && !context.env.OPENAI_API_KEY?.trim()) {
     return json({ error: 'Assistant IA non configuré sur le serveur.' }, 500);
   }
 
@@ -196,18 +198,19 @@ export async function onRequest(context: { request: Request; env: Env }) {
   }));
 
   const configuredModel = (context.env.GEMINI_MODEL || '').trim();
-  const result = await callGeminiUnified(contents, {
-    apiKey,
-    preferredModel: 'gemini-3.5-flash-lite',
-    fallbackModels: ['gemini-3.8-flash'],
+  const result = await callAI({
+    assistant: 'vyra',
+    env: context.env,
+    contents,
     systemInstruction: `${SYSTEM_INSTRUCTIONS}\n\nBASE DE CONNAISSANCES IAMTRADER\n${IAMTRADER_KNOWLEDGE}`,
     temperature: 0.3,
     maxTokens: 1200,
     timeoutMs: 6500,
+    globalTimeoutMs: 16000,
   });
 
   if (!result.success || !result.text) {
-    console.error('VYRA Gemini request failed:', { model: configuredModel || undefined, status: result.httpStatus });
+    console.error('VYRA Gemini request failed:', { provider: result.providerUsed, model: result.modelUsed || configuredModel || undefined, status: result.httpStatus });
     return json(
       {
         error: 'Le service IA n’a pas pu répondre pour le moment.',

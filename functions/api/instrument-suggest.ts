@@ -1,9 +1,13 @@
-import { callGeminiUnified } from './common/gemini-client';
+import { callAI } from './common/ai-engine';
 
 interface Env {
   GEMINI_API_KEY?: string;
   GEMINI_MODEL?: string;
   GEMINI_CHLOE_MODEL?: string;
+  GEMINI_INSTRUMENT_MODEL?: string;
+  OPENAI_API_KEY?: string;
+  OPENAI_MODEL?: string;
+  AI_PRIMARY_PROVIDER?: string;
 }
 
 const categories = ['forex', 'metal', 'index', 'futures', 'crypto', 'stock', 'other'] as const;
@@ -57,7 +61,7 @@ export async function onRequest(context: { request: Request; env: Env }) {
     return json({ error: 'Saisissez un symbole valide (ex. XAUUSD ou EURUSD).' }, 400);
   }
 
-  if (!env.GEMINI_API_KEY?.trim()) {
+  if (!env.GEMINI_API_KEY?.trim() && !env.OPENAI_API_KEY?.trim()) {
     return json({
       error: 'Chloé est temporairement indisponible. Vous pouvez compléter l’instrument manuellement.',
       requiresReview: true,
@@ -75,16 +79,10 @@ Tous les nombres doivent être strictement positifs.`;
 
   // Respect the model configured in Cloudflare. Use the current stable Flash model
   // when no explicit model is configured, and keep it as a fallback.
-  const configuredModel = (env.GEMINI_CHLOE_MODEL || env.GEMINI_MODEL || '').trim();
-  const fallbackModels = [
-    env.GEMINI_MODEL?.trim(),
-    'gemini-3.8-flash',
-  ].filter((model): model is string => Boolean(model));
-
-  const result = await callGeminiUnified(prompt, {
-    apiKey: env.GEMINI_API_KEY,
-    preferredModel: configuredModel || 'gemini-3.8-flash',
-    fallbackModels,
+  const result = await callAI({
+    assistant: 'instrument-suggest',
+    env,
+    contents: prompt,
     responseJson: true,
     temperature: 0.1,
     maxTokens: 300,
@@ -94,6 +92,7 @@ Tous les nombres doivent être strictement positifs.`;
 
   if (!result.success || !result.text) {
     console.warn('[InstrumentSuggest] Gemini unavailable', {
+      provider: result.providerUsed,
       model: result.modelUsed,
       status: result.httpStatus,
     });
