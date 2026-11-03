@@ -535,29 +535,32 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
     let timer: number | undefined;
     setPaymentId(pendingPaymentReference);
     setPaymentStatus('processing');
-    setPaymentMessage('Vérification de votre paiement…');
+    setPaymentMessage('Nous vérifions la confirmation auprès du prestataire de paiement.');
+    setPaymentPollTimedOut(false);
+    setPaymentCheckError('');
     const checkPending = async () => {
       attempts += 1;
       try {
-        const result = await verifySasPayPayment(pendingPaymentReference);
+        const result = await getPaymentStatus(pendingPaymentReference);
         if (cancelled) return;
-        if (result.payment?.plan === 'pro' || result.payment?.plan === 'community') setPaymentPlan(result.payment.plan);
+        if (result.plan === 'pro' || result.plan === 'community') setPaymentPlan(result.plan);
+        setPaymentReference(result.reference || null);
+        setPaymentLastCheckedAt(new Date().toISOString());
         if (result.status === 'paid') {
           setPaymentStatus('paid');
-          setPaymentMessage('Paiement confirmé. Actualisation de votre abonnement…');
-          // The profile subscription updates the active plan without a full-page reload.
+          setPaymentMessage('Paiement confirmé. Votre abonnement est activé.');
           return;
         }
         if (result.status === 'failed') {
           setPaymentStatus('failed');
-          setPaymentMessage('Le paiement n’a pas été finalisé. Vous pouvez réessayer.');
+          setPaymentMessage(result.failureMessage || 'Le paiement a été refusé. Vérifiez les informations de votre portefeuille et contactez votre opérateur si nécessaire.');
           return;
         }
       } catch (error: any) {
         if (!cancelled) setPaymentMessage(error?.message || 'Vérification temporairement indisponible.');
       }
-      if (!cancelled && attempts < 40) timer = window.setTimeout(checkPending, 3000);
-      else if (!cancelled) setPaymentMessage('Le paiement est toujours en attente. Revenez vérifier votre abonnement plus tard.');
+      if (!cancelled && attempts < 90) timer = window.setTimeout(checkPending, 4000);
+      else if (!cancelled) setPaymentPollTimedOut(true);
     };
     void checkPending();
     return () => { cancelled = true; if (timer !== undefined) window.clearTimeout(timer); };
