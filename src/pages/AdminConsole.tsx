@@ -548,7 +548,7 @@ export function AdminConsole() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {payments.filter(p=>paymentFilter==='all'||p.status===paymentFilter).map(p=>{
+                    {payments.filter(p=>paymentFilter==='all'||(paymentFilter==='processing'&&(p.status==='pending'||p.status==='processing'||p.status==='initiated'))||p.status===paymentFilter).map(p=>{
                       const rowName=(p as any).fullName || p.payerName || p.displayName || '—';
                       const rowStatus=p.status==='paid'?'PAYÉ':p.status==='pending'||p.status==='processing'||p.status==='initiated'?'EN ATTENTE':p.status==='cancelled'?'ANNULÉ':p.status==='invalidated'?'INVALIDÉ':'ÉCHEC';
                       const rowTone=p.status==='paid'?'bg-emerald-50 text-emerald-700':p.status==='pending'||p.status==='processing'||p.status==='initiated'?'bg-amber-50 text-amber-700':p.status==='cancelled'?'bg-slate-100 text-slate-600':'bg-rose-50 text-rose-700';
@@ -628,7 +628,7 @@ export function AdminConsole() {
                         <div className="mt-3 space-y-2 text-sm text-slate-500">
                           <div><b className="text-slate-700">Nom affiché :</b> {p.displayName || '—'}</div>
                           <div><b className="text-slate-700">Email :</b> {p.email || '—'}</div>
-                          <div><b className="text-slate-700">Mobile Money :</b> {p.phone || p.payerPhone || '—'}</div>
+                          <div><b className="text-slate-700">Téléphone de contact :</b> {p.phone || p.payerPhone || '—'}</div>
                         </div>
                       </div>
                     </section>
