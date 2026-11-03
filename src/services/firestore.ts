@@ -11,6 +11,7 @@ import {
   getDoc,
   setDoc,
   writeBatch,
+  runTransaction,
   orderBy,
   limit,
   deleteField,
@@ -244,6 +245,94 @@ export async function addAccountMovement(
     updatedAt: createdAt
   });
   await batch.commit();
+}
+
+export async function updateAccountMovement(
+  accountId: string,
+  movementId: string,
+  type: AccountMovementType,
+  amount: number,
+  note = ''
+): Promise<void> {
+  if (!auth.currentUser) throw new Error('Utilisateur non authentifié');
+  if (!Number.isFinite(amount) || amount <= 0) throw new Error('Le montant doit être supérieur à zéro.');
+
+  const accountRef = doc(db, 'accounts', accountId);
+  const movementRef = doc(db, 'accounts', accountId, 'movements', movementId);
+
+  await runTransaction(db, async (transaction) => {
+    const [accountSnapshot, movementSnapshot] = await Promise.all([
+      transaction.get(accountRef),
+      transaction.get(movementRef)
+    ]);
+
+    if (!accountSnapshot.exists() || accountSnapshot.data().userId !== auth.currentUser?.uid) {
+      throw new Error('Compte introuvable ou accès non autorisé.');
+    }
+    if (!movementSnapshot.exists() || movementSnapshot.data().userId !== auth.currentUser?.uid) {
+      throw new Error('Mouvement introuvable ou accès non autorisé.');
+    }
+
+    const accountBalance = Number(accountSnapshot.data().currentBalance ?? accountSnapshot.data().initialBalance ?? 0);
+    const oldSignedAmount = Number(movementSnapshot.data().signedAmount || 0);
+    const balanceWithoutOldMovement = accountBalance - oldSignedAmount;
+    const signedAmount = type === 'deposit' || type === 'payout'
+      ? amount
+      : type === 'withdrawal' || type === 'fee'
+        ? -amount
+        : amount - balanceWithoutOldMovement;
+
+    if (balanceWithoutOldMovement + signedAmount < 0) {
+      throw new Error('Cette modification entraînerait un solde négatif.');
+    }
+
+    const updatedAt = new Date().toISOString();
+    transaction.update(movementRef, {
+      type,
+      amount,
+      signedAmount,
+      note: note.trim(),
+      updatedAt
+    });
+    transaction.update(accountRef, {
+      currentBalance: balanceWithoutOldMovement + signedAmount,
+      updatedAt
+    });
+  });
+}
+
+export async function deleteAccountMovement(
+  accountId: string,
+  movementId: string
+): Promise<void> {
+  if (!auth.currentUser) throw new Error('Utilisateur non authentifié');
+
+  const accountRef = doc(db, 'accounts', accountId);
+  const movementRef = doc(db, 'accounts', accountId, 'movements', movementId);
+
+  await runTransaction(db, async (transaction) => {
+    const [accountSnapshot, movementSnapshot] = await Promise.all([
+      transaction.get(accountRef),
+      transaction.get(movementRef)
+    ]);
+
+    if (!accountSnapshot.exists() || accountSnapshot.data().userId !== auth.currentUser?.uid) {
+      throw new Error('Compte introuvable ou accès non autorisé.');
+    }
+    if (!movementSnapshot.exists() || movementSnapshot.data().userId !== auth.currentUser?.uid) {
+      throw new Error('Mouvement introuvable ou accès non autorisé.');
+    }
+
+    const currentBalance = Number(accountSnapshot.data().currentBalance ?? accountSnapshot.data().initialBalance ?? 0);
+    const restoredBalance = currentBalance - Number(movementSnapshot.data().signedAmount || 0);
+    if (restoredBalance < 0) throw new Error('Suppression impossible : le solde recalculé serait négatif.');
+
+    transaction.delete(movementRef);
+    transaction.update(accountRef, {
+      currentBalance: restoredBalance,
+      updatedAt: new Date().toISOString()
+    });
+  });
 }
 
 // ==========================================
