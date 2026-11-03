@@ -30,11 +30,14 @@ const PAYMENT_FEE_RATE = 0;
 const PAYMENT_PRICES = { pro: 9.99, community: 89.99 } as const;
 const CINETPAY_CDF_PRICES = { pro: 23335, community: 210196 } as const;
 
-function getPaymentAmounts(plan: PaidPlan) {
-  const baseAmount = PAYMENT_PRICES[plan];
+function getPaymentAmounts(plan: PaidPlan, months = 1) {
+  const safeMonths = Math.max(1, Math.min(12, Math.floor(months)));
+  const baseAmount = plan === 'pro'
+    ? Math.round(PAYMENT_PRICES.pro * safeMonths * 100) / 100
+    : Math.round((PAYMENT_PRICES.community / 6 * safeMonths) * 100) / 100;
   const paymentFee = Math.round(baseAmount * PAYMENT_FEE_RATE * 100) / 100;
   const total = Math.round((baseAmount + paymentFee) * 100) / 100;
-  const cdfTotal = CINETPAY_CDF_PRICES[plan];
+  const cdfTotal = Math.round(CINETPAY_CDF_PRICES[plan] * (safeMonths / (plan === 'community' ? 6 : 1)));
   return { baseAmount, paymentFee, total, cdfTotal };
 }
 
@@ -105,6 +108,10 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
   const [dashboardMode, setDashboardMode] = useState<'standard' | 'focus' | 'analysis' | 'compact'>(() => (localStorage.getItem('iamtrader-dashboard-mode') as any) || 'standard');
   const [paymentPlan, setPaymentPlan] = useState<PaidPlan | null>(null);
   const [paymentGateway, setPaymentGateway] = useState<'cinetpay' | 'saspay'>('saspay');
+  const [paymentMonths, setPaymentMonths] = useState(1);
+  const [paymentMethod, setPaymentMethod] = useState<'mobile_money' | 'bank_transfer'>('mobile_money');
+  const [paymentStep, setPaymentStep] = useState<'duration' | 'method' | 'details' | 'summary'>('duration');
+  const [paymentBankDetails, setPaymentBankDetails] = useState<PaymentDetails extends never ? never : { bankName: string; accountName: string; accountNumber: string; swift?: string; branch?: string; currency?: string; instructions?: string } | null>(null);
   const [paymentPhone, setPaymentPhone] = useState('');
   const [promoCode, setPromoCode] = useState('');
   const [isPromoModalOpen, setIsPromoModalOpen] = useState(false);
@@ -375,12 +382,12 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
     localStorage.setItem('iamtrader-dashboard-mode', mode);
   };
 
-  const loadAutomaticPromotion = async (plan: PaidPlan) => {
+  const loadAutomaticPromotion = async (plan: PaidPlan, months = paymentMonths) => {
     try {
       const response = await fetch('/api/promotions/quote', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan })
+        body: JSON.stringify({ plan, months })
       });
       if (!response.ok) return;
       const result = await response.json() as { success?: boolean; promotion?: { baseAmount: number; discountAmount: number; finalAmount: number; promotionName: string; promoCode: string | null } };
@@ -402,7 +409,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
     const nationalDigits = digits.startsWith(dialDigits) ? digits.slice(dialDigits.length) : digits;
     setPaymentCountryCode(initialCountry.code);
     setPaymentPhone(nationalDigits.replace(/^0+/, '').slice(0, initialCountry.phoneLength));
-    setPaymentPlan(plan); setPromoCode(''); setPromoQuote(null); setPromoMessage(''); setIsPromoModalOpen(false); setPaymentGateway('saspay'); void loadAutomaticPromotion(plan);
+    setPaymentPlan(plan); setPaymentMonths(1); setPaymentMethod('mobile_money'); setPaymentStep('duration'); setPaymentBankDetails(null); setPromoCode(''); setPromoQuote(null); setPromoMessage(''); setIsPromoModalOpen(false); setPaymentGateway('saspay'); void loadAutomaticPromotion(plan, 1);
     setPaymentProvider(initialCountry.networks[0]?.value || '');
     setPaymentUrl(null); setPaymentPayerName('');
     setPaymentId(null); setPaymentReference(null); setPaymentStatus('idle'); setPaymentMessage('');
@@ -420,7 +427,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
       const response = await fetch('/api/promotions/quote', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ plan: paymentPlan, code: promoCode.trim().toUpperCase() })
+        body: JSON.stringify({ plan: paymentPlan, months: paymentMonths, code: promoCode.trim().toUpperCase() })
       });
       const result = await response.json() as { success?: boolean; message?: string; promotion?: { baseAmount: number; discountAmount: number; finalAmount: number; promotionName: string; promoCode: string | null } };
       if (!response.ok || !result.success || !result.promotion) {
@@ -445,10 +452,11 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
     setIsPaymentLoading(true); setPaymentMessage('');
     try {
       const details: PaymentDetails = {
-        phone: paymentPhone.trim(),
+        months: paymentMonths,
+        phone: paymentMethod === 'mobile_money' ? paymentPhone.trim() : undefined,
         countryCode: paymentCountryCode,
-        paymentMethod: 'mobile_money',
-        paymentProvider,
+        paymentMethod,
+        paymentProvider: paymentMethod === 'mobile_money' ? paymentProvider : undefined,
         payerName: paymentPayerName.trim(),
         promoCode: promoCode.trim().toUpperCase() || undefined
       };
@@ -456,11 +464,14 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
       setPaymentId(payment.id);
       setPaymentReference(payment.reference || null);
       setPaymentUrl(null);
+      setPaymentBankDetails(payment.bankDetails || null);
       setPaymentAction(payment.subscriptionAction || null);
       setPaymentActivationStart(payment.activationStartAt || null);
       setPaymentActivationExpires(payment.activationExpiresAt || null);
       setPaymentStatus('processing');
-      setPaymentMessage(payment.message || 'Demande Mobile Money envoyée. Confirmez-la sur votre téléphone.');
+      setPaymentMessage(payment.message || (paymentMethod === 'bank_transfer'
+        ? 'Demande enregistrée. Effectuez le virement puis transmettez la preuve à IAMTRADER.'
+        : 'Demande envoyée. Confirmez le paiement sur votre téléphone.'));
     } catch (error: any) {
       setPaymentStatus('failed');
       setPaymentMessage(error?.message || 'Impossible d’initier le paiement.');
@@ -468,7 +479,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
   };
 
   React.useEffect(() => {
-    if (!paymentReference || paymentStatus !== 'processing') return;
+    if (!paymentReference || paymentStatus !== 'processing' || paymentMethod === 'bank_transfer') return;
     let cancelled = false;
     let attempts = 0;
     let timer: number | undefined;
@@ -504,6 +515,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
     let attempts = 0;
     let timer: number | undefined;
     setPaymentGateway('saspay');
+    setPaymentMethod('mobile_money');
     setPaymentId(pendingPaymentReference);
     setPaymentStatus('processing');
     setPaymentMessage('Vérification du paiement auprès de SasPay…');
@@ -866,170 +878,163 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
       {activeTab === 'journal' && <TradingJournalSettings userProfile={userProfile} />}
 
       {paymentPlan && (
-        <div className="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto bg-slate-900/35 p-2 backdrop-blur-md sm:p-5">
-          <div className="relative my-auto grid w-full max-w-7xl overflow-hidden rounded-[30px] border border-emerald-100 bg-white text-slate-900 shadow-[0_30px_100px_rgba(15,23,42,.22)] animate-in fade-in zoom-in-95 duration-300 lg:grid-cols-[0.68fr_1.32fr]">
-            <style>{`
-              @keyframes iamAmbientGlow { 0%,100% { opacity:.24; transform:scale(1) } 50% { opacity:.52; transform:scale(1.12) } }
-              @keyframes iamRipple { 0% { transform:scale(.65); opacity:.65 } 100% { transform:scale(1.55); opacity:0 } }
-              @keyframes iamPhoneFloat { 0%,100% { transform:translateY(0) rotate(-2deg) } 50% { transform:translateY(-8px) rotate(1deg) } }
-              @keyframes iamScreenSpin { to { transform:rotate(360deg) } }
-              @keyframes iamProgressShine { 0% { transform:translateX(-110%) } 100% { transform:translateX(240%) } }
-              @keyframes iamEntrance { from { opacity:0; transform:translateY(12px) scale(.985) } to { opacity:1; transform:translateY(0) scale(1) } }
-              .iam-checkout-brand:before { content:""; position:absolute; width:230px; height:230px; right:-100px; bottom:-80px; border-radius:999px; background:rgba(0,210,150,.24); filter:blur(45px); animation:iamAmbientGlow 8s ease-in-out infinite; pointer-events:none }
-              .iam-checkout-brand:after { content:""; position:absolute; inset:0; opacity:.22; pointer-events:none; background-image:linear-gradient(rgba(5,150,105,.09) 1px,transparent 1px),linear-gradient(90deg,rgba(5,150,105,.09) 1px,transparent 1px); background-size:28px 28px; mask-image:linear-gradient(to bottom,black,transparent 85%) }
-              .iam-payment-enter { animation:iamEntrance .45s cubic-bezier(.16,1,.3,1) both }
-              .iam-payment-ripple { position:absolute; inset:0; border:1px solid rgba(16,185,129,.48); border-radius:999px; animation:iamRipple 2.4s cubic-bezier(.2,.7,.3,1) infinite; pointer-events:none }
-              .iam-payment-ripple.delay { animation-delay:1.2s }
-              .iam-payment-phone { animation:iamPhoneFloat 3s ease-in-out infinite; filter:drop-shadow(0 14px 18px rgba(5,150,105,.15)) }
-              .iam-payment-spinner { transform-origin:center; animation:iamScreenSpin 1.15s linear infinite }
-              .iam-payment-progress:after { content:""; position:absolute; inset:0; width:42%; background:linear-gradient(90deg,transparent,rgba(255,255,255,.85),transparent); animation:iamProgressShine 2s ease-in-out infinite }
-              @media (prefers-reduced-motion: reduce) { .iam-checkout-brand:before,.iam-payment-enter,.iam-payment-ripple,.iam-payment-phone,.iam-payment-spinner,.iam-payment-progress:after { animation:none !important } }
-            `}</style>
-            <aside className="iam-checkout-brand relative hidden overflow-hidden border-r border-emerald-900/40 bg-[radial-gradient(ellipse_at_10%_90%,rgba(0,220,170,.24),transparent_44%),linear-gradient(145deg,#032f2b_0%,#064e3b_52%,#047857_100%)] p-7 text-left text-white lg:flex lg:flex-col lg:items-start">
-              <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(rgba(167,243,208,.045)_1px,transparent_1px),linear-gradient(90deg,rgba(167,243,208,.045)_1px,transparent_1px)] bg-[size:28px_28px]" />
-              <div className="relative flex min-h-10 items-center rounded-lg bg-white/5 px-2 py-1 ring-1 ring-white/10"><img src="/brand/logo-iamtrader-full.png" alt="IAMTRADER" className="h-10 w-auto object-contain drop-shadow-sm" /></div>
-              <div className="relative mt-8 w-full text-left"><span className="inline-flex rounded-full border border-emerald-300/20 bg-emerald-400/15 px-3 py-1 text-[10px] font-extrabold uppercase tracking-[.16em] text-emerald-200">IAMTRADER Plus</span><h2 className="mt-4 max-w-xs text-3xl font-black leading-tight tracking-tight text-white">Progressez avec de meilleurs outils.</h2><p className="mt-3 max-w-xs text-sm leading-6 text-emerald-50/80">Un suivi clair de vos performances et de vos décisions.</p></div>
-              <div className="relative mt-7 space-y-4">
-                {[
-                  ['Journal avancé',Activity],
-                  ['Statistiques détaillées',TrendingUp],
-                  ['IA Chloé',Sparkles]
-                ].map(([title,Icon]: any) => <div key={title} className="flex items-center gap-3"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-emerald-300/15 bg-emerald-400/15 text-emerald-200"><Icon className="h-4 w-4" /></div><div className="text-sm font-bold text-white">{title}</div></div>)}
+        <div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-slate-950/45 px-3 py-4 backdrop-blur-sm sm:px-5 sm:py-6" role="dialog" aria-modal="true" aria-labelledby="payment-checkout-title">
+          <div className="relative my-auto flex max-h-[calc(100dvh-2rem)] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white text-slate-900 shadow-2xl sm:rounded-3xl">
+            <header className="flex shrink-0 items-start justify-between gap-3 border-b border-slate-100 px-4 py-4 sm:px-6 sm:py-5">
+              <div className="min-w-0">
+                <p className="text-[10px] font-extrabold uppercase tracking-[.16em] text-emerald-700">IAMTRADER · Abonnement</p>
+                <h3 id="payment-checkout-title" className="mt-1 text-lg font-black tracking-tight sm:text-xl">{paymentPlan === 'pro' ? 'Passer à Plus' : 'Activer Community'}</h3>
+                <p className="mt-1 text-xs leading-5 text-slate-500">Étape {paymentStep === 'duration' ? '1' : paymentStep === 'method' ? '2' : paymentStep === 'details' ? '3' : '4'} sur 4 · {paymentStep === 'duration' ? 'Durée' : paymentStep === 'method' ? 'Moyen de paiement' : paymentStep === 'details' ? 'Informations' : 'Récapitulatif'}</p>
               </div>
-              <div className="relative mt-auto w-full border-t border-emerald-100/10 pt-4"><PromotionBanners placement="ticker" /></div>
-            </aside>
-            <section className="min-w-0 bg-white">
-            <div className="relative flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-5 sm:px-7 sm:py-6">
-              <div className="flex min-w-0 items-start gap-3"><div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100"><Shield className="h-5 w-5" /></div><div className="min-w-0"><div className="text-[10px] font-bold uppercase tracking-[0.18em] text-emerald-700">Paiement sécurisé par SasPay</div><h3 className="mt-1 text-xl font-extrabold tracking-tight text-slate-900 sm:text-2xl">{paymentPlan === 'pro' ? 'Passer à Plus' : 'Activer Community'}</h3><p className="mt-1 max-w-lg text-xs leading-5 text-slate-500">Vérifiez votre formule et poursuivez vers le paiement sécurisé pour activer votre abonnement.</p></div></div>
-              <button onClick={() => setPaymentPlan(null)} className="shrink-0 rounded-xl border border-slate-200 bg-white p-2.5 text-slate-500 transition hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700" aria-label="Fermer"><X className="h-4 w-4" /></button>
-            </div>
-            <div className="space-y-5 p-5 sm:p-7 lg:p-8">
+              <button type="button" onClick={() => setPaymentPlan(null)} className="shrink-0 rounded-xl border border-slate-200 p-2.5 text-slate-500 hover:bg-slate-50" aria-label="Fermer"><X className="h-4 w-4" /></button>
+            </header>
+
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-5 sm:px-6 sm:py-6">
+              {paymentStatus === 'idle' && (
+                <>
+                  <div className="mb-5 grid grid-cols-4 gap-1.5" aria-label="Progression du paiement">
+                    {(['duration','method','details','summary'] as const).map((step, index) => (
+                      <div key={step} className={'h-1.5 rounded-full ' + ((['duration','method','details','summary'] as const).indexOf(paymentStep) >= index ? 'bg-emerald-500' : 'bg-slate-100')} />
+                    ))}
+                  </div>
+
+                  {paymentStep === 'duration' && (
+                    <div className="mx-auto max-w-md space-y-5">
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+                        <p className="text-xs font-bold text-emerald-700">Formule sélectionnée</p>
+                        <h4 className="mt-1 text-xl font-black">{paymentPlan === 'pro' ? 'IAMTRADER Plus' : 'IAMTRADER Community'}</h4>
+                        <p className="mt-1 text-xs leading-5 text-slate-500">{paymentPlan === 'pro' ? 'Accès complet aux outils de trading.' : 'Accès aux ressources et à la communauté.'}</p>
+                      </div>
+                      <div>
+                        <label className="mb-2 block text-sm font-bold text-slate-800">Durée de l’abonnement</label>
+                        <div className="flex items-center justify-center gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-4">
+                          <div className="flex flex-col items-center gap-1">
+                            <button type="button" aria-label="Augmenter la durée" disabled={paymentMonths >= 12} onClick={() => { const next = Math.min(12, paymentMonths + 1); setPaymentMonths(next); setPromoQuote(null); setPromoMessage(''); void loadAutomaticPromotion(paymentPlan, next); }} className="flex h-9 w-12 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:border-emerald-400 hover:bg-emerald-50 disabled:opacity-30"><span className="text-lg leading-none">▲</span></button>
+                            <span className="min-w-12 text-center text-3xl font-black tabular-nums">{paymentMonths}</span>
+                            <button type="button" aria-label="Diminuer la durée" disabled={paymentMonths <= 1} onClick={() => { const next = Math.max(1, paymentMonths - 1); setPaymentMonths(next); setPromoQuote(null); setPromoMessage(''); void loadAutomaticPromotion(paymentPlan, next); }} className="flex h-9 w-12 items-center justify-center rounded-lg border border-slate-200 text-slate-600 transition hover:border-emerald-400 hover:bg-emerald-50 disabled:opacity-30"><span className="text-lg leading-none">▼</span></button>
+                          </div>
+                          <span className="text-sm font-semibold text-slate-500">{paymentMonths > 1 ? 'mois' : 'mois'}</span>
+                        </div>
+                        <p className="mt-2 text-center text-[11px] text-slate-500">Choisissez entre 1 et 12 mois.</p>
+                      </div>
+                      <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4">
+                        <div className="flex items-center justify-between gap-3 text-sm"><span className="text-slate-600">Montant de l’abonnement</span><strong className="text-xl font-black text-slate-950">${getPaymentAmounts(paymentPlan, paymentMonths).total.toFixed(2)} USD</strong></div>
+                        <p className="mt-1 text-[11px] leading-4 text-slate-500">{paymentPlan === 'pro' ? '$9.99 par mois.' : 'Tarif calculé à partir du forfait Community de 6 mois à $89.99.'}</p>
+                      </div>
+                      <div className="flex flex-col gap-2 sm:flex-row">
+                        <button type="button" onClick={() => setPaymentPlan(null)} className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-600 sm:flex-1">Annuler</button>
+                        <button type="button" onClick={() => setPaymentStep('method')} className="rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700 sm:flex-[1.5]">Continuer <ArrowRight className="ml-1 inline h-4 w-4" /></button>
+                      </div>
+                    </div>
+                  )}
+
+                  {paymentStep === 'method' && (
+                    <div className="mx-auto max-w-md space-y-4">
+                      <div><h4 className="text-lg font-black">Comment souhaitez-vous payer ?</h4><p className="mt-1 text-xs leading-5 text-slate-500">Sélectionnez une méthode de paiement pour continuer.</p></div>
+                      <button type="button" onClick={() => setPaymentMethod('mobile_money')} className={'flex w-full items-center gap-4 rounded-2xl border p-4 text-left transition ' + (paymentMethod === 'mobile_money' ? 'border-emerald-500 bg-emerald-50 ring-2 ring-emerald-100' : 'border-slate-200 hover:border-slate-300')}>
+                        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700"><Smartphone className="h-6 w-6" /></span>
+                        <span className="min-w-0 flex-1"><span className="block text-sm font-extrabold">Mobile Money</span><span className="mt-1 block text-xs leading-5 text-slate-500">Paiement depuis votre portefeuille mobile.</span></span>
+                        <span className={'h-4 w-4 shrink-0 rounded-full border-2 ' + (paymentMethod === 'mobile_money' ? 'border-emerald-600 bg-emerald-600 ring-2 ring-emerald-200' : 'border-slate-300')} />
+                      </button>
+                      <button type="button" onClick={() => setPaymentMethod('bank_transfer')} className={'flex w-full items-center gap-4 rounded-2xl border p-4 text-left transition ' + (paymentMethod === 'bank_transfer' ? 'border-emerald-500 bg-emerald-50 ring-2 ring-emerald-100' : 'border-slate-200 hover:border-slate-300')}>
+                        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-700"><WalletCards className="h-6 w-6" /></span>
+                        <span className="min-w-0 flex-1"><span className="block text-sm font-extrabold">Virement bancaire</span><span className="mt-1 block text-xs leading-5 text-slate-500">Paiement par transfert depuis votre banque.</span></span>
+                        <span className={'h-4 w-4 shrink-0 rounded-full border-2 ' + (paymentMethod === 'bank_transfer' ? 'border-emerald-600 bg-emerald-600 ring-2 ring-emerald-200' : 'border-slate-300')} />
+                      </button>
+                      <div className="flex gap-2 pt-2"><button type="button" onClick={() => setPaymentStep('duration')} className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-600">Retour</button><button type="button" onClick={() => setPaymentStep('details')} className="flex-[1.5] rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white">Continuer</button></div>
+                    </div>
+                  )}
+
+                  {paymentStep === 'details' && (
+                    <div className="mx-auto max-w-md space-y-4">
+                      {paymentMethod === 'mobile_money' ? (
+                        <>
+                          <div><h4 className="text-lg font-black">Informations Mobile Money</h4><p className="mt-1 text-xs leading-5 text-slate-500">Renseignez le pays, le numéro et le réseau associé à votre portefeuille mobile.</p></div>
+                          <div><label className="mb-1.5 block text-xs font-bold text-slate-700">Pays</label><select value={paymentCountryCode} onChange={event => { const code = event.target.value; setPaymentCountryCode(code); setPaymentProvider(countryOptions.find(item => item.code === code)?.networks[0]?.value || ''); setPaymentPhone(''); }} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none focus:border-emerald-500">{countryOptions.map(item => <option key={item.code} value={item.code}>{item.flag} {item.name} ({item.dialCode})</option>)}</select></div>
+                          <div><label className="mb-1.5 block text-xs font-bold text-slate-700">Numéro de téléphone</label><div className="flex min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white"><span className="flex shrink-0 items-center border-r border-slate-200 bg-slate-50 px-3 text-sm font-bold text-slate-700">{countryOptions.find(item => item.code === paymentCountryCode)?.dialCode || '+243'}</span><input type="tel" inputMode="numeric" autoComplete="tel-national" value={paymentPhone} onChange={event => setPaymentPhone(event.target.value.replace(/[^0-9]/g, '').replace(/^0+/, '').slice(0, countryOptions.find(item => item.code === paymentCountryCode)?.phoneLength || 9))} placeholder={'X'.repeat(countryOptions.find(item => item.code === paymentCountryCode)?.phoneLength || 9)} className="min-w-0 flex-1 px-3 py-3 text-sm text-slate-900 outline-none" /></div><p className="mt-1 text-[10px] text-slate-500">Sans le zéro initial. L’indicatif est ajouté automatiquement.</p></div>
+                          <div><label className="mb-1.5 block text-xs font-bold text-slate-700">Réseau Mobile Money</label><select value={paymentProvider} onChange={event => setPaymentProvider(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none focus:border-emerald-500">{(countryOptions.find(item => item.code === paymentCountryCode)?.networks || []).map(network => <option key={network.value} value={network.value}>{network.label}</option>)}</select></div>
+                        </>
+                      ) : (
+                        <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4">
+                          <div className="flex items-center gap-2 text-sm font-extrabold text-sky-900"><WalletCards className="h-5 w-5" /> Virement bancaire</div>
+                          <p className="mt-2 text-xs leading-5 text-sky-900/80">Les coordonnées du compte bancaire IAMTRADER seront affichées après l’enregistrement de votre demande. Votre abonnement restera en attente jusqu’à la vérification effective du virement.</p>
+                        </div>
+                      )}
+                      <div className="flex gap-2 pt-2"><button type="button" onClick={() => setPaymentStep('method')} className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-600">Retour</button><button type="button" onClick={() => setPaymentStep('summary')} disabled={paymentMethod === 'mobile_money' && (!paymentPhone.trim() || !paymentProvider)} className="flex-[1.5] rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-40">Continuer</button></div>
+                    </div>
+                  )}
+
+                  {paymentStep === 'summary' && (
+                    <div className="mx-auto max-w-md space-y-4">
+                      <div><h4 className="text-lg font-black">Vérifiez votre commande</h4><p className="mt-1 text-xs leading-5 text-slate-500">Vérifiez les informations avant de confirmer votre demande.</p></div>
+                      <div className="divide-y divide-slate-100 rounded-2xl border border-slate-200 bg-white px-4">
+                        <div className="flex justify-between gap-3 py-3 text-sm"><span className="text-slate-500">Abonnement</span><strong>{paymentPlan === 'pro' ? 'Plus' : 'Community'}</strong></div>
+                        <div className="flex justify-between gap-3 py-3 text-sm"><span className="text-slate-500">Durée</span><strong>{paymentMonths} mois</strong></div>
+                        <div className="flex justify-between gap-3 py-3 text-sm"><span className="text-slate-500">Paiement</span><strong>{paymentMethod === 'mobile_money' ? 'Mobile Money' : 'Virement bancaire'}</strong></div>
+                        {paymentMethod === 'mobile_money' && <div className="flex justify-between gap-3 py-3 text-sm"><span className="text-slate-500">Téléphone</span><strong className="max-w-[60%] break-all text-right">{countryOptions.find(item => item.code === paymentCountryCode)?.dialCode}{paymentPhone}</strong></div>}
+                        <div className="flex justify-between gap-3 py-4"><span className="text-sm font-bold text-slate-700">Total à payer</span><strong className="text-xl font-black text-emerald-700">${(promoQuote?.finalAmount ?? getPaymentAmounts(paymentPlan, paymentMonths).total).toFixed(2)} USD</strong></div>
+                      </div>
+                      <button type="button" onClick={() => { setPromoMessage(''); setIsPromoModalOpen(true); }} className="inline-flex items-center gap-2 rounded-lg px-2 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-50"><Tag className="h-4 w-4" /> Ajouter un code promo</button>
+                      {promoMessage && <p className="text-xs text-slate-500">{promoMessage}</p>}
+                      <div className="flex flex-col gap-2 sm:flex-row"><button type="button" onClick={() => setPaymentStep('details')} className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-600 sm:flex-1">Modifier</button><button type="button" onClick={() => void submitPayment()} disabled={isPaymentLoading} className="rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50 sm:flex-[1.5]">{isPaymentLoading ? 'Enregistrement…' : 'Confirmer et continuer'}</button></div>
+                    </div>
+                  )}
+                </>
+              )}
 
               {isPromoModalOpen && paymentStatus === 'idle' && (
-                <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/45 px-4 py-6 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="promo-code-modal-title">
-                  <div className="w-full max-w-md rounded-2xl border border-emerald-100 bg-white p-5 shadow-2xl sm:p-6">
-                    <div className="flex items-start justify-between gap-3"><div><div className="text-[10px] font-extrabold uppercase tracking-[.16em] text-emerald-700">Avantage abonnement</div><h3 id="promo-code-modal-title" className="mt-1 text-lg font-black text-slate-950">Appliquer un code promo</h3><p className="mt-1 text-xs leading-5 text-slate-500">Le serveur vérifie le code et recalcule le prix avant le paiement.</p></div><button type="button" onClick={() => setIsPromoModalOpen(false)} aria-label="Fermer" className="rounded-lg p-2 text-slate-400 hover:bg-slate-100"><X className="h-4 w-4" /></button></div>
+                <div className="fixed inset-0 z-[120] flex items-center justify-center bg-slate-950/50 px-4 py-6 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="promo-code-modal-title">
+                  <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-5 shadow-2xl sm:p-6">
+                    <div className="flex items-start justify-between gap-3"><div><p className="text-[10px] font-extrabold uppercase tracking-[.16em] text-emerald-700">Avantage abonnement</p><h3 id="promo-code-modal-title" className="mt-1 text-lg font-black">Appliquer un code promo</h3></div><button type="button" onClick={() => setIsPromoModalOpen(false)} aria-label="Fermer" className="rounded-lg p-2 text-slate-400 hover:bg-slate-100"><X className="h-4 w-4" /></button></div>
                     <label htmlFor="payment-promo-code" className="mt-5 mb-1.5 block text-xs font-bold text-slate-700">Code promo</label>
-                    <input id="payment-promo-code" value={promoCode} onChange={event => { setPromoCode(event.target.value.toUpperCase().replace(/\\s/g,'')); setPromoQuote(null); setPromoMessage(''); }} placeholder="Ex. IAM-XXXXX" autoComplete="off" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-mono font-bold text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100" />
-                    {promoMessage && <p className={`mt-2 text-xs font-semibold ${promoQuote ? 'text-emerald-700' : 'text-rose-600'}`}>{promoMessage}</p>}
-                    <div className="mt-5 flex gap-2"><button type="button" onClick={() => setIsPromoModalOpen(false)} className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-xs font-bold text-slate-600 hover:bg-slate-50">Annuler</button><button type="button" onClick={() => void applyPromoCode()} disabled={isPromoApplying || !promoCode.trim()} className="flex-1 rounded-xl bg-emerald-600 px-4 py-3 text-xs font-extrabold text-white hover:bg-emerald-700 disabled:opacity-50">{isPromoApplying ? 'Vérification…' : 'Appliquer'}</button></div>
+                    <input id="payment-promo-code" value={promoCode} onChange={event => { setPromoCode(event.target.value.toUpperCase().replace(/\s/g,'')); setPromoQuote(null); setPromoMessage(''); }} placeholder="Ex. IAM-XXXXX" autoComplete="off" className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm font-mono font-bold text-slate-900 outline-none focus:border-emerald-500" />
+                    {promoMessage && <p className={'mt-2 text-xs font-semibold ' + (promoQuote ? 'text-emerald-700' : 'text-rose-600')}>{promoMessage}</p>}
+                    <div className="mt-5 flex gap-2"><button type="button" onClick={() => setIsPromoModalOpen(false)} className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-xs font-bold text-slate-600">Annuler</button><button type="button" onClick={() => void applyPromoCode()} disabled={isPromoApplying || !promoCode.trim()} className="flex-1 rounded-xl bg-emerald-600 px-4 py-3 text-xs font-extrabold text-white disabled:opacity-50">{isPromoApplying ? 'Vérification…' : 'Appliquer'}</button></div>
                   </div>
                 </div>
               )}
-              {paymentStatus === 'processing' && paymentGateway === 'saspay' && paymentUrl ? (
-                <div className="grid gap-5 lg:grid-cols-[0.8fr_1.2fr]">
-                  <section className="rounded-2xl bg-slate-50 p-5 ring-1 ring-slate-200">
-                    <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-emerald-700">Récapitulatif</div>
-                    <h4 className="mt-2 text-lg font-black text-slate-950">{paymentPlan === 'pro' ? 'Abonnement Plus' : 'Abonnement Community'}</h4>
-                    <p className="mt-1 text-xs text-slate-500">La transaction est sécurisée et traitée par SasPay.</p>
-                    <div className="mt-5 flex items-end justify-between border-t border-slate-200 pt-4"><span className="text-sm font-semibold text-slate-600">Total prévu</span><strong className="text-2xl font-black text-slate-950">${getPaymentAmounts(paymentPlan!).total.toFixed(2)} USD</strong></div>
-                    <p className="mt-3 text-xs leading-5 text-slate-500">Ne fermez pas cette fenêtre avant la fin du paiement. L’abonnement sera activé uniquement après confirmation serveur.</p>
-                    <div className="mt-4 rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-xs text-emerald-900">{paymentMessage || 'En attente de confirmation de SasPay…'}</div>
-                  </section>
-                  <section className="min-w-0 overflow-hidden rounded-2xl border border-slate-200 bg-white">
-                    <div className="flex items-center gap-2 border-b border-slate-100 px-4 py-3 text-sm font-bold text-slate-800"><Lock className="h-4 w-4 text-emerald-700" /> Paiement SasPay sécurisé</div>
-                    <div className="flex min-h-[420px] flex-col items-center justify-center bg-slate-50 px-6 py-10 text-center sm:min-h-[520px]"><div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100"><Lock className="h-6 w-6" /></div><h4 className="mt-4 text-base font-extrabold text-slate-900">Finalisez sur SasPay</h4><p className="mt-2 max-w-sm text-sm leading-6 text-slate-500">Vous allez être redirigé vers la page de paiement sécurisée pour finaliser votre abonnement.</p><button type="button" onClick={() => window.location.assign(paymentUrl)} className="mt-5 inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700"><Lock className="h-4 w-4" /> Continuer vers le paiement sécurisé</button><p className="mt-3 text-[11px] text-slate-400">Après le paiement, vous serez ramené sur IAMTRADER. L’abonnement sera activé après confirmation serveur.</p></div>
-                  </section>
+
+              {paymentStatus === 'processing' && paymentMethod === 'bank_transfer' && (
+                <div className="mx-auto max-w-lg space-y-4 py-2">
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4"><div className="flex items-center gap-2 text-sm font-extrabold text-amber-900"><Clock3 className="h-5 w-5" /> Paiement en attente de vérification</div><p className="mt-2 text-xs leading-5 text-amber-900/80">{paymentMessage}</p></div>
+                  {paymentBankDetails ? (
+                    <div className="rounded-2xl border border-slate-200 p-4 sm:p-5">
+                      <h4 className="text-sm font-black">Coordonnées bancaires</h4>
+                      <dl className="mt-3 space-y-3 text-sm">
+                        <div className="flex flex-col gap-1 sm:flex-row sm:justify-between"><dt className="text-slate-500">Banque</dt><dd className="font-bold sm:text-right">{paymentBankDetails.bankName}</dd></div>
+                        <div className="flex flex-col gap-1 sm:flex-row sm:justify-between"><dt className="text-slate-500">Titulaire</dt><dd className="font-bold sm:text-right">{paymentBankDetails.accountName}</dd></div>
+                        <div className="flex flex-col gap-1 sm:flex-row sm:justify-between"><dt className="text-slate-500">Numéro de compte</dt><dd className="break-all font-mono font-bold sm:text-right">{paymentBankDetails.accountNumber}</dd></div>
+                        {paymentBankDetails.swift && <div className="flex flex-col gap-1 sm:flex-row sm:justify-between"><dt className="text-slate-500">SWIFT / BIC</dt><dd className="font-mono font-bold sm:text-right">{paymentBankDetails.swift}</dd></div>}
+                        {paymentBankDetails.branch && <div className="flex flex-col gap-1 sm:flex-row sm:justify-between"><dt className="text-slate-500">Agence</dt><dd className="font-bold sm:text-right">{paymentBankDetails.branch}</dd></div>}
+                        <div className="flex flex-col gap-1 sm:flex-row sm:justify-between"><dt className="text-slate-500">Devise</dt><dd className="font-bold sm:text-right">{paymentBankDetails.currency || 'USD'}</dd></div>
+                      </dl>
+                      {paymentBankDetails.instructions && <p className="mt-4 rounded-xl bg-slate-50 p-3 text-xs leading-5 text-slate-600">{paymentBankDetails.instructions}</p>}
+                    </div>
+                  ) : <p className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs leading-5 text-slate-600">Les coordonnées bancaires ne sont pas encore disponibles. Votre demande n’a pas été enregistrée ; contactez l’assistance IAMTRADER.</p>}
+                  <div className="rounded-xl border border-slate-200 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Référence à communiquer</p><p className="mt-1 break-all font-mono text-base font-black">{paymentReference || paymentId}</p><p className="mt-2 text-xs leading-5 text-slate-500">Après le virement, transmettez la preuve de paiement à l’assistance en indiquant cette référence. L’abonnement sera activé uniquement après vérification.</p></div>
+                  <button type="button" onClick={() => setPaymentPlan(null)} className="w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-bold text-white">Terminer</button>
                 </div>
-              ) : null}
-              {paymentStatus === 'idle' && (<>
-                <div className="flex items-start justify-between gap-4 border-b border-slate-100 pb-5">
-                  <div className="min-w-0">
-                    <div className="text-[10px] font-bold uppercase tracking-wider text-emerald-700">Votre formule</div>
-                    <div className="mt-1 text-base font-black text-slate-950">{paymentPlan === 'pro' ? 'Plus · 1 mois' : 'Community · 6 mois'}</div>
-                    <p className="mt-1 break-words text-xs text-slate-500">Compte : {userProfile?.displayName || userProfile?.email || 'Votre compte IAMTRADER'}</p>
-                  </div>
-                  <div className="shrink-0 text-right">
-                    <div className="text-[10px] font-semibold text-slate-400">Total à payer</div>
-                    <div className="mt-1 text-xl font-black tracking-tight text-slate-950">{paymentGateway === 'saspay' ? `${(promoQuote?.finalAmount ?? getPaymentAmounts(paymentPlan).total).toFixed(2)} USD` : `${getPaymentAmounts(paymentPlan).cdfTotal.toLocaleString('fr-FR')} CDF`}</div>
-                  </div>
+              )}
+
+              {paymentStatus === 'processing' && paymentMethod === 'mobile_money' && (
+                <div className="mx-auto max-w-lg space-y-4 py-4 text-center">
+                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700"><Smartphone className="h-8 w-8" /></div>
+                  <h4 className="text-xl font-black">Paiement en traitement</h4>
+                  <p className="text-sm leading-6 text-slate-500">{paymentMessage || 'Une demande de confirmation a été envoyée sur votre téléphone.'}</p>
+                  <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-xs leading-5 text-emerald-900">Validez la demande sur votre téléphone. L’abonnement sera activé après confirmation.</div>
+                  {paymentReference && <p className="break-all text-[11px] text-slate-400">Référence : {paymentReference}</p>}
+                  <button type="button" onClick={() => setPaymentPlan(null)} className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-600">Fermer</button>
                 </div>
-                {promoQuote && paymentStatus === 'idle' && <div className="relative overflow-hidden rounded-2xl border border-emerald-200 bg-gradient-to-r from-[#f0fdf8] via-white to-[#effcf7] p-4 shadow-sm sm:p-5"><div className="absolute inset-y-0 left-0 w-1 bg-gradient-to-b from-emerald-400 to-teal-500"/><div className="flex flex-wrap items-center justify-between gap-3"><div className="min-w-0"><div className="flex flex-wrap items-center gap-2"><span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-emerald-800"><Sparkles className="h-3 w-3"/> Offre appliquée</span><span className="text-xs font-bold text-slate-700">{promoQuote.promotionName || 'Avantage abonnement'}</span></div><div className="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1"><span className="text-sm font-semibold text-slate-400 line-through">${promoQuote.baseAmount.toFixed(2)} USD</span><span className="text-2xl font-black tracking-tight text-slate-950">${promoQuote.finalAmount.toFixed(2)} <span className="text-sm font-bold">USD</span></span><span className="inline-flex items-center rounded-full bg-emerald-600 px-2.5 py-1 text-[11px] font-extrabold text-white">−${promoQuote.discountAmount.toFixed(2)}</span></div><p className="mt-1.5 text-[11px] font-medium text-emerald-800">Vous économisez ${promoQuote.discountAmount.toFixed(2)} sur cet abonnement.</p></div><button type="button" onClick={() => { setPromoQuote(null); setPromoCode(''); setPromoMessage(''); }} className="shrink-0 rounded-lg px-3 py-2 text-xs font-bold text-slate-500 transition hover:bg-white hover:text-slate-800">Retirer</button></div></div>}
-                {(
-                  <div className="space-y-4 rounded-2xl border border-slate-200 bg-slate-50/70 p-4 sm:p-5">
-                    <div className="relative">
-                      <div className="mb-1.5 flex items-center justify-between gap-3"><label className="block text-xs font-bold text-slate-700">Pays de paiement</label><button type="button" onClick={() => { setPromoMessage(''); setIsPromoModalOpen(true); }} className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-bold text-emerald-700 transition hover:bg-emerald-50 hover:text-emerald-800"><Tag className="h-3.5 w-3.5" /> Code promo {promoQuote && <Check className="h-3.5 w-3.5" />}</button></div>
-                      <button type="button" onClick={() => setIsCountryListOpen(open => !open)} className="flex w-full items-center gap-3 rounded-xl border border-emerald-200 bg-white px-3 py-3 text-left transition hover:border-emerald-400 focus:outline-none focus:ring-2 focus:ring-emerald-100">
-                        <img src={`https://flagcdn.com/w40/${paymentCountryCode.toLowerCase()}.png`} alt={paymentCountryCode} className="h-5 w-7 shrink-0 rounded-sm object-cover shadow-sm" onError={event => { event.currentTarget.style.display = 'none'; }} />
-                        <span className="min-w-0 flex-1"><span className="mr-2 text-xs font-black text-emerald-300">{paymentCountryCode}</span><span className="text-sm font-semibold text-slate-800">{countryOptions.find(item => item.code === paymentCountryCode)?.name || 'Sélectionner un pays'}</span><span className="mt-0.5 block text-[10px] text-sky-700">{`Indicatif ${countryOptions.find(item => item.code === paymentCountryCode)?.dialCode || ''} · Mobile Money`}</span></span>
-                        <ChevronRight className={'h-4 w-4 text-slate-400 transition ' + (isCountryListOpen ? 'rotate-90' : '')} />
-                      </button>
-                      {isCountryListOpen && <div className="absolute left-0 right-0 top-full z-30 mt-2 overflow-hidden rounded-2xl border border-slate-200 bg-white p-2 shadow-xl shadow-slate-900/10">
-                        <input value={countrySearch} onChange={event => setCountrySearch(event.target.value)} placeholder="Rechercher un pays..." className="mb-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-xs text-slate-800 outline-none placeholder:text-slate-400 focus:border-emerald-400" />
-                        <div className="max-h-52 overflow-y-auto">{countryOptions.filter(item => (item.name + item.code).toLowerCase().includes(countrySearch.toLowerCase())).map(item => <button type="button" key={item.code} onClick={() => { setPaymentCountryCode(item.code); setPaymentProvider(item.networks[0]?.value || ''); setPaymentPhone(''); setIsCountryListOpen(false); setCountrySearch(''); }} className={'flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ' + (paymentCountryCode === item.code ? 'bg-emerald-400/10 text-emerald-700 ring-1 ring-emerald-200' : 'text-slate-700 hover:bg-slate-50')}><img src={`https://flagcdn.com/w40/${item.code.toLowerCase()}.png`} alt={item.code} loading="lazy" className="h-4 w-6 shrink-0 rounded-sm object-cover shadow-sm" onError={event => { event.currentTarget.style.display = 'none'; }} /><span className="w-7 text-xs font-black">{item.code}</span><span className="flex-1 text-xs">{item.name}</span>{paymentCountryCode === item.code && <Check className="h-4 w-4 text-emerald-600" />}</button>)}</div>
-                      </div>}
-                    </div>
-                    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-2">
-                      <div className="min-w-0">
-                        <label htmlFor="saspay-phone" className="mb-1.5 block text-xs font-bold text-slate-700">Numéro Mobile Money</label>
-                        <div className="flex min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white transition focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-100">
-                          <span aria-label={`Indicatif téléphonique ${countryOptions.find(item => item.code === paymentCountryCode)?.dialCode || '+243'}`} className="flex shrink-0 items-center border-r border-slate-200 bg-emerald-50 px-2.5 text-sm font-bold text-emerald-800">{countryOptions.find(item => item.code === paymentCountryCode)?.dialCode || '+243'}</span>
-                          <input id="saspay-phone" type="tel" inputMode="numeric" autoComplete="tel-national" required aria-required="true" value={paymentPhone} onChange={event => setPaymentPhone(event.target.value.replace(/[^0-9]/g, '').replace(/^0+/, '').slice(0, countryOptions.find(item => item.code === paymentCountryCode)?.phoneLength || 9))} placeholder={'X'.repeat(countryOptions.find(item => item.code === paymentCountryCode)?.phoneLength || 9)} className="min-w-0 w-full bg-transparent px-3 py-3 text-sm text-slate-900 outline-none placeholder:text-slate-400" />
-                        </div>
-                        <p className="mt-1.5 text-[10px] leading-4 text-slate-500">Indicatif ajouté automatiquement, sans le 0 initial.</p>
-                      </div>
-                      <div className="min-w-0">
-                        <label htmlFor="saspay-network" className="mb-1.5 block text-xs font-bold text-slate-700">Réseau Mobile Money</label>
-                        <select id="saspay-network" value={paymentProvider} onChange={event => setPaymentProvider(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100">
-                          {(countryOptions.find(item => item.code === paymentCountryCode)?.networks || []).map(network => <option key={network.value} value={network.value}>{network.label}</option>)}
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-xs leading-5 text-emerald-800"><Shield className="mr-2 inline h-4 w-4" />Paiement sécurisé intégré à IAMTRADER. Une demande de confirmation sera envoyée par votre opérateur. L’abonnement ne sera activé qu’après confirmation serveur.</div>
-                <button onClick={submitPayment} disabled={isPaymentLoading || (paymentGateway === 'saspay' && (!paymentPhone.trim() || !paymentProvider))} className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 via-emerald-500 to-teal-400 px-4 py-3.5 text-sm font-extrabold text-white shadow-[0_10px_30px_rgba(0,199,150,.18)] transition hover:-translate-y-0.5 hover:shadow-[0_14px_36px_rgba(0,199,150,.25)] focus:outline-none focus:ring-4 focus:ring-emerald-400/20 disabled:cursor-not-allowed disabled:opacity-40">{isPaymentLoading ? 'Envoi de la demande…' : 'Continuer vers le paiement'}</button>
-              </>)}
-              {paymentStatus === 'processing' && !(paymentGateway === 'saspay' && paymentUrl) && (<div className="iam-payment-enter space-y-5 py-2">
-                <div className="grid items-center gap-5 md:grid-cols-[0.78fr_1.22fr] md:gap-8">
-                  <div className="relative flex min-h-[230px] items-center justify-center overflow-hidden rounded-[26px] border border-emerald-100 bg-[radial-gradient(ellipse_at_center,rgba(16,185,129,.16),transparent_68%),linear-gradient(145deg,#f0fdf8,#ffffff_68%,#ecfdf5)] p-5">
-                    <div className="iam-payment-ripple h-36 w-36" />
-                    <div className="iam-payment-ripple delay h-36 w-36" />
-                    <div className="absolute h-40 w-40 rounded-full bg-emerald-200/40 blur-2xl" />
-                    <svg className="iam-payment-phone relative z-10 h-40 w-28" viewBox="0 0 96 144" fill="none" role="img" aria-label="Téléphone en attente de confirmation Mobile Money">
-                      <defs><linearGradient id="iamPhoneFrame" x1="10" y1="8" x2="86" y2="136" gradientUnits="userSpaceOnUse"><stop stopColor="#10B981"/><stop offset="1" stopColor="#064E3B"/></linearGradient><linearGradient id="iamPhoneScreen" x1="20" y1="18" x2="76" y2="126" gradientUnits="userSpaceOnUse"><stop stopColor="#10B981"/><stop offset="1" stopColor="#064E3B"/></linearGradient></defs>
-                      <rect x="7" y="3" width="82" height="138" rx="17" fill="#0F2925" stroke="url(#iamPhoneFrame)" strokeWidth="3"/>
-                      <rect x="13" y="12" width="70" height="120" rx="11" fill="url(#iamPhoneScreen)"/>
-                      <path d="M37 18h22" stroke="#A7F3D0" strokeWidth="3" strokeLinecap="round"/>
-                      <circle cx="48" cy="57" r="18" stroke="#A7F3D0" strokeWidth="4" opacity=".5"/>
-                      <circle className="iam-payment-spinner" cx="48" cy="57" r="18" stroke="#FFFFFF" strokeWidth="4" strokeLinecap="round" strokeDasharray="38 75"/>
-                      <rect x="24" y="86" width="48" height="17" rx="8.5" fill="#FFFFFF" fillOpacity=".16"/>
-                      <path d="M32 94.5h32" stroke="#FFFFFF" strokeWidth="2.5" strokeLinecap="round"/>
-                      <circle cx="39" cy="115" r="2.5" fill="#A7F3D0"/><circle cx="48" cy="115" r="2.5" fill="#A7F3D0" opacity=".75"/><circle cx="57" cy="115" r="2.5" fill="#A7F3D0" opacity=".5"/>
-                    </svg>
-                    <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2">
-                      <span className="rounded-full border border-emerald-100 bg-white/90 px-2.5 py-1 text-[10px] font-bold text-slate-700 shadow-sm">M-Pesa</span>
-                      <span className="rounded-full border border-emerald-100 bg-white/90 px-2.5 py-1 text-[10px] font-bold text-slate-700 shadow-sm">Airtel</span>
-                      <span className="rounded-full border border-emerald-100 bg-white/90 px-2.5 py-1 text-[10px] font-bold text-slate-700 shadow-sm">Orange</span>
-                    </div>
-                  </div>
-                  <div className="min-w-0 py-2 text-center md:text-left">
-                    <div className="inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-emerald-50 px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[.13em] text-emerald-700"><span className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />Paiement sécurisé par SasPay</div>
-                    <h4 className="mt-4 text-2xl font-black tracking-tight text-slate-950 sm:text-3xl">Paiement <span className="text-emerald-600">en traitement</span></h4>
-                    <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500 md:mx-0">{paymentMessage || 'Demande Mobile Money envoyée. Confirmez le paiement sur votre téléphone.'}</p>
-                    <div className="iam-payment-progress relative mt-5 h-2 overflow-hidden rounded-full bg-emerald-50 ring-1 ring-emerald-100"><div className="h-full w-full rounded-full bg-gradient-to-r from-emerald-600 via-emerald-400 to-teal-300" /></div>
-                    <div className="mt-5 grid grid-cols-3 items-start gap-2">
-                      <div className="flex flex-col items-center gap-2 md:items-start"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-600 text-xs font-black text-white shadow-md shadow-emerald-600/20"><Check className="h-4 w-4" /></span><span className="text-[10px] font-bold leading-4 text-slate-700">Demande envoyée</span></div>
-                      <div className="flex flex-col items-center gap-2 border-x border-slate-100 px-1"><span className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-emerald-500 bg-emerald-50 text-xs font-black text-emerald-700"><span className="h-2.5 w-2.5 animate-pulse rounded-full bg-emerald-500" /></span><span className="text-center text-[10px] font-bold leading-4 text-emerald-700">Confirmez sur votre téléphone</span></div>
-                      <div className="flex flex-col items-center gap-2"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-xs font-black text-slate-400">3</span><span className="text-center text-[10px] font-semibold leading-4 text-slate-400">Confirmation opérateur</span></div>
-                    </div>
-                  </div>
-                </div>
-                {paymentActivationStart && <div className="rounded-2xl border border-slate-200 bg-slate-50/90 px-4 py-3.5">
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-                    <div><div className="text-[10px] font-medium text-slate-500">Type</div><div className="mt-1 text-xs font-bold text-slate-800">{paymentAction === 'upgrade' ? 'Upgrade programmé' : paymentAction === 'renewal' ? 'Renouvellement' : 'Nouvelle souscription'}</div></div>
-                    <div><div className="text-[10px] font-medium text-slate-500">Début</div><div className="mt-1 text-xs font-bold text-slate-800">{formatDate(paymentActivationStart)}</div></div>
-                    <div><div className="text-[10px] font-medium text-slate-500">Expiration</div><div className="mt-1 text-xs font-bold text-slate-800">{formatDate(paymentActivationExpires || undefined)}</div></div>
-                  </div>
-                </div>}
-                <div className="flex items-start gap-3 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3.5 text-left"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-700"><svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/></svg></div><div><div className="text-xs font-extrabold text-amber-800">Validez la demande Mobile Money sur votre téléphone</div><p className="mt-1 text-xs leading-5 text-amber-700">Une notification vient d’être envoyée. Ouvrez-la et confirmez le paiement avant de fermer cette fenêtre.</p></div></div>
-              </div>)}{paymentStatus === 'paid' && (<div className="py-6 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-600"><Check className="h-7 w-7" /></div><h4 className="mt-4 text-base font-black text-slate-950">Paiement confirmé</h4><p className="mt-2 text-xs text-slate-500">{paymentMessage}</p><div className="mt-4 rounded-xl bg-emerald-50 px-3 py-2 text-[10px] font-semibold text-emerald-700">Référence : {paymentId}</div></div>)}
-              {paymentStatus === 'failed' && (<div className="space-y-4 py-3 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-rose-50 text-rose-600">!</div><h4 className="text-base font-black text-slate-950">Paiement non finalisé</h4><p className="text-xs leading-5 text-slate-500">{paymentMessage}</p><button onClick={() => setPaymentStatus('idle')} className="w-full rounded-xl bg-slate-950 px-4 py-3 text-xs font-bold text-white">Réessayer</button></div>)}
+              )}
+
+              {paymentStatus === 'paid' && <div className="mx-auto max-w-md py-10 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-600"><Check className="h-7 w-7" /></div><h4 className="mt-4 text-lg font-black">Paiement confirmé</h4><p className="mt-2 text-sm leading-6 text-slate-500">{paymentMessage}</p><button type="button" onClick={() => setPaymentPlan(null)} className="mt-5 w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white">Terminer</button></div>}
+
+              {paymentStatus === 'failed' && <div className="mx-auto max-w-md space-y-4 py-8 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-rose-50 text-rose-600">!</div><h4 className="text-lg font-black">Paiement non finalisé</h4><p className="text-sm leading-5 text-slate-500">{paymentMessage}</p><button type="button" onClick={() => { setPaymentStatus('idle'); setPaymentStep('summary'); }} className="w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-bold text-white">Réessayer</button></div>}
             </div>
-            </section>
           </div>
         </div>
       )}
+
       {isAvatarPreviewOpen && (userProfile?.avatarURL || userProfile?.photoURL) && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/90 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-label="Photo de profil agrandie" onClick={() => setIsAvatarPreviewOpen(false)}>
           <button type="button" onClick={() => setIsAvatarPreviewOpen(false)} className="absolute right-5 top-5 rounded-full bg-white/10 p-3 text-white transition hover:bg-white/20" aria-label="Fermer l’aperçu"><X className="h-6 w-6" /></button>
