@@ -502,7 +502,6 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
     let cancelled = false;
     let attempts = 0;
     let timer: number | undefined;
-    setPaymentMethod('mobile_money');
     setPaymentId(pendingPaymentReference);
     setPaymentStatus('processing');
     setPaymentMessage('Vérification de votre paiement…');
@@ -871,7 +870,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
               <div className="min-w-0">
                 <p className="text-[10px] font-extrabold uppercase tracking-[.16em] text-emerald-700">IAMTRADER · Abonnement</p>
                 <h3 id="payment-checkout-title" className="mt-1 text-lg font-black tracking-tight sm:text-xl">{paymentPlan === 'pro' ? 'Passer à Plus' : 'Activer Community'}</h3>
-                <p className="mt-1 text-xs leading-5 text-slate-500">Étape {paymentStep === 'duration' ? '1' : paymentStep === 'details' ? '2' : '3'} sur 4 · {paymentStep === 'duration' ? 'Durée et paiement' : paymentStep === 'details' ? 'Informations' : 'Récapitulatif'}</p>
+                <p className="mt-1 text-xs leading-5 text-slate-500">Étape {paymentStep === 'duration' ? '1' : paymentStep === 'details' ? '2' : '3'} sur 3 · {paymentStep === 'duration' ? 'Durée et paiement' : paymentStep === 'details' ? 'Informations' : 'Récapitulatif'}</p>
               </div>
               <button type="button" onClick={() => setPaymentPlan(null)} className="shrink-0 rounded-xl border border-slate-200 p-2.5 text-slate-500 hover:bg-slate-50" aria-label="Fermer"><X className="h-4 w-4" /></button>
             </header>
