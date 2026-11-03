@@ -891,35 +891,34 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                         <h4 className="mt-1 text-xl font-black">{paymentPlan === 'pro' ? 'IAMTRADER Plus' : 'IAMTRADER Community'}</h4>
                         <p className="mt-1 text-xs leading-5 text-slate-500">{paymentPlan === 'pro' ? 'Accès complet aux outils de trading.' : 'Accès aux ressources et à la communauté.'}</p>
                       </div>
-                      <div>
-                        {paymentPlan === 'pro' ? (
-                          <>
-                            <label className="mb-2 block text-sm font-bold text-slate-800">Durée de l’abonnement</label>
-                            <div className="flex items-center justify-center gap-4 rounded-2xl border border-slate-200 bg-white px-4 py-4">
-                              <button type="button" aria-label="Diminuer la durée" disabled={paymentMonths <= 1} onClick={() => { const next = Math.max(1, paymentMonths - 1); setPaymentMonths(next); setPromoQuote(null); setPromoMessage(''); void loadAutomaticPromotion(paymentPlan, next); }} className="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 text-slate-600 transition hover:border-emerald-400 hover:bg-emerald-50 disabled:opacity-30"><span className="text-xl leading-none">−</span></button>
-                              <div className="min-w-24 text-center"><span className="text-3xl font-black tabular-nums">{paymentMonths}</span><span className="ml-2 text-sm font-semibold text-slate-500">mois</span></div>
-                              <button type="button" aria-label="Augmenter la durée" disabled={paymentMonths >= 12} onClick={() => { const next = Math.min(12, paymentMonths + 1); setPaymentMonths(next); setPromoQuote(null); setPromoMessage(''); void loadAutomaticPromotion(paymentPlan, next); }} className="flex h-11 w-11 items-center justify-center rounded-xl border border-slate-200 text-slate-600 transition hover:border-emerald-400 hover:bg-emerald-50 disabled:opacity-30"><span className="text-xl leading-none">+</span></button>
+                      <div className="rounded-xl bg-slate-50/80 px-3 py-2.5">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <label className="text-xs font-semibold text-slate-500">Durée de l’abonnement</label>
+                          {paymentPlan === 'pro' ? (
+                            <div className="flex items-center gap-2">
+                              <button type="button" aria-label="Diminuer la durée" disabled={paymentMonths <= 1} onClick={() => { const next = Math.max(1, paymentMonths - 1); setPaymentMonths(next); setPromoQuote(null); setPromoMessage(''); void loadAutomaticPromotion(paymentPlan, next); }} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-emerald-400 hover:text-emerald-700 disabled:opacity-30"><span className="text-lg leading-none">−</span></button>
+                              <span className="min-w-14 text-center text-base font-bold tabular-nums text-slate-800">{paymentMonths} <span className="text-xs font-medium text-slate-500">mois</span></span>
+                              <button type="button" aria-label="Augmenter la durée" disabled={paymentMonths >= 12} onClick={() => { const next = Math.min(12, paymentMonths + 1); setPaymentMonths(next); setPromoQuote(null); setPromoMessage(''); void loadAutomaticPromotion(paymentPlan, next); }} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 transition hover:border-emerald-400 hover:text-emerald-700 disabled:opacity-30"><span className="text-lg leading-none">+</span></button>
                             </div>
-                            <p className="mt-2 text-center text-[11px] text-slate-500">Choisissez entre 1 et 12 mois.</p>
-                          </>
-                        ) : (
-                          <>
-                            <label className="mb-2 block text-sm font-bold text-slate-800">Durée de l’abonnement</label>
-                            <div className="flex items-center justify-center rounded-2xl border border-emerald-100 bg-emerald-50/70 px-4 py-5"><span className="text-3xl font-black tabular-nums text-slate-950">6</span><span className="ml-2 text-sm font-semibold text-slate-600">mois</span></div>
-                            <p className="mt-2 text-center text-[11px] text-slate-500">La formule Community est proposée uniquement sur 6 mois.</p>
-                          </>
-                        )}
+                          ) : (
+                            <span className="text-sm font-semibold text-slate-700">6 mois</span>
+                          )}
+                        </div>
+                        <p className="mt-1 text-[10px] text-slate-400">{paymentPlan === 'pro' ? 'De 1 à 12 mois' : 'Durée fixe pour Community'}</p>
                       </div>
                       <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4">
                         <div className="flex items-center justify-between gap-3 text-sm"><span className="text-slate-600">Montant de l’abonnement</span><strong className="text-xl font-black text-slate-950">${getPaymentAmounts(paymentPlan, paymentMonths).total.toFixed(2)} USD</strong></div>
                         <p className="mt-1 text-[11px] leading-4 text-slate-500">{paymentPlan === 'pro' ? '$9.99 par mois.' : 'Tarif calculé à partir du forfait Community de 6 mois à $89.99.'}</p>
                       </div>
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between gap-2"><label className="text-sm font-bold text-slate-800">Méthode de paiement</label><span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">1 option active</span></div>
+                      <div className="space-y-3 rounded-2xl border border-emerald-100 bg-white p-3.5 sm:p-4">
+                        <div className="flex items-center justify-between gap-2">
+                          <div><label className="block text-base font-extrabold text-slate-900">Choisissez votre moyen de paiement</label><p className="mt-0.5 text-[11px] text-slate-500">Sélectionnez comment régler votre abonnement.</p></div>
+                          <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide text-emerald-700">Disponible</span>
+                        </div>
                         <div className="grid gap-2 sm:grid-cols-2">
-                          <div className="flex min-w-0 items-center gap-3 rounded-2xl border-2 border-emerald-500 bg-emerald-50/60 p-3.5">
-                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-emerald-700 shadow-sm"><Smartphone className="h-5 w-5" /></span>
-                            <span className="min-w-0 flex-1"><span className="block text-sm font-extrabold text-slate-900">Mobile Money</span><span className="mt-0.5 block text-[11px] leading-4 text-slate-500">Paiement mobile sécurisé</span></span>
+                          <div className="flex min-w-0 items-center gap-3 rounded-2xl border-2 border-emerald-500 bg-emerald-50 p-4 shadow-sm shadow-emerald-100/70"> 
+                            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-emerald-700 shadow-sm"><Smartphone className="h-5 w-5" /></span>
+                            <span className="min-w-0 flex-1"><span className="block text-sm font-extrabold text-slate-950">Mobile Money</span><span className="mt-1 block text-xs leading-4 text-slate-600">Paiement mobile sécurisé</span></span>
                             <span className="h-4 w-4 shrink-0 rounded-full border-[5px] border-emerald-600 bg-white" />
                           </div>
                           <div aria-disabled="true" className="flex min-w-0 items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3.5 opacity-65">
