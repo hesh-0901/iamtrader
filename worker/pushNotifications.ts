@@ -61,11 +61,15 @@ export async function handlePipTalkPush(request: Request, env: PushEnv): Promise
         return json({ success: false, error: 'Forbidden' }, 403);
       }
       const profile = await firestoreGet(env, 'users/' + encodeURIComponent(sender.uid)) as Record<string, unknown> | null;
-      const paidAccess = profile
-        && ['pro', 'community'].includes(String(profile.plan || 'free'))
-        && profile.subscriptionStatus === 'active'
-        && profile.paymentStatus === 'paid'
-        && profile.status === 'active';
+      const paidAccess = profile && (
+        profile.role === 'admin'
+        || (
+          ['pro', 'community'].includes(String(profile.plan || 'free'))
+          && profile.subscriptionStatus === 'active'
+          && profile.paymentStatus === 'paid'
+          && profile.status === 'active'
+        )
+      );
       if (!paidAccess) return json({ success: false, error: 'Paid PipTalk access required' }, 403);
       recipients = conversation.members.filter((uid): uid is string => typeof uid === 'string' && uid !== sender.uid);
     }
