@@ -156,6 +156,17 @@ export async function handleAdminMutation(request: Request, env: AdminEnv) {
 
     if (body.action === 'update-user') {
       if (!body.uid || !body.data) return json({ error: 'Utilisateur ou données manquants.' }, 400);
+
+      // Only the primary administrator may grant or revoke administrative roles.
+      if (Object.prototype.hasOwnProperty.call(body.data, 'role')) {
+        if (String(identity.email || '').trim().toLowerCase() !== 'henochshungu@gmail.com') {
+          return json({ error: 'Seul l’administrateur principal peut modifier les rôles.' }, 403);
+        }
+        if (body.data.role !== 'admin' && body.data.role !== 'trader') {
+          return json({ error: 'Rôle utilisateur invalide.' }, 400);
+        }
+      }
+
       const allowed = ['role','plan','status','paymentDate','subscriptionStartAt','subscriptionExpiresAt','subscriptionStatus','paymentStatus','pendingPlan','planChangeRequestedAt','planChangeConfirmedAt'];
       const data = Object.fromEntries(Object.entries(body.data).filter(([key, value]) => allowed.includes(key) && value !== undefined));
       data.updatedAt = new Date().toISOString();
