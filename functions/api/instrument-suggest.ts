@@ -3,7 +3,8 @@ import { callAI } from './common/ai-engine';
 interface Env {
   GEMINI_API_KEY?: string;
   GEMINI_MODEL?: string;
-undefined
+  GEMINI_CHLOE_MODEL?: string;
+  GEMINI_INSTRUMENT_MODEL?: string;
   OPENAI_API_KEY?: string;
   OPENAI_MODEL?: string;
   AI_PRIMARY_PROVIDER?: string;
