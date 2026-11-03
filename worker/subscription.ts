@@ -45,6 +45,7 @@ export function subscriptionFields(profile: Record<string, unknown>, planKey: ke
     fields.scheduledPlan = '';
     fields.scheduledStartAt = '';
     fields.scheduledExpiresAt = '';
+    fields.scheduledExpiresAtMs = 0;
   }
   return fields;
 }
@@ -63,6 +64,7 @@ export function lifecycleFields(profile: Record<string, unknown>, now: Date) {
     scheduledPlan: '',
     scheduledStartAt: '',
     scheduledExpiresAt: '',
+    scheduledExpiresAtMs: 0,
     updatedAt: now.toISOString()
   };
 
