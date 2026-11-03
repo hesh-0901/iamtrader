@@ -1,4 +1,5 @@
 import { firestoreGet, firestorePatch, firestoreDelete, firestoreSet, firestoreQueryCollection, verifyFirebaseIdToken, type PaymentEnv } from './firebaseAdmin';
+import { lifecycleFields } from './subscription';
 
 type AdminEnv = PaymentEnv;
 
@@ -168,19 +169,17 @@ export async function handleAdminMutation(request: Request, env: AdminEnv) {
         const results = await Promise.all(batch.map(async profile => {
           const uid = String(profile.uid || profile.id || '');
           if (!uid || profile.role === 'admin') return null;
+          const lifecycle = lifecycleFields(profile, new Date(now));
           const rawExpiry = profile.subscriptionExpiresAt;
           const expiryMs = rawExpiry ? new Date(String(rawExpiry)).getTime() : NaN;
-          if (!Number.isFinite(expiryMs)) {
-            if (['pro', 'community'].includes(String(profile.plan || ''))) withoutExpiry += 1;
-            return null;
+          const patch: Record<string, unknown> = lifecycle ? { ...lifecycle } : {};
+          if (!lifecycle && Number.isFinite(expiryMs) && Number(profile.subscriptionExpiresAtMs) !== expiryMs) {
+            patch.subscriptionExpiresAtMs = expiryMs;
           }
-          const patch: Record<string, unknown> = {};
-          if (Number(profile.subscriptionExpiresAtMs) !== expiryMs) patch.subscriptionExpiresAtMs = expiryMs;
-          if (expiryMs <= now && String(profile.plan || 'free') !== 'free') {
-            patch.plan = 'free';
-            patch.subscriptionStatus = 'expired';
-            expired += 1;
+          if (!Number.isFinite(expiryMs) && !lifecycle && ['pro', 'community'].includes(String(profile.plan || ''))) {
+            withoutExpiry += 1;
           }
+          if (patch.plan === 'free' && String(profile.plan || 'free') !== 'free') expired += 1;
           if (!Object.keys(patch).length) return null;
           await firestorePatch(env, 'users/' + encodeURIComponent(uid), patch, Object.keys(patch));
           migrated += 1;
