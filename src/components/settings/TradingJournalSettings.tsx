@@ -185,15 +185,10 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
             valuePerPriceUnit: Number(suggestion.valuePerPriceUnit),
             defaultPositionSize: Number(suggestion.defaultPositionSize) || 1
           };
-          setInstruments(previous => {
-            if (previous.some(item => item.symbol.toUpperCase() === symbol)) return previous;
-            const next = [...previous, normalized];
-            void persist(next, setups, { silent: true }).catch(error => {
-              showToast(`Enregistrement impossible pour ${symbol} : ${error?.message || 'Firestore'}`, 'error');
-              setInstruments(previous);
-            });
-            return next;
-          });
+          if (instruments.some(item => item.symbol.toUpperCase() === symbol)) return;
+          const next = [...instruments, normalized];
+          setInstruments(next);
+          await persist(next, setups, { silent: true });
         } catch (error: any) {
           setInstrument({
             id: '',
@@ -282,6 +277,12 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
                 <button type="button" disabled={saving} onClick={()=>{setInstrumentDetailsOpen(true);setInstrumentSuggestionNote('Saisie manuelle : vérifiez les spécifications exactes de votre broker.');}} className="shrink-0 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 disabled:opacity-50">Saisie manuelle</button>
               </div>
               <p className="mt-2 text-xs leading-5 text-slate-600">Saisissez le symbole puis ajoutez l’instrument. Ses paramètres sont recherchés automatiquement en arrière-plan. Vous pouvez aussi choisir la saisie manuelle.</p>
+              {!instrumentDetailsOpen && <div className="mt-3 flex flex-wrap gap-2">
+                <button type="button" disabled={!instrument.symbol.trim() || saving} onClick={()=>void addInstrument()} className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50">
+                  <Plus className="h-4 w-4"/> Ajouter l’instrument
+                </button>
+                <button type="button" disabled={saving} onClick={()=>{setInstrumentDetailsOpen(true);setInstrumentSuggestionNote('Saisie manuelle : vérifiez les spécifications exactes de votre broker.');}} className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-white">Saisie manuelle</button>
+              </div>}
             </div>
             {instrumentDetailsOpen && <div className="space-y-4 border-t border-emerald-100 pt-4">
               <div className="flex items-center gap-2 text-sm font-bold text-slate-800"><CheckCircle2 className="h-4 w-4 text-emerald-600"/> Paramètres proposés — modifiables</div>
