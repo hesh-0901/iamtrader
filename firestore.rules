@@ -475,7 +475,7 @@ service cloud.firestore {
           return signedIn()
             && (
               cid == 'community-hub'
-              ? member(cid)
+              ? signedIn()
               : paidPipTalk()
                 && member(cid)
                 && (
