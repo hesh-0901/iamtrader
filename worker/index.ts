@@ -20,7 +20,11 @@ import { handleReferralRequest } from './referrals';
 interface Env {
   ASSETS: Fetcher;
   GEMINI_API_KEY?: string;
-undefined
+  GEMINI_MODEL?: string;
+  GEMINI_VYRA_MODEL?: string;
+  GEMINI_INSTRUMENT_MODEL?: string;
+  GEMINI_CHLOE_MODEL?: string;
+  GEMINI_CALENDAR_MODEL?: string;
   OPENAI_API_KEY?: string;
   OPENAI_MODEL?: string;
   AI_PRIMARY_PROVIDER?: string;
