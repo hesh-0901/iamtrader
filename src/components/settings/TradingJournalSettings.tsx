@@ -135,21 +135,16 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
     setInstrument({ id: '', symbol: '', name: '', category: 'forex', priceStep: '', valuePerPriceUnit: '', defaultPositionSize: '' });
   };
 
-  const persist = async (
-    nextInstruments: TradingInstrument[],
-    nextSetups: TradingSetup[],
-    options: { silent?: boolean } = {}
-  ) => {
-    if (!userProfile?.uid) throw new Error('Utilisateur non authentifié.');
+  const persist = async (nextInstruments: TradingInstrument[], nextSetups: TradingSetup[]) => {
+    if (!userProfile?.uid) return;
     setSaving(true);
     try {
       await updateUserSettings(userProfile.uid, {
         instruments: nextInstruments,
         setups: nextSetups
       });
-      if (!options.silent) showToast('Paramètres du journal enregistrés', 'success');
+      showToast('Paramètres du journal enregistrés', 'success');
     } catch (error: any) {
-      if (options.silent) throw error;
       showToast(`Erreur lors de l'enregistrement : ${error.message || 'Firestore'}`, 'error');
     } finally {
       setSaving(false);
@@ -193,7 +188,15 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
           const next = [...instrumentsRef.current, normalized];
           instrumentsRef.current = next;
           setInstruments(next);
-          await persist(next, setups, { silent: true });
+          if (!userProfile?.uid) throw new Error('Utilisateur non authentifié.');
+          setSaving(true);
+          try {
+            // N'écrire que la liste des instruments : ne pas écraser les setups
+            // qui auraient été modifiés pendant la recherche de Chloé.
+            await updateUserSettings(userProfile.uid, { instruments: next });
+          } finally {
+            setSaving(false);
+          }
         } catch (error: any) {
           if (insertedId) {
             const rolledBack = instrumentsRef.current.filter(item => item.id !== insertedId);
