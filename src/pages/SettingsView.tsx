@@ -126,38 +126,12 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
   const [paymentLastCheckedAt, setPaymentLastCheckedAt] = useState<string | null>(null);
   const [paymentCheckError, setPaymentCheckError] = useState('');
   const [paymentPollTimedOut, setPaymentPollTimedOut] = useState(false);
-  const [isPaymentChecking, setIsPaymentChecking] = useState(false);
   const [isPaymentLoading, setIsPaymentLoading] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<any>(null);
   const [deviceSessions, setDeviceSessions] = useState<DeviceSession[]>([]);
   const [devicesLoading, setDevicesLoading] = useState(true);
   const [revokingDeviceId, setRevokingDeviceId] = useState<string | null>(null);
   const currentDeviceSessionId = getDeviceSessionId();
-
-  const refreshPaymentStatus = async () => {
-    if (!paymentId || isPaymentChecking) return;
-    setIsPaymentChecking(true);
-    try {
-      const result = await getPaymentStatus(paymentId);
-      setPaymentLastCheckedAt(new Date().toISOString());
-      setPaymentCheckError('');
-      if (result.status === 'paid') {
-        setPaymentStatus('paid');
-        setPaymentMessage('Paiement confirmé. Votre abonnement est activé.');
-        setPaymentPollTimedOut(false);
-      } else if (result.status === 'failed') {
-        setPaymentStatus('failed');
-        setPaymentMessage(result.failureMessage || 'Le paiement a été refusé par le service Mobile Money. Vérifiez votre portefeuille ou contactez votre opérateur.');
-      } else {
-        setPaymentMessage('Nous attendons la confirmation de votre opérateur Mobile Money.');
-      }
-    } catch (error: any) {
-      setPaymentLastCheckedAt(new Date().toISOString());
-      setPaymentCheckError(error?.message || 'La vérification est momentanément indisponible.');
-    } finally {
-      setIsPaymentChecking(false);
-    }
-  };
 
   const traderRating = useMemo(() => calculateTraderRating(trades), [trades]);
 
@@ -1034,10 +1008,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                     {paymentCheckError && <p className="mt-2 text-xs leading-5 text-amber-700">Connexion de vérification perturbée : {paymentCheckError} Le système réessaie automatiquement.</p>}
                     {paymentPollTimedOut && <p className="mt-2 text-xs leading-5 text-amber-700">La confirmation prend plus de temps que prévu. Vérifiez votre téléphone puis relancez une vérification.</p>}
                   </div>
-                  <div className="flex flex-col gap-2 sm:flex-row">
-                    <button type="button" onClick={() => void refreshPaymentStatus()} disabled={isPaymentChecking} className="flex-1 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white disabled:opacity-50">{isPaymentChecking ? 'Vérification…' : 'Vérifier maintenant'}</button>
-                    <button type="button" onClick={() => setPaymentPlan(null)} className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-600">Fermer</button>
-                  </div>
+                  <button type="button" onClick={() => setPaymentPlan(null)} className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-600">Fermer</button>
                 </div>
               )}
 
