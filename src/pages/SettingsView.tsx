@@ -403,9 +403,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
     setPaymentPhone(nationalDigits.replace(/^0+/, '').slice(0, initialCountry.phoneLength));
     setPaymentPlan(plan); setPaymentMonths(1); setPaymentMethod('mobile_money'); setPaymentStep('duration'); setPaymentBankDetails(null); setPromoCode(''); setPromoQuote(null); setPromoMessage(''); setIsPromoModalOpen(false); void loadAutomaticPromotion(plan, 1);
     setPaymentProvider(initialCountry.networks[0]?.value || '');
-    setPaymentPayerName('');
     setPaymentId(null); setPaymentReference(null); setPaymentStatus('idle'); setPaymentMessage('');
-    setPaymentAction(null); setPaymentActivationStart(null); setPaymentActivationExpires(null);
   };
 
   const applyPromoCode = async () => {
