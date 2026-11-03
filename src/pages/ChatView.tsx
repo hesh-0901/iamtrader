@@ -37,6 +37,7 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
     && userProfile?.subscriptionStatus === 'active'
     && userProfile?.paymentStatus === 'paid'
     && userProfile?.status === 'active'
+    && Number(userProfile?.subscriptionExpiresAtMs) > Date.now()
   );
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [unreadByConversation, setUnreadByConversation] = useState<Record<string, number>>({});
