@@ -41,6 +41,7 @@ export async function handlePipTalkInviteJoin(request: Request, env: InviteEnv):
         && profile.subscriptionStatus === 'active'
         && profile.paymentStatus === 'paid'
         && profile.status === 'active'
+        && Number(profile.subscriptionExpiresAtMs) > Date.now()
       )
     );
     if (!paidAccess) return json({ success: false, message: 'Les invitations aux groupes sont réservées aux abonnements payants actifs.' }, 403);
