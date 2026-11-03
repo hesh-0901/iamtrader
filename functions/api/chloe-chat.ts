@@ -1,9 +1,8 @@
-import { callGeminiUnified } from './common/gemini-client';
+import { callAI } from './common/ai-core';
 
 interface Env {
   GEMINI_API_KEY?: string;
   GEMINI_MODEL?: string;
-  GEMINI_CHLOE_MODEL?: string;
 }
 
 type Message = { role: 'user' | 'assistant'; content: string };
@@ -133,26 +132,12 @@ export async function onRequest(context: { request: Request; env: Env }) {
 
   // Utiliser Flash-Lite : le quota quotidien visible est plus élevé sur le projet actuel.
   // Aucun fallback automatique vers les modèles dont le quota est déjà dépassé.
-  const preferredModel =
-    (context.env.GEMINI_CHLOE_MODEL || '').trim() ||
-    'gemini-3.5-flash-lite';
-
+  const preferredModel = (context.env.GEMINI_CHLOE_MODEL || '').trim() || 'gemini-3.5-flash-lite';
   const fallbackModels: string[] = [];
-
-  const result = await callGeminiUnified(
-    [{ role: 'user', parts }],
-    {
-      apiKey,
-      preferredModel,
-      fallbackModels,
-      systemInstruction: SYSTEM_INSTRUCTIONS,
-      responseJson: true,
-      temperature: 0.2,
-      maxTokens: 1000,
-      timeoutMs: 20000,
-      globalTimeoutMs: 45000,
-    },
-  );
+  const result = await callAI('chloe', [{ role: 'user', parts }], context.env, {
+    systemInstruction: SYSTEM_INSTRUCTIONS,
+    responseJson: true,
+  });
 
   if (!result.success || !result.text) {
     // Garder les détails dans les logs serveur uniquement, jamais dans la réponse au client.
