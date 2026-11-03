@@ -190,7 +190,7 @@ export default {
 } satisfies ExportedHandler<Env>;
 
 
-/** Keep PipTalk message media below the 20 GiB quota by deleting the oldest assets first. */
+/** Keep PipTalk message media below the 20 GB quota by deleting the oldest assets first. */
 async function cleanupPipTalkMediaQuota(env: EnvWithPayments): Promise<void> {
   const cloud = env.CLOUDINARY_CLOUD_NAME;
   const key = env.CLOUDINARY_API_KEY;
@@ -200,7 +200,7 @@ async function cleanupPipTalkMediaQuota(env: EnvWithPayments): Promise<void> {
     return;
   }
 
-  const quotaBytes = 20 * 1024 * 1024 * 1024;
+  const quotaBytes = 20_000_000_000;
   const excludedPrefixes = [
     'piptalk/groups/',
     'piptalk/group-avatars/',
