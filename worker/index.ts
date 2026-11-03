@@ -201,11 +201,11 @@ async function cleanupPipTalkMediaQuota(env: EnvWithPayments): Promise<void> {
   }
 
   const quotaBytes = 20_000_000_000;
+  // Profile pictures and market-analysis images are not PipTalk message attachments.
   const excludedPrefixes = [
-    'piptalk/groups/',
-    'piptalk/group-avatars/',
-    'piptalk/avatars/',
-    'piptalk/profiles/'
+    'piptalk/groups/', 'piptalk/group-avatars/', 'piptalk/avatars/', 'piptalk/profiles/',
+    'piptalk/profile/', 'piptalk/users/', 'piptalk/user-avatars/', 'piptalk/members/',
+    'piptalk/analyses/', 'piptalk/analysis/', 'piptalk/market-analysis/', 'piptalk/charts/'
   ];
   const auth = 'Basic ' + btoa(key + ':' + secret);
   const assets: Array<{
@@ -237,7 +237,8 @@ async function cleanupPipTalkMediaQuota(env: EnvWithPayments): Promise<void> {
       };
       for (const asset of data.resources || []) {
         const publicId = String(asset.public_id || '');
-        if (!publicId.startsWith('piptalk/') || excludedPrefixes.some(prefix => publicId.startsWith(prefix))) continue;
+        const segments = publicId.split('/');
+        if (segments.length < 4 || segments[0] !== 'piptalk' || excludedPrefixes.some(prefix => publicId.startsWith(prefix))) continue;
         assets.push({
           public_id: publicId,
           created_at: String(asset.created_at || ''),
