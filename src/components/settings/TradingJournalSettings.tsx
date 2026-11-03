@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useRef, useState } from 'react';
 import { Plus, Trash2, Pencil, Settings2, CandlestickChart, Layers3, X, CheckCircle2, Sparkles, AlertTriangle } from 'lucide-react';
 import { TradingInstrument, TradingSetup, UserProfile } from '../../types';
 import { updateUserSettings } from '../../services/firestore';
@@ -14,6 +14,8 @@ const labelClass = 'mb-1.5 block text-xs font-semibold text-slate-600';
 export function TradingJournalSettings({ userProfile }: TradingJournalSettingsProps) {
   const { showToast } = useToast();
   const [instruments, setInstruments] = useState<TradingInstrument[]>(userProfile?.settings?.instruments || []);
+  const instrumentsRef = useRef(instruments);
+  const pendingInstrumentSymbols = useRef(new Set<string>());
   const [setups, setSetups] = useState<TradingSetup[]>(userProfile?.settings?.setups || []);
   const [newSetup, setNewSetup] = useState('');
   const [instrumentFormOpen, setInstrumentFormOpen] = useState(false);
@@ -167,15 +169,19 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
         showToast('Saisissez un symbole valide.', 'error');
         return;
       }
-      if (instruments.some(item => item.symbol.toUpperCase() === symbol)) {
+      if (instrumentsRef.current.some(item => item.symbol.toUpperCase() === symbol)) {
         showToast('Cet instrument existe déjà. Ouvrez-le pour le modifier.', 'error');
         return;
       }
+      if (pendingInstrumentSymbols.current.has(symbol)) return;
 
+      pendingInstrumentSymbols.current.add(symbol);
       closeInstrumentForm();
       void (async () => {
+        let insertedId: string | null = null;
         try {
           const { suggestion } = await requestInstrumentSuggestion(symbol);
+          if (instrumentsRef.current.some(item => item.symbol.toUpperCase() === symbol)) return;
           const normalized: TradingInstrument = {
             id: crypto.randomUUID(),
             symbol,
@@ -185,11 +191,17 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
             valuePerPriceUnit: Number(suggestion.valuePerPriceUnit),
             defaultPositionSize: Number(suggestion.defaultPositionSize) || 1
           };
-          if (instruments.some(item => item.symbol.toUpperCase() === symbol)) return;
-          const next = [...instruments, normalized];
+          insertedId = normalized.id;
+          const next = [...instrumentsRef.current, normalized];
+          instrumentsRef.current = next;
           setInstruments(next);
           await persist(next, setups, { silent: true });
         } catch (error: any) {
+          if (insertedId) {
+            const rolledBack = instrumentsRef.current.filter(item => item.id !== insertedId);
+            instrumentsRef.current = rolledBack;
+            setInstruments(rolledBack);
+          }
           setInstrument({
             id: '',
             ...suggestInstrument(symbol, {
@@ -206,6 +218,8 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
           setInstrumentDetailsOpen(true);
           setInstrumentSuggestionNote('Chloé n’a pas pu compléter automatiquement cet instrument. Vérifiez les spécifications de votre broker et renseignez les paramètres manuellement.');
           showToast(error?.message || 'Complétez les paramètres de cet instrument manuellement.', 'error');
+        } finally {
+          pendingInstrumentSymbols.current.delete(symbol);
         }
       })();
       return;
@@ -229,6 +243,7 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
     const next = editingInstrumentId
       ? instruments.map(item => item.id === editingInstrumentId ? normalized : item)
       : [...instruments, normalized];
+    instrumentsRef.current = next;
     setInstruments(next);
     closeInstrumentForm();
     await persist(next, setups);
@@ -236,6 +251,7 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
 
   const removeInstrument = async (id: string) => {
     const next = instruments.filter(item => item.id !== id);
+    instrumentsRef.current = next;
     setInstruments(next);
     setDeleteTarget(null);
     await persist(next, setups);
