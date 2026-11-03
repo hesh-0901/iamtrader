@@ -149,10 +149,8 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
       });
       if (!options.silent) showToast('Paramètres du journal enregistrés', 'success');
     } catch (error: any) {
-      if (!options.silent) {
-        showToast(`Erreur lors de l'enregistrement : ${error.message || 'Firestore'}`, 'error');
-      }
-      throw error;
+      if (options.silent) throw error;
+      showToast(`Erreur lors de l'enregistrement : ${error.message || 'Firestore'}`, 'error');
     } finally {
       setSaving(false);
     }
