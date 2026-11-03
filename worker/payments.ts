@@ -427,7 +427,9 @@ export async function handlePaymentRequest(request: Request, env: CinetPayEnv) {
     };
     const planKey = body.plan;
     const plan = planKey ? PLANS[planKey] : undefined;
-    const months = Math.max(1, Math.min(12, Math.floor(Number(body.months) || 1)));
+    const months = planKey === 'community' ? 6 : Math.max(1, Math.min(12, Math.floor(Number(body.months) || 1)));
+    // Keep every downstream provider branch and stored payment aligned with the server-enforced duration.
+    body.months = months;
     const paymentMethod = body.paymentMethod === 'bank_transfer' ? 'bank_transfer' : 'mobile_money';
     const countryCode = String(body.countryCode || 'CD').toUpperCase();
     const phone = paymentMethod === 'mobile_money' ? normalizePhone(body.phone, countryCode) : null;
