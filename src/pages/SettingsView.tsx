@@ -13,7 +13,7 @@ import { AffiliationSettings } from '../components/settings/AffiliationSettings'
 import { PaymentHistory } from './PaymentHistory';
 import { PromotionBanners } from '../components/promotions/PromotionBanners';
 import { calculateTraderRating, formatCurrency } from '../utils/calculations';
-import { createPayment, getSasPayPaymentStatus, verifySasPayPayment, PaidPlan, PaymentDetails } from '../services/payments';
+import { createPayment, getPaymentStatus, verifySasPayPayment, PaidPlan, PaymentDetails } from '../services/payments';
 
 interface SettingsViewProps {
   userProfile: UserProfile | null;
@@ -123,12 +123,41 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
   const [paymentReference, setPaymentReference] = useState<string | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<'idle' | 'processing' | 'paid' | 'failed'>('idle');
   const [paymentMessage, setPaymentMessage] = useState('');
+  const [paymentLastCheckedAt, setPaymentLastCheckedAt] = useState<string | null>(null);
+  const [paymentCheckError, setPaymentCheckError] = useState('');
+  const [paymentPollTimedOut, setPaymentPollTimedOut] = useState(false);
+  const [isPaymentChecking, setIsPaymentChecking] = useState(false);
   const [isPaymentLoading, setIsPaymentLoading] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<any>(null);
   const [deviceSessions, setDeviceSessions] = useState<DeviceSession[]>([]);
   const [devicesLoading, setDevicesLoading] = useState(true);
   const [revokingDeviceId, setRevokingDeviceId] = useState<string | null>(null);
   const currentDeviceSessionId = getDeviceSessionId();
+
+  const refreshPaymentStatus = async () => {
+    if (!paymentId || isPaymentChecking) return;
+    setIsPaymentChecking(true);
+    try {
+      const result = await getPaymentStatus(paymentId);
+      setPaymentLastCheckedAt(new Date().toISOString());
+      setPaymentCheckError('');
+      if (result.status === 'paid') {
+        setPaymentStatus('paid');
+        setPaymentMessage('Paiement confirmé. Votre abonnement est activé.');
+        setPaymentPollTimedOut(false);
+      } else if (result.status === 'failed') {
+        setPaymentStatus('failed');
+        setPaymentMessage(result.failureMessage || 'Le paiement a été refusé par le service Mobile Money. Vérifiez votre portefeuille ou contactez votre opérateur.');
+      } else {
+        setPaymentMessage('Nous attendons la confirmation de votre opérateur Mobile Money.');
+      }
+    } catch (error: any) {
+      setPaymentLastCheckedAt(new Date().toISOString());
+      setPaymentCheckError(error?.message || 'La vérification est momentanément indisponible.');
+    } finally {
+      setIsPaymentChecking(false);
+    }
+  };
 
   const traderRating = useMemo(() => calculateTraderRating(trades), [trades]);
 
@@ -405,7 +434,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
     const initialMonths = plan === 'community' ? 6 : 1;
     setPaymentPlan(plan); setPaymentMonths(initialMonths); setPaymentStep('duration'); setPaymentBankDetails(null); setPromoCode(''); setPromoQuote(null); setPromoMessage(''); setIsPromoModalOpen(false); void loadAutomaticPromotion(plan, initialMonths);
     setPaymentProvider(initialCountry.networks[0]?.value || '');
-    setPaymentId(null); setPaymentReference(null); setPaymentStatus('idle'); setPaymentMessage('');
+    setPaymentId(null); setPaymentReference(null); setPaymentStatus('idle'); setPaymentMessage(''); setPaymentLastCheckedAt(null); setPaymentCheckError(''); setPaymentPollTimedOut(false);
   };
 
   const applyPromoCode = async () => {
@@ -467,35 +496,37 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
   };
 
   React.useEffect(() => {
-    if (!paymentReference || paymentStatus !== 'processing' || paymentMethod === 'bank_transfer') return;
+    if (!paymentId || paymentStatus !== 'processing' || paymentMethod === 'bank_transfer') return;
     let cancelled = false;
     let attempts = 0;
     let timer: number | undefined;
     const check = async () => {
       attempts += 1;
       try {
-        const result = await getSasPayPaymentStatus(paymentReference);
+        const result = await getPaymentStatus(paymentId);
         if (cancelled) return;
-        if (result.status === 'SUCCESS') {
+        setPaymentLastCheckedAt(new Date().toISOString());
+        setPaymentCheckError('');
+        if (result.status === 'paid') {
           setPaymentStatus('paid');
           setPaymentMessage('Paiement confirmé. Votre abonnement est activé.');
-          // The profile subscription updates the active plan without a full-page reload.
+          setPaymentPollTimedOut(false);
           return;
         }
-        if (['FAILED', 'FAILURE', 'CANCELLED', 'CANCELED', 'EXPIRED'].includes(result.status)) {
+        if (result.status === 'failed') {
           setPaymentStatus('failed');
-          setPaymentMessage('Le paiement a été refusé, annulé ou expiré. Vous pouvez réessayer.');
+          setPaymentMessage(result.failureMessage || 'Le paiement a été refusé par le service Mobile Money. Vérifiez votre portefeuille ou contactez votre opérateur.');
           return;
         }
       } catch (error: any) {
-        if (!cancelled) setPaymentMessage(error?.message || 'Vérification du paiement en cours…');
+        if (!cancelled) setPaymentCheckError(error?.message || 'La vérification est momentanément indisponible.');
       }
-      if (!cancelled && attempts < 60) timer = window.setTimeout(check, 4000);
-      else if (!cancelled) setPaymentMessage('Le paiement est toujours en attente. Revenez vérifier votre abonnement plus tard.');
+      if (!cancelled && attempts < 90) timer = window.setTimeout(check, 4000);
+      else if (!cancelled) setPaymentPollTimedOut(true);
     };
     void check();
     return () => { cancelled = true; if (timer !== undefined) window.clearTimeout(timer); };
-  }, [paymentReference, paymentStatus, paymentMethod]);
+  }, [paymentId, paymentStatus, paymentMethod]);
 
   React.useEffect(() => {
     if (!pendingPaymentReference) return;
@@ -1007,19 +1038,41 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
               )}
 
               {paymentStatus === 'processing' && paymentMethod === 'mobile_money' && (
-                <div className="mx-auto max-w-lg space-y-4 py-4 text-center">
-                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700"><Smartphone className="h-8 w-8" /></div>
-                  <h4 className="text-xl font-black">Paiement en traitement</h4>
-                  <p className="text-sm leading-6 text-slate-500">{paymentMessage || 'Une demande de confirmation a été envoyée sur votre téléphone.'}</p>
-                  <div className="rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-xs leading-5 text-emerald-900">Validez la demande sur votre téléphone. L’abonnement sera activé après confirmation.</div>
-                  {paymentReference && <p className="break-all text-[11px] text-slate-400">Référence : {paymentReference}</p>}
-                  <button type="button" onClick={() => setPaymentPlan(null)} className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-600">Fermer</button>
+                <div className="mx-auto max-w-lg space-y-5 py-4">
+                  <div className="text-center">
+                    <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700"><span className="h-8 w-8 animate-spin rounded-full border-[3px] border-emerald-200 border-t-emerald-600" /></div>
+                    <h4 className="mt-4 text-xl font-black text-slate-900">Confirmation du paiement</h4>
+                    <p className="mt-2 text-sm leading-6 text-slate-600">{paymentMessage || 'La demande a été envoyée. Validez-la sur votre téléphone.'}</p>
+                  </div>
+                  <div className="rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4">
+                    <div className="flex items-center gap-2 text-sm font-extrabold text-emerald-900"><Clock3 className="h-4 w-4" /> Suivi automatique en cours</div>
+                    <ol className="mt-3 space-y-2.5 text-xs text-emerald-950">
+                      <li className="flex items-center gap-2"><Check className="h-4 w-4 shrink-0" /> Demande de paiement envoyée</li>
+                      <li className="flex items-center gap-2"><span className="h-4 w-4 shrink-0 animate-pulse rounded-full border-2 border-emerald-600" /> En attente de la réponse de l’opérateur</li>
+                      <li className="flex items-center gap-2 text-emerald-800/55"><span className="h-4 w-4 shrink-0 rounded-full border border-emerald-300" /> Activation de l’abonnement après confirmation</li>
+                    </ol>
+                  </div>
+                  <div className="rounded-xl border border-slate-200 bg-white p-3">
+                    <div className="flex items-center justify-between gap-3 text-xs"><span className="text-slate-500">Référence</span><strong className="break-all font-mono text-slate-800">{paymentReference || paymentId}</strong></div>
+                    {paymentLastCheckedAt && <p className="mt-2 text-[10px] text-slate-400">Dernière vérification : {new Date(paymentLastCheckedAt).toLocaleTimeString('fr-FR')}</p>}
+                    {paymentCheckError && <p className="mt-2 text-xs leading-5 text-amber-700">Connexion de vérification perturbée : {paymentCheckError} Le système réessaie automatiquement.</p>}
+                    {paymentPollTimedOut && <p className="mt-2 text-xs leading-5 text-amber-700">La confirmation prend plus de temps que prévu. Vérifiez votre téléphone puis relancez une vérification.</p>}
+                  </div>
+                  <div className="flex flex-col gap-2 sm:flex-row">
+                    <button type="button" onClick={() => void refreshPaymentStatus()} disabled={isPaymentChecking} className="flex-1 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white disabled:opacity-50">{isPaymentChecking ? 'Vérification…' : 'Vérifier maintenant'}</button>
+                    <button type="button" onClick={() => setPaymentPlan(null)} className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-600">Fermer</button>
+                  </div>
                 </div>
               )}
 
               {paymentStatus === 'paid' && <div className="mx-auto max-w-md py-10 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-50 text-emerald-600"><Check className="h-7 w-7" /></div><h4 className="mt-4 text-lg font-black">Paiement confirmé</h4><p className="mt-2 text-sm leading-6 text-slate-500">{paymentMessage}</p><button type="button" onClick={() => setPaymentPlan(null)} className="mt-5 w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white">Terminer</button></div>}
 
-              {paymentStatus === 'failed' && <div className="mx-auto max-w-md space-y-4 py-8 text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-rose-50 text-rose-600">!</div><h4 className="text-lg font-black">Paiement non finalisé</h4><p className="text-sm leading-5 text-slate-500">{paymentMessage}</p><button type="button" onClick={() => { setPaymentStatus('idle'); setPaymentStep('summary'); }} className="w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-bold text-white">Réessayer</button></div>}
+              {paymentStatus === 'failed' && <div className="mx-auto max-w-md space-y-4 py-8">
+                <div className="text-center"><div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-rose-50 text-rose-600"><X className="h-7 w-7" /></div><h4 className="mt-4 text-lg font-black text-slate-900">Paiement échoué</h4><p className="mt-2 text-sm leading-5 text-slate-600">Le fournisseur n’a pas confirmé votre paiement.</p></div>
+                <div className="rounded-xl border border-rose-200 bg-rose-50 p-4"><p className="text-[10px] font-extrabold uppercase tracking-wider text-rose-700">Motif communiqué</p><p className="mt-1 text-sm leading-5 text-rose-900">{paymentMessage || 'Le paiement a été refusé. Vérifiez votre solde et les informations de votre portefeuille, puis réessayez.'}</p></div>
+                {paymentReference && <p className="break-all text-center text-[11px] text-slate-400">Référence : {paymentReference}</p>}
+                <div className="flex flex-col gap-2 sm:flex-row"><button type="button" onClick={() => { setPaymentStatus('idle'); setPaymentStep('summary'); setPaymentMessage(''); setPaymentCheckError(''); }} className="flex-1 rounded-xl bg-slate-900 px-4 py-3 text-sm font-bold text-white">Réessayer</button><button type="button" onClick={() => setPaymentPlan(null)} className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-600">Fermer</button></div>
+              </div>}
             </div>
           </div>
         </div>
