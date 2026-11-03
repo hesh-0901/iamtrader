@@ -1,6 +1,6 @@
 import { IAMTRADER_KNOWLEDGE } from './vyra-knowledge';
 import { VYRA_STYLE_INSTRUCTIONS } from './vyra-style';
-import { callGeminiUnified } from './common/gemini-client';
+import { callAI } from './common/ai-core';
 
 interface Env {
   GEMINI_API_KEY?: string;
@@ -195,15 +195,9 @@ export async function onRequest(context: { request: Request; env: Env }) {
     parts: [{ text: message.content }],
   }));
 
-  const configuredModel = (context.env.GEMINI_MODEL || '').trim();
-  const result = await callGeminiUnified(contents, {
-    apiKey,
-    preferredModel: 'gemini-3.5-flash-lite',
-    fallbackModels: ['gemini-3.8-flash'],
+  const configuredModel = (context.env.GEMINI_VYRA_MODEL || context.env.GEMINI_MODEL || '').trim();
+  const result = await callAI('vyra', contents, context.env, {
     systemInstruction: `${SYSTEM_INSTRUCTIONS}\n\nBASE DE CONNAISSANCES IAMTRADER\n${IAMTRADER_KNOWLEDGE}`,
-    temperature: 0.3,
-    maxTokens: 1200,
-    timeoutMs: 6500,
   });
 
   if (!result.success || !result.text) {
