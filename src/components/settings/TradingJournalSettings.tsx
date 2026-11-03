@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { Plus, Trash2, Pencil, Settings2, CandlestickChart, Layers3, X, CheckCircle2, Sparkles, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, Pencil, Loader2, Settings2, CandlestickChart, Layers3, X, CheckCircle2, Sparkles, AlertTriangle } from 'lucide-react';
 import { TradingInstrument, TradingSetup, UserProfile } from '../../types';
 import { updateUserSettings } from '../../services/firestore';
 import { useToast } from '../common/Toast';
@@ -21,6 +21,7 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
   const [instrumentFormOpen, setInstrumentFormOpen] = useState(false);
   const [editingInstrumentId, setEditingInstrumentId] = useState<string | null>(null);
   const [instrumentDetailsOpen, setInstrumentDetailsOpen] = useState(false);
+  const [suggestingInstrument, setSuggestingInstrument] = useState(false);
   const [instrumentSuggestionNote, setInstrumentSuggestionNote] = useState('');
   const [setupFormOpen, setSetupFormOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ type: 'instrument' | 'setup'; id: string; label: string } | null>(null);
@@ -169,57 +170,31 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
       if (pendingInstrumentSymbols.current.has(symbol)) return;
 
       pendingInstrumentSymbols.current.add(symbol);
-      closeInstrumentForm();
+      setInstrumentDetailsOpen(true);
+      setInstrumentSuggestionNote('Chloé analyse les caractéristiques de cet instrument. Vous pourrez vérifier et modifier les paramètres avant de les enregistrer.');
+      setSuggestingInstrument(true);
       void (async () => {
-        let insertedId: string | null = null;
         try {
-          const { suggestion } = await requestInstrumentSuggestion(symbol);
-          if (instrumentsRef.current.some(item => item.symbol.toUpperCase() === symbol)) return;
-          const normalized: TradingInstrument = {
-            id: crypto.randomUUID(),
+          const { suggestion, note } = await requestInstrumentSuggestion(symbol);
+          setInstrument(current => ({
+            ...current,
             symbol,
             name: suggestion.name.trim(),
             category: suggestion.category,
-            priceStep: Number(suggestion.priceStep),
-            valuePerPriceUnit: Number(suggestion.valuePerPriceUnit),
-            defaultPositionSize: Number(suggestion.defaultPositionSize) || 1
-          };
-          insertedId = normalized.id;
-          const next = [...instrumentsRef.current, normalized];
-          instrumentsRef.current = next;
-          setInstruments(next);
-          if (!userProfile?.uid) throw new Error('Utilisateur non authentifié.');
-          setSaving(true);
-          try {
-            // N'écrire que la liste des instruments : ne pas écraser les setups
-            // qui auraient été modifiés pendant la recherche de Chloé.
-            await updateUserSettings(userProfile.uid, { instruments: next });
-          } finally {
-            setSaving(false);
-          }
+            priceStep: String(suggestion.priceStep),
+            valuePerPriceUnit: String(suggestion.valuePerPriceUnit),
+            defaultPositionSize: String(Number(suggestion.defaultPositionSize) || 1)
+          }));
+          setInstrumentSuggestionNote(note || 'Paramètres proposés par Chloé. Vérifiez les spécifications exactes de votre broker avant l’enregistrement.');
         } catch (error: any) {
-          if (insertedId) {
-            const rolledBack = instrumentsRef.current.filter(item => item.id !== insertedId);
-            instrumentsRef.current = rolledBack;
-            setInstruments(rolledBack);
-          }
-          setInstrument({
-            id: '',
-            ...suggestInstrument(symbol, {
-              id: '',
-              symbol,
-              name: '',
-              category: 'forex',
-              priceStep: '',
-              valuePerPriceUnit: '',
-              defaultPositionSize: ''
-            })
-          });
-          setInstrumentFormOpen(true);
-          setInstrumentDetailsOpen(true);
-          setInstrumentSuggestionNote('Chloé n’a pas pu compléter automatiquement cet instrument. Vérifiez les spécifications de votre broker et renseignez les paramètres manuellement.');
-          showToast(error?.message || 'Complétez les paramètres de cet instrument manuellement.', 'error');
+          setInstrument(current => ({
+            ...suggestInstrument(symbol, current),
+            symbol
+          }));
+          setInstrumentSuggestionNote('Chloé n’a pas pu compléter automatiquement cet instrument. Vous pouvez renseigner ou corriger les paramètres manuellement.');
+          showToast(error?.message || 'Complétez les paramètres manuellement.', 'error');
         } finally {
+          setSuggestingInstrument(false);
           pendingInstrumentSymbols.current.delete(symbol);
         }
       })();
@@ -295,14 +270,18 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
               </div>
               <p className="mt-2 text-xs leading-5 text-slate-600">Saisissez le symbole puis ajoutez l’instrument. Ses paramètres sont recherchés automatiquement en arrière-plan. Vous pouvez aussi choisir la saisie manuelle.</p>
               {!instrumentDetailsOpen && <div className="mt-3 flex flex-wrap gap-2">
-                <button type="button" disabled={!instrument.symbol.trim() || saving} onClick={()=>void addInstrument()} className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50">
+                <button type="button" disabled={!instrument.symbol.trim() || saving || suggestingInstrument} onClick={()=>void addInstrument()} className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white transition hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-50">
                   <Plus className="h-4 w-4"/> Ajouter l’instrument
                 </button>
                 <button type="button" disabled={saving} onClick={()=>{setInstrumentDetailsOpen(true);setInstrumentSuggestionNote('Saisie manuelle : vérifiez les spécifications exactes de votre broker.');}} className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600 hover:bg-white">Saisie manuelle</button>
               </div>}
             </div>
             {instrumentDetailsOpen && <div className="space-y-4 border-t border-emerald-100 pt-4">
-              <div className="flex items-center gap-2 text-sm font-bold text-slate-800"><CheckCircle2 className="h-4 w-4 text-emerald-600"/> Paramètres proposés — modifiables</div>
+              <div className="flex items-center gap-2 text-sm font-bold text-slate-800">
+                {suggestingInstrument
+                  ? <><Loader2 className="h-4 w-4 animate-spin text-emerald-600"/><span>Chloé analyse l’instrument…</span></>
+                  : <><CheckCircle2 className="h-4 w-4 text-emerald-600"/><span>Paramètres — modifiables</span></>}
+              </div>
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div><label className={labelClass}>Nom *</label><input className={inputClass} value={instrument.name} onChange={e=>setInstrument(v=>({...v,name:e.target.value}))} placeholder="Gold"/></div>
                 <div><label className={labelClass}>Catégorie</label><select className={inputClass} value={instrument.category} onChange={e=>setInstrument(v=>({...v,category:e.target.value as TradingInstrument['category']}))}><option value="forex">Forex</option><option value="metal">Métal</option><option value="index">Indice</option><option value="futures">Futures</option><option value="crypto">Crypto</option><option value="stock">Action</option><option value="other">Autre</option></select></div>
