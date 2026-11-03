@@ -13,13 +13,15 @@ export interface PaymentInitResult {
   status: 'processing';
   reference: string;
   paymentUrl?: string;
+  months?: number;
+  bankDetails?: { bankName: string; accountName: string; accountNumber: string; swift?: string; branch?: string; currency?: string; instructions?: string };
   message: string;
   subscriptionAction?: 'initial' | 'renewal' | 'upgrade';
   activationStartAt?: string;
   activationExpiresAt?: string;
 }
 
-export interface PaymentDetails { phone: string; countryCode?: string; paymentMethod: string; paymentProvider: string; payerName: string; promoCode?: string; }
+export interface PaymentDetails { months: number; phone?: string; countryCode?: string; paymentMethod: 'mobile_money' | 'bank_transfer'; paymentProvider?: string; payerName: string; promoCode?: string; }
 type PaymentResponse = { success?: boolean; message?: string; payment?: unknown; subscription?: unknown };
 
 export async function createPayment(plan: PaidPlan, details: PaymentDetails): Promise<PaymentInitResult> {
@@ -50,7 +52,7 @@ export async function verifySasPayPayment(reference: string) {
     message?: string;
     payment?: { id: string; plan: PaidPlan; planName: string; amount: number; currency: string; status: string; reference: string };
   };
-  if (!response.ok || !data.success) throw new Error(data.message || 'Impossible de vérifier le paiement SasPay.');
+  if (!response.ok || !data.success) throw new Error(data.message || 'Impossible de vérifier le paiement.');
   return { status: data.status || 'unknown', payment: data.payment };
 }
 
