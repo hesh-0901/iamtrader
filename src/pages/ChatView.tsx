@@ -799,7 +799,6 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
       if (!response.ok || !uploaded.secure_url || !uploaded.public_id) {
         throw new Error(uploaded.error?.message || 'Échec du téléversement Cloudinary. Vérifiez le preset piptalk_media en mode Unsigned.');
       }
-      const expiresAt = Timestamp.fromDate(new Date(Date.now() + 72 * 60 * 60 * 1000));
       await addDoc(collection(db, 'conversations', activeId, 'messages'), {
         senderId: uid,
         senderName: currentDisplayName,
@@ -807,7 +806,7 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
         text: type === 'image' ? 'Image' : 'Message vocal',
         type, mediaUrl: uploaded.secure_url, mediaPublicId: uploaded.public_id,
         mediaResourceType: uploaded.resource_type || (type === 'voice' ? 'video' : 'image'),
-        mediaName: safeName, duration: duration || 0, expiresAt,
+        mediaName: safeName, duration: duration || 0,
         ...replyPayload(replyTo),
         pinned: false, edited: false, createdAt: serverTimestamp()
       });
@@ -1289,13 +1288,11 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
                   {message.forwarded && <div className={`mb-1.5 flex items-center gap-1.5 text-[10px] font-semibold ${mine ? "text-emerald-800" : "text-slate-500"}`}><Forward className="h-3 w-3" /><span>Transféré · Origine : {message.forwardedFrom || "Expéditeur initial inconnu"}</span></div>}
                   {message.pinned && <div className="mb-1 flex items-center gap-1 text-[9px] font-bold text-emerald-700"><Pin className="h-3 w-3" />Message épinglé</div>}
                   {(message.replyToMessageId || message.replyToId) && <div className={`mb-1.5 flex max-w-full gap-1.5 rounded-lg border-l-[3px] px-2 py-1.5 text-left ${mine ? 'border-emerald-600 bg-emerald-100/70' : 'border-slate-400 bg-slate-50'}`}><Reply className="mt-0.5 h-3.5 w-3.5 shrink-0 text-emerald-700" /><div className="min-w-0"><p className="truncate text-[10px] font-bold text-slate-700">{message.replyToSenderName || 'Message cité'}</p><p className="truncate text-[11px] text-slate-500">{message.replyToText || 'Message'}</p></div></div>}
-                  {message.expiresAt?.toDate && message.expiresAt.toDate().getTime() <= Date.now()
-                    ? <p className="text-xs italic text-slate-400">Média expiré après 72 heures</p>
-                    : message.type === 'image' && message.mediaUrl
-                      ? <button type="button" onClick={() => setViewerImage(message)} aria-label="Ouvrir l’image dans PipTalk" className="mb-1 block max-w-full cursor-zoom-in overflow-hidden rounded-xl text-left focus:outline-none focus:ring-2 focus:ring-emerald-400"><img src={message.mediaUrl} alt={message.mediaName || "Image envoyée"} loading="lazy" className="max-h-72 max-w-full rounded-xl object-contain" /></button>
-                      : message.type === 'voice' && message.mediaUrl
-                        ? <VoiceMessagePlayer src={message.mediaUrl} mine={mine} duration={message.duration || 0} />
-                        : <MessageText text={message.text} mine={mine} />}
+                  {message.type === 'image' && message.mediaUrl
+                    ? <button type="button" onClick={() => setViewerImage(message)} aria-label="Ouvrir l’image dans PipTalk" className="mb-1 block max-w-full cursor-zoom-in overflow-hidden rounded-xl text-left focus:outline-none focus:ring-2 focus:ring-emerald-400"><img src={message.mediaUrl} alt={message.mediaName || "Image envoyée"} loading="lazy" className="max-h-72 max-w-full rounded-xl object-contain" /></button>
+                    : message.type === 'voice' && message.mediaUrl
+                      ? <VoiceMessagePlayer src={message.mediaUrl} mine={mine} duration={message.duration || 0} />
+                      : <MessageText text={message.text} mine={mine} />}
 
                   <div className="mt-0.5 flex items-center justify-end gap-1"><span className="text-[10px] leading-4 text-slate-500">{message.edited ? 'modifié · ' : ''}{formatTime(message.createdAt)}</span>{mine && (() => { const sentAt = message.createdAt?.toMillis?.() || 0; const readBySomeone = sentAt > 0 && (active?.members || []).some(memberUid => memberUid !== uid && (readReceiptsByUser[memberUid] || 0) >= sentAt); return readBySomeone ? <CheckCheck title="Lu" aria-label="Lu" className="h-3 w-3 text-emerald-600" /> : null; })()}</div>
                   {active?.group && <span aria-hidden="true" className={`pointer-events-none absolute bottom-3 h-2.5 w-2.5 rotate-45 ${mine ? '-right-[5px] border-b border-r border-emerald-200 bg-[#bbf7d0]' : '-left-[5px] border-b border-l border-slate-200 bg-[#f1f5f9]'}`} />}
