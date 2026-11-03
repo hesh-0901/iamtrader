@@ -166,7 +166,7 @@ export async function handleAdminMutation(request: Request, env: AdminEnv) {
       let withoutExpiry = 0;
       for (let offset = 0; offset < users.length; offset += 20) {
         const batch = users.slice(offset, offset + 20);
-        const results = await Promise.all(batch.map(async profile => {
+        await Promise.all(batch.map(async profile => {
           const uid = String(profile.uid || profile.id || '');
           if (!uid || profile.role === 'admin') return null;
           const lifecycle = lifecycleFields(profile, new Date(now));
