@@ -37,7 +37,7 @@ export function CommunityView({ userProfile }: { userProfile: UserProfile | null
     { id: 'calendar' as const, label: 'Calendrier', icon: CalendarDays },
     { id: 'courses' as const, label: 'Cours', icon: BookOpen },
     { id: 'analysis' as const, label: 'Analyse', icon: BarChart3 },
-    { id: 'sentiment' as const, label: 'Trader Sentiment', icon: Activity },
+    ...(hasPaidPipTalk ? [{ id: 'sentiment' as const, label: 'Trader Sentiment', icon: Activity }] : []),
     ...(isAdmin ? [{ id: 'economic-data' as const, label: 'Analyse économique data', icon: Database }] : []),
   ];
 
