@@ -5,6 +5,7 @@ import { callAI } from './common/ai-core';
 interface Env {
   GEMINI_API_KEY?: string;
   GEMINI_MODEL?: string;
+  GEMINI_VYRA_MODEL?: string;
 }
 
 type ChatMessage = {
