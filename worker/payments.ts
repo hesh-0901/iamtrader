@@ -353,7 +353,7 @@ export async function handleSasPayVerifyRequest(request: Request, env: SasPayEnv
     return json({ success: true, status: 'processing', payment: publicPayment({ ...payment, status: 'processing' }) });
   } catch (error) {
     console.error('SasPay verification error:', error);
-    return json({ success: false, message: error instanceof Error ? error.message : 'Impossible de vérifier le paiement.' }, 500);
+    return json({ success: false, message: 'Impossible de vérifier le paiement. Réessayez ultérieurement.' }, 500);
   }
 }
 
@@ -362,7 +362,7 @@ export async function handleSasPayStatusRequest(request: Request, env: SasPayEnv
   if (request.method !== 'GET') return json({ success: false, message: 'Méthode non autorisée.' }, 405);
   const token = authHeader(request);
   if (!token) return json({ success: false, message: 'Authentification requise.' }, 401);
-  if (!env.SASPAY_API_KEY) return json({ success: false, message: 'SasPay n’est pas configuré côté serveur.' }, 503);
+  if (!env.SASPAY_API_KEY) return json({ success: false, message: 'Le service de paiement est temporairement indisponible.' }, 503);
   try {
     const user = await verifyFirebaseIdToken(env, token);
     const reference = String(new URL(request.url).searchParams.get('reference') || '').trim();
@@ -621,7 +621,7 @@ export async function handlePaymentRequest(request: Request, env: CinetPayEnv) {
       }, ['status', 'failureMessage', 'cinetpayCode', 'updatedAt']);
       return json({
         success: false,
-        message: result?.description || result?.message || 'Impossible d’initier le paiement CinetPay.'
+        message: result?.description || result?.message || 'Impossible d’initier le paiement. Réessayez ultérieurement.'
       }, 400);
     }
 
