@@ -1,13 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
   ArrowLeft, ArrowDownLeft, ArrowUpRight, BadgeDollarSign, CalendarDays,
-  Check, Clock3, Edit3, History, Landmark, Loader2, Plus, Save, Wallet, X
+  Check, Clock3, Edit3, History, Landmark, Loader2, Plus, Save, Wallet, X, Trash2
 } from 'lucide-react';
 import { TradingAccount, Trade } from '../../types';
 import { formatCurrency } from '../../utils/calculations';
 import {
   AccountMovement, AccountMovementType, addAccountMovement,
-  subscribeAccountMovements, updateAccount
+  subscribeAccountMovements, updateAccount, updateAccountMovement, deleteAccountMovement
 } from '../../services/firestore';
 import { useToast } from '../common/Toast';
 
@@ -33,6 +33,8 @@ export function AccountDetailView({ account, trades, onBack }: AccountDetailView
   const [note, setNote] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isMovementModalOpen, setIsMovementModalOpen] = useState(false);
+  const [editingMovement, setEditingMovement] = useState<AccountMovement | null>(null);
+  const [deletingMovementId, setDeletingMovementId] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [name, setName] = useState(account.name);
   const [broker, setBroker] = useState(account.broker);
@@ -58,15 +60,41 @@ export function AccountDetailView({ account, trades, onBack }: AccountDetailView
     }
     try {
       setIsSubmitting(true);
-      await addAccountMovement(account.id, movementType, parsedAmount, note);
+      if (editingMovement) {
+        await updateAccountMovement(account.id, editingMovement.id, movementType, parsedAmount, note);
+      } else {
+        await addAccountMovement(account.id, movementType, parsedAmount, note);
+      }
       setAmount('');
       setNote('');
       setIsMovementModalOpen(false);
-      showToast('Mouvement enregistré et solde actualisé.', 'success');
+      setEditingMovement(null);
+      showToast(editingMovement ? 'Mouvement modifié et solde recalculé.' : 'Mouvement enregistré et solde actualisé.', 'success');
     } catch (error: any) {
       showToast(error?.message || 'Impossible d’enregistrer le mouvement.', 'error');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const openEditMovement = (item: AccountMovement) => {
+    setEditingMovement(item);
+    setMovementType(item.type);
+    setAmount(String(item.amount));
+    setNote(item.note || '');
+    setIsMovementModalOpen(true);
+  };
+
+  const removeMovement = async (item: AccountMovement) => {
+    if (!window.confirm(`Supprimer l’opération « ${movementLabels[item.type]} » de ${formatCurrency(item.amount, account.currency)} ? Le solde du compte sera recalculé.`)) return;
+    try {
+      setDeletingMovementId(item.id);
+      await deleteAccountMovement(account.id, item.id);
+      showToast('Opération supprimée et solde recalculé.', 'success');
+    } catch (error: any) {
+      showToast(error?.message || 'Impossible de supprimer cette opération.', 'error');
+    } finally {
+      setDeletingMovementId(null);
     }
   };
 
@@ -148,7 +176,7 @@ export function AccountDetailView({ account, trades, onBack }: AccountDetailView
           <h2 className="text-base font-extrabold text-slate-900">Activité financière</h2>
           <p className="mt-0.5 text-xs text-slate-500">Consultez l’historique ou enregistrez une opération.</p>
         </div>
-        <button type="button" onClick={() => setIsMovementModalOpen(true)} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 sm:w-auto">
+        <button type="button" onClick={() => { setEditingMovement(null); setMovementType('deposit'); setAmount(''); setNote(''); setIsMovementModalOpen(true); }} className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 sm:w-auto">
           <Plus className="h-4 w-4" /> Enregistrer une opération
         </button>
       </div>
@@ -163,7 +191,11 @@ export function AccountDetailView({ account, trades, onBack }: AccountDetailView
                   {item.signedAmount >= 0 ? <ArrowDownLeft className="h-4 w-4" /> : <ArrowUpRight className="h-4 w-4" />}
                 </div>
                 <div className="min-w-0 flex-1"><p className="truncate text-sm font-bold text-slate-800">{movementLabels[item.type]}</p><p className="truncate text-[11px] text-slate-500">{item.note || new Date(item.createdAt).toLocaleString('fr-FR')}</p></div>
-                <div className={`shrink-0 text-right text-sm font-extrabold tabular-nums ${item.signedAmount >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>{item.signedAmount > 0 ? '+' : ''}{formatCurrency(item.signedAmount, account.currency)}</div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <div className={`text-right text-sm font-extrabold tabular-nums ${item.signedAmount >= 0 ? 'text-emerald-700' : 'text-rose-700'}`}>{item.signedAmount > 0 ? '+' : ''}{formatCurrency(item.signedAmount, account.currency)}</div>
+                  <button type="button" onClick={() => openEditMovement(item)} className="rounded-lg p-2 text-slate-400 transition hover:bg-emerald-50 hover:text-emerald-700" aria-label="Modifier cette opération" title="Modifier"><Edit3 className="h-4 w-4" /></button>
+                  <button type="button" onClick={() => removeMovement(item)} disabled={deletingMovementId === item.id} className="rounded-lg p-2 text-slate-400 transition hover:bg-rose-50 hover:text-rose-700 disabled:opacity-40" aria-label="Supprimer cette opération" title="Supprimer">{deletingMovementId === item.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}</button>
+                </div>
               </div>
             ))}
           </div>
@@ -178,9 +210,9 @@ export function AccountDetailView({ account, trades, onBack }: AccountDetailView
             <div className="mb-5 flex items-start justify-between gap-4">
               <div className="flex items-start gap-3">
                 <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700"><BadgeDollarSign className="h-5 w-5" /></span>
-                <div><h2 id="movement-modal-title" className="text-lg font-extrabold text-slate-900">Enregistrer une opération</h2><p className="mt-1 text-xs text-slate-500">Ajoutez un mouvement financier à ce compte.</p></div>
+                <div><h2 id="movement-modal-title" className="text-lg font-extrabold text-slate-900">{editingMovement ? 'Modifier une opération' : 'Enregistrer une opération'}</h2><p className="mt-1 text-xs text-slate-500">{editingMovement ? 'Corrigez les informations de cette opération.' : 'Ajoutez un mouvement financier à ce compte.'}</p></div>
               </div>
-              <button type="button" onClick={() => setIsMovementModalOpen(false)} disabled={isSubmitting} className="rounded-xl p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 disabled:opacity-50" aria-label="Fermer"><X className="h-5 w-5" /></button>
+              <button type="button" onClick={() => { setIsMovementModalOpen(false); setEditingMovement(null); }} disabled={isSubmitting} className="rounded-xl p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-800 disabled:opacity-50" aria-label="Fermer"><X className="h-5 w-5" /></button>
             </div>
             <form onSubmit={submitMovement} className="space-y-4">
               <label className="block text-xs font-semibold text-slate-600">Type d’opération
@@ -197,7 +229,7 @@ export function AccountDetailView({ account, trades, onBack }: AccountDetailView
               <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end">
                 <button type="button" onClick={() => setIsMovementModalOpen(false)} disabled={isSubmitting} className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-600 transition hover:bg-slate-50 disabled:opacity-50">Annuler</button>
                 <button type="submit" disabled={isSubmitting} className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-700 disabled:cursor-wait disabled:opacity-60">
-                  {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Enregistrer le mouvement
+                  {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : editingMovement ? <Save className="h-4 w-4" /> : <Plus className="h-4 w-4" />} {editingMovement ? 'Enregistrer les modifications' : 'Enregistrer le mouvement'}
                 </button>
               </div>
             </form>
