@@ -168,6 +168,7 @@ export interface UserProfile {
   paymentDate?: string;
   subscriptionStartAt?: string;
   subscriptionExpiresAt?: string;
+  subscriptionExpiresAtMs?: number;
   subscriptionStatus?: SubscriptionStatus;
   paymentStatus?: PaymentStatus;
   pendingPlan?: SubscriptionPlan;
