@@ -4,6 +4,7 @@ interface Env {
   GEMINI_API_KEY?: string;
   GEMINI_MODEL?: string;
   GEMINI_CHLOE_MODEL?: string;
+  GEMINI_INSTRUMENT_MODEL?: string;
 }
 
 const categories = ['forex', 'metal', 'index', 'futures', 'crypto', 'stock', 'other'] as const;
@@ -73,8 +74,7 @@ valuePerPriceUnit est le gain/perte approximatif, dans la devise du compte indiq
 Fais une proposition pratique à partir des spécifications usuelles connues. N'invente pas une certitude : le contrat, la taille de lot et la valeur peuvent varier selon le broker, notamment pour les CFD, indices, futures et paires dont la devise de cotation diffère de celle du compte. Explique brièvement cette réserve dans note. Ne prétends pas avoir consulté le broker de l'utilisateur. Si l'actif est inconnu, utilise category "other", name égal au symbole, priceStep 0.01 et valuePerPriceUnit 1 comme valeurs provisoires clairement signalées dans note.
 Tous les nombres doivent être strictement positifs.`;
 
-  // Respect the model configured in Cloudflare. Use the current stable Flash model
-  // when no explicit model is configured, and keep it as a fallback.
+  // The central AI Core selects the instrument-specific configured model.
   const result = await callAI('instrument-suggest', prompt, env, { responseJson: true });
 
   if (!result.success || !result.text) {
