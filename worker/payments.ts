@@ -93,6 +93,16 @@ function invoiceNumber(paymentId: string, createdAt: string) {
   return `FAC-${paymentReference(paymentId, createdAt)}`;
 }
 
+function paymentFailureMessage(status: string, providerMessage?: unknown) {
+  const detail = String(providerMessage || '').trim().slice(0, 240);
+  if (detail) return detail;
+  const normalized = status.toUpperCase();
+  if (normalized === 'INSUFFICIENT_BALANCE' || normalized === 'INSUFFICIENT_FUNDS') return 'Solde insuffisant sur votre portefeuille mobile. Rechargez-le puis réessayez.';
+  if (normalized === 'CANCELLED' || normalized === 'CANCELED') return 'Vous avez annulé la demande de paiement.';
+  if (normalized === 'EXPIRED') return 'La demande de paiement a expiré avant validation. Relancez un nouveau paiement.';
+  if (normalized === 'TIMEOUT') return 'La demande a expiré sans réponse de l’opérateur. Vérifiez votre solde puis réessayez.';
+  return 'Le paiement a été refusé par le service Mobile Money. Vérifiez les informations et réessayez.';
+}
 
 function publicPayment(payment: Record<string, unknown>) {
   return {
@@ -345,7 +355,7 @@ export async function handleSasPayVerifyRequest(request: Request, env: SasPayEnv
 
     if (['FAILED', 'FAILURE', 'EXPIRED', 'CANCELLED', 'CANCELED'].includes(canonicalStatus)) {
       await firestorePatch(env, 'payments/' + paymentId, {
-        status: 'failed', failureMessage: 'Paiement mobile ' + canonicalStatus + '.', saspayStatus: canonicalStatus, updatedAt: now
+        status: 'failed', failureMessage: paymentFailureMessage(canonicalStatus, transaction?.failure_reason || transaction?.reason || transaction?.message || transaction?.description), saspayStatus: canonicalStatus, updatedAt: now
       }, ['status', 'failureMessage', 'saspayStatus', 'updatedAt']);
       return json({ success: true, status: 'failed', payment: publicPayment({ ...payment, status: 'failed' }) });
     }
@@ -796,7 +806,7 @@ export async function handleCinetPayNotification(request: Request, env: CinetPay
     if ([2010, 2005].includes(Number(statusResult?.code)) || ['FAILED', 'INSUFFICIENT_BALANCE', 'EXPIRED'].includes(status)) {
       await firestorePatch(env, `payments/${merchantTransactionId}`, {
         status: 'failed',
-        failureMessage: 'Le paiement a échoué.',
+        failureMessage: paymentFailureMessage(status || String(statusResult?.code || 'FAILED'), canonical?.message || canonical?.description || statusResult?.description || statusResult?.message),
         cinetpayStatus: status || 'FAILED',
         updatedAt: new Date().toISOString()
       }, ['status', 'failureMessage', 'cinetpayStatus', 'updatedAt']);
