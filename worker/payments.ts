@@ -431,6 +431,9 @@ export async function handlePaymentRequest(request: Request, env: CinetPayEnv) {
     // Keep every downstream provider branch and stored payment aligned with the server-enforced duration.
     body.months = months;
     const paymentMethod = body.paymentMethod === 'bank_transfer' ? 'bank_transfer' : 'mobile_money';
+    if (paymentMethod === 'bank_transfer') {
+      return json({ success: false, message: 'Le virement bancaire est temporairement indisponible. Utilisez Mobile Money.' }, 503);
+    }
     const countryCode = String(body.countryCode || 'CD').toUpperCase();
     const phone = paymentMethod === 'mobile_money' ? normalizePhone(body.phone, countryCode) : null;
     const price = plan ? (planKey === 'community'
