@@ -6,6 +6,10 @@ export type AIProvider = 'gemini' | 'openai';
 export interface AIEnv {
   GEMINI_API_KEY?: string;
   GEMINI_MODEL?: string;
+  GEMINI_VYRA_MODEL?: string;
+  GEMINI_INSTRUMENT_MODEL?: string;
+  GEMINI_CHLOE_MODEL?: string;
+  GEMINI_CALENDAR_MODEL?: string;
   OPENAI_API_KEY?: string;
   OPENAI_MODEL?: string;
   AI_PRIMARY_PROVIDER?: string;
@@ -168,7 +172,7 @@ export async function callAI(options: AIRequestOptions): Promise<AIResponse> {
       }
       const result = await callGeminiUnified(options.contents, {
         apiKey: options.env.GEMINI_API_KEY,
-        preferredModel: options.env.GEMINI_MODEL?.trim() || config.geminiModel,
+        preferredModel: (options.assistant === 'vyra' ? options.env.GEMINI_VYRA_MODEL : options.assistant === 'instrument-suggest' ? (options.env.GEMINI_INSTRUMENT_MODEL || options.env.GEMINI_CHLOE_MODEL) : options.env.GEMINI_CALENDAR_MODEL)?.trim() || options.env.GEMINI_MODEL?.trim() || config.geminiModel,
         fallbackModels: [],
         systemInstruction: options.systemInstruction,
         temperature: options.temperature ?? config.temperature,
