@@ -1,7 +1,7 @@
 import { analyzeEconomicEvent } from './economicAnalysisEngine';
 import { callAI } from '../functions/api/common/ai-engine';
 
-undefined OPENAI_API_KEY?: string; OPENAI_MODEL?: string; AI_PRIMARY_PROVIDER?: string };
+type AnalysisEnv = { GEMINI_API_KEY?: string; GEMINI_MODEL?: string; GEMINI_CALENDAR_MODEL?: string; OPENAI_API_KEY?: string; OPENAI_MODEL?: string; AI_PRIMARY_PROVIDER?: string };
 
 type PublicSource = { title: string; url: string; date?: string; excerpt: string };
 
