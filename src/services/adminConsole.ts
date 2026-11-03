@@ -14,6 +14,10 @@ async function adminMutation<T = unknown>(body: Record<string, unknown>): Promis
   return payload as T;
 }
 
+export function adminMigrateSubscriptionExpiry() {
+  return adminMutation<{ success: boolean; scanned: number; migrated: number; expired: number; withoutExpiry: number }>({ action: 'migrate-subscription-expiry' });
+}
+
 export function adminUpdateUser(uid: string, data: Record<string, unknown>) {
   return adminMutation({ action: 'update-user', uid, data });
 }
