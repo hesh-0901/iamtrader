@@ -936,7 +936,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                     </div>
                   )}
 
-                                    {paymentStep === 'details' && (
+                  {paymentStep === 'details' && (
                     <div className="mx-auto max-w-md space-y-4">
                       {paymentMethod === 'mobile_money' ? (
                         <>
