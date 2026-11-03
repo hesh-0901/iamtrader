@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Activity, Sparkles, CalendarClock, AlertTriangle, BellRing, Check, CheckCircle2, ChevronLeft, Eye, ChevronRight, Clock3, CreditCard, Edit3, History, Mail, ReceiptText, RefreshCw, Search, Send, ShieldCheck, Trash2, UserCheck, UserX, Users, X, XCircle, Copy, Paperclip, Smile, MoreVertical, Info, Plus, Filter, PenLine } from 'lucide-react';
 import { AdminLog, PaymentRecord, SubscriptionPlan, UserProfile, UserStatus, TradingAccount, Trade } from '../types';
 import { getAdminLogs, getAllAccounts, getAllTrades, getAllUsers, subscribeAllUsers, subscribeAllPayments, subscribeContactMessages } from '../services/firestore';
-import { adminAddLog, adminDeleteContact, adminGetPayments, adminUpdateContact, adminUpdatePayment, adminUpdateUser } from '../services/adminConsole';
+import { adminAddLog, adminDeleteContact, adminGetPayments, adminMigrateSubscriptionExpiry, adminUpdateContact, adminUpdatePayment, adminUpdateUser } from '../services/adminConsole';
 import { useToast } from '../components/common/Toast';
 import { auth } from '../firebase/config';
 import { Tag } from 'lucide-react';
@@ -75,6 +75,8 @@ export function AdminConsole() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [migrationBusy, setMigrationBusy] = useState(false);
+  const isPrimaryAdmin = auth.currentUser?.email?.trim().toLowerCase() === 'henochshungu@gmail.com';
   const [plan, setPlan] = useState<SubscriptionPlan>('free');
   const [status, setStatus] = useState<UserStatus>('active');
   const [payment, setPayment] = useState<'unpaid' | 'paid' | 'refunded'>('unpaid');
@@ -134,6 +136,20 @@ export function AdminConsole() {
       showToast(error?.message || 'Mise à jour impossible.', 'error');
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function migrateSubscriptionExpiry() {
+    if (migrationBusy || !isPrimaryAdmin) return;
+    setMigrationBusy(true);
+    try {
+      const result = await adminMigrateSubscriptionExpiry();
+      showToast(`Migration terminée : ${result.migrated} profils mis à jour, ${result.expired} abonnements expirés, ${result.withoutExpiry} profils payants sans échéance.`, 'success');
+      await load();
+    } catch (error: any) {
+      showToast(error?.message || 'Migration des échéances impossible.', 'error');
+    } finally {
+      setMigrationBusy(false);
     }
   }
 
@@ -389,6 +405,7 @@ export function AdminConsole() {
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div><div className="mb-2 inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-white/90 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.16em] text-emerald-700 shadow-sm">Console administrateur</div><h1 className="text-3xl font-bold tracking-[-0.045em] text-[#10243b] sm:text-4xl">{adminTab==='overview'?'Dashboard admin':adminTab==='users'?'Utilisateurs':adminTab==='subscriptions'?'Abonnements':adminTab==='payments'?'Paiements':adminTab==='promotions'?'Promotions & avantages':adminTab==='support'?'Support':adminTab==='analytics'?'Analytics':'Journal d’audit'}</h1><p className="mt-1 text-sm text-slate-400">{adminTab==='subscriptions'?'Suivi commercial des abonnements, répartition des plans et paiements à confirmer.':adminTab==='analytics'?'Lecture comportementale et performance des utilisateurs.':'Pilotage opérationnel de la plateforme IAMTRADER.'}</p></div>
               <div className="hidden lg:flex items-center gap-2 rounded-full border border-emerald-100 bg-white/80 px-3 py-2 text-xs font-semibold text-emerald-700"><span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-50"></span><span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span></span>Synchronisation active</div>
+              {isPrimaryAdmin && <button type="button" onClick={migrateSubscriptionExpiry} disabled={migrationBusy} className="inline-flex items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800 transition hover:bg-amber-100 disabled:cursor-wait disabled:opacity-60"><RefreshCw className={`h-3.5 w-3.5 ${migrationBusy ? 'animate-spin' : ''}`}/>{migrationBusy ? 'Migration…' : 'Migrer les échéances'}</button>}
             </div>
           </header>
 
