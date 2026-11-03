@@ -156,8 +156,7 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
     const symbol = instrument.symbol.trim().toUpperCase();
     if (!symbol) return;
 
-    // Ajout rapide : Chloé complète les caractéristiques côté serveur sans
-    // afficher de loader, de modal ou de message de progression.
+    // Ouvrir immédiatement les champs manuels pendant que Chloé prépare sa proposition.
     if (!editingInstrumentId && !instrumentDetailsOpen) {
       if (!/^[A-Z0-9._-]{1,24}$/.test(symbol)) {
         showToast('Saisissez un symbole valide.', 'error');
