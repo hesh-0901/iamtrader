@@ -108,8 +108,8 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
   const [dashboardMode, setDashboardMode] = useState<'standard' | 'focus' | 'analysis' | 'compact'>(() => (localStorage.getItem('iamtrader-dashboard-mode') as any) || 'standard');
   const [paymentPlan, setPaymentPlan] = useState<PaidPlan | null>(null);
   const [paymentMonths, setPaymentMonths] = useState(1);
-  const [paymentMethod, setPaymentMethod] = useState<'mobile_money' | 'bank_transfer'>('mobile_money');
-  const [paymentStep, setPaymentStep] = useState<'duration' | 'method' | 'details' | 'summary'>('duration');
+  const [paymentMethod] = useState<'mobile_money'>('mobile_money');
+  const [paymentStep, setPaymentStep] = useState<'duration' | 'details' | 'summary'>('duration');
   const [paymentBankDetails, setPaymentBankDetails] = useState<{ bankName: string; accountName: string; accountNumber: string; swift?: string; branch?: string; currency?: string; instructions?: string } | null>(null);
   const [paymentPhone, setPaymentPhone] = useState('');
   const [promoCode, setPromoCode] = useState('');
@@ -403,7 +403,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
     setPaymentCountryCode(initialCountry.code);
     setPaymentPhone(nationalDigits.replace(/^0+/, '').slice(0, initialCountry.phoneLength));
     const initialMonths = plan === 'community' ? 6 : 1;
-    setPaymentPlan(plan); setPaymentMonths(initialMonths); setPaymentMethod('mobile_money'); setPaymentStep('duration'); setPaymentBankDetails(null); setPromoCode(''); setPromoQuote(null); setPromoMessage(''); setIsPromoModalOpen(false); void loadAutomaticPromotion(plan, initialMonths);
+    setPaymentPlan(plan); setPaymentMonths(initialMonths); setPaymentStep('duration'); setPaymentBankDetails(null); setPromoCode(''); setPromoQuote(null); setPromoMessage(''); setIsPromoModalOpen(false); void loadAutomaticPromotion(plan, initialMonths);
     setPaymentProvider(initialCountry.networks[0]?.value || '');
     setPaymentId(null); setPaymentReference(null); setPaymentStatus('idle'); setPaymentMessage('');
   };
@@ -871,7 +871,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
               <div className="min-w-0">
                 <p className="text-[10px] font-extrabold uppercase tracking-[.16em] text-emerald-700">IAMTRADER · Abonnement</p>
                 <h3 id="payment-checkout-title" className="mt-1 text-lg font-black tracking-tight sm:text-xl">{paymentPlan === 'pro' ? 'Passer à Plus' : 'Activer Community'}</h3>
-                <p className="mt-1 text-xs leading-5 text-slate-500">Étape {paymentStep === 'duration' ? '1' : paymentStep === 'method' ? '2' : paymentStep === 'details' ? '3' : '4'} sur 4 · {paymentStep === 'duration' ? 'Durée' : paymentStep === 'method' ? 'Moyen de paiement' : paymentStep === 'details' ? 'Informations' : 'Récapitulatif'}</p>
+                <p className="mt-1 text-xs leading-5 text-slate-500">Étape {paymentStep === 'duration' ? '1' : paymentStep === 'details' ? '2' : '3'} sur 4 · {paymentStep === 'duration' ? 'Durée et paiement' : paymentStep === 'details' ? 'Informations' : 'Récapitulatif'}</p>
               </div>
               <button type="button" onClick={() => setPaymentPlan(null)} className="shrink-0 rounded-xl border border-slate-200 p-2.5 text-slate-500 hover:bg-slate-50" aria-label="Fermer"><X className="h-4 w-4" /></button>
             </header>
@@ -880,8 +880,8 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
               {paymentStatus === 'idle' && (
                 <>
                   <div className="mb-5 grid grid-cols-4 gap-1.5" aria-label="Progression du paiement">
-                    {(['duration','method','details','summary'] as const).map((step, index) => (
-                      <div key={step} className={'h-1.5 rounded-full ' + ((['duration','method','details','summary'] as const).indexOf(paymentStep) >= index ? 'bg-emerald-500' : 'bg-slate-100')} />
+                    {(['duration','details','summary'] as const).map((step, index) => (
+                      <div key={step} className={'h-1.5 rounded-full ' + ((['duration','details','summary'] as const).indexOf(paymentStep) >= index ? 'bg-emerald-500' : 'bg-slate-100')} />
                     ))}
                   </div>
 
@@ -915,31 +915,29 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                         <div className="flex items-center justify-between gap-3 text-sm"><span className="text-slate-600">Montant de l’abonnement</span><strong className="text-xl font-black text-slate-950">${getPaymentAmounts(paymentPlan, paymentMonths).total.toFixed(2)} USD</strong></div>
                         <p className="mt-1 text-[11px] leading-4 text-slate-500">{paymentPlan === 'pro' ? '$9.99 par mois.' : 'Tarif calculé à partir du forfait Community de 6 mois à $89.99.'}</p>
                       </div>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between gap-2"><label className="text-sm font-bold text-slate-800">Méthode de paiement</label><span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">1 option active</span></div>
+                        <div className="grid gap-2 sm:grid-cols-2">
+                          <div className="flex min-w-0 items-center gap-3 rounded-2xl border-2 border-emerald-500 bg-emerald-50/60 p-3.5">
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-emerald-700 shadow-sm"><Smartphone className="h-5 w-5" /></span>
+                            <span className="min-w-0 flex-1"><span className="block text-sm font-extrabold text-slate-900">Mobile Money</span><span className="mt-0.5 block text-[11px] leading-4 text-slate-500">Paiement mobile sécurisé</span></span>
+                            <span className="h-4 w-4 shrink-0 rounded-full border-[5px] border-emerald-600 bg-white" />
+                          </div>
+                          <div aria-disabled="true" className="flex min-w-0 items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3.5 opacity-65">
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-slate-400"><WalletCards className="h-5 w-5" /></span>
+                            <span className="min-w-0 flex-1"><span className="block text-sm font-bold text-slate-500">Virement bancaire</span><span className="mt-0.5 block text-[11px] leading-4 text-slate-400">Bientôt disponible</span></span>
+                            <span className="shrink-0 rounded-full border border-slate-200 bg-white px-2 py-1 text-[9px] font-bold uppercase tracking-wide text-slate-400">Indisponible</span>
+                          </div>
+                        </div>
+                      </div>
                       <div className="flex flex-col gap-2 sm:flex-row">
                         <button type="button" onClick={() => setPaymentPlan(null)} className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-600 sm:flex-1">Annuler</button>
-                        <button type="button" onClick={() => setPaymentStep('method')} className="rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700 sm:flex-[1.5]">Continuer <ArrowRight className="ml-1 inline h-4 w-4" /></button>
+                        <button type="button" onClick={() => setPaymentStep('details')} className="rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700 sm:flex-[1.5]">Continuer <ArrowRight className="ml-1 inline h-4 w-4" /></button>
                       </div>
                     </div>
                   )}
 
-                  {paymentStep === 'method' && (
-                    <div className="mx-auto max-w-md space-y-4">
-                      <div><h4 className="text-lg font-black">Comment souhaitez-vous payer ?</h4><p className="mt-1 text-xs leading-5 text-slate-500">Sélectionnez une méthode de paiement pour continuer.</p></div>
-                      <button type="button" onClick={() => setPaymentMethod('mobile_money')} className={'flex w-full items-center gap-4 rounded-2xl border p-4 text-left transition ' + (paymentMethod === 'mobile_money' ? 'border-emerald-500 bg-emerald-50 ring-2 ring-emerald-100' : 'border-slate-200 hover:border-slate-300')}>
-                        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700"><Smartphone className="h-6 w-6" /></span>
-                        <span className="min-w-0 flex-1"><span className="block text-sm font-extrabold">Mobile Money</span><span className="mt-1 block text-xs leading-5 text-slate-500">Paiement depuis votre portefeuille mobile.</span></span>
-                        <span className={'h-4 w-4 shrink-0 rounded-full border-2 ' + (paymentMethod === 'mobile_money' ? 'border-emerald-600 bg-emerald-600 ring-2 ring-emerald-200' : 'border-slate-300')} />
-                      </button>
-                      <button type="button" onClick={() => setPaymentMethod('bank_transfer')} className={'flex w-full items-center gap-4 rounded-2xl border p-4 text-left transition ' + (paymentMethod === 'bank_transfer' ? 'border-emerald-500 bg-emerald-50 ring-2 ring-emerald-100' : 'border-slate-200 hover:border-slate-300')}>
-                        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-sky-50 text-sky-700"><WalletCards className="h-6 w-6" /></span>
-                        <span className="min-w-0 flex-1"><span className="block text-sm font-extrabold">Virement bancaire</span><span className="mt-1 block text-xs leading-5 text-slate-500">Paiement par transfert depuis votre banque.</span></span>
-                        <span className={'h-4 w-4 shrink-0 rounded-full border-2 ' + (paymentMethod === 'bank_transfer' ? 'border-emerald-600 bg-emerald-600 ring-2 ring-emerald-200' : 'border-slate-300')} />
-                      </button>
-                      <div className="flex gap-2 pt-2"><button type="button" onClick={() => setPaymentStep('duration')} className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-600">Retour</button><button type="button" onClick={() => setPaymentStep('details')} className="flex-[1.5] rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white">Continuer</button></div>
-                    </div>
-                  )}
-
-                  {paymentStep === 'details' && (
+                                    {paymentStep === 'details' && (
                     <div className="mx-auto max-w-md space-y-4">
                       {paymentMethod === 'mobile_money' ? (
                         <>
@@ -954,7 +952,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                           <p className="mt-2 text-xs leading-5 text-sky-900/80">Les coordonnées du compte bancaire IAMTRADER seront affichées après l’enregistrement de votre demande. Votre abonnement restera en attente jusqu’à la vérification effective du virement.</p>
                         </div>
                       )}
-                      <div className="flex gap-2 pt-2"><button type="button" onClick={() => setPaymentStep('method')} className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-600">Retour</button><button type="button" onClick={() => setPaymentStep('summary')} disabled={paymentMethod === 'mobile_money' && (!paymentPhone.trim() || !paymentProvider)} className="flex-[1.5] rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-40">Continuer</button></div>
+                      <div className="flex gap-2 pt-2"><button type="button" onClick={() => setPaymentStep('duration')} className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-600">Retour</button><button type="button" onClick={() => setPaymentStep('summary')} disabled={paymentMethod === 'mobile_money' && (!paymentPhone.trim() || !paymentProvider)} className="flex-[1.5] rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-40">Continuer</button></div>
                     </div>
                   )}
 
