@@ -470,7 +470,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
 
   const submitPayment = async () => {
     if (!paymentPlan) return;
-    setIsPaymentLoading(true); setPaymentMessage('');
+    setIsPaymentLoading(true); setPaymentMessage(''); setPaymentLastCheckedAt(null); setPaymentCheckError(''); setPaymentPollTimedOut(false);
     try {
       const details: PaymentDetails = {
         months: paymentPlan === 'community' ? 6 : paymentMonths,
