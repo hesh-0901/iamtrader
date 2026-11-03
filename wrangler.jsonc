@@ -32,7 +32,7 @@
       "SASPAY_COUNTRY": "XC"
     }
   },
-  "triggers": { "crons": ["0 * * * *"] },
+  "triggers": { "crons": ["*/15 * * * *"] },
   "observability": {
     "enabled": true
   }
