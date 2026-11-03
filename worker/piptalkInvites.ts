@@ -1,4 +1,4 @@
-import { firestorePatch, firestoreQueryByField } from './firebaseAdmin';
+import { firestoreGet, firestorePatch, firestoreQueryByField } from './firebaseAdmin';
 
 interface InviteEnv {
   FIREBASE_API_KEY?: string;
@@ -32,6 +32,14 @@ export async function handlePipTalkInviteJoin(request: Request, env: InviteEnv):
     const identity = await identityResponse.json() as { users?: Array<{ localId?: string; displayName?: string }> };
     const uid = identity.users?.[0]?.localId;
     if (!uid) return json({ success: false, message: 'Compte IAMTRADER introuvable.' }, 401);
+
+    const profile = await firestoreGet(env as any, 'users/' + encodeURIComponent(uid)) as Record<string, unknown> | null;
+    const paidAccess = profile
+      && ['pro', 'community'].includes(String(profile.plan || 'free'))
+      && profile.subscriptionStatus === 'active'
+      && profile.paymentStatus === 'paid'
+      && profile.status === 'active';
+    if (!paidAccess) return json({ success: false, message: 'Les invitations aux groupes sont réservées aux abonnements payants actifs.' }, 403);
 
     const body = await request.json() as { code?: string; displayName?: string };
     const code = String(body.code || '').trim();
