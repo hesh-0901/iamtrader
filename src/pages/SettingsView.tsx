@@ -108,7 +108,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
   const [dashboardMode, setDashboardMode] = useState<'standard' | 'focus' | 'analysis' | 'compact'>(() => (localStorage.getItem('iamtrader-dashboard-mode') as any) || 'standard');
   const [paymentPlan, setPaymentPlan] = useState<PaidPlan | null>(null);
   const [paymentMonths, setPaymentMonths] = useState(1);
-  const [paymentMethod] = useState<'mobile_money'>('mobile_money');
+  const [paymentMethod] = useState<'mobile_money' | 'bank_transfer'>('mobile_money');
   const [paymentStep, setPaymentStep] = useState<'duration' | 'details' | 'summary'>('duration');
   const [paymentBankDetails, setPaymentBankDetails] = useState<{ bankName: string; accountName: string; accountNumber: string; swift?: string; branch?: string; currency?: string; instructions?: string } | null>(null);
   const [paymentPhone, setPaymentPhone] = useState('');
