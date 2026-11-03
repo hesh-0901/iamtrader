@@ -107,11 +107,10 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
   const [theme, setTheme] = useState<'light'>('light');
   const [dashboardMode, setDashboardMode] = useState<'standard' | 'focus' | 'analysis' | 'compact'>(() => (localStorage.getItem('iamtrader-dashboard-mode') as any) || 'standard');
   const [paymentPlan, setPaymentPlan] = useState<PaidPlan | null>(null);
-  const [paymentGateway, setPaymentGateway] = useState<'cinetpay' | 'saspay'>('saspay');
   const [paymentMonths, setPaymentMonths] = useState(1);
   const [paymentMethod, setPaymentMethod] = useState<'mobile_money' | 'bank_transfer'>('mobile_money');
   const [paymentStep, setPaymentStep] = useState<'duration' | 'method' | 'details' | 'summary'>('duration');
-  const [paymentBankDetails, setPaymentBankDetails] = useState<PaymentDetails extends never ? never : { bankName: string; accountName: string; accountNumber: string; swift?: string; branch?: string; currency?: string; instructions?: string } | null>(null);
+  const [paymentBankDetails, setPaymentBankDetails] = useState<{ bankName: string; accountName: string; accountNumber: string; swift?: string; branch?: string; currency?: string; instructions?: string } | null>(null);
   const [paymentPhone, setPaymentPhone] = useState('');
   const [promoCode, setPromoCode] = useState('');
   const [isPromoModalOpen, setIsPromoModalOpen] = useState(false);
@@ -119,18 +118,11 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
   const [isPromoApplying, setIsPromoApplying] = useState(false);
   const [promoMessage, setPromoMessage] = useState('');
   const [paymentCountryCode, setPaymentCountryCode] = useState<string>(() => detectCountryCode());
-  const [countrySearch, setCountrySearch] = useState('');
-  const [isCountryListOpen, setIsCountryListOpen] = useState(false);
   const [paymentProvider, setPaymentProvider] = useState(() => countryOptions.find(item => item.code === detectCountryCode())?.networks[0]?.value || 'vodacom_cd');
-  const [paymentPayerName, setPaymentPayerName] = useState(userProfile?.displayName || [userProfile?.traderProfile?.firstName, userProfile?.traderProfile?.lastName].filter(Boolean).join(' ') || '');
   const [paymentId, setPaymentId] = useState<string | null>(null);
   const [paymentReference, setPaymentReference] = useState<string | null>(null);
-  const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<'idle' | 'processing' | 'paid' | 'failed'>('idle');
   const [paymentMessage, setPaymentMessage] = useState('');
-  const [paymentAction, setPaymentAction] = useState<'initial' | 'renewal' | 'upgrade' | null>(null);
-  const [paymentActivationStart, setPaymentActivationStart] = useState<string | null>(null);
-  const [paymentActivationExpires, setPaymentActivationExpires] = useState<string | null>(null);
   const [isPaymentLoading, setIsPaymentLoading] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<any>(null);
   const [deviceSessions, setDeviceSessions] = useState<DeviceSession[]>([]);
@@ -409,9 +401,9 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
     const nationalDigits = digits.startsWith(dialDigits) ? digits.slice(dialDigits.length) : digits;
     setPaymentCountryCode(initialCountry.code);
     setPaymentPhone(nationalDigits.replace(/^0+/, '').slice(0, initialCountry.phoneLength));
-    setPaymentPlan(plan); setPaymentMonths(1); setPaymentMethod('mobile_money'); setPaymentStep('duration'); setPaymentBankDetails(null); setPromoCode(''); setPromoQuote(null); setPromoMessage(''); setIsPromoModalOpen(false); setPaymentGateway('saspay'); void loadAutomaticPromotion(plan, 1);
+    setPaymentPlan(plan); setPaymentMonths(1); setPaymentMethod('mobile_money'); setPaymentStep('duration'); setPaymentBankDetails(null); setPromoCode(''); setPromoQuote(null); setPromoMessage(''); setIsPromoModalOpen(false); void loadAutomaticPromotion(plan, 1);
     setPaymentProvider(initialCountry.networks[0]?.value || '');
-    setPaymentUrl(null); setPaymentPayerName('');
+    setPaymentPayerName('');
     setPaymentId(null); setPaymentReference(null); setPaymentStatus('idle'); setPaymentMessage('');
     setPaymentAction(null); setPaymentActivationStart(null); setPaymentActivationExpires(null);
   };
@@ -457,17 +449,13 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
         countryCode: paymentCountryCode,
         paymentMethod,
         paymentProvider: paymentMethod === 'mobile_money' ? paymentProvider : undefined,
-        payerName: paymentPayerName.trim(),
+        payerName: userProfile?.displayName || [userProfile?.traderProfile?.firstName, userProfile?.traderProfile?.lastName].filter(Boolean).join(' ') || '',
         promoCode: promoCode.trim().toUpperCase() || undefined
       };
       const payment = await createPayment(paymentPlan, details);
       setPaymentId(payment.id);
       setPaymentReference(payment.reference || null);
-      setPaymentUrl(null);
       setPaymentBankDetails(payment.bankDetails || null);
-      setPaymentAction(payment.subscriptionAction || null);
-      setPaymentActivationStart(payment.activationStartAt || null);
-      setPaymentActivationExpires(payment.activationExpiresAt || null);
       setPaymentStatus('processing');
       setPaymentMessage(payment.message || (paymentMethod === 'bank_transfer'
         ? 'Demande enregistrée. Effectuez le virement puis transmettez la preuve à IAMTRADER.'
@@ -514,7 +502,6 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
     let cancelled = false;
     let attempts = 0;
     let timer: number | undefined;
-    setPaymentGateway('saspay');
     setPaymentMethod('mobile_money');
     setPaymentId(pendingPaymentReference);
     setPaymentStatus('processing');
