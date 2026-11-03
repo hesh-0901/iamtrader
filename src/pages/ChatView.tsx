@@ -20,7 +20,7 @@ type ChatConversation = {
 };
 type ChatMessage = {
   id: string; senderId: string; text: string; createdAt?: Timestamp | null;
-  edited?: boolean; pinned?: boolean; forwarded?: boolean; forwardedFrom?: string; reactions?: Record<string, string>; type?: 'text' | 'image' | 'voice'; mediaUrl?: string; mediaName?: string; mediaPublicId?: string; mediaResourceType?: string; expiresAt?: Timestamp | null; duration?: number; senderName?: string; senderAvatarURL?: string; mentions?: string[]; replyToId?: string; replyToMessageId?: string; replyToSenderId?: string; replyToSenderName?: string; replyToText?: string; replyToType?: 'text' | 'image' | 'voice';
+  edited?: boolean; pinned?: boolean; forwarded?: boolean; forwardedFrom?: string; reactions?: Record<string, string>; type?: 'text' | 'image' | 'voice'; mediaUrl?: string; mediaName?: string; mediaPublicId?: string; mediaResourceType?: string; duration?: number; senderName?: string; senderAvatarURL?: string; mentions?: string[]; replyToId?: string; replyToMessageId?: string; replyToSenderId?: string; replyToSenderName?: string; replyToText?: string; replyToType?: 'text' | 'image' | 'voice';
 };
 
 const formatTime = (value?: Timestamp | null) => value?.toDate
