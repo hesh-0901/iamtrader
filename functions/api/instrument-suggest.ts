@@ -73,15 +73,23 @@ valuePerPriceUnit est le gain/perte approximatif, dans la devise du compte indiq
 Fais une proposition pratique à partir des spécifications usuelles connues. N'invente pas une certitude : le contrat, la taille de lot et la valeur peuvent varier selon le broker, notamment pour les CFD, indices, futures et paires dont la devise de cotation diffère de celle du compte. Explique brièvement cette réserve dans note. Ne prétends pas avoir consulté le broker de l'utilisateur. Si l'actif est inconnu, utilise category "other", name égal au symbole, priceStep 0.01 et valuePerPriceUnit 1 comme valeurs provisoires clairement signalées dans note.
 Tous les nombres doivent être strictement positifs.`;
 
+  // Respect the model configured in Cloudflare. Use the current stable Flash model
+  // when no explicit model is configured, and keep it as a fallback.
   const configuredModel = (env.GEMINI_CHLOE_MODEL || env.GEMINI_MODEL || '').trim();
+  const fallbackModels = [
+    env.GEMINI_MODEL?.trim(),
+    'gemini-3.8-flash',
+  ].filter((model): model is string => Boolean(model));
+
   const result = await callGeminiUnified(prompt, {
     apiKey: env.GEMINI_API_KEY,
-    preferredModel: 'gemini-3.5-flash-lite',
-    fallbackModels: ['gemini-3.8-flash'],
+    preferredModel: configuredModel || 'gemini-3.8-flash',
+    fallbackModels,
     responseJson: true,
     temperature: 0.1,
     maxTokens: 300,
-    timeoutMs: 6000,
+    timeoutMs: 12000,
+    globalTimeoutMs: 20000,
   });
 
   if (!result.success || !result.text) {
