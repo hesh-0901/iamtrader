@@ -328,7 +328,7 @@ export async function handleSasPayVerifyRequest(request: Request, env: SasPayEnv
       }, ['status', 'paidAt', 'provider', 'saspayStatus', 'updatedAt']);
       await firestorePatch(env, 'users/' + encodeURIComponent(String(payment.uid)),
         subscriptionFields(profile, planKey, action, start, expires, paidAt),
-        ['plan', 'paymentDate', 'subscriptionStartAt', 'subscriptionExpiresAt', 'subscriptionStatus', 'paymentStatus', 'planChangeConfirmedAt', 'pendingPlan', 'planChangeRequestedAt', 'scheduledPlan', 'scheduledStartAt', 'scheduledExpiresAt', 'updatedAt']);
+        ['plan', 'paymentDate', 'subscriptionStartAt', 'subscriptionExpiresAt', 'subscriptionExpiresAtMs', 'subscriptionStatus', 'paymentStatus', 'planChangeConfirmedAt', 'pendingPlan', 'planChangeRequestedAt', 'scheduledPlan', 'scheduledStartAt', 'scheduledExpiresAt', 'scheduledExpiresAtMs', 'updatedAt']);
       const updated = await firestoreGet(env, 'payments/' + paymentId);
       return json({ success: true, status: 'paid', payment: publicPayment(updated || { ...payment, status: 'paid', paidAt }) });
     }
@@ -723,7 +723,7 @@ export async function handleCinetPayNotification(request: Request, env: CinetPay
           decision.expires.toISOString(),
           paidAt
         ),
-        ['plan', 'paymentDate', 'subscriptionStartAt', 'subscriptionExpiresAt', 'subscriptionStatus', 'paymentStatus', 'planChangeConfirmedAt', 'pendingPlan', 'planChangeRequestedAt', 'scheduledPlan', 'scheduledStartAt', 'scheduledExpiresAt', 'updatedAt']
+        ['plan', 'paymentDate', 'subscriptionStartAt', 'subscriptionExpiresAt', 'subscriptionExpiresAtMs', 'subscriptionStatus', 'paymentStatus', 'planChangeConfirmedAt', 'pendingPlan', 'planChangeRequestedAt', 'scheduledPlan', 'scheduledStartAt', 'scheduledExpiresAt', 'scheduledExpiresAtMs', 'updatedAt']
       );
       await markReferralFirstPayment(env, String(payment.uid), paidAt);
 
@@ -928,7 +928,7 @@ export async function handleSasPayWebhook(
         env,
         'users/' + encodeURIComponent(String(payment.uid)),
         subscriptionFields(profile, planKey, subscriptionAction, activationStartAt, activationExpiresAt, paidAt),
-        ['plan', 'paymentDate', 'subscriptionStartAt', 'subscriptionExpiresAt', 'subscriptionStatus', 'paymentStatus', 'planChangeConfirmedAt', 'pendingPlan', 'planChangeRequestedAt', 'scheduledPlan', 'scheduledStartAt', 'scheduledExpiresAt', 'updatedAt']
+        ['plan', 'paymentDate', 'subscriptionStartAt', 'subscriptionExpiresAt', 'subscriptionExpiresAtMs', 'subscriptionStatus', 'paymentStatus', 'planChangeConfirmedAt', 'pendingPlan', 'planChangeRequestedAt', 'scheduledPlan', 'scheduledStartAt', 'scheduledExpiresAt', 'scheduledExpiresAtMs', 'updatedAt']
       );
       await markReferralFirstPayment(env, String(payment.uid), paidAt);
       return json({ received: true });
