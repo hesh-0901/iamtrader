@@ -1,6 +1,7 @@
 import { analyzeEconomicEvent } from './economicAnalysisEngine';
+import { callAI } from '../functions/api/common/ai-engine';
 
-type AnalysisEnv = { GEMINI_API_KEY?: string; GEMINI_MODEL?: string };
+type AnalysisEnv = { GEMINI_API_KEY?: string; GEMINI_MODEL?: string; OPENAI_API_KEY?: string; OPENAI_MODEL?: string; AI_PRIMARY_PROVIDER?: string };
 
 type PublicSource = { title: string; url: string; date?: string; excerpt: string };
 
@@ -79,8 +80,7 @@ export async function handleEconomicEventAnalysis(request: Request, env: Analysi
   const currency = typeof body.currency === 'string' ? body.currency.trim().slice(0, 8) : '—';
   if (!event) return json({ error: 'Le nom de l’événement est requis.' }, 400);
 
-  const apiKey = env.GEMINI_API_KEY?.trim();
-  if (!apiKey) return json({ error: 'La synthèse en ligne est temporairement indisponible.' }, 503);
+  if (!env.GEMINI_API_KEY?.trim() && !env.OPENAI_API_KEY?.trim()) return json({ error: 'La synthèse en ligne est temporairement indisponible.' }, 503);
 
   const allSources = await Promise.all([
     readFeed('https://www.federalreserve.gov/feeds/press_all.xml', 'Réserve fédérale américaine'),
@@ -118,28 +118,26 @@ ${JSON.stringify(sources)}
 En 2 à 4 courts paragraphes maximum, résume uniquement les faits utiles et vérifiables, leur lien éventuel avec l'événement et les facteurs à surveiller. Si les sources ne parlent pas clairement de cet événement, dis-le et donne un contexte général limité. N'invente ni chiffres, ni prévisions, ni actualités, ni direction certaine du marché. Explique que l'effet dépend des attentes déjà intégrées dans les prix. Ne crée pas de titres ni de listes. Ne donne aucun signal d'achat/vente.`;
 
   try {
-    const model = (env.GEMINI_MODEL || 'gemini-3.5-flash-lite').trim();
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`, {
-      method: 'POST',
-      headers: { 'x-goog-api-key': apiKey, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ role: 'user', parts: [{ text: prompt }] }],
-        generationConfig: { temperature: 0.2, maxOutputTokens: 500 },
-      }),
-      signal: AbortSignal.timeout(12000),
+    const response = await callAI({
+      assistant: 'economic-calendar-analysis',
+      env,
+      contents: prompt,
+      temperature: 0.2,
+      maxTokens: 500,
+      timeoutMs: 12000,
+      globalTimeoutMs: 20000,
     });
-    const data = await response.json() as {
-      candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>;
-    };
-    if (!response.ok) {
-      const providerError = JSON.stringify(data).slice(0, 1200);
-      console.error('Gemini API error:', response.status, providerError);
-      return json({ error: 'La synthèse économique n’a pas pu être générée.', providerStatus: response.status }, 502);
+    if (!response.success || !response.text) {
+      console.error('Economic event AI request failed:', {
+        provider: response.providerUsed,
+        model: response.modelUsed,
+        status: response.httpStatus,
+        reason: response.error,
+      });
+      return json({ error: 'La synthèse économique n’a pas pu être générée.', providerStatus: response.httpStatus }, 502);
     }
-    const summary = data.candidates?.[0]?.content?.parts?.map((part) => part.text || '').join('\n').trim();
-    if (!summary) return json({ error: 'Aucune synthèse n’a été retournée.' }, 502);
     return json({
-      summary,
+      summary: response.text.trim(),
       calculation,
       sources: sources.map(({ title, url, date }) => ({ title, url, date })),
       fetchedAt: new Date().toISOString(),
