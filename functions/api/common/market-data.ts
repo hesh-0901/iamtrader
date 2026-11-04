@@ -83,8 +83,6 @@ function mapSymbol(raw: string): SymbolMapping {
   if (/^[A-Z]{3,12}USDT$/.test(symbol)) {
     return { ticker: symbol.slice(0, -4) + '-USD', note: 'La cotation USD est utilisée comme approximation de la paire USDT.' };
   }
-  if (symbol === 'XAUUSD') return { ticker: 'XAUUSD=X', note: 'La disponibilité du symbole spot dépend du fournisseur.' };
-  if (symbol === 'XAGUSD') return { ticker: 'XAGUSD=X', note: 'La disponibilité du symbole spot dépend du fournisseur.' };
   return { ticker: symbol };
 }
 
