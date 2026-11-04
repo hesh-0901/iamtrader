@@ -88,19 +88,21 @@ export async function callGeminiUnified(
   nextKeyIndex = (nextKeyIndex + 1) % configuredKeys.length;
 
   try {
-    for (const key of keyOrder) {
-      for (const model of models) {
+    modelLoop: for (const model of models) {
+      for (const key of keyOrder) {
         const remaining = deadline - Date.now();
         if (remaining <= 0 || controller.signal.aborted) {
           lastError = `Budget global dépassé (${globalTimeoutMs} ms).`;
           lastCategory = 'timeout';
-          break;
+          break modelLoop;
         }
+
         attempts += 1;
         lastAlias = key.alias;
         const attemptController = new AbortController();
         const attemptTimeoutMs = Math.min(Math.max(1000, options.timeoutMs ?? 12000), remaining);
         const attemptTimer = setTimeout(() => attemptController.abort(), attemptTimeoutMs);
+
         try {
           const generationConfig: Record<string, unknown> = {
             temperature: options.temperature ?? 0.2,
@@ -120,15 +122,21 @@ export async function callGeminiUnified(
             },
           );
           const raw = await response.text();
+
           if (!response.ok) {
             lastStatus = response.status;
             lastError = `Gemini (${model}): ${extractErrorMessage(raw, response.status)}`;
             lastCategory = errorCategory(response.status, lastError);
+
+            if (response.status === 404 && models.length > 1) {
+              // The model ID may be retired or unavailable to this project: try the next model.
+              continue modelLoop;
+            }
             if (response.status === 429 || response.status >= 500 || response.status === 401) {
               keyCooldownUntil.set(key.alias, Date.now() + (response.status === 429 ? KEY_COOLDOWN_MS : 15_000));
-              break;
+              // Try the same model with the next configured key before moving to a fallback model.
+              continue;
             }
-            if (response.status === 404 && models.length > 1) continue;
             return { success: false, error: lastError, httpStatus: lastStatus, keyAlias: key.alias, attempts, failovers: attempts - 1, latencyMs: Date.now() - startedAt, errorCategory: lastCategory };
           }
 
@@ -137,15 +145,17 @@ export async function callGeminiUnified(
           catch {
             lastError = `Réponse JSON invalide du modèle ${model}.`;
             lastCategory = 'invalid_provider_response';
-            break;
+            break modelLoop;
           }
+
           const text = data.candidates?.[0]?.content?.parts
-            ?.map(part => part.text).filter((part): part is string => typeof part === 'string').join('\n').trim();
+            ?.map(part => part.text).filter((part): part is string => typeof part === 'string').join('\\n').trim();
           if (!text) {
             lastError = `Réponse vide du modèle ${model}.`;
             lastCategory = 'empty_provider_response';
-            break;
+            break modelLoop;
           }
+
           return { success: true, text, modelUsed: model, httpStatus: response.status, keyAlias: key.alias, attempts, failovers: attempts - 1, latencyMs: Date.now() - startedAt };
         } catch (error) {
           const timedOut = error instanceof Error && error.name === 'AbortError';
@@ -154,10 +164,12 @@ export async function callGeminiUnified(
             : 'Erreur réseau Gemini.';
           lastCategory = timedOut ? 'timeout' : 'network_error';
           keyCooldownUntil.set(key.alias, Date.now() + 15_000);
-          if (controller.signal.aborted) break;
-        } finally { clearTimeout(attemptTimer); }
+          if (controller.signal.aborted) break modelLoop;
+          // A single slow/unreachable key must not prevent trying another key or model.
+        } finally {
+          clearTimeout(attemptTimer);
+        }
       }
-      if (controller.signal.aborted || Date.now() >= deadline) break;
     }
   } finally { clearTimeout(globalTimer); }
 
