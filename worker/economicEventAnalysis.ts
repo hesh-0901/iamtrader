@@ -1,7 +1,7 @@
 import { analyzeEconomicEvent } from './economicAnalysisEngine';
-import { callAI } from '../functions/api/common/ai-core';
+import { callAI, isGeminiConfigured } from '../functions/api/common/ai-core';
 
-type AnalysisEnv = { GEMINI_API_KEY?: string; GEMINI_MODEL?: string; GEMINI_ECONOMIC_MODEL?: string };
+type AnalysisEnv = { GEMINI_API_KEY?: string; GEMINI_API_KEY_2?: string; GEMINI_API_KEY_3?: string; GEMINI_API_KEY_4?: string; GEMINI_MODEL?: string; GEMINI_ECONOMIC_MODEL?: string };
 
 type PublicSource = { title: string; url: string; date?: string; excerpt: string };
 
@@ -80,8 +80,7 @@ export async function handleEconomicEventAnalysis(request: Request, env: Analysi
   const currency = typeof body.currency === 'string' ? body.currency.trim().slice(0, 8) : '—';
   if (!event) return json({ error: 'Le nom de l’événement est requis.' }, 400);
 
-  const apiKey = env.GEMINI_API_KEY?.trim();
-  if (!apiKey) return json({ error: 'La synthèse en ligne est temporairement indisponible.' }, 503);
+  if (!isGeminiConfigured(env)) return json({ error: 'La synthèse en ligne est temporairement indisponible.' }, 503);
 
   const allSources = await Promise.all([
     readFeed('https://www.federalreserve.gov/feeds/press_all.xml', 'Réserve fédérale américaine'),
