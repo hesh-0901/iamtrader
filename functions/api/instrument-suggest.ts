@@ -1,4 +1,4 @@
-import { callAI, isGeminiConfigured } from './common/ai-core';
+import { callAI, isInstrumentAIConfigured } from './common/ai-core';
 
 interface Env {
   GEMINI_API_KEY?: string;
@@ -8,6 +8,8 @@ interface Env {
   GEMINI_MODEL?: string;
   GEMINI_CHLOE_MODEL?: string;
   GEMINI_INSTRUMENT_MODEL?: string;
+  OPENAI_API_KEY?: string;
+  OPENAI_INSTRUMENT_MODEL?: string;
 }
 
 const categories = ['forex', 'metal', 'index', 'futures', 'crypto', 'stock', 'other'] as const;
@@ -61,7 +63,7 @@ export async function onRequest(context: { request: Request; env: Env }) {
     return json({ error: 'Saisissez un symbole valide (ex. XAUUSD ou EURUSD).' }, 400);
   }
 
-  if (!isGeminiConfigured(env)) {
+  if (!isInstrumentAIConfigured(env)) {
     return json({
       error: 'Chloé est temporairement indisponible. Vous pouvez compléter l’instrument manuellement.',
       requiresReview: true,
@@ -74,16 +76,17 @@ Devise du compte : ${accountCurrency}
 category doit être l'une de : ${categories.join(', ')}.
 priceStep est le plus petit incrément de cotation habituel (par exemple 0.01 pour XAUUSD ou 0.0001 pour la plupart des paires Forex).
 valuePerPriceUnit est le gain/perte approximatif, dans la devise du compte indiquée, pour un mouvement de prix de 1.00 et une unité de taille de position, selon un contrat standard courant. defaultPositionSize doit être 1.
-Fais une proposition pratique à partir des spécifications usuelles connues. N'invente pas une certitude : le contrat, la taille de lot et la valeur peuvent varier selon le broker, notamment pour les CFD, indices, futures et paires dont la devise de cotation diffère de celle du compte. Explique brièvement cette réserve dans note. Ne prétends pas avoir consulté le broker de l'utilisateur. Si l'actif est inconnu, utilise category "other", name égal au symbole, priceStep 0.01 et valuePerPriceUnit 1 comme valeurs provisoires clairement signalées dans note.
-Tous les nombres doivent être strictement positifs.`;
+Fais une proposition pratique à partir des spécifications usuelles connues. N'invente pas une certitude : le contrat, la taille de lot et la valeur peuvent varier selon le broker, notamment pour les CFD, indices, futures et paires dont la devise de cotation diffère de celle du compte. Explique brièvement cette réserve dans note. Ne prétends pas avoir consulté le broker de l'utilisateur. Si l'actif ou ses spécifications sont inconnus, ne devine PAS priceStep ni valuePerPriceUnit : retourne null pour ces deux champs et explique dans note que les spécifications du broker sont nécessaires.
+defaultPositionSize doit être 1. N'invente jamais priceStep ni valuePerPriceUnit.`;
 
   // The central AI Core selects the instrument-specific configured model.
   const result = await callAI('instrument-suggest', prompt, env, { responseJson: true });
 
   if (!result.success || !result.text) {
-    console.warn('[InstrumentSuggest] Gemini unavailable', {
+    console.warn('[InstrumentSuggest] All configured AI providers unavailable', {
       model: result.modelUsed,
       status: result.httpStatus,
+      provider: result.keyAlias === 'OPENAI_PRIMARY' ? 'openai' : 'gemini',
     });
     return json({
       error: 'Chloé ne peut pas suggérer cet instrument pour le moment. Vous pouvez le compléter manuellement.',
@@ -132,6 +135,7 @@ Tous les nombres doivent être strictement positifs.`;
       ? suggestion.note.trim().slice(0, 500)
       : 'Vérifiez les spécifications de votre broker avant d’utiliser ces valeurs pour calculer le risque.',
     requiresReview: true,
+    provider: result.keyAlias === 'OPENAI_PRIMARY' ? 'openai' : 'gemini',
     modelUsed: result.modelUsed,
   });
 }
