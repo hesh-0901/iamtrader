@@ -63,6 +63,17 @@ export async function onRequest(context: { request: Request; env: Env }) {
     return json({ error: 'Saisissez un symbole valide (ex. XAUUSD ou EURUSD).' }, 400);
   }
 
+  // Verified Exness XAUUSD contract profile; this deterministic path does not depend on AI availability.
+  // valuePerPriceUnit is USD per 1.00 price move for 1.00 lot.
+  if (symbol === 'XAUUSD' && accountCurrency === 'USD') {
+    return json({
+      instrument: { symbol: 'XAUUSD', name: 'Gold / US Dollar', category: 'metal', priceStep: 0.01, valuePerPriceUnit: 100, defaultPositionSize: 0.01 },
+      brokerSpecs: { broker: 'Exness', contractSize: 100, contractUnit: 'troy ounces', pipSize: 0.01, minVolume: 0.01, valueCurrency: 'USD', sourceUrl: 'https://get.exness.help/hc/fr/articles/17854173039388-Mati%C3%A8res-premi%C3%A8res' },
+      note: 'Profil Exness vérifié : contrat de 100 onces troy par lot, pip de 0,01 et volume minimum de 0,01 lot. Pour 1 lot, un mouvement de 1,00 vaut 100 USD (soit 1 USD par pip de 0,01). Le volume par défaut est réglé au minimum Exness de 0,01 lot. Vérifiez le symbole et les conditions de votre type de compte dans MT5 avant utilisation.',
+      requiresReview: true,
+      provider: 'exness-specifications',
+    });
+  }
   if (!isInstrumentAIConfigured(env)) {
     return json({
       error: 'Chloé est temporairement indisponible. Vous pouvez compléter l’instrument manuellement.',
