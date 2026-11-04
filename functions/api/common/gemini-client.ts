@@ -86,6 +86,7 @@ export async function callGeminiUnified(
   const available = rotated.filter(key => (keyCooldownUntil.get(key.alias) || 0) <= now);
   const keyOrder = available.length ? available : rotated;
   nextKeyIndex = (nextKeyIndex + 1) % configuredKeys.length;
+  const candidateCount = models.length * keyOrder.length;
 
   try {
     modelLoop: for (const model of models) {
@@ -100,7 +101,11 @@ export async function callGeminiUnified(
         attempts += 1;
         lastAlias = key.alias;
         const attemptController = new AbortController();
-        const attemptTimeoutMs = Math.min(Math.max(1000, options.timeoutMs ?? 12000), remaining);
+        // Share the global budget across the remaining model/key candidates. This prevents
+        // the primary model from consuming the entire budget before fallback models are tried.
+        const candidatesRemaining = Math.max(1, candidateCount - attempts + 1);
+        const fairShareMs = Math.max(1000, Math.floor(remaining / candidatesRemaining));
+        const attemptTimeoutMs = Math.min(Math.max(1000, options.timeoutMs ?? 12000), fairShareMs);
         const attemptTimer = setTimeout(() => attemptController.abort(), attemptTimeoutMs);
 
         try {
@@ -127,6 +132,10 @@ export async function callGeminiUnified(
             lastStatus = response.status;
             lastError = `Gemini (${model}): ${extractErrorMessage(raw, response.status)}`;
             lastCategory = errorCategory(response.status, lastError);
+            console.warn('[GEMINI] Attempt failed:', {
+              model, keyAlias: key.alias, attempt: attempts, status: response.status,
+              category: lastCategory, latencyMs: Date.now() - startedAt,
+            });
 
             if (response.status === 404 && models.length > 1) {
               // The model ID may be retired or unavailable to this project: try the next model.
@@ -163,6 +172,11 @@ export async function callGeminiUnified(
             ? (controller.signal.aborted ? `Budget global dépassé (${globalTimeoutMs} ms).` : `Délai dépassé (${attemptTimeoutMs} ms) pour le modèle ${model}.`)
             : 'Erreur réseau Gemini.';
           lastCategory = timedOut ? 'timeout' : 'network_error';
+          console.warn('[GEMINI] Attempt interrupted:', {
+            model, keyAlias: key.alias, attempt: attempts, category: lastCategory,
+            attemptTimeoutMs, latencyMs: Date.now() - startedAt,
+            reason: lastError,
+          });
           keyCooldownUntil.set(key.alias, Date.now() + 15_000);
           if (controller.signal.aborted) break modelLoop;
           // A single slow/unreachable key must not prevent trying another key or model.
