@@ -88,7 +88,13 @@ function positiveNumber(value: unknown): number | null {
   return Number.isFinite(number) && number > 0 ? number : null;
 }
 
-const symbolAliases: Record<string, string> = {\n  NAS100: 'USTEC', SPX500: 'US500', GER40: 'DE30', DAX40: 'DE30',\n  US30X10: 'US30_X10', USTECX100: 'USTEC_X100', NAS100X100: 'USTEC_X100',\n  US500X100: 'US500_X100', SPX500X100: 'US500_X100',\n};\n\nfunction fallbackProfile(symbol: string, accountCurrency: string): InstrumentProfile {
+const symbolAliases: Record<string, string> = {
+  NAS100: 'USTEC', SPX500: 'US500', GER40: 'DE30', DAX40: 'DE30',
+  US30X10: 'US30_X10', USTECX100: 'USTEC_X100', NAS100X100: 'USTEC_X100',
+  US500X100: 'US500_X100', SPX500X100: 'US500_X100',
+};
+
+function fallbackProfile(symbol: string, accountCurrency: string): InstrumentProfile {
   const forexMatch = /^([A-Z]{3})([A-Z]{3})$/.exec(symbol);
   if (symbol === 'DXY') {
     return {
@@ -117,7 +123,7 @@ const symbolAliases: Record<string, string> = {\n  NAS100: 'USTEC', SPX500: 'US5
 
   if (metalContracts[symbol]) {
     const spec = metalContracts[symbol];
-    const quote = symbol.slice(-3);
+    const quote = symbol === 'XAUUSD247' ? 'USD' : symbol.slice(-3);
     return {
       name: symbol.startsWith('XAU') ? 'Gold / ' + (currencyNames[quote] || quote)
         : symbol.startsWith('XAG') ? 'Silver / ' + (currencyNames[quote] || quote)
@@ -311,8 +317,9 @@ N'invente pas de source ni de validation officielle.`;
   }
 
   const category: Category = categories.includes(suggestion.category as Category) ? suggestion.category as Category : fallback.category;
-  const priceStep = positiveNumber(suggestion.priceStep) ?? fallback.priceStep;
-  const valuePerPriceUnit = positiveNumber(suggestion.valuePerPriceUnit) ?? fallback.valuePerPriceUnit;
+  // Contract economics are never trusted from AI; only verified catalogue values may prefill them.
+  const priceStep = fallback.priceStep;
+  const valuePerPriceUnit = fallback.valuePerPriceUnit;
   const defaultPositionSize = positiveNumber(suggestion.defaultPositionSize) ?? fallback.defaultPositionSize;
 
   return json({
