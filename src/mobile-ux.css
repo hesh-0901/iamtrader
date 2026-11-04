@@ -1,0 +1,36 @@
+/* Mobile ergonomics: prevent iOS form-field auto-zoom without disabling pinch zoom. */
+@media (max-width: 767px) {
+  .iamtrader-shell input,
+  .iamtrader-shell select,
+  .iamtrader-shell textarea,
+  .iamtrader-shell [contenteditable="true"] {
+    font-size: 16px !important;
+    line-height: 1.4;
+  }
+
+  .iamtrader-shell input::placeholder,
+  .iamtrader-shell textarea::placeholder {
+    font-size: 16px !important;
+  }
+
+  .iamtrader-shell {
+    overflow-x: clip;
+  }
+
+  .iamtrader-shell main {
+    min-width: 0;
+  }
+}
+
+/* Respect iPhone safe areas and dynamic browser chrome. */
+@supports (height: 100dvh) {
+  .iamtrader-mobile-drawer {
+    height: 100dvh;
+    max-height: 100dvh;
+  }
+}
+
+.iamtrader-mobile-drawer {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
