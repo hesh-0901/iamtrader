@@ -1,6 +1,7 @@
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
+import './mobile-ux.css';
 
 // Capture the native install event globally; Settings may mount after the browser emits it.
 declare global {
