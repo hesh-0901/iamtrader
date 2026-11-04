@@ -117,7 +117,7 @@ export async function callAI(
     errorCategory: result.errorCategory || null, createdAt: new Date().toISOString(),
   };
   if (env.FIREBASE_SERVICE_ACCOUNT_JSON) {
-    void firestoreSet(env, `aiTelemetry/${crypto.randomUUID()}`, telemetry)
+    await firestoreSet(env, `aiTelemetry/${crypto.randomUUID()}`, telemetry)
       .catch(error => console.warn('[IAMTRADER_AI] Telemetry persistence unavailable:', error instanceof Error ? error.message : 'unknown'));
   }
   console.info('[IAMTRADER_AI]', JSON.stringify({
