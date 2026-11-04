@@ -66,11 +66,11 @@ function mapSymbol(raw: string): SymbolMapping {
     return { ticker: INDEX_SYMBOLS[symbol], proxy: true, note: 'Indice de référence utilisé comme proxy : il peut différer du CFD proposé par votre broker.' };
   }
   if (FUTURE_SYMBOLS[symbol]) return { ticker: FUTURE_SYMBOLS[symbol] };
-  if (/^[A-Z]{6}$/.test(symbol)) return { ticker: symbol + '=X' };
   if (/^(BTC|ETH|SOL|XRP|ADA|DOGE|BNB|LTC|BCH|AVAX|DOT|LINK|TRX|TON|XLM|SHIB)(USD|USDT)$/.test(symbol)) {
     const base = symbol.replace(/USDT?$/, '');
     return { ticker: base + '-USD', note: symbol.endsWith('USDT') ? 'La cotation USD est utilisée comme approximation de la paire USDT.' : undefined };
   }
+  if (/^[A-Z]{6}$/.test(symbol)) return { ticker: symbol + '=X' };
   if (symbol === 'XAUUSD') return { ticker: 'XAUUSD=X', note: 'La disponibilité du symbole spot dépend du fournisseur.' };
   if (symbol === 'XAGUSD') return { ticker: 'XAGUSD=X', note: 'La disponibilité du symbole spot dépend du fournisseur.' };
   return { ticker: symbol };
