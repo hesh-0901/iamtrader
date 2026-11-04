@@ -1,7 +1,10 @@
-import { callAI } from './common/ai-core';
+import { callAI, isGeminiConfigured } from './common/ai-core';
 
 interface Env {
   GEMINI_API_KEY?: string;
+  GEMINI_API_KEY_2?: string;
+  GEMINI_API_KEY_3?: string;
+  GEMINI_API_KEY_4?: string;
   GEMINI_MODEL?: string;
   GEMINI_CHLOE_MODEL?: string;
 }
@@ -86,8 +89,7 @@ export async function onRequest(context: { request: Request; env: Env }) {
   }
   if (context.request.method !== 'POST') return json({ error: 'Méthode non autorisée.' }, 405);
 
-  const apiKey = context.env.GEMINI_API_KEY?.trim();
-  if (!apiKey) return json({ error: 'Assistant IA non configuré sur le serveur.' }, 500);
+  if (!isGeminiConfigured(context.env)) return json({ error: 'Assistant IA non configuré sur le serveur.' }, 500);
 
   let body: {
     messages?: Message[];
