@@ -1,7 +1,7 @@
 import { firestoreGet, firestorePatch, firestoreDelete, firestoreSet, firestoreQueryCollection, verifyFirebaseIdToken, type PaymentEnv } from './firebaseAdmin';
 import { lifecycleFields, subscriptionFields, type SubscriptionAction } from './subscription';
 
-type AdminEnv = PaymentEnv;
+type AdminEnv = PaymentEnv & { GEMINI_API_KEY?: string; GEMINI_API_KEY_2?: string; GEMINI_API_KEY_3?: string; GEMINI_API_KEY_4?: string };
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
@@ -130,6 +130,29 @@ export async function handleAdminMutation(request: Request, env: AdminEnv) {
         action: 'promotion-deleted', promotionId, adminUid: identity.uid, createdAt: new Date().toISOString()
       });
       return json({ success: true });
+    }
+
+    if (body.action === 'get-ai-monitoring') {
+      const events = await firestoreQueryCollection(env, 'aiTelemetry', 250, 'createdAt');
+      const keys = [env.GEMINI_API_KEY, env.GEMINI_API_KEY_2, env.GEMINI_API_KEY_3, env.GEMINI_API_KEY_4]
+        .map((value, index) => ({ alias: `KEY_0${index + 1}`, configured: Boolean(value?.trim()) }));
+      return json({
+        success: true,
+        keys,
+        events: events.map(event => ({
+          assistant: String(event.assistant || ''),
+          provider: String(event.provider || 'gemini'),
+          model: String(event.model || ''),
+          keyAlias: String(event.keyAlias || ''),
+          status: Number(event.status || 0) || null,
+          latencyMs: Number(event.latencyMs || 0),
+          attempts: Number(event.attempts || 0),
+          failovers: Number(event.failovers || 0),
+          outcome: event.outcome === 'success' ? 'success' : 'failure',
+          errorCategory: String(event.errorCategory || ''),
+          createdAt: String(event.createdAt || '')
+        }))
+      });
     }
 
     if (body.action === 'get-payments') {
