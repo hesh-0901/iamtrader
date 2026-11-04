@@ -20,6 +20,9 @@ import { handleReferralRequest } from './referrals';
 interface Env {
   ASSETS: Fetcher;
   GEMINI_API_KEY?: string;
+  GEMINI_API_KEY_2?: string;
+  GEMINI_API_KEY_3?: string;
+  GEMINI_API_KEY_4?: string;
   GEMINI_MODEL?: string;
   GEMINI_CHLOE_MODEL?: string;
   GEMINI_VYRA_MODEL?: string;
