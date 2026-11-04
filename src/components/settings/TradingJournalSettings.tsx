@@ -304,25 +304,19 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
       </div>
       {instrumentFormOpen && (
         <div className="fixed inset-0 z-[130] flex items-center justify-center bg-slate-950/60 p-3 backdrop-blur-sm sm:p-6" onMouseDown={event => { if (event.target === event.currentTarget && !suggestingInstrument && !saving) closeInstrumentForm(); }}>
-          <div role="dialog" aria-modal="true" aria-labelledby="instrument-modal-title" className="flex max-h-[92dvh] w-full max-w-xl flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
+          <div role="dialog" aria-modal="true" aria-labelledby="instrument-modal-title" className="flex max-h-[88dvh] w-full max-w-lg flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
             <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4 sm:px-6">
               <div className="flex min-w-0 items-center gap-3">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700"><CandlestickChart className="h-5 w-5"/></div>
-                <div className="min-w-0"><h3 id="instrument-modal-title" className="text-base font-extrabold text-slate-950">{editingInstrumentId ? 'Modifier l’instrument' : 'Ajouter un instrument'}</h3><p className="mt-0.5 text-xs text-slate-500">Configurez les paramètres utilisés dans vos calculs.</p></div>
+                <div className="min-w-0"><h3 id="instrument-modal-title" className="text-base font-extrabold text-slate-950">{editingInstrumentId ? 'Modifier l’instrument' : 'Ajouter un instrument'}</h3><p className="mt-0.5 text-xs text-slate-500">Paramètres de calcul de l’instrument.</p></div>
               </div>
               <button type="button" aria-label="Fermer" disabled={suggestingInstrument || saving} onClick={closeInstrumentForm} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-40"><X className="h-5 w-5"/></button>
             </div>
-            <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-5 sm:p-6">
+            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 sm:p-5">
               <div>
                 <label className={labelClass}>Symbole de l’instrument *</label>
                 <input className={inputClass} value={instrument.symbol} onChange={e => setInstrument(v => suggestInstrument(e.target.value, v))} placeholder="XAUUSD, EURUSD, NAS100…" autoComplete="off" disabled={suggestingInstrument}/>
               </div>
-              {!instrumentDetailsOpen && !editingInstrumentId && (
-                <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4">
-                  <div className="flex items-center gap-2 text-sm font-semibold text-slate-800"><Sparkles className="h-4 w-4 text-emerald-600"/> Assistance Chloé</div>
-                  <p className="mt-1.5 text-xs leading-5 text-slate-500">Chloé propose les caractéristiques de l’instrument. Vous pourrez tout vérifier et modifier avant l’enregistrement.</p>
-                </div>
-              )}
               {suggestingInstrument && (
                 <div className="flex items-center gap-3 rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4">
                   <Loader2 className="h-5 w-5 animate-spin text-emerald-600"/>
@@ -331,23 +325,21 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
               )}
               {instrumentDetailsOpen && (
                 <div className="space-y-4 border-t border-slate-100 pt-4">
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                    <div className="flex items-center justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-wide text-slate-500">Cotation du marché</p><p className="mt-1 text-[11px] text-slate-400">Source publique indicative · non garantie temps réel</p></div>{marketQuoteLoading && <Loader2 className="h-4 w-4 animate-spin text-emerald-600"/>}</div>
-                    {marketQuote ? <><div className="mt-3 flex flex-wrap items-baseline gap-2"><span className="text-2xl font-black tabular-nums text-slate-950">{new Intl.NumberFormat(undefined, { maximumFractionDigits: 8 }).format(marketQuote.price)}</span><span className="text-xs font-semibold text-slate-500">{marketQuote.currency || ''}</span>{marketQuote.changePercent != null && <span className={'text-xs font-bold ' + (marketQuote.changePercent >= 0 ? 'text-emerald-700' : 'text-rose-700')}>{marketQuote.changePercent >= 0 ? '+' : ''}{marketQuote.changePercent.toFixed(2)}%</span>}</div><div className="mt-3 grid grid-cols-2 gap-2 text-xs"><div className="rounded-xl bg-white p-2.5"><span className="text-slate-400">Bid</span><p className="mt-1 font-bold tabular-nums text-slate-800">{marketQuote.bid == null ? '—' : marketQuote.bid}</p></div><div className="rounded-xl bg-white p-2.5"><span className="text-slate-400">Ask</span><p className="mt-1 font-bold tabular-nums text-slate-800">{marketQuote.ask == null ? '—' : marketQuote.ask}</p></div></div><p className="mt-2 text-[11px] leading-5 text-slate-500">{marketQuote.source}{marketQuote.timestamp ? ' · ' + new Date(marketQuote.timestamp).toLocaleString() : ''}{marketQuote.isProxy ? ' · Indice proxy' : ''}</p><p className="mt-1 text-[11px] leading-5 text-amber-700">{marketQuote.note}</p></> : <p className="mt-3 text-xs leading-5 text-slate-500">{marketQuoteLoading ? 'Recherche de la cotation…' : 'Cotation indisponible pour ce symbole. Les autres informations de l’instrument restent configurables.'}</p>}
-                  </div>
-                  {brokerSpecs && (
-                    <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4">
-                      <p className="text-xs font-bold uppercase tracking-wide text-emerald-900">Spécifications du contrat · {brokerSpecs.broker}</p>
-                      <div className="mt-2 grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
-                        <div className="rounded-xl bg-white p-2.5"><span className="text-slate-500">Taille du contrat</span><p className="mt-1 font-bold text-slate-900">{brokerSpecs.contractSize} {brokerSpecs.contractUnit}</p></div>
-                        <div className="rounded-xl bg-white p-2.5"><span className="text-slate-500">Taille du pip</span><p className="mt-1 font-bold text-slate-900">{brokerSpecs.pipSize}</p></div>
-                        <div className="rounded-xl bg-white p-2.5"><span className="text-slate-500">Volume minimum</span><p className="mt-1 font-bold text-slate-900">{brokerSpecs.minVolume} lot</p></div>
+                                    {brokerSpecs && (
+                    <details className="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3">
+                      <summary className="cursor-pointer list-none text-xs font-semibold text-slate-700">
+                        Spécifications {brokerSpecs.broker} · Contrat {brokerSpecs.contractSize} {brokerSpecs.contractUnit}
+                        <span className="ml-1 text-slate-400">— voir détails</span>
+                      </summary>
+                      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
+                        <span>Pip : <strong className="text-slate-700">{brokerSpecs.pipSize}</strong></span>
+                        <span>Minimum : <strong className="text-slate-700">{brokerSpecs.minVolume} lot</strong></span>
+                        <span>Valeur / 1,00 : <strong className="text-slate-700">{instrument.valuePerPriceUnit ? `${instrument.valuePerPriceUnit} ${brokerSpecs.valueCurrency}` : 'à confirmer'}</strong></span>
                       </div>
-                      <p className="mt-2 text-xs leading-5 text-emerald-900">Valeur par variation de 1,00 : {instrument.valuePerPriceUnit ? `${instrument.valuePerPriceUnit} ${brokerSpecs.valueCurrency} par lot` : "à confirmer selon la devise du compte"}.</p>
-                      <a href={brokerSpecs.sourceUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex text-xs font-semibold text-emerald-800 underline underline-offset-2">Consulter la fiche de référence {brokerSpecs.broker}</a>
-                    </div>
+                      <a href={brokerSpecs.sourceUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex text-xs font-semibold text-emerald-700 underline underline-offset-2">Source {brokerSpecs.broker}</a>
+                    </details>
                   )}
-                  <div className="flex items-center gap-2 text-sm font-bold text-slate-800"><CheckCircle2 className="h-4 w-4 text-emerald-600"/> Paramètres modifiables</div>
+                  <div className="text-xs font-semibold text-slate-500">Paramètres de calcul</div>
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div><label className={labelClass}>Nom *</label><input className={inputClass} value={instrument.name} onChange={e=>setInstrument(v=>({...v,name:e.target.value}))} placeholder="Gold"/></div>
                     <div><label className={labelClass}>Catégorie</label><select className={inputClass} value={instrument.category} onChange={e=>setInstrument(v=>({...v,category:e.target.value as TradingInstrument['category']}))}><option value="forex">Forex</option><option value="metal">Métal</option><option value="index">Indice</option><option value="futures">Futures</option><option value="crypto">Crypto</option><option value="stock">Action</option><option value="other">Autre</option></select></div>
