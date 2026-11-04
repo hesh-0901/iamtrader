@@ -17,7 +17,7 @@ interface NavbarProps {
 
 export function Navbar({ userProfile, accounts, selectedAccountId, onSelectAccount, onOpenNewTrade, onLogout, onToggleSidebar, onOpenChloe, currentPageTitle }: NavbarProps) {
   return (
-    <header className="h-16 border-b border-[#e7eeeb] bg-white px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30 select-none">
+    <header className="iam-mobile-titlebar h-16 border-b border-[#e7eeeb] bg-white px-4 sm:px-6 flex items-center justify-between sticky top-0 z-30 select-none">
       <div className="flex items-center gap-3 min-w-0">
         <button
           onClick={onToggleSidebar}
