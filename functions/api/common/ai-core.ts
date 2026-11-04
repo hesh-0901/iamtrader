@@ -133,9 +133,8 @@ async function callOpenAIInstrumentFallback(
 }
 
 /**
- * Invoke the configured model for one IAMTRADER assistant.
- * No automatic provider switch, paid-provider fallback or implicit model
- * fallback is performed. This keeps API spend predictable and errors visible.
+ * Invoke the configured model. OpenAI fallback is intentionally restricted to instrument suggestions;
+ * other assistants retain their Gemini-only behavior and predictable provider selection.
  */
 export async function callAI(
   assistantId: AIAssistantId,
