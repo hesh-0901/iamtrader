@@ -25,6 +25,9 @@ export type AIProvider = 'gemini';
 
 export interface AIEnvironment {
   GEMINI_API_KEY?: string;
+  GEMINI_API_KEY_2?: string;
+  GEMINI_API_KEY_3?: string;
+  GEMINI_API_KEY_4?: string;
   GEMINI_MODEL?: string;
   GEMINI_CHLOE_MODEL?: string;
   GEMINI_VYRA_MODEL?: string;
@@ -76,6 +79,11 @@ const ASSISTANT_CONFIG: Record<AIAssistantId, AssistantConfig> = {
   },
 };
 
+export function isGeminiConfigured(env: AIEnvironment): boolean {
+  return [env.GEMINI_API_KEY, env.GEMINI_API_KEY_2, env.GEMINI_API_KEY_3, env.GEMINI_API_KEY_4]
+    .some(key => Boolean(key?.trim()));
+}
+
 /**
  * Invoke the configured model for one IAMTRADER assistant.
  * No automatic provider switch, paid-provider fallback or implicit model
@@ -88,8 +96,8 @@ export async function callAI(
   overrides: AICallOverrides = {},
 ): Promise<GeminiResponse> {
   const config = ASSISTANT_CONFIG[assistantId];
-  return callGeminiUnified(contents, {
-    apiKey: env.GEMINI_API_KEY || '',
+  const result = await callGeminiUnified(contents, {
+    apiKeys: [env.GEMINI_API_KEY, env.GEMINI_API_KEY_2, env.GEMINI_API_KEY_3, env.GEMINI_API_KEY_4],
     preferredModel: config.model(env),
     fallbackModels: [],
     temperature: overrides.temperature ?? config.temperature,
@@ -99,4 +107,12 @@ export async function callAI(
     systemInstruction: overrides.systemInstruction,
     responseJson: overrides.responseJson,
   });
+  console.info('[IAMTRADER_AI]', JSON.stringify({
+    event: 'request_completed', assistant: assistantId, provider: 'gemini',
+    model: result.modelUsed || config.model(env), keyAlias: result.keyAlias || null,
+    status: result.httpStatus || null, latencyMs: result.latencyMs,
+    attempts: result.attempts || 0, failovers: result.failovers || 0,
+    outcome: result.success ? 'success' : 'failure', errorCategory: result.errorCategory || null,
+  }));
+  return result;
 }
