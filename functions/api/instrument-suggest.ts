@@ -88,7 +88,7 @@ function positiveNumber(value: unknown): number | null {
   return Number.isFinite(number) && number > 0 ? number : null;
 }
 
-function fallbackProfile(symbol: string, accountCurrency: string): InstrumentProfile {
+const symbolAliases: Record<string, string> = {\n  NAS100: 'USTEC', SPX500: 'US500', GER40: 'DE30', DAX40: 'DE30',\n  US30X10: 'US30_X10', USTECX100: 'USTEC_X100', NAS100X100: 'USTEC_X100',\n  US500X100: 'US500_X100', SPX500X100: 'US500_X100',\n};\n\nfunction fallbackProfile(symbol: string, accountCurrency: string): InstrumentProfile {
   const forexMatch = /^([A-Z]{3})([A-Z]{3})$/.exec(symbol);
   if (symbol === 'DXY') {
     return {
@@ -229,7 +229,7 @@ export async function onRequest(context: { request: Request; env: Env }) {
     return json({ error: 'Saisissez un symbole valide (ex. XAUUSD ou EURUSD).' }, 400);
   }
 
-  const fallback = fallbackProfile(symbol, accountCurrency);
+  const catalogSymbol = symbolAliases[symbol.replace(/[^A-Z0-9]/g, '')] ?? symbol;\n  const fallback = fallbackProfile(catalogSymbol, accountCurrency);
   const hasVerifiedValue = fallback.valuePerPriceUnit !== null && fallback.priceStep !== null;
   // Fully specified Exness catalogue entries are deterministic and do not depend on an AI provider.
   if (hasVerifiedValue && fallback.broker === 'Exness') {
