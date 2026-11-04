@@ -1,7 +1,10 @@
-import { callAI } from './common/ai-core';
+import { callAI, isGeminiConfigured } from './common/ai-core';
 
 interface Env {
   GEMINI_API_KEY?: string;
+  GEMINI_API_KEY_2?: string;
+  GEMINI_API_KEY_3?: string;
+  GEMINI_API_KEY_4?: string;
   GEMINI_MODEL?: string;
   GEMINI_CHLOE_MODEL?: string;
   GEMINI_INSTRUMENT_MODEL?: string;
@@ -58,7 +61,7 @@ export async function onRequest(context: { request: Request; env: Env }) {
     return json({ error: 'Saisissez un symbole valide (ex. XAUUSD ou EURUSD).' }, 400);
   }
 
-  if (!env.GEMINI_API_KEY?.trim()) {
+  if (!isGeminiConfigured(env)) {
     return json({
       error: 'Chloé est temporairement indisponible. Vous pouvez compléter l’instrument manuellement.',
       requiresReview: true,
