@@ -1,5 +1,6 @@
 export interface GeminiRequestOptions {
-  apiKey: string;
+  apiKeys?: Array<string | undefined>;
+  apiKey?: string;
   preferredModel?: string;
   fallbackModels?: string[];
   systemInstruction?: string;
@@ -16,155 +17,153 @@ export interface GeminiResponse {
   error?: string;
   modelUsed?: string;
   httpStatus?: number;
+  keyAlias?: string;
+  attempts?: number;
+  failovers?: number;
+  latencyMs?: number;
+  errorCategory?: string;
 }
 
 const DEFAULT_FALLBACKS = ['gemini-2.5-flash'];
+const KEY_COOLDOWN_MS = 60_000;
+let nextKeyIndex = 0;
+const keyCooldownUntil = new Map<string, number>();
 
-type GeminiErrorPayload = {
-  error?: { message?: string; status?: string; code?: number };
-};
+type GeminiErrorPayload = { error?: { message?: string; status?: string; code?: number } };
 
 function extractErrorMessage(raw: string, status: number): string {
   try {
     const parsed = JSON.parse(raw) as GeminiErrorPayload;
     return parsed?.error?.message || parsed?.error?.status || `HTTP ${status}`;
-  } catch {
-    return `HTTP ${status}`;
-  }
+  } catch { return `HTTP ${status}`; }
 }
 
-function shouldTryFallback(status: number): boolean {
-  // Invalid requests and credentials will not be fixed by switching models.
-  if ([400, 401, 403].includes(status)) return false;
-  return status === 404 || status === 429 || status >= 500;
+function errorCategory(status: number | undefined, message: string): string {
+  if (/timeout|délai dépassé|budget global/i.test(message)) return 'timeout';
+  if (status === 429) return 'rate_limit';
+  if (status === 401) return 'invalid_key';
+  if (status === 403) return 'permission_or_billing';
+  if (status === 400) return 'invalid_request';
+  if (status === 404) return 'model_not_found';
+  if (status && status >= 500) return 'provider_error';
+  return 'network_error';
 }
 
-/**
- * Appelle Gemini côté serveur. La clé reste dans l'en-tête et n'est jamais ajoutée à l'URL.
- * Un seul budget temporel couvre toute la chaîne principale + secours.
- */
+/** Gemini server-side client with bounded multi-key failover. Request contents are passed through unchanged. */
 export async function callGeminiUnified(
   promptOrContents: unknown,
   options: GeminiRequestOptions,
 ): Promise<GeminiResponse> {
-  const apiKey = options.apiKey?.trim();
-  if (!apiKey) {
-    return { success: false, error: 'GEMINI_API_KEY non configurée dans l’environnement.' };
+  const configuredKeys = (options.apiKeys || [options.apiKey])
+    .map((value, index) => ({ value: value?.trim(), alias: `KEY_0${index + 1}` }))
+    .filter((item): item is { value: string; alias: string } => Boolean(item.value));
+  if (!configuredKeys.length) {
+    return { success: false, error: 'Aucune clé Gemini n’est configurée.', errorCategory: 'configuration' };
   }
 
   const models = [...new Set(
     [options.preferredModel?.trim(), ...(options.fallbackModels ?? DEFAULT_FALLBACKS).map(m => m.trim())]
       .filter((model): model is string => Boolean(model)),
   )];
-
-  if (!models.length) {
-    return { success: false, error: 'Aucun modèle Gemini configuré.' };
-  }
+  if (!models.length) return { success: false, error: 'Aucun modèle Gemini configuré.', errorCategory: 'configuration' };
 
   const contents = typeof promptOrContents === 'string'
     ? [{ role: 'user', parts: [{ text: promptOrContents }] }]
     : promptOrContents;
 
-  let lastError = 'Aucun modèle Gemini n’a pu répondre.';
-  let lastStatus: number | undefined;
+  const startedAt = Date.now();
   const globalTimeoutMs = Math.max(1000, options.globalTimeoutMs ?? options.timeoutMs ?? 20000);
+  const deadline = startedAt + globalTimeoutMs;
   const controller = new AbortController();
-  const deadline = Date.now() + globalTimeoutMs;
-  const timer = setTimeout(() => controller.abort(), globalTimeoutMs);
+  const globalTimer = setTimeout(() => controller.abort(), globalTimeoutMs);
+  let lastError = 'Aucune clé Gemini disponible.';
+  let lastStatus: number | undefined;
+  let lastCategory = 'provider_unavailable';
+  let attempts = 0;
+  let lastAlias: string | undefined;
+  const now = Date.now();
+  const rotated = configuredKeys.map((_, offset) => configuredKeys[(nextKeyIndex + offset) % configuredKeys.length]);
+  const available = rotated.filter(key => (keyCooldownUntil.get(key.alias) || 0) <= now);
+  const keyOrder = available.length ? available : rotated;
+  nextKeyIndex = (nextKeyIndex + 1) % configuredKeys.length;
 
   try {
-  for (const model of models) {
-    if (controller.signal.aborted) {
-      lastError = `Budget global dépassé (${globalTimeoutMs} ms).`;
-      break;
+    for (const key of keyOrder) {
+      for (const model of models) {
+        const remaining = deadline - Date.now();
+        if (remaining <= 0 || controller.signal.aborted) {
+          lastError = `Budget global dépassé (${globalTimeoutMs} ms).`;
+          lastCategory = 'timeout';
+          break;
+        }
+        attempts += 1;
+        lastAlias = key.alias;
+        const attemptController = new AbortController();
+        const attemptTimeoutMs = Math.min(Math.max(1000, options.timeoutMs ?? 12000), remaining);
+        const attemptTimer = setTimeout(() => attemptController.abort(), attemptTimeoutMs);
+        try {
+          const generationConfig: Record<string, unknown> = {
+            temperature: options.temperature ?? 0.2,
+            maxOutputTokens: options.maxTokens ?? 800,
+          };
+          if (options.responseJson) generationConfig.responseMimeType = 'application/json';
+          const payload: Record<string, unknown> = { contents, generationConfig };
+          if (options.systemInstruction) payload.systemInstruction = { parts: [{ text: options.systemInstruction }] };
+
+          const response = await fetch(
+            `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json', 'x-goog-api-key': key.value },
+              body: JSON.stringify(payload),
+              signal: AbortSignal.any([controller.signal, attemptController.signal]),
+            },
+          );
+          const raw = await response.text();
+          if (!response.ok) {
+            lastStatus = response.status;
+            lastError = `Gemini (${model}): ${extractErrorMessage(raw, response.status)}`;
+            lastCategory = errorCategory(response.status, lastError);
+            if (response.status === 429 || response.status >= 500 || response.status === 401) {
+              keyCooldownUntil.set(key.alias, Date.now() + (response.status === 429 ? KEY_COOLDOWN_MS : 15_000));
+              break;
+            }
+            if (response.status === 404 && models.length > 1) continue;
+            return { success: false, error: lastError, httpStatus: lastStatus, keyAlias: key.alias, attempts, failovers: attempts - 1, latencyMs: Date.now() - startedAt, errorCategory: lastCategory };
+          }
+
+          let data: { candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }> };
+          try { data = raw ? JSON.parse(raw) : {}; }
+          catch {
+            lastError = `Réponse JSON invalide du modèle ${model}.`;
+            lastCategory = 'invalid_provider_response';
+            break;
+          }
+          const text = data.candidates?.[0]?.content?.parts
+            ?.map(part => part.text).filter((part): part is string => typeof part === 'string').join('\n').trim();
+          if (!text) {
+            lastError = `Réponse vide du modèle ${model}.`;
+            lastCategory = 'empty_provider_response';
+            break;
+          }
+          return { success: true, text, modelUsed: model, httpStatus: response.status, keyAlias: key.alias, attempts, failovers: attempts - 1, latencyMs: Date.now() - startedAt };
+        } catch (error) {
+          const timedOut = error instanceof Error && error.name === 'AbortError';
+          lastError = timedOut
+            ? (controller.signal.aborted ? `Budget global dépassé (${globalTimeoutMs} ms).` : `Délai dépassé (${attemptTimeoutMs} ms) pour le modèle ${model}.`)
+            : 'Erreur réseau Gemini.';
+          lastCategory = timedOut ? 'timeout' : 'network_error';
+          keyCooldownUntil.set(key.alias, Date.now() + 15_000);
+          if (controller.signal.aborted) break;
+        } finally { clearTimeout(attemptTimer); }
+      }
+      if (controller.signal.aborted || Date.now() >= deadline) break;
     }
+  } finally { clearTimeout(globalTimer); }
 
-    const remainingMs = deadline - Date.now();
-    if (remainingMs <= 0) {
-      lastError = `Budget global dépassé (${globalTimeoutMs} ms).`;
-      break;
-    }
-    const attemptController = new AbortController();
-    const attemptTimeoutMs = Math.min(Math.max(1000, options.timeoutMs ?? 12000), remainingMs);
-    const attemptTimer = setTimeout(() => attemptController.abort(), attemptTimeoutMs);
-
-    try {
-      const generationConfig: Record<string, unknown> = {
-        temperature: options.temperature ?? 0.2,
-        maxOutputTokens: options.maxTokens ?? 800,
-      };
-      if (options.responseJson) generationConfig.responseMimeType = 'application/json';
-
-      const payload: Record<string, unknown> = { contents, generationConfig };
-      if (options.systemInstruction) {
-        payload.systemInstruction = { parts: [{ text: options.systemInstruction }] };
-      }
-
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
-          body: JSON.stringify(payload),
-          signal: AbortSignal.any([controller.signal, attemptController.signal]),
-        },
-      );
-
-      const raw = await response.text();
-      if (!response.ok) {
-        lastStatus = response.status;
-        lastError = `Gemini (${model}): ${extractErrorMessage(raw, response.status)}`;
-        console.warn('[GeminiClient] Provider error', { model, status: response.status });
-        if (shouldTryFallback(response.status)) continue;
-        break;
-      }
-
-      let data: {
-        candidates?: Array<{
-          content?: { parts?: Array<{ text?: string }> };
-          finishReason?: string;
-        }>;
-        error?: { message?: string };
-      };
-      try {
-        data = raw ? JSON.parse(raw) : {};
-      } catch {
-        lastError = `Réponse JSON invalide du modèle ${model}.`;
-        lastStatus = response.status;
-        continue;
-      }
-
-      const text = data.candidates?.[0]?.content?.parts
-        ?.map(part => part.text)
-        .filter((part): part is string => typeof part === 'string')
-        .join('\n')
-        .trim();
-
-      if (!text) {
-        lastError = `Réponse vide du modèle ${model}.`;
-        lastStatus = response.status;
-        continue;
-      }
-
-      return { success: true, text, modelUsed: model, httpStatus: response.status };
-    } catch (error) {
-      const wasTimeout = error instanceof Error && error.name === 'AbortError';
-      lastError = wasTimeout
-        ? (controller.signal.aborted
-            ? `Budget global dépassé (${globalTimeoutMs} ms) pendant l’appel à ${model}.`
-            : `Délai dépassé (${attemptTimeoutMs} ms) pour le modèle ${model}.`)
-        : error instanceof Error ? error.message : 'Erreur réseau Gemini inconnue.';
-      console.warn('[GeminiClient] Request failed', {
-        model,
-        reason: wasTimeout ? (controller.signal.aborted ? 'GlobalTimeout' : 'AttemptTimeout') : error instanceof Error ? error.name : 'unknown',
-      });
-    } finally {
-      clearTimeout(attemptTimer);
-    }
-  }
-  } finally {
-    clearTimeout(timer);
-  }
-
-  return { success: false, error: lastError, httpStatus: lastStatus };
+  return {
+    success: false, error: lastError, httpStatus: lastStatus, keyAlias: lastAlias,
+    attempts, failovers: Math.max(0, attempts - 1), latencyMs: Date.now() - startedAt,
+    errorCategory: lastCategory,
+  };
 }
