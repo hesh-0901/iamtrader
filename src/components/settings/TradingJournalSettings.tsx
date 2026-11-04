@@ -11,6 +11,8 @@ interface TradingJournalSettingsProps {
 const inputClass = 'w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10';
 const labelClass = 'mb-1.5 block text-xs font-semibold text-slate-600';
 
+type ExnessBrokerSpecsView = { broker: string; contractSize: number; contractUnit: string; pipSize: number; minVolume: number; valueCurrency: string; sourceUrl: string; };
+
 type MarketQuoteView = {
   symbol: string; price: number; currency: string | null; bid: number | null; ask: number | null;
   changePercent: number | null; timestamp: string | null; source: string; isProxy: boolean; note: string;
@@ -29,6 +31,7 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
   const [suggestingInstrument, setSuggestingInstrument] = useState(false);
   const [instrumentSuggestionNote, setInstrumentSuggestionNote] = useState('');
   const [marketQuote, setMarketQuote] = useState<MarketQuoteView | null>(null);
+  const [brokerSpecs, setBrokerSpecs] = useState<ExnessBrokerSpecsView | null>(null);
   const [marketQuoteLoading, setMarketQuoteLoading] = useState(false);
   const [setupFormOpen, setSetupFormOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ type: 'instrument' | 'setup'; id: string; label: string } | null>(null);
@@ -98,6 +101,7 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
 
   const requestInstrumentSuggestion = async (symbol: string) => {
     setMarketQuote(null);
+    setBrokerSpecs(null);
     setMarketQuoteLoading(true);
     void fetch('/api/market-data?symbol=' + encodeURIComponent(symbol), { cache: 'no-store' })
       .then(response => response.json())
@@ -124,6 +128,7 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
         valuePerPriceUnit: number | null;
         defaultPositionSize: number;
       };
+      brokerSpecs?: ExnessBrokerSpecsView;
       note?: string;
     };
     if (!response.ok || !data.instrument) {
@@ -136,7 +141,7 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
     ) {
       throw new Error('La réponse de Chloé est incomplète. Complétez les paramètres manuellement.');
     }
-    return { suggestion, note: data.note || '' };
+    return { suggestion, note: data.note || '', brokerSpecs: data.brokerSpecs || null };
   };
 
   const closeInstrumentForm = () => {
@@ -145,6 +150,7 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
     setInstrumentDetailsOpen(false);
     setInstrumentSuggestionNote('');
     setMarketQuote(null);
+    setBrokerSpecs(null);
     setInstrument({ id: '', symbol: '', name: '', category: 'forex', priceStep: '', valuePerPriceUnit: '', defaultPositionSize: '' });
   };
 
@@ -186,7 +192,8 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
       setSuggestingInstrument(true);
       void (async () => {
         try {
-          const { suggestion, note } = await requestInstrumentSuggestion(symbol);
+          const { suggestion, note, brokerSpecs: specs } = await requestInstrumentSuggestion(symbol);
+          setBrokerSpecs(specs);
           setInstrument(current => ({
             ...current,
             symbol,
@@ -198,12 +205,16 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
           }));
           setInstrumentSuggestionNote(note || 'Paramètres proposés par Chloé. Vérifiez les spécifications exactes de votre broker avant l’enregistrement.');
         } catch (error: any) {
-          setInstrument(current => ({
-            ...suggestInstrument(symbol, current),
-            symbol
-          }));
-          setInstrumentSuggestionNote('Échec des fournisseurs IA. Les valeurs manquantes restent à renseigner ; vérifiez les spécifications du broker.');
-          showToast(error?.message || 'Complétez les paramètres manuellement.', 'error');
+          const isExnessGoldUsd = symbol === 'XAUUSD' && (userProfile?.settings?.defaultCurrency || 'USD') === 'USD';
+          if (isExnessGoldUsd) {
+            setInstrument(current => ({ ...suggestInstrument(symbol, current), symbol, name: 'Gold / US Dollar', category: 'metal', priceStep: '0.01', valuePerPriceUnit: '100', defaultPositionSize: '0.01' }));
+            setBrokerSpecs({ broker: 'Exness', contractSize: 100, contractUnit: 'troy ounces', pipSize: 0.01, minVolume: 0.01, valueCurrency: 'USD', sourceUrl: 'https://get.exness.help/hc/fr/articles/17854173039388-Mati%C3%A8res-premi%C3%A8res' });
+            setInstrumentSuggestionNote('Profil Exness de secours utilisé : contrat 100 onces troy, pip 0,01, minimum 0,01 lot. 1 lot = 100 USD par variation de prix de 1,00. Source officielle Exness ci-dessous.');
+          } else {
+            setInstrument(current => ({ ...suggestInstrument(symbol, current), symbol }));
+            setInstrumentSuggestionNote('Échec des fournisseurs IA. Les spécifications de valeur restent à renseigner ; vérifiez la devise du compte et le contrat du broker.');
+            showToast(error?.message || 'Complétez les paramètres manuellement.', 'error');
+          }
         } finally {
           setSuggestingInstrument(false);
           pendingInstrumentSymbols.current.delete(symbol);
@@ -324,13 +335,25 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
                     <div className="flex items-center justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-wide text-slate-500">Cotation du marché</p><p className="mt-1 text-[11px] text-slate-400">Source publique indicative · non garantie temps réel</p></div>{marketQuoteLoading && <Loader2 className="h-4 w-4 animate-spin text-emerald-600"/>}</div>
                     {marketQuote ? <><div className="mt-3 flex flex-wrap items-baseline gap-2"><span className="text-2xl font-black tabular-nums text-slate-950">{new Intl.NumberFormat(undefined, { maximumFractionDigits: 8 }).format(marketQuote.price)}</span><span className="text-xs font-semibold text-slate-500">{marketQuote.currency || ''}</span>{marketQuote.changePercent != null && <span className={'text-xs font-bold ' + (marketQuote.changePercent >= 0 ? 'text-emerald-700' : 'text-rose-700')}>{marketQuote.changePercent >= 0 ? '+' : ''}{marketQuote.changePercent.toFixed(2)}%</span>}</div><div className="mt-3 grid grid-cols-2 gap-2 text-xs"><div className="rounded-xl bg-white p-2.5"><span className="text-slate-400">Bid</span><p className="mt-1 font-bold tabular-nums text-slate-800">{marketQuote.bid == null ? '—' : marketQuote.bid}</p></div><div className="rounded-xl bg-white p-2.5"><span className="text-slate-400">Ask</span><p className="mt-1 font-bold tabular-nums text-slate-800">{marketQuote.ask == null ? '—' : marketQuote.ask}</p></div></div><p className="mt-2 text-[11px] leading-5 text-slate-500">{marketQuote.source}{marketQuote.timestamp ? ' · ' + new Date(marketQuote.timestamp).toLocaleString() : ''}{marketQuote.isProxy ? ' · Indice proxy' : ''}</p><p className="mt-1 text-[11px] leading-5 text-amber-700">{marketQuote.note}</p></> : <p className="mt-3 text-xs leading-5 text-slate-500">{marketQuoteLoading ? 'Recherche de la cotation…' : 'Cotation indisponible pour ce symbole. Les autres informations de l’instrument restent configurables.'}</p>}
                   </div>
+                  {brokerSpecs && (
+                    <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4">
+                      <p className="text-xs font-bold uppercase tracking-wide text-emerald-900">Spécifications officielles · {brokerSpecs.broker}</p>
+                      <div className="mt-2 grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
+                        <div className="rounded-xl bg-white p-2.5"><span className="text-slate-500">Taille du contrat</span><p className="mt-1 font-bold text-slate-900">{brokerSpecs.contractSize} {brokerSpecs.contractUnit}</p></div>
+                        <div className="rounded-xl bg-white p-2.5"><span className="text-slate-500">Taille du pip</span><p className="mt-1 font-bold text-slate-900">{brokerSpecs.pipSize}</p></div>
+                        <div className="rounded-xl bg-white p-2.5"><span className="text-slate-500">Volume minimum</span><p className="mt-1 font-bold text-slate-900">{brokerSpecs.minVolume} lot</p></div>
+                      </div>
+                      <p className="mt-2 text-xs leading-5 text-emerald-900">Valeur par 1,00 : 100 USD pour 1 lot · valeur d’un pip : 1 USD par lot.</p>
+                      <a href={brokerSpecs.sourceUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex text-xs font-semibold text-emerald-800 underline underline-offset-2">Consulter la fiche officielle Exness</a>
+                    </div>
+                  )}
                   <div className="flex items-center gap-2 text-sm font-bold text-slate-800"><CheckCircle2 className="h-4 w-4 text-emerald-600"/> Paramètres modifiables</div>
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div><label className={labelClass}>Nom *</label><input className={inputClass} value={instrument.name} onChange={e=>setInstrument(v=>({...v,name:e.target.value}))} placeholder="Gold"/></div>
                     <div><label className={labelClass}>Catégorie</label><select className={inputClass} value={instrument.category} onChange={e=>setInstrument(v=>({...v,category:e.target.value as TradingInstrument['category']}))}><option value="forex">Forex</option><option value="metal">Métal</option><option value="index">Indice</option><option value="futures">Futures</option><option value="crypto">Crypto</option><option value="stock">Action</option><option value="other">Autre</option></select></div>
                     <div><label className={labelClass}>Pas de prix *</label><input type="number" step="any" min="0" className={inputClass} value={instrument.priceStep} onChange={e=>setInstrument(v=>({...v,priceStep:e.target.value}))} placeholder="À renseigner"/></div>
-                    <div><label className={labelClass}>Valeur par 1.00 *</label><input type="number" step="any" min="0" className={inputClass} value={instrument.valuePerPriceUnit} onChange={e=>setInstrument(v=>({...v,valuePerPriceUnit:e.target.value}))} placeholder="À vérifier auprès du broker"/></div>
-                    <div><label className={labelClass}>Taille par défaut</label><input type="number" step="any" min="0" className={inputClass} value={instrument.defaultPositionSize} onChange={e=>setInstrument(v=>({...v,defaultPositionSize:e.target.value}))} placeholder="1"/></div>
+                    <div><label className={labelClass}>Valeur par 1.00 *</label><input type="number" step="any" min="0" className={inputClass} value={instrument.valuePerPriceUnit} onChange={e=>setInstrument(v=>({...v,valuePerPriceUnit:e.target.value}))} placeholder="100 USD par 1 lot (Exness)"/></div>
+                    <div><label className={labelClass}>Taille par défaut</label><input type="number" step="any" min="0" className={inputClass} value={instrument.defaultPositionSize} onChange={e=>setInstrument(v=>({...v,defaultPositionSize:e.target.value}))} placeholder="0.01"/></div>
                   </div>
                   <div className="rounded-xl border border-amber-200/80 bg-amber-50/70 px-3.5 py-3 text-xs leading-5 text-amber-900"><strong>À vérifier :</strong> les paramètres peuvent varier selon le broker. {instrumentSuggestionNote || 'Vérifiez le contrat et la valeur du lot avant de les utiliser pour calculer le risque.'}</div>
                 </div>
