@@ -3,7 +3,7 @@ export type TradeResult = 'WIN' | 'LOSS' | 'BREAKEVEN' | 'OPEN';
 export type TradingSession = 'Asia' | 'London' | 'New York' | 'Overlap';
 export type TradingTimeframe = '1m' | '5m' | '15m' | '1h' | '4h' | '1D';
 
-export type TradingInstrumentCategory = 'forex' | 'metal' | 'index' | 'futures' | 'crypto' | 'stock' | 'other';
+export type TradingInstrumentCategory = 'forex' | 'metal' | 'index' | 'commodity' | 'futures' | 'crypto' | 'stock' | 'etf' | 'bond' | 'option' | 'synthetic' | 'other';
 
 export interface TradingInstrument {
   id: string;
