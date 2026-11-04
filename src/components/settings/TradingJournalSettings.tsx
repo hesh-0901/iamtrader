@@ -304,54 +304,85 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
       </div>
       {instrumentFormOpen && (
         <div className="fixed inset-0 z-[130] flex items-center justify-center bg-slate-950/60 p-3 backdrop-blur-sm sm:p-6" onMouseDown={event => { if (event.target === event.currentTarget && !suggestingInstrument && !saving) closeInstrumentForm(); }}>
-          <div role="dialog" aria-modal="true" aria-labelledby="instrument-modal-title" className="flex max-h-[88dvh] w-full max-w-lg flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
-            <div className="flex items-start justify-between gap-4 border-b border-slate-100 px-5 py-4 sm:px-6">
+          <div role="dialog" aria-modal="true" aria-labelledby="instrument-modal-title" className="flex max-h-[88dvh] w-full max-w-xl flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl">
+            <div className="flex items-center justify-between gap-4 border-b border-slate-100 bg-white px-5 py-4 sm:px-6">
               <div className="flex min-w-0 items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700"><CandlestickChart className="h-5 w-5"/></div>
-                <div className="min-w-0"><h3 id="instrument-modal-title" className="text-base font-extrabold text-slate-950">{editingInstrumentId ? 'Modifier l’instrument' : 'Ajouter un instrument'}</h3><p className="mt-0.5 text-xs text-slate-500">Paramètres de calcul de l’instrument.</p></div>
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700 ring-1 ring-emerald-100"><CandlestickChart className="h-5 w-5"/></div>
+                <div className="min-w-0">
+                  <h3 id="instrument-modal-title" className="text-base font-extrabold tracking-tight text-slate-950">{editingInstrumentId ? 'Modifier l’instrument' : 'Ajouter un instrument'}</h3>
+                  <p className="mt-1 text-xs text-slate-500">Identité et paramètres utilisés pour les calculs du journal.</p>
+                </div>
               </div>
-              <button type="button" aria-label="Fermer" disabled={suggestingInstrument || saving} onClick={closeInstrumentForm} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-40"><X className="h-5 w-5"/></button>
+              <button type="button" aria-label="Fermer" disabled={suggestingInstrument || saving} onClick={closeInstrumentForm} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-40"><X className="h-5 w-5"/></button>
             </div>
-            <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 sm:p-5">
-              <div>
-                <label className={labelClass}>Symbole de l’instrument *</label>
-                <input className={inputClass} value={instrument.symbol} onChange={e => setInstrument(v => suggestInstrument(e.target.value, v))} placeholder="XAUUSD, EURUSD, NAS100…" autoComplete="off" disabled={suggestingInstrument}/>
-              </div>
+
+            <div className="min-h-0 flex-1 space-y-6 overflow-y-auto px-5 py-5 sm:px-6 sm:py-6">
+              <section className="space-y-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900">Identification</h4>
+                    <p className="mt-0.5 text-xs text-slate-500">Commencez par le symbole négocié chez votre broker.</p>
+                  </div>
+                  <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-slate-500">Étape 1</span>
+                </div>
+                <div>
+                  <label className={labelClass}>Symbole de l’instrument <span className="text-rose-500">*</span></label>
+                  <input className={inputClass} value={instrument.symbol} onChange={e => setInstrument(v => suggestInstrument(e.target.value, v))} placeholder="Ex. XAUUSD, EURUSD, NAS100" autoComplete="off" disabled={suggestingInstrument}/>
+                </div>
+              </section>
+
               {suggestingInstrument && (
-                <div className="flex items-center gap-3 rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4">
-                  <Loader2 className="h-5 w-5 animate-spin text-emerald-600"/>
-                  <div><p className="text-sm font-semibold text-slate-800">Chloé analyse {instrument.symbol.toUpperCase()}…</p><p className="mt-0.5 text-xs text-slate-500">Préparation des caractéristiques de l’instrument.</p></div>
+                <div className="flex items-center gap-3 rounded-2xl border border-emerald-100 bg-emerald-50/70 p-4">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-emerald-600"><Loader2 className="h-5 w-5 animate-spin"/></div>
+                  <div><p className="text-sm font-bold text-slate-800">Chloé analyse {instrument.symbol.toUpperCase()}…</p><p className="mt-1 text-xs leading-5 text-slate-500">Recherche des caractéristiques de l’instrument. Vous pourrez vérifier les valeurs avant l’enregistrement.</p></div>
                 </div>
               )}
+
               {instrumentDetailsOpen && (
-                <div className="space-y-4 border-t border-slate-100 pt-4">
-                                    {brokerSpecs && (
-                    <details className="rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3">
-                      <summary className="cursor-pointer list-none text-xs font-semibold text-slate-700">
-                        Spécifications {brokerSpecs.broker} · Contrat {brokerSpecs.contractSize} {brokerSpecs.contractUnit}
-                        <span className="ml-1 text-slate-400">— voir détails</span>
+                <>
+                  {brokerSpecs && (
+                    <details className="group rounded-2xl border border-slate-200 bg-slate-50/80 p-4">
+                      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-semibold text-slate-800">
+                        <span>Référence broker · {brokerSpecs.broker}<span className="mt-1 block text-xs font-normal text-slate-500">Contrat : {brokerSpecs.contractSize} {brokerSpecs.contractUnit}</span></span>
+                        <span className="shrink-0 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-emerald-700 group-open:hidden">Voir</span>
+                        <span className="hidden shrink-0 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-600 group-open:inline">Masquer</span>
                       </summary>
-                      <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-500">
-                        <span>Pip : <strong className="text-slate-700">{brokerSpecs.pipSize}</strong></span>
-                        <span>Minimum : <strong className="text-slate-700">{brokerSpecs.minVolume} lot</strong></span>
-                        <span>Valeur / 1,00 : <strong className="text-slate-700">{instrument.valuePerPriceUnit ? `${instrument.valuePerPriceUnit} ${brokerSpecs.valueCurrency}` : 'à confirmer'}</strong></span>
+                      <div className="mt-4 grid grid-cols-2 gap-3 border-t border-slate-200 pt-3 sm:grid-cols-3">
+                        <div><p className="text-[11px] text-slate-500">Pas / pip</p><p className="mt-1 text-sm font-bold text-slate-800">{brokerSpecs.pipSize}</p></div>
+                        <div><p className="text-[11px] text-slate-500">Volume minimum</p><p className="mt-1 text-sm font-bold text-slate-800">{brokerSpecs.minVolume} lot</p></div>
+                        <div><p className="text-[11px] text-slate-500">Valeur / 1,00</p><p className="mt-1 text-sm font-bold text-slate-800">{instrument.valuePerPriceUnit ? instrument.valuePerPriceUnit + ' ' + brokerSpecs.valueCurrency : 'À confirmer'}</p></div>
                       </div>
-                      <a href={brokerSpecs.sourceUrl} target="_blank" rel="noreferrer" className="mt-2 inline-flex text-xs font-semibold text-emerald-700 underline underline-offset-2">Source {brokerSpecs.broker}</a>
+                      <a href={brokerSpecs.sourceUrl} target="_blank" rel="noreferrer" className="mt-3 inline-flex text-xs font-semibold text-emerald-700 underline underline-offset-2">Consulter la source officielle</a>
                     </details>
                   )}
-                  <div className="text-xs font-semibold text-slate-500">Paramètres de calcul</div>
-                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                    <div><label className={labelClass}>Nom *</label><input className={inputClass} value={instrument.name} onChange={e=>setInstrument(v=>({...v,name:e.target.value}))} placeholder="Gold"/></div>
-                    <div><label className={labelClass}>Catégorie</label><select className={inputClass} value={instrument.category} onChange={e=>setInstrument(v=>({...v,category:e.target.value as TradingInstrument['category']}))}><option value="forex">Forex</option><option value="metal">Métal</option><option value="index">Indice</option><option value="futures">Futures</option><option value="crypto">Crypto</option><option value="stock">Action</option><option value="other">Autre</option></select></div>
-                    <div><label className={labelClass}>Pas de prix *</label><input type="number" step="any" min="0" className={inputClass} value={instrument.priceStep} onChange={e=>setInstrument(v=>({...v,priceStep:e.target.value}))} placeholder="À renseigner"/></div>
-                    <div><label className={labelClass}>Valeur par 1.00 *</label><input type="number" step="any" min="0" className={inputClass} value={instrument.valuePerPriceUnit} onChange={e=>setInstrument(v=>({...v,valuePerPriceUnit:e.target.value}))} placeholder="Valeur dans la devise du compte pour 1,00"/></div>
-                    <div><label className={labelClass}>Taille par défaut</label><input type="number" step="any" min="0" className={inputClass} value={instrument.defaultPositionSize} onChange={e=>setInstrument(v=>({...v,defaultPositionSize:e.target.value}))} placeholder="0.01"/></div>
+
+                  <section className="space-y-4 border-t border-slate-100 pt-5">
+                    <div className="flex items-center justify-between gap-3">
+                      <div>
+                        <h4 className="text-sm font-bold text-slate-900">Paramètres de calcul</h4>
+                        <p className="mt-0.5 text-xs text-slate-500">Ces valeurs déterminent le calcul du risque et du résultat.</p>
+                      </div>
+                      <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider text-emerald-700">Étape 2</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 gap-x-4 gap-y-4 sm:grid-cols-2">
+                      <div><label className={labelClass}>Nom <span className="text-rose-500">*</span></label><input className={inputClass} value={instrument.name} onChange={e=>setInstrument(v=>({...v,name:e.target.value}))} placeholder="Ex. Gold / US Dollar"/></div>
+                      <div><label className={labelClass}>Catégorie</label><select className={inputClass} value={instrument.category} onChange={e=>setInstrument(v=>({...v,category:e.target.value as TradingInstrument['category']}))}><option value="forex">Forex</option><option value="metal">Métal</option><option value="index">Indice</option><option value="futures">Futures</option><option value="crypto">Crypto</option><option value="stock">Action</option><option value="other">Autre</option></select></div>
+                      <div><label className={labelClass}>Pas de prix <span className="text-rose-500">*</span></label><input type="number" step="any" min="0" className={inputClass} value={instrument.priceStep} onChange={e=>setInstrument(v=>({...v,priceStep:e.target.value}))} placeholder="Ex. 0.01"/><p className="mt-1.5 text-[11px] text-slate-400">Plus petite variation de prix prise en compte.</p></div>
+                      <div><label className={labelClass}>Valeur par 1,00 <span className="text-rose-500">*</span></label><input type="number" step="any" min="0" className={inputClass} value={instrument.valuePerPriceUnit} onChange={e=>setInstrument(v=>({...v,valuePerPriceUnit:e.target.value}))} placeholder="Ex. 100"/><p className="mt-1.5 text-[11px] text-slate-400">Valeur dans la devise de votre compte, pour 1 lot.</p></div>
+                      <div className="sm:col-span-2"><label className={labelClass}>Taille de position par défaut <span className="font-normal text-slate-400">(facultatif)</span></label><input type="number" step="any" min="0" className={inputClass} value={instrument.defaultPositionSize} onChange={e=>setInstrument(v=>({...v,defaultPositionSize:e.target.value}))} placeholder="Ex. 0.01"/><p className="mt-1.5 text-[11px] text-slate-400">Préremplie lors de la saisie d’une opération. Vous pourrez toujours la modifier.</p></div>
+                    </div>
+                  </section>
+
+                  <div className="flex gap-3 rounded-2xl border border-amber-200/80 bg-amber-50/70 p-4 text-xs leading-5 text-amber-950">
+                    <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-amber-700"/>
+                    <p><strong className="font-bold">Vérification recommandée.</strong> Les spécifications peuvent varier selon le broker et le type de compte. {instrumentSuggestionNote || 'Confirmez le contrat et la valeur du lot avant d’utiliser ces paramètres pour calculer votre risque.'}</p>
                   </div>
-                  <div className="rounded-xl border border-amber-200/80 bg-amber-50/70 px-3.5 py-3 text-xs leading-5 text-amber-900"><strong>À vérifier :</strong> les paramètres peuvent varier selon le broker. {instrumentSuggestionNote || 'Vérifiez le contrat et la valeur du lot avant de les utiliser pour calculer le risque.'}</div>
-                </div>
+                </>
               )}
             </div>
-            <div className="flex flex-col-reverse gap-2 border-t border-slate-100 bg-slate-50/70 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+
+            <div className="flex flex-col-reverse gap-2 border-t border-slate-100 bg-slate-50/80 px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
               <button type="button" disabled={saving || suggestingInstrument} onClick={closeInstrumentForm} className="inline-flex w-full items-center justify-center rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50 disabled:opacity-40 sm:w-auto">Annuler</button>
               <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row sm:justify-end">
                 {!instrumentDetailsOpen && !editingInstrumentId ? (
