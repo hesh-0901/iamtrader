@@ -41,7 +41,7 @@ export interface AIEnvironment {
 
 export type AICallOverrides = Pick<
   GeminiRequestOptions,
-  'systemInstruction' | 'temperature' | 'maxTokens' | 'responseJson' | 'timeoutMs' | 'globalTimeoutMs'
+  'systemInstruction' | 'temperature' | 'maxTokens' | 'responseJson' | 'timeoutMs' | 'globalTimeoutMs' | 'fallbackModels'
 >;
 
 interface AssistantConfig {
@@ -64,8 +64,8 @@ const ASSISTANT_CONFIG: Record<AIAssistantId, AssistantConfig> = {
     model: env => env.GEMINI_VYRA_MODEL?.trim() || env.GEMINI_MODEL?.trim() || 'gemini-3.5-flash-lite',
     temperature: 0.3,
     maxTokens: 1200,
-    timeoutMs: 6500,
-    globalTimeoutMs: 16000,
+    timeoutMs: 15000,
+    globalTimeoutMs: 45000,
   },
   'instrument-suggest': {
     model: env => env.GEMINI_INSTRUMENT_MODEL?.trim() || env.GEMINI_CHLOE_MODEL?.trim() || env.GEMINI_MODEL?.trim() || 'gemini-3.8-flash',
@@ -147,7 +147,7 @@ export async function callAI(
   const geminiResult = geminiConfigured ? await callGeminiUnified(contents, {
     apiKeys: [env.GEMINI_API_KEY, env.GEMINI_API_KEY_2, env.GEMINI_API_KEY_3, env.GEMINI_API_KEY_4],
     preferredModel: config.model(env),
-    fallbackModels: [],
+    fallbackModels: overrides.fallbackModels ?? [],
     temperature: overrides.temperature ?? config.temperature,
     maxTokens: overrides.maxTokens ?? config.maxTokens,
     timeoutMs: overrides.timeoutMs ?? config.timeoutMs,
