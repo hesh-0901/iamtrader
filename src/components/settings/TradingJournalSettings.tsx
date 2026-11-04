@@ -2,6 +2,7 @@ import React, { useMemo, useRef, useState } from 'react';
 import { Plus, Trash2, Pencil, Loader2, Settings2, CandlestickChart, Layers3, X, CheckCircle2, Sparkles, AlertTriangle } from 'lucide-react';
 import { TradingInstrument, TradingSetup, UserProfile } from '../../types';
 import { updateUserSettings } from '../../services/firestore';
+import { searchAssetCatalog } from '../../data/assetCatalog';
 import { useToast } from '../common/Toast';
 
 interface TradingJournalSettingsProps {
@@ -19,6 +20,8 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
   const [setups, setSetups] = useState<TradingSetup[]>(userProfile?.settings?.setups || []);
   const [newSetup, setNewSetup] = useState('');
   const [instrumentFormOpen, setInstrumentFormOpen] = useState(false);
+  const [assetCatalogQuery, setAssetCatalogQuery] = useState('');
+  const catalogMatches = useMemo(() => searchAssetCatalog(assetCatalogQuery, 18), [assetCatalogQuery]);
   const [editingInstrumentId, setEditingInstrumentId] = useState<string | null>(null);
   const [instrumentDetailsOpen, setInstrumentDetailsOpen] = useState(false);
   const [suggestingInstrument, setSuggestingInstrument] = useState(false);
@@ -290,6 +293,27 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
               <button type="button" aria-label="Fermer" disabled={suggestingInstrument || saving} onClick={closeInstrumentForm} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-40"><X className="h-5 w-5"/></button>
             </div>
             <div className="min-h-0 flex-1 space-y-5 overflow-y-auto p-5 sm:p-6">
+              {!editingInstrumentId && (
+                <div className="space-y-2 rounded-2xl border border-emerald-100 bg-emerald-50/40 p-3.5">
+                  <div className="flex items-center justify-between gap-2">
+                    <div><p className="text-sm font-bold text-slate-800">Catalogue universel</p><p className="text-xs text-slate-500">Recherchez un actif par symbole, nom ou marché.</p></div>
+                    <span className="rounded-full bg-white px-2 py-1 text-[10px] font-bold text-emerald-700">{catalogMatches.length} résultats</span>
+                  </div>
+                  <input className={inputClass} value={assetCatalogQuery} onChange={e=>setAssetCatalogQuery(e.target.value)} placeholder="Ex. XAUUSD, NAS100, Volatility 75, Apple…" />
+                  {assetCatalogQuery.trim() && <div className="max-h-52 space-y-1 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1.5">
+                    {catalogMatches.length ? catalogMatches.map(asset=><button key={asset.symbol} type="button" onClick={()=>{
+                      setInstrument(current=>({...current,symbol:asset.symbol,name:asset.name,category:asset.category,priceStep:'',valuePerPriceUnit:'',defaultPositionSize:'1'}));
+                      setInstrumentDetailsOpen(true);
+                      setInstrumentSuggestionNote(asset.note+' Les valeurs de tick et de contrat ne sont pas présumées universelles : confirmez-les auprès du broker.');
+                      setAssetCatalogQuery('');
+                    }} className="flex w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-left hover:bg-emerald-50">
+                      <span className="min-w-0"><span className="block truncate text-sm font-bold text-slate-800">{asset.symbol}</span><span className="block truncate text-xs text-slate-500">{asset.name} · {asset.market}</span></span>
+                      <span className="shrink-0 text-[10px] font-semibold text-amber-700">{asset.dataStatus==='reference-only'?'Référence':asset.dataStatus==='indicative'?'Indicatif':'Broker'}</span>
+                    </button>) : <p className="px-3 py-4 text-center text-xs text-slate-500">Aucun résultat. Vous pouvez saisir un symbole personnalisé.</p>}
+                  </div>}
+                  <p className="text-[11px] leading-4 text-slate-500">Les paramètres de contrat restent à confirmer selon le broker et le compte.</p>
+                </div>
+              )}
               <div>
                 <label className={labelClass}>Symbole de l’instrument *</label>
                 <input className={inputClass} value={instrument.symbol} onChange={e => setInstrument(v => suggestInstrument(e.target.value, v))} placeholder="XAUUSD, EURUSD, NAS100…" autoComplete="off" disabled={suggestingInstrument}/>
@@ -311,7 +335,7 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
                   <div className="flex items-center gap-2 text-sm font-bold text-slate-800"><CheckCircle2 className="h-4 w-4 text-emerald-600"/> Paramètres modifiables</div>
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div><label className={labelClass}>Nom *</label><input className={inputClass} value={instrument.name} onChange={e=>setInstrument(v=>({...v,name:e.target.value}))} placeholder="Gold"/></div>
-                    <div><label className={labelClass}>Catégorie</label><select className={inputClass} value={instrument.category} onChange={e=>setInstrument(v=>({...v,category:e.target.value as TradingInstrument['category']}))}><option value="forex">Forex</option><option value="metal">Métal</option><option value="index">Indice</option><option value="futures">Futures</option><option value="crypto">Crypto</option><option value="stock">Action</option><option value="other">Autre</option></select></div>
+                    <div><label className={labelClass}>Catégorie</label><select className={inputClass} value={instrument.category} onChange={e=>setInstrument(v=>({...v,category:e.target.value as TradingInstrument['category']}))}><option value="forex">Forex</option><option value="metal">Métal</option><option value="index">Indice</option><option value="synthetic">Indice synthétique</option><option value="commodity">Matière première</option><option value="futures">Futures</option><option value="crypto">Crypto</option><option value="stock">Action</option><option value="etf">ETF</option><option value="bond">Obligation</option><option value="option">Option</option><option value="other">Autre</option></select></div>
                     <div><label className={labelClass}>Pas de prix *</label><input type="number" step="any" min="0" className={inputClass} value={instrument.priceStep} onChange={e=>setInstrument(v=>({...v,priceStep:e.target.value}))} placeholder="À renseigner"/></div>
                     <div><label className={labelClass}>Valeur par 1.00 *</label><input type="number" step="any" min="0" className={inputClass} value={instrument.valuePerPriceUnit} onChange={e=>setInstrument(v=>({...v,valuePerPriceUnit:e.target.value}))} placeholder="À vérifier auprès du broker"/></div>
                     <div><label className={labelClass}>Taille par défaut</label><input type="number" step="any" min="0" className={inputClass} value={instrument.defaultPositionSize} onChange={e=>setInstrument(v=>({...v,defaultPositionSize:e.target.value}))} placeholder="1"/></div>
