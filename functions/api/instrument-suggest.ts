@@ -235,7 +235,8 @@ export async function onRequest(context: { request: Request; env: Env }) {
     return json({ error: 'Saisissez un symbole valide (ex. XAUUSD ou EURUSD).' }, 400);
   }
 
-  const catalogSymbol = symbolAliases[symbol.replace(/[^A-Z0-9]/g, '')] ?? symbol;\n  const fallback = fallbackProfile(catalogSymbol, accountCurrency);
+  const catalogSymbol = symbolAliases[symbol.replace(/[^A-Z0-9]/g, '')] ?? symbol;
+  const fallback = fallbackProfile(catalogSymbol, accountCurrency);
   const hasVerifiedValue = fallback.valuePerPriceUnit !== null && fallback.priceStep !== null;
   // Fully specified Exness catalogue entries are deterministic and do not depend on an AI provider.
   if (hasVerifiedValue && fallback.broker === 'Exness') {
