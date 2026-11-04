@@ -197,25 +197,43 @@ export async function onRequest(context: { request: Request; env: Env }) {
     parts: [{ text: message.content }],
   }));
 
-  const configuredModel = (context.env.GEMINI_VYRA_MODEL || context.env.GEMINI_MODEL || '').trim();
-  const result = await callAI('vyra', contents, context.env, {
-    systemInstruction: `${SYSTEM_INSTRUCTIONS}\n\nBASE DE CONNAISSANCES IAMTRADER\n${IAMTRADER_KNOWLEDGE}`,
-  });
+  const configuredModel = (context.env.GEMINI_VYRA_MODEL || context.env.GEMINI_MODEL || 'gemini-3.5-flash-lite').trim();
 
-  if (!result.success || !result.text) {
-    console.error('VYRA Gemini request failed:', { model: configuredModel || undefined, status: result.httpStatus });
-    return json(
-      {
-        error: 'Le service IA n’a pas pu répondre pour le moment.',
-        details: {
-          reason: result.error,
-          model: configuredModel || undefined,
-          httpStatus: result.httpStatus,
+  try {
+    const result = await callAI('vyra', contents, context.env, {
+      systemInstruction: `${SYSTEM_INSTRUCTIONS}\\n\\nBASE DE CONNAISSANCES IAMTRADER\\n${IAMTRADER_KNOWLEDGE}`,
+      // Keep the cost-efficient Flash-Lite model first, then retry on the current stable Flash model.
+      fallbackModels: ['gemini-3.8-flash'],
+      timeoutMs: 15000,
+      globalTimeoutMs: 45000,
+    });
+
+    if (!result.success || !result.text) {
+      console.error('[VYRA] Gemini request failed:', {
+        model: result.modelUsed || configuredModel,
+        status: result.httpStatus,
+        category: result.errorCategory,
+        reason: result.error,
+        attempts: result.attempts,
+        latencyMs: result.latencyMs,
+      });
+      return json(
+        {
+          error: 'VYRA est temporairement indisponible. Réessaie dans quelques instants.',
+          details: {
+            reason: result.error,
+            model: result.modelUsed || configuredModel,
+            httpStatus: result.httpStatus,
+            category: result.errorCategory,
+          },
         },
-      },
-      502
-    );
-  }
+        502
+      );
+    }
 
-  return json({ reply: result.text.trim() });
+    return json({ reply: result.text.trim() });
+  } catch (error) {
+    console.error('[VYRA] Unhandled AI route error:', error instanceof Error ? error.message : 'unknown');
+    return json({ error: 'VYRA est temporairement indisponible. Réessaie dans quelques instants.' }, 502);
+  }
 }
