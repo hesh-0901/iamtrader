@@ -28,6 +28,8 @@ interface Env {
   GEMINI_VYRA_MODEL?: string;
   GEMINI_INSTRUMENT_MODEL?: string;
   GEMINI_ECONOMIC_MODEL?: string;
+  OPENAI_API_KEY?: string;
+  OPENAI_INSTRUMENT_MODEL?: string;
   FINNHUB_API_KEY?: string;
   RESEND_API_KEY?: string;
   RESEND_FROM_EMAIL?: string;
