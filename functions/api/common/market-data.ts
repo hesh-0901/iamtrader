@@ -52,6 +52,12 @@ const INDEX_SYMBOLS: Record<string, string> = {
   HK50: '^HSI', CHINA50: '000016.SS',
 };
 
+const ENERGY_SYMBOLS: Record<string, string> = {
+  USOIL: 'CL=F', WTI: 'CL=F', UKOIL: 'BZ=F', BRENT: 'BZ=F', NATGAS: 'NG=F', NATURALGAS: 'NG=F',
+};
+
+const ISO_CURRENCIES = new Set('USD EUR GBP JPY CHF CAD AUD NZD CNY CNH HKD SGD SEK NOK DKK PLN CZK HUF TRY MXN ZAR BRL INR KRW TWD THB ILS AED SAR RUB XAU XAG XPD XPT'.split(' '));
+
 const FUTURE_SYMBOLS: Record<string, string> = {
   ES: 'ES=F', MES: 'MES=F', NQ: 'NQ=F', MNQ: 'MNQ=F',
   YM: 'YM=F', MYM: 'MYM=F', RTY: 'RTY=F', M2K: 'M2K=F',
@@ -65,14 +71,18 @@ function mapSymbol(raw: string): SymbolMapping {
   if (INDEX_SYMBOLS[symbol]) {
     return { ticker: INDEX_SYMBOLS[symbol], proxy: true, note: 'Indice de référence utilisé comme proxy : il peut différer du CFD proposé par votre broker.' };
   }
+  if (ENERGY_SYMBOLS[symbol]) return { ticker: ENERGY_SYMBOLS[symbol], proxy: true, note: 'Contrat futures de référence utilisé comme proxy ; le CFD du broker peut différer.' };
   if (FUTURE_SYMBOLS[symbol]) return { ticker: FUTURE_SYMBOLS[symbol] };
-  if (symbol === 'XAUUSD') return { ticker: 'XAUUSD=X', note: 'La disponibilité du symbole spot dépend du fournisseur.' };
-  if (symbol === 'XAGUSD') return { ticker: 'XAGUSD=X', note: 'La disponibilité du symbole spot dépend du fournisseur.' };
-  if (/^(BTC|ETH|SOL|XRP|ADA|DOGE|BNB|LTC|BCH|AVAX|DOT|LINK|TRX|TON|XLM|SHIB)(USD|USDT)$/.test(symbol)) {
-    const base = symbol.replace(/USDT?$/, '');
-    return { ticker: base + '-USD', note: symbol.endsWith('USDT') ? 'La cotation USD est utilisée comme approximation de la paire USDT.' : undefined };
+  if (symbol === 'XAUUSD' || symbol === 'XAGUSD') return { ticker: symbol + '=X', note: 'La disponibilité du symbole spot dépend du fournisseur.' };
+  if (/^[A-Z]{6}$/.test(symbol)) {
+    const base = symbol.slice(0, 3);
+    const quote = symbol.slice(3, 6);
+    if (ISO_CURRENCIES.has(base) && ISO_CURRENCIES.has(quote)) return { ticker: symbol + '=X' };
+    return { ticker: base + '-' + quote };
   }
-  if (/^[A-Z]{6}$/.test(symbol)) return { ticker: symbol + '=X' };
+  if (/^[A-Z]{3,12}USDT$/.test(symbol)) {
+    return { ticker: symbol.slice(0, -4) + '-USD', note: 'La cotation USD est utilisée comme approximation de la paire USDT.' };
+  }
   if (symbol === 'XAUUSD') return { ticker: 'XAUUSD=X', note: 'La disponibilité du symbole spot dépend du fournisseur.' };
   if (symbol === 'XAGUSD') return { ticker: 'XAGUSD=X', note: 'La disponibilité du symbole spot dépend du fournisseur.' };
   return { ticker: symbol };
