@@ -113,13 +113,6 @@ defaultPositionSize doit être 1. N'invente jamais priceStep ni valuePerPriceUni
   const valuePerPriceUnit = positiveNumber(suggestion.valuePerPriceUnit);
   const defaultPositionSize = positiveNumber(suggestion.defaultPositionSize) ?? 1;
 
-  if (!priceStep || !valuePerPriceUnit) {
-    return json({
-      error: 'Les paramètres proposés sont incomplets. Veuillez vérifier les spécifications auprès de votre broker.',
-      requiresReview: true,
-    });
-  }
-
   return json({
     instrument: {
       symbol,
@@ -133,7 +126,7 @@ defaultPositionSize doit être 1. N'invente jamais priceStep ni valuePerPriceUni
     },
     note: typeof suggestion.note === 'string'
       ? suggestion.note.trim().slice(0, 500)
-      : 'Vérifiez les spécifications de votre broker avant d’utiliser ces valeurs pour calculer le risque.',
+      : 'Les spécifications contractuelles peuvent varier selon le broker. Les champs non vérifiés doivent être complétés avant tout calcul de risque.',
     requiresReview: true,
     provider: result.keyAlias === 'OPENAI_PRIMARY' ? 'openai' : 'gemini',
     modelUsed: result.modelUsed,

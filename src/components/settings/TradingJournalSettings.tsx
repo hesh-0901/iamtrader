@@ -11,6 +11,11 @@ interface TradingJournalSettingsProps {
 const inputClass = 'w-full min-w-0 rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10';
 const labelClass = 'mb-1.5 block text-xs font-semibold text-slate-600';
 
+type MarketQuoteView = {
+  symbol: string; price: number; currency: string | null; bid: number | null; ask: number | null;
+  changePercent: number | null; timestamp: string | null; source: string; isProxy: boolean; note: string;
+};
+
 export function TradingJournalSettings({ userProfile }: TradingJournalSettingsProps) {
   const { showToast } = useToast();
   const [instruments, setInstruments] = useState<TradingInstrument[]>(userProfile?.settings?.instruments || []);
@@ -23,6 +28,8 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
   const [instrumentDetailsOpen, setInstrumentDetailsOpen] = useState(false);
   const [suggestingInstrument, setSuggestingInstrument] = useState(false);
   const [instrumentSuggestionNote, setInstrumentSuggestionNote] = useState('');
+  const [marketQuote, setMarketQuote] = useState<MarketQuoteView | null>(null);
+  const [marketQuoteLoading, setMarketQuoteLoading] = useState(false);
   const [setupFormOpen, setSetupFormOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ type: 'instrument' | 'setup'; id: string; label: string } | null>(null);
   const [instrument, setInstrument] = useState<TradingInstrument>({
@@ -90,6 +97,14 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
   };
 
   const requestInstrumentSuggestion = async (symbol: string) => {
+    setMarketQuote(null);
+    setMarketQuoteLoading(true);
+    void fetch('/api/market-data?symbol=' + encodeURIComponent(symbol), { cache: 'no-store' })
+      .then(response => response.json())
+      .then(data => setMarketQuote(data?.quote || null))
+      .catch(() => setMarketQuote(null))
+      .finally(() => setMarketQuoteLoading(false));
+
     const response = await fetch('/api/instruments/suggest', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -105,8 +120,8 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
         symbol: string;
         name: string;
         category: TradingInstrument['category'];
-        priceStep: number;
-        valuePerPriceUnit: number;
+        priceStep: number | null;
+        valuePerPriceUnit: number | null;
         defaultPositionSize: number;
       };
       note?: string;
@@ -117,11 +132,7 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
     const suggestion = data.instrument;
     if (
       suggestion.symbol?.toUpperCase() !== symbol ||
-      !suggestion.name?.trim() ||
-      !Number.isFinite(Number(suggestion.priceStep)) ||
-      Number(suggestion.priceStep) <= 0 ||
-      !Number.isFinite(Number(suggestion.valuePerPriceUnit)) ||
-      Number(suggestion.valuePerPriceUnit) <= 0
+      !suggestion.name?.trim()
     ) {
       throw new Error('La réponse de Chloé est incomplète. Complétez les paramètres manuellement.');
     }
@@ -133,6 +144,7 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
     setEditingInstrumentId(null);
     setInstrumentDetailsOpen(false);
     setInstrumentSuggestionNote('');
+    setMarketQuote(null);
     setInstrument({ id: '', symbol: '', name: '', category: 'forex', priceStep: '', valuePerPriceUnit: '', defaultPositionSize: '' });
   };
 
@@ -180,8 +192,8 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
             symbol,
             name: suggestion.name.trim(),
             category: suggestion.category,
-            priceStep: String(suggestion.priceStep),
-            valuePerPriceUnit: String(suggestion.valuePerPriceUnit),
+            priceStep: String(suggestion.priceStep ?? ''),
+            valuePerPriceUnit: String(suggestion.valuePerPriceUnit ?? ''),
             defaultPositionSize: String(Number(suggestion.defaultPositionSize) || 1)
           }));
           setInstrumentSuggestionNote(note || 'Paramètres proposés par Chloé. Vérifiez les spécifications exactes de votre broker avant l’enregistrement.');
@@ -308,6 +320,10 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
               )}
               {instrumentDetailsOpen && (
                 <div className="space-y-4 border-t border-slate-100 pt-4">
+                  <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                    <div className="flex items-center justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-wide text-slate-500">Cotation du marché</p><p className="mt-1 text-[11px] text-slate-400">Source publique indicative · non garantie temps réel</p></div>{marketQuoteLoading && <Loader2 className="h-4 w-4 animate-spin text-emerald-600"/>}</div>
+                    {marketQuote ? <><div className="mt-3 flex flex-wrap items-baseline gap-2"><span className="text-2xl font-black tabular-nums text-slate-950">{new Intl.NumberFormat(undefined, { maximumFractionDigits: 8 }).format(marketQuote.price)}</span><span className="text-xs font-semibold text-slate-500">{marketQuote.currency || ''}</span>{marketQuote.changePercent != null && <span className={'text-xs font-bold ' + (marketQuote.changePercent >= 0 ? 'text-emerald-700' : 'text-rose-700')}>{marketQuote.changePercent >= 0 ? '+' : ''}{marketQuote.changePercent.toFixed(2)}%</span>}</div><div className="mt-3 grid grid-cols-2 gap-2 text-xs"><div className="rounded-xl bg-white p-2.5"><span className="text-slate-400">Bid</span><p className="mt-1 font-bold tabular-nums text-slate-800">{marketQuote.bid == null ? '—' : marketQuote.bid}</p></div><div className="rounded-xl bg-white p-2.5"><span className="text-slate-400">Ask</span><p className="mt-1 font-bold tabular-nums text-slate-800">{marketQuote.ask == null ? '—' : marketQuote.ask}</p></div></div><p className="mt-2 text-[11px] leading-5 text-slate-500">{marketQuote.source}{marketQuote.timestamp ? ' · ' + new Date(marketQuote.timestamp).toLocaleString() : ''}{marketQuote.isProxy ? ' · Indice proxy' : ''}</p><p className="mt-1 text-[11px] leading-5 text-amber-700">{marketQuote.note}</p></> : <p className="mt-3 text-xs leading-5 text-slate-500">{marketQuoteLoading ? 'Recherche de la cotation…' : 'Cotation indisponible pour ce symbole. Les autres informations de l’instrument restent configurables.'}</p>}
+                  </div>
                   <div className="flex items-center gap-2 text-sm font-bold text-slate-800"><CheckCircle2 className="h-4 w-4 text-emerald-600"/> Paramètres modifiables</div>
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div><label className={labelClass}>Nom *</label><input className={inputClass} value={instrument.name} onChange={e=>setInstrument(v=>({...v,name:e.target.value}))} placeholder="Gold"/></div>
