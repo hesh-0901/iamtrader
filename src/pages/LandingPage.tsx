@@ -277,10 +277,19 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
         }),
       });
 
-      const data = (await response.json().catch(() => ({}))) as { reply?: string; error?: string };
+      const data = (await response.json().catch(() => ({}))) as {
+        reply?: string;
+        error?: string;
+        details?: { reason?: string; model?: string; httpStatus?: number; category?: string };
+      };
       const reply = data.reply;
       if (!response.ok || typeof reply !== 'string') {
-        throw new Error(typeof data.error === 'string' ? data.error : 'Réponse IA indisponible.');
+        console.error('[VYRA] API request failed:', {
+          status: response.status,
+          error: data.error,
+          details: data.details,
+        });
+        throw new Error(typeof data.error === 'string' ? data.error : 'VYRA est temporairement indisponible.');
       }
 
       setAiMessages((messages) => [
