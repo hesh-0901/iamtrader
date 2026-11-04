@@ -3,6 +3,7 @@ import {
   type GeminiRequestOptions,
   type GeminiResponse,
 } from './gemini-client';
+import { firestoreSet } from '../../../worker/firebaseAdmin';
 
 /**
  * Central AI Core for IAMTRADER.
@@ -28,6 +29,7 @@ export interface AIEnvironment {
   GEMINI_API_KEY_2?: string;
   GEMINI_API_KEY_3?: string;
   GEMINI_API_KEY_4?: string;
+  FIREBASE_SERVICE_ACCOUNT_JSON?: string;
   GEMINI_MODEL?: string;
   GEMINI_CHLOE_MODEL?: string;
   GEMINI_VYRA_MODEL?: string;
@@ -107,6 +109,17 @@ export async function callAI(
     systemInstruction: overrides.systemInstruction,
     responseJson: overrides.responseJson,
   });
+  const telemetry = {
+    assistant: assistantId, provider: 'gemini', model: result.modelUsed || config.model(env),
+    keyAlias: result.keyAlias || null, status: result.httpStatus || null,
+    latencyMs: result.latencyMs || 0, attempts: result.attempts || 0,
+    failovers: result.failovers || 0, outcome: result.success ? 'success' : 'failure',
+    errorCategory: result.errorCategory || null, createdAt: new Date().toISOString(),
+  };
+  if (env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+    void firestoreSet(env, `aiTelemetry/${crypto.randomUUID()}`, telemetry)
+      .catch(error => console.warn('[IAMTRADER_AI] Telemetry persistence unavailable:', error instanceof Error ? error.message : 'unknown'));
+  }
   console.info('[IAMTRADER_AI]', JSON.stringify({
     event: 'request_completed', assistant: assistantId, provider: 'gemini',
     model: result.modelUsed || config.model(env), keyAlias: result.keyAlias || null,
