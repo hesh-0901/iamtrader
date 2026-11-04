@@ -50,3 +50,14 @@ html {
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
 }
+
+
+/* iPhone title bar: move controls below the status area without changing desktop layout. */
+@media (max-width: 639px) {
+  .iam-mobile-titlebar {
+    box-sizing: border-box;
+    height: calc(4rem + 8px + env(safe-area-inset-top)) !important;
+    padding-top: calc(8px + env(safe-area-inset-top)) !important;
+    scroll-margin-top: env(safe-area-inset-top);
+  }
+}
