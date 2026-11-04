@@ -1,6 +1,7 @@
 import { onRequest as handleAiChat } from '../functions/api/ai-chat';
 import { onRequest as handleChloeChat } from '../functions/api/chloe-chat';
 import { onRequest as handleInstrumentSuggest } from '../functions/api/instrument-suggest';
+import { onRequest as handleMarketData } from '../functions/api/market-data';
 import { onRequestPost as handleContactReply } from '../functions/api/contact-reply';
 import { handlePaymentRequest, handlePaymentCallback, handleCinetPayNotification, handleSasPayWebhook, handleSasPayVerifyRequest, handleSasPayStatusRequest } from './payments';
 import { resolvePromotion } from './promotions';
@@ -110,6 +111,10 @@ export default {
 
     if (url.pathname === '/api/instruments/suggest') {
       return handleInstrumentSuggest({ request, env });
+    }
+
+    if (url.pathname === '/api/market-data') {
+      return handleMarketData({ request });
     }
 
     if (url.pathname === '/api/contact-reply') {
