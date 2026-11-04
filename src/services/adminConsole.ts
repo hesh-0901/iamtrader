@@ -43,3 +43,8 @@ export function adminUpdatePayment(paymentId: string, data: Record<string, unkno
 }
 
 // Keep payment mutations in the same secure admin service surface as payment reads.
+
+
+export function adminGetAiMonitoring<T = unknown>(): Promise<T> {
+  return adminMutation<T>({ action: 'get-ai-monitoring' });
+}
