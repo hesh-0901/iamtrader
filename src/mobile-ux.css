@@ -1,4 +1,4 @@
-/* Mobile ergonomics: prevent iOS form-field auto-zoom without disabling pinch zoom. */
+/* Site-wide mobile ergonomics: prevent iOS input zoom on every route and overlay. */
 @media (max-width: 767px) {
   .iamtrader-shell input,
   .iamtrader-shell select,
@@ -13,6 +13,16 @@
     font-size: 16px !important;
   }
 
+  /* Avoid double-tap zoom on controls while preserving normal scrolling. */
+  .iamtrader-shell button,
+  .iamtrader-shell a,
+  .iamtrader-shell [role="button"],
+  .iamtrader-shell input,
+  .iamtrader-shell select,
+  .iamtrader-shell textarea {
+    touch-action: manipulation;
+  }
+
   .iamtrader-shell {
     overflow-x: clip;
   }
@@ -20,6 +30,12 @@
   .iamtrader-shell main {
     min-width: 0;
   }
+}
+
+/* Prevent iOS from automatically enlarging text independently of page scale. */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 /* Respect iPhone safe areas and dynamic browser chrome. */
