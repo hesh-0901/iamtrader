@@ -112,7 +112,7 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
       note?: string;
     };
     if (!response.ok || !data.instrument) {
-      throw new Error(data.error || 'Chloé ne peut pas compléter cet instrument pour le moment.');
+      throw new Error(data.error || 'Les fournisseurs IA ne peuvent pas compléter cet instrument pour le moment.');
     }
     const suggestion = data.instrument;
     if (
@@ -190,7 +190,7 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
             ...suggestInstrument(symbol, current),
             symbol
           }));
-          setInstrumentSuggestionNote('Chloé n’a pas pu compléter automatiquement cet instrument. Vous pouvez renseigner ou corriger les paramètres manuellement.');
+          setInstrumentSuggestionNote('Échec des fournisseurs IA. Les valeurs manquantes restent à renseigner ; vérifiez les spécifications du broker.');
           showToast(error?.message || 'Complétez les paramètres manuellement.', 'error');
         } finally {
           setSuggestingInstrument(false);
@@ -312,8 +312,8 @@ export function TradingJournalSettings({ userProfile }: TradingJournalSettingsPr
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                     <div><label className={labelClass}>Nom *</label><input className={inputClass} value={instrument.name} onChange={e=>setInstrument(v=>({...v,name:e.target.value}))} placeholder="Gold"/></div>
                     <div><label className={labelClass}>Catégorie</label><select className={inputClass} value={instrument.category} onChange={e=>setInstrument(v=>({...v,category:e.target.value as TradingInstrument['category']}))}><option value="forex">Forex</option><option value="metal">Métal</option><option value="index">Indice</option><option value="futures">Futures</option><option value="crypto">Crypto</option><option value="stock">Action</option><option value="other">Autre</option></select></div>
-                    <div><label className={labelClass}>Pas de prix *</label><input type="number" step="any" min="0" className={inputClass} value={instrument.priceStep} onChange={e=>setInstrument(v=>({...v,priceStep:e.target.value}))} placeholder="0.01"/></div>
-                    <div><label className={labelClass}>Valeur par 1.00 *</label><input type="number" step="any" min="0" className={inputClass} value={instrument.valuePerPriceUnit} onChange={e=>setInstrument(v=>({...v,valuePerPriceUnit:e.target.value}))} placeholder="100"/></div>
+                    <div><label className={labelClass}>Pas de prix *</label><input type="number" step="any" min="0" className={inputClass} value={instrument.priceStep} onChange={e=>setInstrument(v=>({...v,priceStep:e.target.value}))} placeholder="À renseigner"/></div>
+                    <div><label className={labelClass}>Valeur par 1.00 *</label><input type="number" step="any" min="0" className={inputClass} value={instrument.valuePerPriceUnit} onChange={e=>setInstrument(v=>({...v,valuePerPriceUnit:e.target.value}))} placeholder="À vérifier auprès du broker"/></div>
                     <div><label className={labelClass}>Taille par défaut</label><input type="number" step="any" min="0" className={inputClass} value={instrument.defaultPositionSize} onChange={e=>setInstrument(v=>({...v,defaultPositionSize:e.target.value}))} placeholder="1"/></div>
                   </div>
                   <div className="rounded-xl border border-amber-200/80 bg-amber-50/70 px-3.5 py-3 text-xs leading-5 text-amber-900"><strong>À vérifier :</strong> les paramètres peuvent varier selon le broker. {instrumentSuggestionNote || 'Vérifiez le contrat et la valeur du lot avant de les utiliser pour calculer le risque.'}</div>
