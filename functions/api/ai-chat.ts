@@ -1,9 +1,12 @@
 import { IAMTRADER_KNOWLEDGE } from './vyra-knowledge';
 import { VYRA_STYLE_INSTRUCTIONS } from './vyra-style';
-import { callAI } from './common/ai-core';
+import { callAI, isGeminiConfigured } from './common/ai-core';
 
 interface Env {
   GEMINI_API_KEY?: string;
+  GEMINI_API_KEY_2?: string;
+  GEMINI_API_KEY_3?: string;
+  GEMINI_API_KEY_4?: string;
   GEMINI_MODEL?: string;
   GEMINI_VYRA_MODEL?: string;
 }
@@ -153,9 +156,7 @@ export async function onRequest(context: { request: Request; env: Env }) {
     return json({ error: 'Méthode non autorisée.' }, 405);
   }
 
-  const apiKey = context.env.GEMINI_API_KEY?.trim();
-
-  if (!apiKey) {
+  if (!isGeminiConfigured(context.env)) {
     return json({ error: 'Assistant IA non configuré sur le serveur.' }, 500);
   }
 
