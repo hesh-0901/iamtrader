@@ -29,7 +29,7 @@ export function AIMonitoringPanel() {
   const [draftColumnFilters, setDraftColumnFilters] = useState<Record<string, string[]>>({});
   const [filterSearch, setFilterSearch] = useState<Record<string, string>>({});
   const [activeColumnFilter, setActiveColumnFilter] = useState<string | null>(null);
-  const [filterPosition, setFilterPosition] = useState<{ x: number; y: number } | null>(null);
+  const [filterPosition, setFilterPosition] = useState<{ x: number; y: number; maxHeight: number } | null>(null);
   const activeFilterHeaderRef = useRef<HTMLTableCellElement | null>(null);
   const activeFilterPopoverRef = useRef<HTMLDivElement | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: string; direction: 'asc' | 'desc' } | null>(null);
@@ -55,34 +55,71 @@ export function AIMonitoringPanel() {
   useEffect(() => { void refresh(); }, [refresh]);
   useEffect(() => {
     if (!activeColumnFilter) return;
+    let frame = 0;
     const updatePosition = () => {
       const anchor = activeFilterHeaderRef.current;
-      if (!anchor) return;
-      const rect = anchor.getBoundingClientRect();
-      const width = 320;
-      const estimatedHeight = Math.min(520, window.innerHeight * 0.7);
-      const left = Math.max(12, Math.min(rect.left, window.innerWidth - width - 12));
-      const below = rect.bottom + 8;
-      const top = below + estimatedHeight <= window.innerHeight - 12
-        ? below
-        : Math.max(12, Math.min(rect.top - estimatedHeight - 8, window.innerHeight - estimatedHeight - 12));
-      setFilterPosition({ x: left, y: top });
+      const popover = activeFilterPopoverRef.current;
+      if (!anchor || !popover) return;
+      const anchorRect = anchor.getBoundingClientRect();
+      const popoverRect = popover.getBoundingClientRect();
+      const gap = 8;
+      const edge = 12;
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const width = Math.min(popoverRect.width || 320, viewportWidth - edge * 2);
+      const height = popoverRect.height || 420;
+      const belowSpace = Math.max(0, viewportHeight - edge - anchorRect.bottom - gap);
+      const aboveSpace = Math.max(0, anchorRect.top - gap - edge);
+      const rightSpace = Math.max(0, viewportWidth - anchorRect.right - gap - edge);
+      const leftSpace = Math.max(0, anchorRect.left - gap - edge);
+
+      let x = Math.max(edge, Math.min(anchorRect.left, viewportWidth - width - edge));
+      let y = anchorRect.bottom + gap;
+      let maxHeight = Math.max(160, viewportHeight - edge * 2);
+
+      // Prefer staying attached to the header: below when it fits, otherwise above.
+      if (belowSpace >= Math.min(height, 260) || belowSpace >= aboveSpace) {
+        maxHeight = Math.max(160, Math.min(height, belowSpace));
+        y = anchorRect.bottom + gap;
+      } else if (aboveSpace > 0) {
+        maxHeight = Math.max(160, Math.min(height, aboveSpace));
+        y = anchorRect.top - gap - maxHeight;
+      }
+
+      // If vertical space is critically limited, use the side with more room.
+      if (Math.max(belowSpace, aboveSpace) < 190 && Math.max(rightSpace, leftSpace) >= Math.min(width, 240)) {
+        maxHeight = Math.max(160, Math.min(height, viewportHeight - edge * 2));
+        y = Math.max(edge, Math.min(anchorRect.top, viewportHeight - maxHeight - edge));
+        if (rightSpace >= leftSpace && rightSpace >= width) x = anchorRect.right + gap;
+        else if (leftSpace >= width) x = anchorRect.left - gap - width;
+      }
+
+      setFilterPosition(current =>
+        current && Math.abs(current.x - x) < 1 && Math.abs(current.y - y) < 1 && Math.abs(current.maxHeight - maxHeight) < 1
+          ? current
+          : { x, y, maxHeight }
+      );
     };
+    const schedulePosition = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(updatePosition);
+    };
+    schedulePosition();
     const closeOnOutsideClick = (event: PointerEvent) => {
       if (!activeFilterHeaderRef.current?.contains(event.target as Node) && !activeFilterPopoverRef.current?.contains(event.target as Node)) {
         setActiveColumnFilter(null);
       }
     };
-    updatePosition();
     document.addEventListener('pointerdown', closeOnOutsideClick);
-    window.addEventListener('resize', updatePosition);
-    window.addEventListener('scroll', updatePosition, true);
+    window.addEventListener('resize', schedulePosition);
+    window.addEventListener('scroll', schedulePosition, true);
     return () => {
+      cancelAnimationFrame(frame);
       document.removeEventListener('pointerdown', closeOnOutsideClick);
-      window.removeEventListener('resize', updatePosition);
-      window.removeEventListener('scroll', updatePosition, true);
+      window.removeEventListener('resize', schedulePosition);
+      window.removeEventListener('scroll', schedulePosition, true);
     };
-  }, [activeColumnFilter]);
+  }, [activeColumnFilter, filterSearch, draftColumnFilters]);
 
   const selectedAssistant = assistants.find(item => item.id === selectedAssistantId) || null;
   const events = data?.events || [];
@@ -124,12 +161,8 @@ export function AIMonitoringPanel() {
     setDraftColumnFilters(current => ({ ...current, [key]: columnFilters[key]?.length ? [...columnFilters[key]] : [...options] }));
     setFilterSearch(current => ({ ...current, [key]: '' }));
     const rect = trigger.getBoundingClientRect();
-    const width = 320;
-    const estimatedHeight = 470;
-    const left = Math.max(12, Math.min(rect.left, window.innerWidth - width - 12));
-    const below = rect.bottom + 8;
-    const top = below + estimatedHeight <= window.innerHeight - 12 ? below : Math.max(12, rect.top - estimatedHeight - 8);
-    setFilterPosition({ x: left, y: top });
+    const width = Math.min(320, window.innerWidth - 24);
+    setFilterPosition({ x: Math.max(12, Math.min(rect.left, window.innerWidth - width - 12)), y: Math.min(rect.bottom + 8, window.innerHeight - 180), maxHeight: Math.max(160, window.innerHeight - 24) });
     setActiveColumnFilter(current => current === key ? null : key);
   };
   const toggleColumnValue = (key: string, value: string) => {
@@ -250,7 +283,7 @@ export function AIMonitoringPanel() {
       (() => {
         const column = historyColumns.find(item => item.key === activeColumnFilter);
         if (!column) return null;
-        return <div ref={activeFilterPopoverRef} className="fixed z-[10000] max-h-[min(70vh,560px)] w-[320px] max-w-[calc(100vw-1.5rem)] overflow-y-auto overflow-x-hidden rounded-xl border border-slate-200 bg-white text-left normal-case shadow-[0_24px_70px_-18px_rgba(15,23,42,0.45)] ring-1 ring-slate-900/10" style={{left:filterPosition?.x??12,top:filterPosition?.y??12}}><div className="border-b border-slate-100 bg-slate-50/80 px-4 py-3"><div className="flex items-center justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Filtrer par</p><h4 className="mt-0.5 text-sm font-bold normal-case text-slate-800">{column.label}</h4></div><span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-semibold text-slate-500 ring-1 ring-slate-200">{(draftColumnFilters[column.key]||[]).length} / {getColumnOptions(column.key).length}</span></div></div><div className="p-3"><div className="relative"><input autoFocus value={filterSearch[column.key]||''} onChange={e=>setFilterSearch(current=>({...current,[column.key]:e.target.value}))} placeholder="Rechercher une valeur…" className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-3 pr-3 text-xs font-normal text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-100"/></div><div className="mt-3 flex items-center justify-between gap-2"><span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Valeurs disponibles</span><div className="flex items-center gap-2"><button type="button" onClick={()=>selectAllColumnValues(column.key)} className="text-[10px] font-semibold text-sky-700 hover:text-sky-900">Tout sélectionner</button><span className="text-slate-300">·</span><button type="button" onClick={()=>deselectAllColumnValues(column.key)} className="text-[10px] font-semibold text-slate-500 hover:text-slate-800">Tout désélectionner</button></div></div><div className="mt-2 max-h-56 space-y-0.5 overflow-y-auto rounded-lg border border-slate-100 bg-slate-50/60 p-1">{getColumnOptions(column.key).filter(value=>value.toLowerCase().includes((filterSearch[column.key]||'').toLowerCase())).map(value=><label key={value} className="flex cursor-pointer items-center gap-2.5 rounded-md px-2.5 py-2 text-xs font-medium text-slate-700 transition hover:bg-white hover:shadow-sm"><input type="checkbox" checked={(draftColumnFilters[column.key]||[]).includes(value)} onChange={()=>toggleColumnValue(column.key,value)} className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"/><span className="min-w-0 flex-1 break-words">{value||'(vide)'}</span></label>)}{getColumnOptions(column.key).filter(value=>value.toLowerCase().includes((filterSearch[column.key]||'').toLowerCase())).length===0&&<p className="px-2.5 py-4 text-center text-xs text-slate-400">Aucune valeur correspondante.</p>}</div></div><div className="flex items-center justify-between gap-2 border-t border-slate-100 bg-white px-3 py-3"><button type="button" onClick={()=>{clearColumnFilter(column.key);setDraftColumnFilters(current=>({...current,[column.key]:getColumnOptions(column.key)}));setActiveColumnFilter(null);}} className="rounded-lg px-2.5 py-2 text-[11px] font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800">Réinitialiser</button><div className="flex items-center gap-2"><button type="button" onClick={()=>setActiveColumnFilter(null)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold text-slate-600 hover:bg-slate-50">Annuler</button><button type="button" onClick={()=>applyColumnFilter(column.key)} className="rounded-lg bg-slate-900 px-4 py-2 text-[11px] font-bold text-white shadow-sm transition hover:bg-slate-700">OK · Appliquer</button></div></div><div className="flex gap-3 border-t border-slate-100 bg-slate-50/70 px-4 py-2"><button type="button" onClick={()=>{sortBy(column.key,'asc');}} className="text-[10px] font-medium text-slate-500 hover:text-slate-800">Trier A → Z</button><button type="button" onClick={()=>{sortBy(column.key,'desc');}} className="text-[10px] font-medium text-slate-500 hover:text-slate-800">Trier Z → A</button></div></div>;
+        return <div ref={activeFilterPopoverRef} className="fixed z-[10000] max-h-[min(70vh,560px)] w-[320px] max-w-[calc(100vw-1.5rem)] overflow-y-auto overflow-x-hidden rounded-xl border border-slate-200 bg-white text-left normal-case shadow-[0_24px_70px_-18px_rgba(15,23,42,0.45)] ring-1 ring-slate-900/10" style={{left:filterPosition?.x??12,top:filterPosition?.y??12,maxHeight:filterPosition?.maxHeight??'70vh'}}><div className="border-b border-slate-100 bg-slate-50/80 px-4 py-3"><div className="flex items-center justify-between gap-3"><div><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Filtrer par</p><h4 className="mt-0.5 text-sm font-bold normal-case text-slate-800">{column.label}</h4></div><span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-semibold text-slate-500 ring-1 ring-slate-200">{(draftColumnFilters[column.key]||[]).length} / {getColumnOptions(column.key).length}</span></div></div><div className="p-3"><div className="relative"><input autoFocus value={filterSearch[column.key]||''} onChange={e=>setFilterSearch(current=>({...current,[column.key]:e.target.value}))} placeholder="Rechercher une valeur…" className="w-full rounded-lg border border-slate-200 bg-white py-2.5 pl-3 pr-3 text-xs font-normal text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-sky-500 focus:ring-2 focus:ring-sky-100"/></div><div className="mt-3 flex items-center justify-between gap-2"><span className="text-[10px] font-semibold uppercase tracking-wide text-slate-400">Valeurs disponibles</span><div className="flex items-center gap-2"><button type="button" onClick={()=>selectAllColumnValues(column.key)} className="text-[10px] font-semibold text-sky-700 hover:text-sky-900">Tout sélectionner</button><span className="text-slate-300">·</span><button type="button" onClick={()=>deselectAllColumnValues(column.key)} className="text-[10px] font-semibold text-slate-500 hover:text-slate-800">Tout désélectionner</button></div></div><div className="mt-2 max-h-56 space-y-0.5 overflow-y-auto rounded-lg border border-slate-100 bg-slate-50/60 p-1">{getColumnOptions(column.key).filter(value=>value.toLowerCase().includes((filterSearch[column.key]||'').toLowerCase())).map(value=><label key={value} className="flex cursor-pointer items-center gap-2.5 rounded-md px-2.5 py-2 text-xs font-medium text-slate-700 transition hover:bg-white hover:shadow-sm"><input type="checkbox" checked={(draftColumnFilters[column.key]||[]).includes(value)} onChange={()=>toggleColumnValue(column.key,value)} className="h-4 w-4 rounded border-slate-300 text-sky-600 focus:ring-sky-500"/><span className="min-w-0 flex-1 break-words">{value||'(vide)'}</span></label>)}{getColumnOptions(column.key).filter(value=>value.toLowerCase().includes((filterSearch[column.key]||'').toLowerCase())).length===0&&<p className="px-2.5 py-4 text-center text-xs text-slate-400">Aucune valeur correspondante.</p>}</div></div><div className="flex items-center justify-between gap-2 border-t border-slate-100 bg-white px-3 py-3"><button type="button" onClick={()=>{clearColumnFilter(column.key);setDraftColumnFilters(current=>({...current,[column.key]:getColumnOptions(column.key)}));setActiveColumnFilter(null);}} className="rounded-lg px-2.5 py-2 text-[11px] font-semibold text-slate-500 transition hover:bg-slate-100 hover:text-slate-800">Réinitialiser</button><div className="flex items-center gap-2"><button type="button" onClick={()=>setActiveColumnFilter(null)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold text-slate-600 hover:bg-slate-50">Annuler</button><button type="button" onClick={()=>applyColumnFilter(column.key)} className="rounded-lg bg-slate-900 px-4 py-2 text-[11px] font-bold text-white shadow-sm transition hover:bg-slate-700">OK · Appliquer</button></div></div><div className="flex gap-3 border-t border-slate-100 bg-slate-50/70 px-4 py-2"><button type="button" onClick={()=>{sortBy(column.key,'asc');}} className="text-[10px] font-medium text-slate-500 hover:text-slate-800">Trier A → Z</button><button type="button" onClick={()=>{sortBy(column.key,'desc');}} className="text-[10px] font-medium text-slate-500 hover:text-slate-800">Trier Z → A</button></div></div>;
       })(),
       document.body
     )}
