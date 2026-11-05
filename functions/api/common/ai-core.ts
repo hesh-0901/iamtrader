@@ -91,7 +91,7 @@ export function isGeminiConfigured(env: AIEnvironment): boolean {
     .some(key => Boolean(key?.trim()));
 }
 
-export function isInstrumentAIConfigured(env: AIEnvironment): boolean {
+export function isAIConfigured(env: AIEnvironment): boolean {\n  return isGeminiConfigured(env) || Boolean(env.OPENAI_API_KEY?.trim()) || Boolean(env.DEEPSEEK_API_KEY?.trim());\n}\n\nexport function isInstrumentAIConfigured(env: AIEnvironment): boolean {
   return isGeminiConfigured(env) || Boolean(env.OPENAI_API_KEY?.trim()) || Boolean(env.DEEPSEEK_API_KEY?.trim());
 }
 
