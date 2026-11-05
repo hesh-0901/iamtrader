@@ -8,13 +8,9 @@ import { firestoreSet } from '../../../worker/firebaseAdmin';
 /**
  * Central AI Core for IAMTRADER.
  *
- * Gemini is primary; OpenAI is a controlled fallback for instrument suggestions only. Assistant identity,
- * prompts, input validation and HTTP response contracts remain in their
- * existing route handlers. The core owns provider invocation and defaults.
- *
- * Contents are passed through unchanged so Chloé can keep Gemini multimodal
- * parts (inlineData for images, PDFs and supported audio) without conversion
- * or accidental loss.
+ * Central provider orchestration for every IAMTRADER assistant.
+ * Gemini is primary, followed by OpenAI and DeepSeek within one shared timeout budget.
+ * Assistant identity, prompts, validation and HTTP contracts remain in route handlers.
  */
 export type AIAssistantId =
   | 'chloe'
@@ -113,8 +109,7 @@ function toCompatibleMessages(contents: unknown, systemInstruction?: string): Ar
     return messages;
   }
   for (const item of contents as Array<{ role?: string; parts?: Array<{ text?: string }> }>) {
-    const content = (item.parts || []).map(part => typeof part.text === 'string' ? part.text : '').filter(Boolean).join('\
-').trim();
+    const content = (item.parts || []).map(part => typeof part.text === 'string' ? part.text : '').filter(Boolean).join('\\n').trim();
     if (!content) continue;
     messages.push({ role: item.role === 'model' || item.role === 'assistant' ? 'assistant' : 'user', content });
   }
@@ -166,8 +161,9 @@ async function callCompatibleProvider(
 }
 
 /**
- * Invoke the configured model. OpenAI fallback is intentionally restricted to instrument suggestions;
- * other assistants retain their Gemini-only behavior and predictable provider selection.
+ * Invoke the configured provider chain for any assistant while preserving a single
+ * end-to-end timeout budget. Non-text Gemini payloads are not sent to incompatible
+ * providers, preventing silent loss of images, audio or document content.
  */
 export async function callAI(
   assistantId: AIAssistantId,
@@ -176,29 +172,54 @@ export async function callAI(
   overrides: AICallOverrides = {},
 ): Promise<GeminiResponse> {
   const config = ASSISTANT_CONFIG[assistantId];
-  const geminiConfigured = isGeminiConfigured(env);
-  let result: GeminiResponse = geminiConfigured ? await callGeminiUnified(contents, {
+  const startedAt = Date.now();
+  const totalBudgetMs = Math.max(3000, overrides.globalTimeoutMs ?? config.globalTimeoutMs);
+  const deadline = startedAt + totalBudgetMs;
+  const canUseTextFallback = typeof contents === 'string' || (
+    Array.isArray(contents) && contents.every(item =>
+      item && Array.isArray((item as { parts?: unknown }).parts) &&
+      ((item as { parts: unknown[] }).parts).every(part =>
+        part && typeof part === 'object' && typeof (part as { text?: unknown }).text === 'string'
+      )
+    )
+  );
+  const geminiBudgetMs = Math.max(1000, Math.floor(totalBudgetMs * 0.65));
+  let result: GeminiResponse = isGeminiConfigured(env) ? await callGeminiUnified(contents, {
     apiKeys: [env.GEMINI_API_KEY, env.GEMINI_API_KEY_2, env.GEMINI_API_KEY_3, env.GEMINI_API_KEY_4],
     preferredModel: config.model(env),
     fallbackModels: overrides.fallbackModels ?? [],
     temperature: overrides.temperature ?? config.temperature,
     maxTokens: overrides.maxTokens ?? config.maxTokens,
     timeoutMs: overrides.timeoutMs ?? config.timeoutMs,
-    globalTimeoutMs: overrides.globalTimeoutMs ?? config.globalTimeoutMs,
+    globalTimeoutMs: geminiBudgetMs,
     systemInstruction: overrides.systemInstruction,
     responseJson: overrides.responseJson,
   }) : { success: false, error: 'Gemini non configuré.', errorCategory: 'configuration' };
 
-  // Keep Gemini first. OpenAI and DeepSeek are independent fallbacks for every assistant.
-  if (!result.success && env.OPENAI_API_KEY?.trim()) {
-    const openAIResult = await callCompatibleProvider('openai', contents, env, overrides, result.error);
-    if (openAIResult.success) result = openAIResult;
-    else result = { ...openAIResult, error: openAIResult.error || result.error };
-  }
-  if (!result.success && env.DEEPSEEK_API_KEY?.trim()) {
-    const deepSeekResult = await callCompatibleProvider('deepseek', contents, env, overrides, result.error);
-    if (deepSeekResult.success) result = deepSeekResult;
-    else result = { ...deepSeekResult, error: deepSeekResult.error || result.error };
+  if (!result.success && canUseTextFallback) {
+    const remainingProviders = [env.OPENAI_API_KEY?.trim(), env.DEEPSEEK_API_KEY?.trim()].filter(Boolean).length;
+    if (remainingProviders > 0 && env.OPENAI_API_KEY?.trim()) {
+      const remaining = deadline - Date.now();
+      if (remaining > 1000) {
+        const openAIResult = await callCompatibleProvider('openai', contents, env, {
+          ...overrides, globalTimeoutMs: Math.max(1000, Math.floor(remaining / remainingProviders)),
+        }, result.error);
+        if (openAIResult.success) result = openAIResult;
+        else result = { ...openAIResult, error: openAIResult.error || result.error };
+      }
+    }
+    if (!result.success && env.DEEPSEEK_API_KEY?.trim()) {
+      const remaining = deadline - Date.now();
+      if (remaining > 1000) {
+        const deepSeekResult = await callCompatibleProvider('deepseek', contents, env, {
+          ...overrides, globalTimeoutMs: remaining,
+        }, result.error);
+        if (deepSeekResult.success) result = deepSeekResult;
+        else result = { ...deepSeekResult, error: deepSeekResult.error || result.error };
+      }
+    }
+  } else if (!result.success && !canUseTextFallback) {
+    result = { ...result, errorCategory: 'fallback_payload_unsupported' };
   }
   const provider: AIProvider = result.keyAlias === 'OPENAI_PRIMARY' ? 'openai' : result.keyAlias === 'DEEPSEEK_PRIMARY' ? 'deepseek' : 'gemini';
   const telemetry = {
