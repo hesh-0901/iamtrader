@@ -3,7 +3,7 @@ import {
   type GeminiRequestOptions,
   type GeminiResponse,
 } from './gemini-client';
-import { firestoreSet } from '../../../worker/firebaseAdmin';
+import { firestoreGet, firestoreSet } from '../../../worker/firebaseAdmin';
 
 /**
  * Central AI Core for IAMTRADER.
@@ -49,6 +49,12 @@ interface AssistantConfig {
   maxTokens: number;
   timeoutMs: number;
   globalTimeoutMs: number;
+  enabled?: boolean;
+  providerOrder?: AIProvider[];
+  model?: string;
+  temperature?: number;
+  maxTokens?: number;
+  timeoutMs?: number;
 }
 
 const ASSISTANT_CONFIG: Record<AIAssistantId, AssistantConfig> = {
@@ -118,13 +124,13 @@ function toCompatibleMessages(contents: unknown, systemInstruction?: string): Ar
 
 async function callCompatibleProvider(
   provider: CompatibleProvider, contents: unknown, env: AIEnvironment,
-  overrides: AICallOverrides, previousError?: string,
+  overrides: AICallOverrides, previousError?: string, providerModel?: string,
 ): Promise<GeminiResponse> {
   const apiKey = provider === 'openai' ? env.OPENAI_API_KEY?.trim() : env.DEEPSEEK_API_KEY?.trim();
   if (!apiKey) return { success: false, error: previousError || `${provider} non configuré.`, errorCategory: 'configuration' };
   const model = provider === 'openai'
-    ? env.OPENAI_INSTRUMENT_MODEL?.trim() || env.OPENAI_MODEL?.trim() || 'gpt-4o-mini'
-    : env.DEEPSEEK_MODEL?.trim() || 'deepseek-flash';
+    ? providerModel || env.OPENAI_INSTRUMENT_MODEL?.trim() || env.OPENAI_MODEL?.trim() || 'gpt-4o-mini'
+    : providerModel || env.DEEPSEEK_MODEL?.trim() || 'deepseek-flash';
   const endpoint = provider === 'openai' ? 'https://api.openai.com/v1/chat/completions' : 'https://api.deepseek.com/chat/completions';
   const startedAt = Date.now();
   const controller = new AbortController();
@@ -171,9 +177,29 @@ export async function callAI(
   env: AIEnvironment,
   overrides: AICallOverrides = {},
 ): Promise<GeminiResponse> {
-  const config = ASSISTANT_CONFIG[assistantId];
+  const baseConfig = ASSISTANT_CONFIG[assistantId];
+  let managed: Record<string, any> | undefined;
+  if (env.FIREBASE_SERVICE_ACCOUNT_JSON) {
+    try {
+      const saved = await firestoreGet(env, 'system/aiEngineConfig');
+      managed = Array.isArray(saved?.assistants) ? saved.assistants.find((item: any) => item.id === assistantId) : undefined;
+    } catch (error) {
+      console.warn('[IAMTRADER_AI] Dynamic config unavailable; using safe defaults:', error instanceof Error ? error.message : 'unknown');
+    }
+  }
+  const config: AssistantConfig = {
+    ...baseConfig,
+    ...(managed ? {
+      enabled: managed.enabled !== false,
+      providerOrder: Array.isArray(managed.providerOrder) ? managed.providerOrder.filter((value: unknown): value is AIProvider => ['gemini','openai','deepseek'].includes(String(value))) : undefined,
+      model: () => typeof managed.model === 'string' && managed.model.trim() ? managed.model.trim() : baseConfig.model(env),
+      temperature: Number.isFinite(Number(managed.temperature)) ? Number(managed.temperature) : baseConfig.temperature,
+      maxTokens: Number.isFinite(Number(managed.maxTokens)) ? Number(managed.maxTokens) : baseConfig.maxTokens,
+      timeoutMs: Number.isFinite(Number(managed.timeoutMs)) ? Number(managed.timeoutMs) : baseConfig.timeoutMs,
+    } : {}),
+  };
   const startedAt = Date.now();
-  const totalBudgetMs = Math.max(3000, overrides.globalTimeoutMs ?? config.globalTimeoutMs);
+  const totalBudgetMs = Math.max(3000, baseConfig.globalTimeoutMs);
   const deadline = startedAt + totalBudgetMs;
   const canUseTextFallback = typeof contents === 'string' || (
     Array.isArray(contents) && contents.every(item =>
@@ -183,43 +209,54 @@ export async function callAI(
       )
     )
   );
-  const geminiBudgetMs = Math.max(1000, Math.floor(totalBudgetMs * 0.65));
-  let result: GeminiResponse = isGeminiConfigured(env) ? await callGeminiUnified(contents, {
-    apiKeys: [env.GEMINI_API_KEY, env.GEMINI_API_KEY_2, env.GEMINI_API_KEY_3, env.GEMINI_API_KEY_4],
-    preferredModel: config.model(env),
-    fallbackModels: overrides.fallbackModels ?? [],
-    temperature: overrides.temperature ?? config.temperature,
-    maxTokens: overrides.maxTokens ?? config.maxTokens,
-    timeoutMs: overrides.timeoutMs ?? config.timeoutMs,
-    globalTimeoutMs: geminiBudgetMs,
-    systemInstruction: overrides.systemInstruction,
-    responseJson: overrides.responseJson,
-  }) : { success: false, error: 'Gemini non configuré.', errorCategory: 'configuration' };
-
-  if (!result.success && canUseTextFallback) {
-    const remainingProviders = [env.OPENAI_API_KEY?.trim(), env.DEEPSEEK_API_KEY?.trim()].filter(Boolean).length;
-    if (remainingProviders > 0 && env.OPENAI_API_KEY?.trim()) {
+  const providerOrder = config.providerOrder?.length ? config.providerOrder : ['gemini', 'openai', 'deepseek'];
+  let result: GeminiResponse = { success: false, error: 'Aucun fournisseur IA disponible.', errorCategory: 'configuration' };
+  let attempted = 0;
+  if (config.enabled === false) {
+    result = { success: false, error: 'Cet assistant est désactivé depuis le moteur IA.', errorCategory: 'assistant_disabled' };
+  } else {
+    for (let index = 0; index < providerOrder.length; index += 1) {
+      const provider = providerOrder[index];
       const remaining = deadline - Date.now();
-      if (remaining > 1000) {
-        const openAIResult = await callCompatibleProvider('openai', contents, env, {
-          ...overrides, globalTimeoutMs: Math.max(1000, Math.floor(remaining / remainingProviders)),
-        }, result.error);
-        if (openAIResult.success) result = openAIResult;
-        else result = { ...openAIResult, error: openAIResult.error || result.error };
+      if (remaining <= 1000) break;
+      const remainingProviders = providerOrder.length - index;
+      const attemptBudget = Math.max(1000, Math.floor(remaining / remainingProviders));
+      let attempt: GeminiResponse;
+      if (provider === 'gemini') {
+        if (!isGeminiConfigured(env)) continue;
+        attempt = await callGeminiUnified(contents, {
+          apiKeys: [env.GEMINI_API_KEY, env.GEMINI_API_KEY_2, env.GEMINI_API_KEY_3, env.GEMINI_API_KEY_4],
+          preferredModel: config.model(env),
+          fallbackModels: overrides.fallbackModels ?? [],
+          temperature: overrides.temperature ?? config.temperature,
+          maxTokens: overrides.maxTokens ?? config.maxTokens,
+          timeoutMs: Math.min(overrides.timeoutMs ?? config.timeoutMs, attemptBudget),
+          globalTimeoutMs: attemptBudget,
+          systemInstruction: overrides.systemInstruction,
+          responseJson: overrides.responseJson,
+        });
+      } else {
+        if (!canUseTextFallback) {
+          attempt = { success: false, error: 'Contenu multimodal incompatible avec le fournisseur de secours.', errorCategory: 'fallback_payload_unsupported' };
+        } else if (provider === 'openai' && env.OPENAI_API_KEY?.trim()) {
+          attempt = await callCompatibleProvider('openai', contents, env, {
+            ...overrides, temperature: overrides.temperature ?? config.temperature,
+            maxTokens: overrides.maxTokens ?? config.maxTokens, globalTimeoutMs: attemptBudget,
+          }, result.error, config.model(env));
+        } else if (provider === 'deepseek' && env.DEEPSEEK_API_KEY?.trim()) {
+          attempt = await callCompatibleProvider('deepseek', contents, env, {
+            ...overrides, temperature: overrides.temperature ?? config.temperature,
+            maxTokens: overrides.maxTokens ?? config.maxTokens, globalTimeoutMs: attemptBudget,
+          }, result.error, config.model(env));
+        } else continue;
       }
-    }
-    if (!result.success && env.DEEPSEEK_API_KEY?.trim()) {
-      const remaining = deadline - Date.now();
-      if (remaining > 1000) {
-        const deepSeekResult = await callCompatibleProvider('deepseek', contents, env, {
-          ...overrides, globalTimeoutMs: remaining,
-        }, result.error);
-        if (deepSeekResult.success) result = deepSeekResult;
-        else result = { ...deepSeekResult, error: deepSeekResult.error || result.error };
+      attempted += 1;
+      if (attempt.success) {
+        result = { ...attempt, failovers: attempted - 1 };
+        break;
       }
+      result = attempt;
     }
-  } else if (!result.success && !canUseTextFallback) {
-    result = { ...result, errorCategory: 'fallback_payload_unsupported' };
   }
   const provider: AIProvider = result.keyAlias === 'OPENAI_PRIMARY' ? 'openai' : result.keyAlias === 'DEEPSEEK_PRIMARY' ? 'deepseek' : 'gemini';
   const telemetry = {
