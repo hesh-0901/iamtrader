@@ -145,8 +145,21 @@ async function callCompatibleProvider(
     const raw = await response.text();
     if (!response.ok) {
       let message = `${provider} HTTP ${response.status}`;
-      try { message = (JSON.parse(raw) as { error?: { message?: string } }).error?.message || message; } catch { /* keep status */ }
-      const category = response.status === 429 ? 'rate_limit' : response.status >= 500 ? 'provider_error' : response.status === 401 || response.status === 403 ? 'authentication_or_billing' : 'provider_error';
+      let providerError: { message?: string; type?: string; code?: string; param?: string } = {};
+      try {
+        providerError = (JSON.parse(raw) as { error?: { message?: string; type?: string; code?: string; param?: string } }).error || {};
+        message = providerError.message || message;
+      } catch { /* keep status */ }
+      const errorCode = String(providerError.code || '').toLowerCase();
+      const errorType = String(providerError.type || '').toLowerCase();
+      const quotaFailure = /insufficient_quota|billing_hard_limit|quota_exceeded|no credits|credits remaining|add credits|billing limit/i.test(
+        [errorCode, errorType, message].join(' '),
+      );
+      const category = quotaFailure ? 'quota_exceeded'
+        : response.status === 429 ? 'rate_limit'
+        : response.status >= 500 ? 'provider_error'
+        : response.status === 401 || response.status === 403 ? 'authentication_or_billing'
+        : 'provider_error';
       console.warn('[IAMTRADER_AI] Compatible provider failed:', { provider, model, status: response.status, category, latencyMs: Date.now() - startedAt });
       const retryAfter = response.headers.get('retry-after');
       const retryAfterMs = retryAfter ? (Number.isFinite(Number(retryAfter)) ? Number(retryAfter) * 1000 : Math.max(0, Date.parse(retryAfter) - Date.now())) : undefined;
