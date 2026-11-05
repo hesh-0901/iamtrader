@@ -133,26 +133,65 @@ export async function handleAdminMutation(request: Request, env: AdminEnv) {
     }
 
     if (body.action === 'get-ai-monitoring') {
-      const events = await firestoreQueryCollection(env, 'aiTelemetry', 250, 'createdAt');
-      const keys = [env.GEMINI_API_KEY, env.GEMINI_API_KEY_2, env.GEMINI_API_KEY_3, env.GEMINI_API_KEY_4]
-        .map((value, index) => ({ alias: `KEY_0${index + 1}`, configured: Boolean(value?.trim()) }));
+      const [events, savedConfig] = await Promise.all([
+        firestoreQueryCollection(env, 'aiTelemetry', 250, 'createdAt'),
+        firestoreGet(env, 'system/aiEngineConfig')
+      ]);
+      const providers = [
+        { id: 'gemini', label: 'Google Gemini', configured: [env.GEMINI_API_KEY, env.GEMINI_API_KEY_2, env.GEMINI_API_KEY_3, env.GEMINI_API_KEY_4].some(value => Boolean(value?.trim())), models: ['gemini-3.5-flash-lite', 'gemini-3.8-flash'] },
+        { id: 'openai', label: 'OpenAI', configured: Boolean((env as any).OPENAI_API_KEY?.trim()), models: ['gpt-4o-mini'] },
+        { id: 'deepseek', label: 'DeepSeek', configured: Boolean((env as any).DEEPSEEK_API_KEY?.trim()), models: ['deepseek-flash'] }
+      ];
+      const defaultAssistants = [
+        { id: 'chloe', label: 'Chloé', enabled: true, providerOrder: ['gemini', 'openai', 'deepseek'], model: 'gemini-3.5-flash-lite', temperature: 0.2, maxTokens: 1000, timeoutMs: 20000 },
+        { id: 'vyra', label: 'VYRA', enabled: true, providerOrder: ['gemini', 'openai', 'deepseek'], model: 'gemini-3.5-flash-lite', temperature: 0.3, maxTokens: 1200, timeoutMs: 15000 },
+        { id: 'instrument-suggest', label: 'Suggestions instruments', enabled: true, providerOrder: ['gemini', 'openai', 'deepseek'], model: 'gemini-3.8-flash', temperature: 0.1, maxTokens: 300, timeoutMs: 12000 },
+        { id: 'economic-calendar-analysis', label: 'Analyse économique', enabled: true, providerOrder: ['gemini', 'openai', 'deepseek'], model: 'gemini-3.5-flash-lite', temperature: 0.2, maxTokens: 500, timeoutMs: 12000 }
+      ];
+      const config = {
+        assistants: Array.isArray(savedConfig?.assistants) ? savedConfig.assistants : defaultAssistants,
+        updatedAt: String(savedConfig?.updatedAt || ''),
+        updatedBy: String(savedConfig?.updatedBy || '')
+      };
       return json({
-        success: true,
-        keys,
+        success: true, providers, assistants: config.assistants, configUpdatedAt: config.updatedAt,
+        keys: [
+          ...[env.GEMINI_API_KEY, env.GEMINI_API_KEY_2, env.GEMINI_API_KEY_3, env.GEMINI_API_KEY_4].map((value, index) => ({ alias: `KEY_0${index + 1}`, provider: 'gemini', configured: Boolean(value?.trim()) })),
+          { alias: 'OPENAI_API_KEY', provider: 'openai', configured: Boolean((env as any).OPENAI_API_KEY?.trim()) },
+          { alias: 'DEEPSEEK_API_KEY', provider: 'deepseek', configured: Boolean((env as any).DEEPSEEK_API_KEY?.trim()) }
+        ],
         events: events.map(event => ({
-          assistant: String(event.assistant || ''),
-          provider: String(event.provider || 'gemini'),
-          model: String(event.model || ''),
-          keyAlias: String(event.keyAlias || ''),
-          status: Number(event.status || 0) || null,
-          latencyMs: Number(event.latencyMs || 0),
-          attempts: Number(event.attempts || 0),
-          failovers: Number(event.failovers || 0),
+          assistant: String(event.assistant || ''), provider: String(event.provider || 'gemini'),
+          model: String(event.model || ''), keyAlias: String(event.keyAlias || ''),
+          status: Number(event.status || 0) || null, latencyMs: Number(event.latencyMs || 0),
+          attempts: Number(event.attempts || 0), failovers: Number(event.failovers || 0),
           outcome: event.outcome === 'success' ? 'success' : 'failure',
-          errorCategory: String(event.errorCategory || ''),
-          createdAt: String(event.createdAt || '')
+          errorCategory: String(event.errorCategory || ''), createdAt: String(event.createdAt || '')
         }))
       });
+    }
+
+    if (body.action === 'save-ai-config') {
+      const input = body.data as { assistants?: Array<Record<string, unknown>> } | undefined;
+      if (!Array.isArray(input?.assistants) || input.assistants.length > 20) return json({ error: 'Configuration des assistants invalide.' }, 400);
+      const allowedIds = ['chloe', 'vyra', 'instrument-suggest', 'economic-calendar-analysis'];
+      const allowedProviders = ['gemini', 'openai', 'deepseek'];
+      const assistants = input.assistants.map(item => {
+        const id = String(item.id || '');
+        const providerOrder = Array.isArray(item.providerOrder) ? item.providerOrder.map(String).filter(provider => allowedProviders.includes(provider)) : [];
+        const temperature = Number(item.temperature);
+        const maxTokens = Number(item.maxTokens);
+        const timeoutMs = Number(item.timeoutMs);
+        if (!allowedIds.includes(id) || !providerOrder.length || !Number.isFinite(temperature) || temperature < 0 || temperature > 2 ||
+            !Number.isInteger(maxTokens) || maxTokens < 1 || maxTokens > 8192 ||
+            !Number.isInteger(timeoutMs) || timeoutMs < 1000 || timeoutMs > 60000) throw new Error('Paramètres IA invalides pour ' + id);
+        return { id, enabled: item.enabled !== false, providerOrder: [...new Set(providerOrder)], model: String(item.model || '').slice(0, 100), temperature, maxTokens, timeoutMs };
+      });
+      if (new Set(assistants.map(item => item.id)).size !== assistants.length) return json({ error: 'Un assistant est déclaré plusieurs fois.' }, 400);
+      const record = { assistants, updatedAt: new Date().toISOString(), updatedBy: identity.uid };
+      await firestoreSet(env, 'system/aiEngineConfig', record);
+      await firestoreSet(env, 'adminLogs/' + encodeURIComponent(crypto.randomUUID()), { action: 'ai-engine-config-updated', adminUid: identity.uid, createdAt: record.updatedAt });
+      return json({ success: true, config: record });
     }
 
     if (body.action === 'get-payments') {
