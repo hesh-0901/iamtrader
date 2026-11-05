@@ -208,7 +208,7 @@ export async function handleAdminMutation(request: Request, env: AdminEnv) {
         events: events.map(event => ({
           assistant: String(event.assistant || ''), provider: String(event.provider || 'unknown'), configSource: String(event.configSource || 'legacy'),
           model: String(event.model || ''), keyAlias: String(event.keyAlias || ''),
-          status: Number(event.status || 0) || null, latencyMs: Number(event.latencyMs || 0),
+          status: Number(event.status || 0) || null, latencyMs: Number(event.latencyMs || 0), errorMessage: String(event.errorMessage || ''), retryAfterMs: Number(event.retryAfterMs || 0) || null, providerTrace: Array.isArray(event.providerTrace) ? event.providerTrace : [],
           attempts: Number(event.attempts || 0), failovers: Number(event.failovers || 0),
           outcome: event.outcome === 'success' ? 'success' : 'failure',
           errorCategory: String(event.errorCategory || ''), createdAt: String(event.createdAt || '')
