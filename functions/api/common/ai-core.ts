@@ -148,7 +148,9 @@ async function callCompatibleProvider(
       try { message = (JSON.parse(raw) as { error?: { message?: string } }).error?.message || message; } catch { /* keep status */ }
       const category = response.status === 429 ? 'rate_limit' : response.status >= 500 ? 'provider_error' : response.status === 401 || response.status === 403 ? 'authentication_or_billing' : 'provider_error';
       console.warn('[IAMTRADER_AI] Compatible provider failed:', { provider, model, status: response.status, category, latencyMs: Date.now() - startedAt });
-      return { success: false, error: message, httpStatus: response.status, modelUsed: model, keyAlias: provider.toUpperCase() + '_PRIMARY', attempts: 1, errorCategory: category, latencyMs: Date.now() - startedAt };
+      const retryAfter = response.headers.get('retry-after');
+      const retryAfterMs = retryAfter ? (Number.isFinite(Number(retryAfter)) ? Number(retryAfter) * 1000 : Math.max(0, Date.parse(retryAfter) - Date.now())) : undefined;
+      return { success: false, error: message, httpStatus: response.status, modelUsed: model, keyAlias: provider.toUpperCase() + '_PRIMARY', attempts: 1, errorCategory: category, retryAfterMs, latencyMs: Date.now() - startedAt };
     }
     const data = JSON.parse(raw) as { choices?: Array<{ message?: { content?: string | null } }> };
     const text = data.choices?.[0]?.message?.content?.trim();
@@ -225,6 +227,7 @@ export async function callAI(
   let totalAttempts = 0;
   let totalFailovers = 0;
   let lastProvider: AIProvider | 'none' = 'none';
+  const providerTrace: Array<{ provider: AIProvider; model: string; status: number | null; category: string | null }> = [];
   if (config.enabled === false) {
     result = { success: false, error: 'Cet assistant est désactivé depuis le moteur IA.', errorCategory: 'assistant_disabled' };
   } else {
@@ -263,6 +266,7 @@ export async function callAI(
         } else continue;
       }
       attempted += 1;
+      providerTrace.push({ provider, model: attempt.modelUsed || (provider === 'gemini' ? config.model(env) : provider === 'openai' ? String(managed?.models?.openai || env.OPENAI_MODEL || 'gpt-4o-mini') : String(managed?.models?.deepseek || env.DEEPSEEK_MODEL || 'deepseek-flash')), status: attempt.httpStatus || null, category: attempt.errorCategory || null });
       totalAttempts += Math.max(1, attempt.attempts || 1);
       totalFailovers += Math.max(0, attempt.failovers || 0);
       if (attempt.success) {
@@ -279,7 +283,7 @@ export async function callAI(
     keyAlias: result.keyAlias || null, status: result.httpStatus || null,
     latencyMs: result.latencyMs || 0, attempts: totalAttempts || result.attempts || 0,
     failovers: totalFailovers + Math.max(0, attempted - 1) || result.failovers || 0, outcome: result.success ? 'success' : 'failure',
-    errorCategory: result.errorCategory || null, createdAt: new Date().toISOString(),
+    errorCategory: result.errorCategory || null, errorMessage: result.error || null, retryAfterMs: result.retryAfterMs || null, providerTrace, createdAt: new Date().toISOString(),
   };
   if (env.FIREBASE_SERVICE_ACCOUNT_JSON) {
     await firestoreSet(env, `aiTelemetry/${crypto.randomUUID()}`, telemetry)
@@ -290,7 +294,7 @@ export async function callAI(
     model: result.modelUsed || (provider === 'openai' ? managed?.models?.openai : provider === 'deepseek' ? managed?.models?.deepseek : config.model(env)) || 'unknown', keyAlias: result.keyAlias || null,
     status: result.httpStatus || null, latencyMs: result.latencyMs,
     attempts: totalAttempts || result.attempts || 0, failovers: totalFailovers + Math.max(0, attempted - 1) || result.failovers || 0,
-    outcome: result.success ? 'success' : 'failure', errorCategory: result.errorCategory || null,
+    outcome: result.success ? 'success' : 'failure', errorCategory: result.errorCategory || null, errorMessage: result.error || null, retryAfterMs: result.retryAfterMs || null, providerTrace,
   }));
   return result;
 }
