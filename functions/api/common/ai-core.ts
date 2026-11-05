@@ -109,7 +109,7 @@ function toCompatibleMessages(contents: unknown, systemInstruction?: string): Ar
     return messages;
   }
   for (const item of contents as Array<{ role?: string; parts?: Array<{ text?: string }> }>) {
-    const content = (item.parts || []).map(part => typeof part.text === 'string' ? part.text : '').filter(Boolean).join('\\n').trim();
+    const content = (item.parts || []).map(part => typeof part.text === 'string' ? part.text : '').filter(Boolean).join('\n').trim();
     if (!content) continue;
     messages.push({ role: item.role === 'model' || item.role === 'assistant' ? 'assistant' : 'user', content });
   }
