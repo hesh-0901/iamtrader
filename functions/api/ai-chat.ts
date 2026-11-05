@@ -1,6 +1,6 @@
 import { IAMTRADER_KNOWLEDGE } from './vyra-knowledge';
 import { VYRA_STYLE_INSTRUCTIONS } from './vyra-style';
-import { callAI, isGeminiConfigured } from './common/ai-core';
+import { callAI, isAIConfigured } from './common/ai-core';
 
 interface Env {
   GEMINI_API_KEY?: string;
@@ -8,7 +8,7 @@ interface Env {
   GEMINI_API_KEY_3?: string;
   GEMINI_API_KEY_4?: string;
   GEMINI_MODEL?: string;
-  GEMINI_VYRA_MODEL?: string;
+  GEMINI_VYRA_MODEL?: string;\n  OPENAI_API_KEY?: string;\n  OPENAI_MODEL?: string;\n  DEEPSEEK_API_KEY?: string;\n  DEEPSEEK_MODEL?: string;
 }
 
 type ChatMessage = {
@@ -156,7 +156,7 @@ export async function onRequest(context: { request: Request; env: Env }) {
     return json({ error: 'Méthode non autorisée.' }, 405);
   }
 
-  if (!isGeminiConfigured(context.env)) {
+  if (!isAIConfigured(context.env)) {
     return json({ error: 'Assistant IA non configuré sur le serveur.' }, 500);
   }
 
