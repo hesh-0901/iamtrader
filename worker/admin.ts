@@ -41,6 +41,33 @@ async function requireAdmin(request: Request, env: AdminEnv) {
   return identity;
 }
 
+const OFFICIAL_MODEL_CATALOGS = {
+  gemini: ['gemini-3.8-flash', 'gemini-3.7-flash', 'gemini-3.6-flash', 'gemini-3.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'],
+  openai: ['gpt-6-astra', 'gpt-6.1-sol', 'gpt-6.1-terra', 'gpt-6-luna', 'gpt-5.6', 'gpt-5.6-mini', 'gpt-5.5', 'gpt-5.4', 'gpt-5.4-mini', 'gpt-oss-120b', 'gpt-oss-20b'],
+  deepseek: ['deepseek-flash', 'deepseek-v4-pro']
+};
+
+async function fetchLiveModels(provider: 'gemini' | 'openai' | 'deepseek', apiKey: string): Promise<string[]> {
+  const endpoint = provider === 'gemini'
+    ? 'https://generativelanguage.googleapis.com/v1beta/models?key=' + encodeURIComponent(apiKey)
+    : provider === 'openai' ? 'https://api.openai.com/v1/models' : 'https://api.deepseek.com/models';
+  const response = await fetch(endpoint, { headers: provider === 'gemini' ? { Accept: 'application/json' } : { Authorization: 'Bearer ' + apiKey, Accept: 'application/json' }, signal: AbortSignal.timeout(8000) });
+  if (!response.ok) throw new Error(provider + ' model catalogue HTTP ' + response.status);
+  const payload = await response.json() as { data?: Array<{ id?: string; owned_by?: string }>; models?: Array<{ name?: string; supportedGenerationMethods?: string[] }> };
+  if (provider === 'gemini') {
+    return (payload.models || []).filter(model =>
+      typeof model.name === 'string' &&
+      model.name.startsWith('models/gemini-') &&
+      (model.supportedGenerationMethods || []).includes('generateContent') &&
+      !/embedding|aqa|tts|image|transcri|live|robotics/i.test(model.name)
+    ).map(model => String(model.name).replace(/^models\//, '')).sort();
+  }
+  const ids = (payload.data || []).map(model => String(model.id || '')).filter(Boolean);
+  if (provider === 'deepseek') return ids.filter(id => /^deepseek-(?:flash|v4-pro)$/.test(id)).sort();
+  // The OpenAI account catalogue is authoritative; retain only general-purpose GPT chat/reasoning families.
+  return ids.filter(id => /^(?:gpt-(?:6|5|4o|4\.1|oss)(?:[-.]|$)|chatgpt-)/i.test(id) && !/(?:audio|transcribe|tts|image|realtime|search-preview|moderation|embedding|codex|computer-use)/i.test(id)).sort();
+}
+
 export async function handleAdminMutation(request: Request, env: AdminEnv) {
   try {
     const identity = await requireAdmin(request, env);
@@ -130,6 +157,24 @@ export async function handleAdminMutation(request: Request, env: AdminEnv) {
         action: 'promotion-deleted', promotionId, adminUid: identity.uid, createdAt: new Date().toISOString()
       });
       return json({ success: true });
+    }
+
+    if (body.action === 'get-ai-models') {
+      const credentials = {
+        gemini: [env.GEMINI_API_KEY, env.GEMINI_API_KEY_2, env.GEMINI_API_KEY_3, env.GEMINI_API_KEY_4].find(value => Boolean(value?.trim()))?.trim() || '',
+        openai: env.OPENAI_API_KEY?.trim() || '',
+        deepseek: env.DEEPSEEK_API_KEY?.trim() || ''
+      };
+      const results = await Promise.all((['gemini', 'openai', 'deepseek'] as const).map(async provider => {
+        if (!credentials[provider]) return { provider, models: OFFICIAL_MODEL_CATALOGS[provider], source: 'official-curated', verifiedWithApiKey: false, warning: 'Clé API absente : catalogue officiel indicatif, non vérifié sur votre compte.' };
+        try {
+          const models = await fetchLiveModels(provider, credentials[provider]);
+          return { provider, models, source: 'provider-api', verifiedWithApiKey: true, warning: models.length ? '' : 'Aucun modèle de génération compatible retourné par le fournisseur.' };
+        } catch (error) {
+          return { provider, models: OFFICIAL_MODEL_CATALOGS[provider], source: 'official-curated', verifiedWithApiKey: false, warning: error instanceof Error ? error.message : 'Catalogue API indisponible.' };
+        }
+      }));
+      return json({ success: true, catalogues: results, fetchedAt: new Date().toISOString() });
     }
 
     if (body.action === 'get-ai-monitoring') {
