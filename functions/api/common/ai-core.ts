@@ -38,10 +38,7 @@ export interface AIEnvironment {
   GEMINI_ECONOMIC_MODEL?: string;
 }
 
-export type AICallOverrides = Pick<
-  GeminiRequestOptions,
-  'systemInstruction' | 'temperature' | 'maxTokens' | 'responseJson' | 'timeoutMs' | 'globalTimeoutMs' | 'fallbackModels'
->;
+export type AICallOverrides = Pick<GeminiRequestOptions, 'systemInstruction' | 'responseJson'>;
 
 interface AssistantConfig {
   model: (env: AIEnvironment) => string;
@@ -175,13 +172,15 @@ export async function callAI(
 ): Promise<GeminiResponse> {
   const baseConfig = ASSISTANT_CONFIG[assistantId];
   let managed: Record<string, any> | undefined;
-  if (env.FIREBASE_SERVICE_ACCOUNT_JSON) {
-    try {
-      const saved = await firestoreGet(env, 'system/aiEngineConfig');
-      managed = Array.isArray(saved?.assistants) ? saved.assistants.find((item: any) => item.id === assistantId) : undefined;
-    } catch (error) {
-      console.warn('[IAMTRADER_AI] Dynamic config unavailable; using safe defaults:', error instanceof Error ? error.message : 'unknown');
-    }
+  let configSource: 'firestore' | 'defaults' = 'defaults';
+  if (!env.FIREBASE_SERVICE_ACCOUNT_JSON?.trim()) return { success: false, error: 'Configuration dynamique indisponible : accès Firestore non configuré.', errorCategory: 'configuration_unavailable' };
+  try {
+    const saved = await firestoreGet(env, 'system/aiEngineConfig');
+    managed = Array.isArray(saved?.assistants) ? saved.assistants.find((item: any) => item.id === assistantId) : undefined;
+    if (saved) configSource = 'firestore';
+  } catch (error) {
+    console.error('[IAMTRADER_AI] Dynamic configuration read failed; request blocked:', error instanceof Error ? error.message : 'unknown');
+    return { success: false, error: 'Impossible de charger la configuration IA active depuis Firestore.', errorCategory: 'configuration_unavailable' };
   }
   const config: AssistantConfig = {
     ...baseConfig,
@@ -195,7 +194,7 @@ export async function callAI(
     } : {}),
   };
   const startedAt = Date.now();
-  const totalBudgetMs = Math.max(3000, config.timeoutMs || baseConfig.globalTimeoutMs);
+  const totalBudgetMs = Math.max(1000, Math.min(60000, config.timeoutMs || baseConfig.timeoutMs));
   const deadline = startedAt + totalBudgetMs;
   const canUseTextFallback = typeof contents === 'string' || (
     Array.isArray(contents) && contents.every(item =>
@@ -208,11 +207,15 @@ export async function callAI(
   const providerOrder = config.providerOrder?.length ? config.providerOrder : ['gemini', 'openai', 'deepseek'];
   let result: GeminiResponse = { success: false, error: 'Aucun fournisseur IA disponible.', errorCategory: 'configuration' };
   let attempted = 0;
+  let totalAttempts = 0;
+  let totalFailovers = 0;
+  let lastProvider: AIProvider = providerOrder[0] || 'gemini';
   if (config.enabled === false) {
     result = { success: false, error: 'Cet assistant est désactivé depuis le moteur IA.', errorCategory: 'assistant_disabled' };
   } else {
     for (let index = 0; index < providerOrder.length; index += 1) {
       const provider = providerOrder[index];
+      lastProvider = provider;
       const remaining = deadline - Date.now();
       if (remaining <= 1000) break;
       const remainingProviders = providerOrder.length - index;
@@ -223,11 +226,8 @@ export async function callAI(
         attempt = await callGeminiUnified(contents, {
           apiKeys: [env.GEMINI_API_KEY, env.GEMINI_API_KEY_2, env.GEMINI_API_KEY_3, env.GEMINI_API_KEY_4],
           preferredModel: config.model(env),
-          fallbackModels: overrides.fallbackModels ?? [],
-          temperature: overrides.temperature ?? config.temperature,
-          maxTokens: overrides.maxTokens ?? config.maxTokens,
-          timeoutMs: Math.min(overrides.timeoutMs ?? config.timeoutMs, attemptBudget),
-          globalTimeoutMs: attemptBudget,
+          fallbackModels: [], temperature: config.temperature, maxTokens: config.maxTokens,
+          timeoutMs: attemptBudget, globalTimeoutMs: attemptBudget,
           systemInstruction: overrides.systemInstruction,
           responseJson: overrides.responseJson,
         });
@@ -236,8 +236,7 @@ export async function callAI(
           attempt = { success: false, error: 'Contenu multimodal incompatible avec le fournisseur de secours.', errorCategory: 'fallback_payload_unsupported' };
         } else if (provider === 'openai' && env.OPENAI_API_KEY?.trim()) {
           attempt = await callCompatibleProvider('openai', contents, env, {
-            ...overrides, temperature: overrides.temperature ?? config.temperature,
-            maxTokens: overrides.maxTokens ?? config.maxTokens, globalTimeoutMs: attemptBudget,
+            ...overrides, temperature: config.temperature, maxTokens: config.maxTokens, globalTimeoutMs: attemptBudget,
           }, result.error, typeof managed?.models?.openai === 'string' ? managed.models.openai : undefined);
         } else if (provider === 'deepseek' && env.DEEPSEEK_API_KEY?.trim()) {
           attempt = await callCompatibleProvider('deepseek', contents, env, {
@@ -247,19 +246,21 @@ export async function callAI(
         } else continue;
       }
       attempted += 1;
+      totalAttempts += Math.max(1, attempt.attempts || 1);
+      totalFailovers += Math.max(0, attempt.failovers || 0);
       if (attempt.success) {
-        result = { ...attempt, failovers: attempted - 1 };
+        result = { ...attempt, attempts: totalAttempts, failovers: totalFailovers + attempted - 1 };
         break;
       }
       result = attempt;
     }
   }
-  const provider: AIProvider = result.keyAlias === 'OPENAI_PRIMARY' ? 'openai' : result.keyAlias === 'DEEPSEEK_PRIMARY' ? 'deepseek' : 'gemini';
+  const provider: AIProvider = result.keyAlias === 'OPENAI_PRIMARY' ? 'openai' : result.keyAlias === 'DEEPSEEK_PRIMARY' ? 'deepseek' : lastProvider;
   const telemetry = {
-    assistant: assistantId, provider, model: result.modelUsed || config.model(env),
+    assistant: assistantId, provider, model: result.modelUsed || (provider === 'openai' ? managed?.models?.openai : provider === 'deepseek' ? managed?.models?.deepseek : config.model(env)) || 'unknown', configSource,
     keyAlias: result.keyAlias || null, status: result.httpStatus || null,
-    latencyMs: result.latencyMs || 0, attempts: result.attempts || 0,
-    failovers: result.failovers || 0, outcome: result.success ? 'success' : 'failure',
+    latencyMs: result.latencyMs || 0, attempts: totalAttempts || result.attempts || 0,
+    failovers: totalFailovers + Math.max(0, attempted - 1) || result.failovers || 0, outcome: result.success ? 'success' : 'failure',
     errorCategory: result.errorCategory || null, createdAt: new Date().toISOString(),
   };
   if (env.FIREBASE_SERVICE_ACCOUNT_JSON) {
@@ -267,8 +268,8 @@ export async function callAI(
       .catch(error => console.warn('[IAMTRADER_AI] Telemetry persistence unavailable:', error instanceof Error ? error.message : 'unknown'));
   }
   console.info('[IAMTRADER_AI]', JSON.stringify({
-    event: 'request_completed', assistant: assistantId, provider,
-    model: result.modelUsed || config.model(env), keyAlias: result.keyAlias || null,
+    event: 'request_completed', assistant: assistantId, provider, configSource,
+    model: result.modelUsed || (provider === 'openai' ? managed?.models?.openai : provider === 'deepseek' ? managed?.models?.deepseek : config.model(env)) || 'unknown', keyAlias: result.keyAlias || null,
     status: result.httpStatus || null, latencyMs: result.latencyMs,
     attempts: result.attempts || 0, failovers: result.failovers || 0,
     outcome: result.success ? 'success' : 'failure', errorCategory: result.errorCategory || null,
