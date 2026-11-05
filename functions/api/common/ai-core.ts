@@ -184,6 +184,19 @@ export async function callAI(
     console.error('[IAMTRADER_AI] Dynamic configuration read failed; request blocked:', error instanceof Error ? error.message : 'unknown');
     return { success: false, error: 'Impossible de charger la configuration IA active depuis Firestore.', errorCategory: 'configuration_unavailable' };
   }
+  if (managed) {
+    const allowedProviders: AIProvider[] = ['gemini', 'openai', 'deepseek'];
+    const order = Array.isArray(managed.providerOrder) ? managed.providerOrder : [];
+    const temperature = Number(managed.temperature);
+    const maxTokens = Number(managed.maxTokens);
+    const timeoutMs = Number(managed.timeoutMs);
+    if (order.length !== allowedProviders.length || new Set(order).size !== allowedProviders.length || order.some((provider: unknown) => !allowedProviders.includes(provider as AIProvider)) ||
+        !Number.isFinite(temperature) || temperature < 0 || temperature > 2 ||
+        !Number.isInteger(maxTokens) || maxTokens < 1 || maxTokens > 8192 ||
+        !Number.isInteger(timeoutMs) || timeoutMs < 1000 || timeoutMs > 60000) {
+      return { success: false, error: `Configuration Firestore invalide pour l’assistant ${assistantId}.`, errorCategory: 'configuration_invalid' };
+    }
+  }
   const config: AssistantConfig = {
     ...baseConfig,
     ...(managed ? {
@@ -260,6 +273,7 @@ export async function callAI(
     }
   }
   const provider = result.keyAlias === 'OPENAI_PRIMARY' ? 'openai' : result.keyAlias === 'DEEPSEEK_PRIMARY' ? 'deepseek' : lastProvider;
+  if (attempted > 0) result = { ...result, attempts: totalAttempts, failovers: totalFailovers + Math.max(0, attempted - 1) };
   const telemetry = {
     assistant: assistantId, provider, model: result.modelUsed || (provider === 'openai' ? managed?.models?.openai : provider === 'deepseek' ? managed?.models?.deepseek : config.model(env)) || 'unknown', configSource,
     keyAlias: result.keyAlias || null, status: result.httpStatus || null,
@@ -275,7 +289,7 @@ export async function callAI(
     event: 'request_completed', assistant: assistantId, provider, configSource,
     model: result.modelUsed || (provider === 'openai' ? managed?.models?.openai : provider === 'deepseek' ? managed?.models?.deepseek : config.model(env)) || 'unknown', keyAlias: result.keyAlias || null,
     status: result.httpStatus || null, latencyMs: result.latencyMs,
-    attempts: result.attempts || 0, failovers: result.failovers || 0,
+    attempts: totalAttempts || result.attempts || 0, failovers: totalFailovers + Math.max(0, attempted - 1) || result.failovers || 0,
     outcome: result.success ? 'success' : 'failure', errorCategory: result.errorCategory || null,
   }));
   return result;
