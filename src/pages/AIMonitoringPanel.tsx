@@ -24,7 +24,7 @@ export function AIMonitoringPanel() {
   const [assistants, setAssistants] = useState<AssistantConfig[]>(fallbackConfigs);
   const [catalogues, setCatalogues] = useState<ModelCatalogue[]>([]);
   const [eventPage, setEventPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(5);
   const [columnFilters, setColumnFilters] = useState<Record<string, string[]>>({});
   const [draftColumnFilters, setDraftColumnFilters] = useState<Record<string, string[]>>({});
   const [filterSearch, setFilterSearch] = useState<Record<string, string>>({});
