@@ -22,6 +22,9 @@ export function AIMonitoringPanel() {
   const [data, setData] = useState<MonitoringData | null>(null);
   const [assistants, setAssistants] = useState<AssistantConfig[]>(fallbackConfigs);
   const [catalogues, setCatalogues] = useState<ModelCatalogue[]>([]);
+  const [assistantPage, setAssistantPage] = useState(1);
+  const [eventPage, setEventPage] = useState(1);
+  const pageSize = 5;
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -30,8 +33,9 @@ export function AIMonitoringPanel() {
   const refresh = useCallback(async () => {
     setLoading(true); setError('');
     try {
-      const result = await adminGetAiMonitoring<MonitoringData>();
+      const [result, modelResult] = await Promise.all([adminGetAiMonitoring<MonitoringData>(), adminGetAiModels<{ catalogues?: ModelCatalogue[] }>()]);
       setData(result);
+      setCatalogues(modelResult.catalogues || result.catalogues || []);
       if (Array.isArray(result.assistants) && result.assistants.length) setAssistants(result.assistants);
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Impossible de charger le moteur IA.'); }
     finally { setLoading(false); }
@@ -39,6 +43,10 @@ export function AIMonitoringPanel() {
   useEffect(() => { void refresh(); }, [refresh]);
 
   const events = data?.events || [];
+  const assistantPages = Math.max(1, Math.ceil(assistants.length / 2));
+  const visibleAssistants = assistants.slice((assistantPage - 1) * 2, assistantPage * 2);
+  const eventPages = Math.max(1, Math.ceil(events.length / pageSize));
+  const visibleEvents = events.slice((eventPage - 1) * pageSize, eventPage * pageSize);
   const summary = useMemo(() => {
     const successful = events.filter(event => event.outcome === 'success').length;
     const latencies = events.map(event => event.latencyMs).filter(value => value > 0);
@@ -88,7 +96,7 @@ export function AIMonitoringPanel() {
 
     <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"><div><div className="flex items-center gap-2"><SlidersHorizontal className="h-4 w-4 text-slate-500"/><h3 className="font-extrabold text-[#10243b]">Routage et paramètres par assistant</h3></div><p className="mt-1 text-xs text-slate-500">Définissez l'ordre des fournisseurs et les paramètres d'exécution.</p></div><button onClick={()=>void save()} disabled={saving||loading} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#10243b] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#173b57] disabled:opacity-50"><Save className="h-4 w-4"/>{saving?'Enregistrement…':'Enregistrer'}</button></div>
-      <div className="mt-4 space-y-4">{assistants.map(assistant=><article key={assistant.id} className="rounded-xl border border-slate-200 p-4">
+      <div className="mt-4 space-y-4">{visibleAssistants.map(assistant=><article key={assistant.id} className="rounded-xl border border-slate-200 p-4">
         <div className="flex flex-wrap items-center justify-between gap-3"><div><b className="text-sm text-slate-900">{assistant.label||assistantNames[assistant.id]||assistant.id}</b><p className="text-xs text-slate-500">{assistant.id}</p></div><label className="flex items-center gap-2 text-xs font-semibold text-slate-600"><input type="checkbox" checked={assistant.enabled} onChange={e=>patchAssistant(assistant.id,{enabled:e.target.checked})}/>Activé</label></div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {(['gemini','openai','deepseek'] as ProviderId[]).map(provider => {
@@ -110,10 +118,10 @@ export function AIMonitoringPanel() {
         </div>
         <div className="mt-4"><div className="mb-2 text-xs font-semibold text-slate-600">Ordre des fournisseurs (du principal au dernier secours)</div><div className="grid gap-2 sm:grid-cols-3">{(['gemini','openai','deepseek'] as ProviderId[]).map(provider=><label key={provider} className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700"><span className="w-20">{providerNames[provider]}</span><select value={assistant.providerOrder.indexOf(provider)+1} onChange={e=>moveProvider(assistant.id,Number(e.target.value)-1,provider)} className="ml-auto rounded-md border border-slate-200 bg-white px-2 py-1"><option value="1">1er</option><option value="2">2e</option><option value="3">3e</option></select></label>)}</div></div>
       </article>)}</div>
-      <div className="mt-4 flex justify-end"><button onClick={()=>void save()} disabled={saving||loading} className="inline-flex items-center gap-2 rounded-xl bg-[#10243b] px-5 py-3 text-sm font-bold text-white disabled:opacity-50"><Save className="h-4 w-4"/>{saving?'Enregistrement…':'Enregistrer la configuration'}</button></div>
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3"><span className="text-xs text-slate-500">Page {assistantPage} / {assistantPages} · {assistants.length} assistants</span><div className="flex gap-2"><button type="button" onClick={()=>setAssistantPage(p=>Math.max(1,p-1))} disabled={assistantPage===1} className="rounded-lg border px-3 py-2 text-xs font-semibold disabled:opacity-40">Précédent</button><button type="button" onClick={()=>setAssistantPage(p=>Math.min(assistantPages,p+1))} disabled={assistantPage===assistantPages} className="rounded-lg border px-3 py-2 text-xs font-semibold disabled:opacity-40">Suivant</button></div></div><div className="mt-4 flex justify-end"><button onClick={()=>void save()} disabled={saving||loading} className="inline-flex items-center gap-2 rounded-xl bg-[#10243b] px-5 py-3 text-sm font-bold text-white disabled:opacity-50"><Save className="h-4 w-4"/>{saving?'Enregistrement…':'Enregistrer la configuration'}</button></div>
       <p className="mt-3 text-[11px] text-slate-400">Dernière configuration : {data?.configUpdatedAt?dateLabel(data.configUpdatedAt):'configuration par défaut'}. Le changement de routage est enregistré côté serveur.</p>
     </section>
 
-    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"><div className="flex items-center justify-between border-b border-slate-100 p-5"><div><h3 className="font-extrabold text-[#10243b]">Derniers appels IA</h3><p className="mt-1 text-xs text-slate-500">Aucun prompt, fichier joint ou contenu privé n'est affiché.</p></div><span className="text-xs text-slate-400">{events.length} événement(s)</span></div>{loading&&!data?<div className="p-8 text-center text-sm text-slate-500">Chargement…</div>:!events.length?<div className="p-8 text-center"><AlertTriangle className="mx-auto h-6 w-6 text-slate-300"/><p className="mt-2 text-sm text-slate-500">Aucune télémétrie disponible.</p></div>:<div className="overflow-x-auto"><table className="w-full min-w-[850px] text-left text-xs"><thead className="bg-slate-50 text-[10px] uppercase text-slate-500"><tr>{['Date','Assistant','Fournisseur','Modèle','Clé','Résultat','Latence','Basculements'].map(label=><th key={label} className="px-3 py-3">{label}</th>)}</tr></thead><tbody className="divide-y divide-slate-100">{events.map((event,index)=><tr key={event.createdAt+event.assistant+index} className="text-slate-600"><td className="whitespace-nowrap px-3 py-3">{dateLabel(event.createdAt)}</td><td className="px-3 py-3 font-semibold">{assistantNames[event.assistant]||event.assistant}</td><td className="px-3 py-3">{providerNames[event.provider as ProviderId]||event.provider}</td><td className="px-3 py-3">{event.model||'—'}</td><td className="px-3 py-3">{event.keyAlias||'—'}</td><td className="px-3 py-3">{event.outcome==='success'?'Succès':'Échec · '+(event.errorCategory||event.status||'erreur')}</td><td className="px-3 py-3">{event.latencyMs?event.latencyMs+' ms':'—'}</td><td className="px-3 py-3">{event.failovers}</td></tr>)}</tbody></table></div>}</section>
+    <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm"><div className="flex items-center justify-between border-b border-slate-100 p-5"><div><h3 className="font-extrabold text-[#10243b]">Derniers appels IA</h3><p className="mt-1 text-xs text-slate-500">Aucun prompt, fichier joint ou contenu privé n'est affiché.</p></div><span className="text-xs text-slate-400">{events.length} événement(s)</span></div>{loading&&!data?<div className="p-8 text-center text-sm text-slate-500">Chargement…</div>:!events.length?<div className="p-8 text-center"><AlertTriangle className="mx-auto h-6 w-6 text-slate-300"/><p className="mt-2 text-sm text-slate-500">Aucune télémétrie disponible.</p></div>:<div className="overflow-x-auto"><table className="w-full min-w-[850px] text-left text-xs"><thead className="bg-slate-50 text-[10px] uppercase text-slate-500"><tr>{['Date','Assistant','Fournisseur','Modèle','Clé','Résultat','Latence','Basculements'].map(label=><th key={label} className="px-3 py-3">{label}</th>)}</tr></thead><tbody className="divide-y divide-slate-100">{visibleEvents.map((event,index)=><tr key={event.createdAt+event.assistant+index} className="text-slate-600"><td className="whitespace-nowrap px-3 py-3">{dateLabel(event.createdAt)}</td><td className="px-3 py-3 font-semibold">{assistantNames[event.assistant]||event.assistant}</td><td className="px-3 py-3">{providerNames[event.provider as ProviderId]||event.provider}</td><td className="px-3 py-3">{event.model||'—'}</td><td className="px-3 py-3">{event.keyAlias||'—'}</td><td className="px-3 py-3">{event.outcome==='success'?'Succès':'Échec · '+(event.errorCategory||event.status||'erreur')}</td><td className="px-3 py-3">{event.latencyMs?event.latencyMs+' ms':'—'}</td><td className="px-3 py-3">{event.failovers}</td></tr>)}</tbody></table></div>}<div className="flex items-center justify-between border-t border-slate-100 p-4"><span className="text-xs text-slate-500">Page {eventPage} / {eventPages}</span><div className="flex gap-2"><button type="button" onClick={()=>setEventPage(p=>Math.max(1,p-1))} disabled={eventPage===1} className="rounded-lg border px-3 py-2 text-xs font-semibold disabled:opacity-40">Précédent</button><button type="button" onClick={()=>setEventPage(p=>Math.min(eventPages,p+1))} disabled={eventPage===eventPages} className="rounded-lg border px-3 py-2 text-xs font-semibold disabled:opacity-40">Suivant</button></div></div></section>
   </section>;
 }
