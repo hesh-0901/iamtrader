@@ -48,3 +48,7 @@ export function adminUpdatePayment(paymentId: string, data: Record<string, unkno
 export function adminGetAiMonitoring<T = unknown>(): Promise<T> {
   return adminMutation<T>({ action: 'get-ai-monitoring' });
 }
+
+export function adminSaveAiConfig(assistants: Array<Record<string, unknown>>) {
+  return adminMutation<{ success: boolean }>({ action: 'save-ai-config', data: { assistants } });
+}
