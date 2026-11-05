@@ -22,7 +22,6 @@ export function AIMonitoringPanel() {
   const [data, setData] = useState<MonitoringData | null>(null);
   const [assistants, setAssistants] = useState<AssistantConfig[]>(fallbackConfigs);
   const [catalogues, setCatalogues] = useState<ModelCatalogue[]>([]);
-  const [assistantPage, setAssistantPage] = useState(1);
   const [eventPage, setEventPage] = useState(1);
   const pageSize = 5;
   const [loading, setLoading] = useState(true);
@@ -43,8 +42,6 @@ export function AIMonitoringPanel() {
   useEffect(() => { void refresh(); }, [refresh]);
 
   const events = data?.events || [];
-  const assistantPages = Math.max(1, Math.ceil(assistants.length / 2));
-  const visibleAssistants = assistants.slice((assistantPage - 1) * 2, assistantPage * 2);
   const eventPages = Math.max(1, Math.ceil(events.length / pageSize));
   const visibleEvents = events.slice((eventPage - 1) * pageSize, eventPage * pageSize);
   const summary = useMemo(() => {
@@ -98,8 +95,8 @@ export function AIMonitoringPanel() {
     <details name="ai-console" className="group"><summary className="cursor-pointer list-none rounded-xl border border-slate-200 bg-white px-5 py-4 text-sm font-extrabold text-[#10243b] shadow-sm">Routage et paramètres par assistant <span className="float-right text-slate-400">⌄</span></summary>
     <section className="mt-2 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between"><div><div className="flex items-center gap-2"><SlidersHorizontal className="h-4 w-4 text-slate-500"/><h3 className="font-extrabold text-[#10243b]">Routage et paramètres par assistant</h3></div><p className="mt-1 text-xs text-slate-500">Définissez l'ordre des fournisseurs et les paramètres d'exécution.</p></div><button onClick={()=>void save()} disabled={saving||loading} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#10243b] px-4 py-2.5 text-sm font-bold text-white hover:bg-[#173b57] disabled:opacity-50"><Save className="h-4 w-4"/>{saving?'Enregistrement…':'Enregistrer'}</button></div>
-      <div className="mt-4 space-y-4">{visibleAssistants.map(assistant=><article key={assistant.id} className="rounded-xl border border-slate-200 p-4">
-        <div className="flex flex-wrap items-center justify-between gap-3"><div><b className="text-sm text-slate-900">{assistant.label||assistantNames[assistant.id]||assistant.id}</b><p className="text-xs text-slate-500">{assistant.id}</p></div><label className="flex items-center gap-2 text-xs font-semibold text-slate-600"><input type="checkbox" checked={assistant.enabled} onChange={e=>patchAssistant(assistant.id,{enabled:e.target.checked})}/>Activé</label></div>
+      <div className="mt-4 space-y-4">{assistants.map(assistant=><details name="assistant-routing" key={assistant.id} className="rounded-xl border border-slate-200 bg-white"><summary className="cursor-pointer list-none px-4 py-4 text-sm font-bold text-slate-900"><span>{assistant.label||assistantNames[assistant.id]||assistant.id}</span><span className="float-right text-xs font-semibold text-slate-400">Ouvrir / réduire　⌄</span></summary><article className="border-t border-slate-100 p-4">
+        <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-xs text-slate-500">{assistant.id}</p><label className="flex items-center gap-2 text-xs font-semibold text-slate-600"><input type="checkbox" checked={assistant.enabled} onChange={e=>patchAssistant(assistant.id,{enabled:e.target.checked})}/>Activé</label></div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {(['gemini','openai','deepseek'] as ProviderId[]).map(provider => {
             const catalogue = catalogues.find(item => item.provider === provider);
@@ -119,8 +116,8 @@ export function AIMonitoringPanel() {
           <label className="text-xs font-semibold text-slate-600">Délai maximum (ms)<input type="number" min="1000" max="60000" step="1000" value={assistant.timeoutMs} onChange={e=>patchAssistant(assistant.id,{timeoutMs:Number(e.target.value)})} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800"/></label>
         </div>
         <div className="mt-4"><div className="mb-2 text-xs font-semibold text-slate-600">Ordre des fournisseurs (du principal au dernier secours)</div><div className="grid gap-2 sm:grid-cols-3">{(['gemini','openai','deepseek'] as ProviderId[]).map(provider=><label key={provider} className="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700"><span className="w-20">{providerNames[provider]}</span><select value={assistant.providerOrder.indexOf(provider)+1} onChange={e=>moveProvider(assistant.id,Number(e.target.value)-1,provider)} className="ml-auto rounded-md border border-slate-200 bg-white px-2 py-1"><option value="1">1er</option><option value="2">2e</option><option value="3">3e</option></select></label>)}</div></div>
-      </article>)}</div>
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3"><span className="text-xs text-slate-500">Page {assistantPage} / {assistantPages} · {assistants.length} assistants</span><div className="flex gap-2"><button type="button" onClick={()=>setAssistantPage(p=>Math.max(1,p-1))} disabled={assistantPage===1} className="rounded-lg border px-3 py-2 text-xs font-semibold disabled:opacity-40">Précédent</button><button type="button" onClick={()=>setAssistantPage(p=>Math.min(assistantPages,p+1))} disabled={assistantPage===assistantPages} className="rounded-lg border px-3 py-2 text-xs font-semibold disabled:opacity-40">Suivant</button></div></div><div className="mt-4 flex justify-end"><button onClick={()=>void save()} disabled={saving||loading} className="inline-flex items-center gap-2 rounded-xl bg-[#10243b] px-5 py-3 text-sm font-bold text-white disabled:opacity-50"><Save className="h-4 w-4"/>{saving?'Enregistrement…':'Enregistrer la configuration'}</button></div>
+      </article></details>)}</div>
+<div className="mt-4 flex justify-end"><button onClick={()=>void save()} disabled={saving||loading} className="inline-flex items-center gap-2 rounded-xl bg-[#10243b] px-5 py-3 text-sm font-bold text-white disabled:opacity-50"><Save className="h-4 w-4"/>{saving?'Enregistrement…':'Enregistrer la configuration'}</button></div>
       <p className="mt-3 text-[11px] text-slate-400">Dernière configuration : {data?.configUpdatedAt?dateLabel(data.configUpdatedAt):'configuration par défaut'}. Le changement de routage est enregistré côté serveur.</p>
     </section></details>
 
