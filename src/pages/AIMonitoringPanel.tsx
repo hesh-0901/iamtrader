@@ -5,21 +5,23 @@ import { adminGetAiMonitoring, adminGetAiModels, adminSaveAiConfig } from '../se
 type ProviderId = 'gemini' | 'openai' | 'deepseek';
 type AssistantConfig = { id: string; label: string; enabled: boolean; providerOrder: ProviderId[]; model: string; models: Record<ProviderId,string>; temperature: number; maxTokens: number; timeoutMs: number };
 type AIEvent = { assistant: string; provider: string; model: string; keyAlias: string; status: number | null; latencyMs: number; attempts: number; failovers: number; outcome: 'success' | 'failure'; errorCategory: string; createdAt: string };
-type ModelCatalogue = { provider: ProviderId; models: string[]; source: string; verifiedWithApiKey: boolean; warning: string };\ntype MonitoringData = { success: boolean; catalogues?: ModelCatalogue[]; keys: Array<{ alias: string; provider: ProviderId; configured: boolean }>; providers: Array<{ id: ProviderId; label: string; configured: boolean; models: string[] }>; assistants: AssistantConfig[]; configUpdatedAt?: string; events: AIEvent[] };
+type ModelCatalogue = { provider: ProviderId; models: string[]; source: string; verifiedWithApiKey: boolean; warning: string };
+type MonitoringData = { success: boolean; catalogues?: ModelCatalogue[]; keys: Array<{ alias: string; provider: ProviderId; configured: boolean }>; providers: Array<{ id: ProviderId; label: string; configured: boolean; models: string[] }>; assistants: AssistantConfig[]; configUpdatedAt?: string; events: AIEvent[] };
 
 const assistantNames: Record<string, string> = { chloe: 'Chloé', vyra: 'VYRA', 'instrument-suggest': 'Suggestions instruments', 'economic-calendar-analysis': 'Analyse économique' };
 const providerNames: Record<ProviderId, string> = { gemini: 'Google Gemini', openai: 'OpenAI', deepseek: 'DeepSeek' };
 const dateLabel = (value: string) => { const date = new Date(value); return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'medium' }); };
 const fallbackConfigs: AssistantConfig[] = [
-  { id: 'chloe', label: 'Chloé', enabled: true, providerOrder: ['gemini','openai','deepseek'], model: 'gemini-3.5-flash-lite', models: { gemini: 'gemini-3.5-flash-lite', openai: 'gpt-4o-mini', deepseek: 'deepseek-flash' }, temperature: .2, maxTokens: 1000, timeoutMs: 20000 },
+  { id: 'chloe', label: 'Chloé', enabled: true, providerOrder: ['gemini','openai','deepseek'], model: 'gemini-3.5-flash-lite', models: { gemini: 'gemini-3.5-flash-lite', openai: 'gpt-6-luna', deepseek: 'deepseek-flash' }, temperature: .2, maxTokens: 1000, timeoutMs: 20000 },
   { id: 'vyra', label: 'VYRA', enabled: true, providerOrder: ['gemini','openai','deepseek'], model: 'gemini-3.5-flash-lite', temperature: .3, maxTokens: 1200, timeoutMs: 15000 },
-  { id: 'instrument-suggest', label: 'Suggestions instruments', enabled: true, providerOrder: ['gemini','openai','deepseek'], model: 'gemini-3.8-flash', models: { gemini: 'gemini-3.8-flash', openai: 'gpt-4o-mini', deepseek: 'deepseek-flash' }, temperature: .1, maxTokens: 300, timeoutMs: 12000 },
+  { id: 'instrument-suggest', label: 'Suggestions instruments', enabled: true, providerOrder: ['gemini','openai','deepseek'], model: 'gemini-3.8-flash', models: { gemini: 'gemini-3.8-flash', openai: 'gpt-6-luna', deepseek: 'deepseek-flash' }, temperature: .1, maxTokens: 300, timeoutMs: 12000 },
   { id: 'economic-calendar-analysis', label: 'Analyse économique', enabled: true, providerOrder: ['gemini','openai','deepseek'], model: 'gemini-3.5-flash-lite', temperature: .2, maxTokens: 500, timeoutMs: 12000 }
 ];
 
 export function AIMonitoringPanel() {
   const [data, setData] = useState<MonitoringData | null>(null);
-  const [assistants, setAssistants] = useState<AssistantConfig[]>(fallbackConfigs);\n  const [catalogues, setCatalogues] = useState<ModelCatalogue[]>([]);
+  const [assistants, setAssistants] = useState<AssistantConfig[]>(fallbackConfigs);
+  const [catalogues, setCatalogues] = useState<ModelCatalogue[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
