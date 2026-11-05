@@ -91,7 +91,11 @@ export function isGeminiConfigured(env: AIEnvironment): boolean {
     .some(key => Boolean(key?.trim()));
 }
 
-export function isAIConfigured(env: AIEnvironment): boolean {\n  return isGeminiConfigured(env) || Boolean(env.OPENAI_API_KEY?.trim()) || Boolean(env.DEEPSEEK_API_KEY?.trim());\n}\n\nexport function isInstrumentAIConfigured(env: AIEnvironment): boolean {
+export function isAIConfigured(env: AIEnvironment): boolean {
+  return isGeminiConfigured(env) || Boolean(env.OPENAI_API_KEY?.trim()) || Boolean(env.DEEPSEEK_API_KEY?.trim());
+}
+
+export function isInstrumentAIConfigured(env: AIEnvironment): boolean {
   return isGeminiConfigured(env) || Boolean(env.OPENAI_API_KEY?.trim()) || Boolean(env.DEEPSEEK_API_KEY?.trim());
 }
 
@@ -109,7 +113,8 @@ function toCompatibleMessages(contents: unknown, systemInstruction?: string): Ar
     return messages;
   }
   for (const item of contents as Array<{ role?: string; parts?: Array<{ text?: string }> }>) {
-    const content = (item.parts || []).map(part => typeof part.text === 'string' ? part.text : '').filter(Boolean).join('\\n').trim();
+    const content = (item.parts || []).map(part => typeof part.text === 'string' ? part.text : '').filter(Boolean).join('\
+').trim();
     if (!content) continue;
     messages.push({ role: item.role === 'model' || item.role === 'assistant' ? 'assistant' : 'user', content });
   }
