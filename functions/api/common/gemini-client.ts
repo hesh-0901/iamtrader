@@ -22,6 +22,7 @@ export interface GeminiResponse {
   failovers?: number;
   latencyMs?: number;
   errorCategory?: string;
+  retryAfterMs?: number;
 }
 
 const DEFAULT_FALLBACKS = ['gemini-2.5-flash'];
