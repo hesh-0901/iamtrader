@@ -3,7 +3,7 @@ import { Activity, AlertTriangle, CheckCircle2, Clock3, RefreshCw, Server, Shiel
 import { adminGetAiMonitoring, adminSaveAiConfig } from '../services/adminConsole';
 
 type ProviderId = 'gemini' | 'openai' | 'deepseek';
-type AssistantConfig = { id: string; label: string; enabled: boolean; providerOrder: ProviderId[]; model: string; temperature: number; maxTokens: number; timeoutMs: number };
+type AssistantConfig = { id: string; label: string; enabled: boolean; providerOrder: ProviderId[]; model: string; models: Record<ProviderId,string>; temperature: number; maxTokens: number; timeoutMs: number };
 type AIEvent = { assistant: string; provider: string; model: string; keyAlias: string; status: number | null; latencyMs: number; attempts: number; failovers: number; outcome: 'success' | 'failure'; errorCategory: string; createdAt: string };
 type MonitoringData = { success: boolean; keys: Array<{ alias: string; provider: ProviderId; configured: boolean }>; providers: Array<{ id: ProviderId; label: string; configured: boolean; models: string[] }>; assistants: AssistantConfig[]; configUpdatedAt?: string; events: AIEvent[] };
 
@@ -11,9 +11,9 @@ const assistantNames: Record<string, string> = { chloe: 'Chloé', vyra: 'VYRA', 
 const providerNames: Record<ProviderId, string> = { gemini: 'Google Gemini', openai: 'OpenAI', deepseek: 'DeepSeek' };
 const dateLabel = (value: string) => { const date = new Date(value); return Number.isNaN(date.getTime()) ? '—' : date.toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'medium' }); };
 const fallbackConfigs: AssistantConfig[] = [
-  { id: 'chloe', label: 'Chloé', enabled: true, providerOrder: ['gemini','openai','deepseek'], model: 'gemini-3.5-flash-lite', temperature: .2, maxTokens: 1000, timeoutMs: 20000 },
+  { id: 'chloe', label: 'Chloé', enabled: true, providerOrder: ['gemini','openai','deepseek'], model: 'gemini-3.5-flash-lite', models: { gemini: 'gemini-3.5-flash-lite', openai: 'gpt-4o-mini', deepseek: 'deepseek-flash' }, temperature: .2, maxTokens: 1000, timeoutMs: 20000 },
   { id: 'vyra', label: 'VYRA', enabled: true, providerOrder: ['gemini','openai','deepseek'], model: 'gemini-3.5-flash-lite', temperature: .3, maxTokens: 1200, timeoutMs: 15000 },
-  { id: 'instrument-suggest', label: 'Suggestions instruments', enabled: true, providerOrder: ['gemini','openai','deepseek'], model: 'gemini-3.8-flash', temperature: .1, maxTokens: 300, timeoutMs: 12000 },
+  { id: 'instrument-suggest', label: 'Suggestions instruments', enabled: true, providerOrder: ['gemini','openai','deepseek'], model: 'gemini-3.8-flash', models: { gemini: 'gemini-3.8-flash', openai: 'gpt-4o-mini', deepseek: 'deepseek-flash' }, temperature: .1, maxTokens: 300, timeoutMs: 12000 },
   { id: 'economic-calendar-analysis', label: 'Analyse économique', enabled: true, providerOrder: ['gemini','openai','deepseek'], model: 'gemini-3.5-flash-lite', temperature: .2, maxTokens: 500, timeoutMs: 12000 }
 ];
 
@@ -89,7 +89,9 @@ export function AIMonitoringPanel() {
       <div className="mt-4 space-y-4">{assistants.map(assistant=><article key={assistant.id} className="rounded-xl border border-slate-200 p-4">
         <div className="flex flex-wrap items-center justify-between gap-3"><div><b className="text-sm text-slate-900">{assistant.label||assistantNames[assistant.id]||assistant.id}</b><p className="text-xs text-slate-500">{assistant.id}</p></div><label className="flex items-center gap-2 text-xs font-semibold text-slate-600"><input type="checkbox" checked={assistant.enabled} onChange={e=>patchAssistant(assistant.id,{enabled:e.target.checked})}/>Activé</label></div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <label className="text-xs font-semibold text-slate-600">Modèle principal<input value={assistant.model} onChange={e=>patchAssistant(assistant.id,{model:e.target.value})} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 outline-none focus:border-teal-500"/></label>
+          <label className="text-xs font-semibold text-slate-600">Modèle Gemini<input value={assistant.models?.gemini || assistant.model} onChange={e=>patchAssistant(assistant.id,{model:e.target.value,models:{...assistant.models,gemini:e.target.value}})} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 outline-none focus:border-teal-500"/></label>
+          <label className="text-xs font-semibold text-slate-600">Modèle OpenAI<input value={assistant.models?.openai || 'gpt-4o-mini'} onChange={e=>patchAssistant(assistant.id,{models:{...assistant.models,openai:e.target.value}})} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800"/></label>
+          <label className="text-xs font-semibold text-slate-600">Modèle DeepSeek<input value={assistant.models?.deepseek || 'deepseek-flash'} onChange={e=>patchAssistant(assistant.id,{models:{...assistant.models,deepseek:e.target.value}})} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800"/></label>
           <label className="text-xs font-semibold text-slate-600">Température · {assistant.temperature}<input type="range" min="0" max="2" step=".1" value={assistant.temperature} onChange={e=>patchAssistant(assistant.id,{temperature:Number(e.target.value)})} className="mt-3 w-full"/></label>
           <label className="text-xs font-semibold text-slate-600">Tokens maximum<input type="number" min="1" max="8192" value={assistant.maxTokens} onChange={e=>patchAssistant(assistant.id,{maxTokens:Number(e.target.value)})} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800"/></label>
           <label className="text-xs font-semibold text-slate-600">Délai maximum (ms)<input type="number" min="1000" max="60000" step="1000" value={assistant.timeoutMs} onChange={e=>patchAssistant(assistant.id,{timeoutMs:Number(e.target.value)})} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800"/></label>
