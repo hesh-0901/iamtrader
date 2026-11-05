@@ -49,9 +49,9 @@ const OFFICIAL_MODEL_CATALOGS = {
 
 async function fetchLiveModels(provider: 'gemini' | 'openai' | 'deepseek', apiKey: string): Promise<string[]> {
   const endpoint = provider === 'gemini'
-    ? 'https://generativelanguage.googleapis.com/v1beta/models?key=' + encodeURIComponent(apiKey)
+    ? 'https://generativelanguage.googleapis.com/v1beta/models'
     : provider === 'openai' ? 'https://api.openai.com/v1/models' : 'https://api.deepseek.com/models';
-  const response = await fetch(endpoint, { headers: provider === 'gemini' ? { Accept: 'application/json' } : { Authorization: 'Bearer ' + apiKey, Accept: 'application/json' }, signal: AbortSignal.timeout(8000) });
+  const response = await fetch(endpoint, { headers: provider === 'gemini' ? { 'x-goog-api-key': apiKey, Accept: 'application/json' } : { Authorization: 'Bearer ' + apiKey, Accept: 'application/json' }, signal: AbortSignal.timeout(8000) });
   if (!response.ok) throw new Error(provider + ' model catalogue HTTP ' + response.status);
   const payload = await response.json() as { data?: Array<{ id?: string; owned_by?: string }>; models?: Array<{ name?: string; supportedGenerationMethods?: string[] }> };
   if (provider === 'gemini') {
@@ -188,9 +188,9 @@ export async function handleAdminMutation(request: Request, env: AdminEnv) {
         { id: 'deepseek', label: 'DeepSeek', configured: Boolean((env as any).DEEPSEEK_API_KEY?.trim()), models: ['deepseek-flash'] }
       ];
       const defaultAssistants = [
-        { id: 'chloe', label: 'Chloé', enabled: true, providerOrder: ['gemini', 'openai', 'deepseek'], model: 'gemini-3.5-flash-lite', temperature: 0.2, maxTokens: 1000, timeoutMs: 20000 },
-        { id: 'vyra', label: 'VYRA', enabled: true, providerOrder: ['gemini', 'openai', 'deepseek'], model: 'gemini-3.5-flash-lite', temperature: 0.3, maxTokens: 1200, timeoutMs: 15000 },
-        { id: 'instrument-suggest', label: 'Suggestions instruments', enabled: true, providerOrder: ['gemini', 'openai', 'deepseek'], model: 'gemini-3.8-flash', temperature: 0.1, maxTokens: 300, timeoutMs: 12000 },
+        { id: 'chloe', label: 'Chloé', enabled: true, providerOrder: ['gemini', 'openai', 'deepseek'], model: 'gemini-3.5-flash-lite', models: { gemini: 'gemini-3.5-flash-lite', openai: 'gpt-6-luna', deepseek: 'deepseek-flash' }, temperature: 0.2, maxTokens: 1000, timeoutMs: 20000 },
+        { id: 'vyra', label: 'VYRA', enabled: true, providerOrder: ['gemini', 'openai', 'deepseek'], model: 'gemini-3.5-flash-lite', models: { gemini: 'gemini-3.5-flash-lite', openai: 'gpt-6-luna', deepseek: 'deepseek-flash' }, temperature: 0.3, maxTokens: 1200, timeoutMs: 15000 },
+        { id: 'instrument-suggest', label: 'Suggestions instruments', enabled: true, providerOrder: ['gemini', 'openai', 'deepseek'], model: 'gemini-3.8-flash', models: { gemini: 'gemini-3.8-flash', openai: 'gpt-6-luna', deepseek: 'deepseek-flash' }, temperature: 0.1, maxTokens: 300, timeoutMs: 12000 },
         { id: 'economic-calendar-analysis', label: 'Analyse économique', enabled: true, providerOrder: ['gemini', 'openai', 'deepseek'], model: 'gemini-3.5-flash-lite', temperature: 0.2, maxTokens: 500, timeoutMs: 12000 }
       ];
       const config = {
