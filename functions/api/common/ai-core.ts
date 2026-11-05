@@ -117,7 +117,7 @@ function toCompatibleMessages(contents: unknown, systemInstruction?: string): Ar
 
 async function callCompatibleProvider(
   provider: CompatibleProvider, contents: unknown, env: AIEnvironment,
-  overrides: AICallOverrides, previousError?: string, providerModel?: string,
+  overrides: AICallOverrides & { temperature: number; maxTokens: number; globalTimeoutMs: number }, previousError?: string, providerModel?: string,
 ): Promise<GeminiResponse> {
   const apiKey = provider === 'openai' ? env.OPENAI_API_KEY?.trim() : env.DEEPSEEK_API_KEY?.trim();
   if (!apiKey) return { success: false, error: previousError || `${provider} non configuré.`, errorCategory: 'configuration' };
@@ -148,14 +148,14 @@ async function callCompatibleProvider(
       try { message = (JSON.parse(raw) as { error?: { message?: string } }).error?.message || message; } catch { /* keep status */ }
       const category = response.status === 429 ? 'rate_limit' : response.status >= 500 ? 'provider_error' : response.status === 401 || response.status === 403 ? 'authentication_or_billing' : 'provider_error';
       console.warn('[IAMTRADER_AI] Compatible provider failed:', { provider, model, status: response.status, category, latencyMs: Date.now() - startedAt });
-      return { success: false, error: message, httpStatus: response.status, modelUsed: model, errorCategory: category, latencyMs: Date.now() - startedAt };
+      return { success: false, error: message, httpStatus: response.status, modelUsed: model, keyAlias: provider.toUpperCase() + '_PRIMARY', attempts: 1, errorCategory: category, latencyMs: Date.now() - startedAt };
     }
     const data = JSON.parse(raw) as { choices?: Array<{ message?: { content?: string | null } }> };
     const text = data.choices?.[0]?.message?.content?.trim();
-    if (!text) return { success: false, error: `${provider} a renvoyé une réponse vide.`, errorCategory: 'empty_provider_response', modelUsed: model, latencyMs: Date.now() - startedAt };
+    if (!text) return { success: false, error: `${provider} a renvoyé une réponse vide.`, errorCategory: 'empty_provider_response', modelUsed: model, keyAlias: provider.toUpperCase() + '_PRIMARY', attempts: 1, latencyMs: Date.now() - startedAt };
     return { success: true, text, modelUsed: model, httpStatus: response.status, keyAlias: provider.toUpperCase() + '_PRIMARY', attempts: 1, failovers: 1, latencyMs: Date.now() - startedAt };
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : `Erreur réseau ${provider}.`, errorCategory: 'network_error', modelUsed: model, latencyMs: Date.now() - startedAt };
+    return { success: false, error: error instanceof Error ? error.message : `Erreur réseau ${provider}.`, errorCategory: 'network_error', modelUsed: model, keyAlias: provider.toUpperCase() + '_PRIMARY', attempts: 1, errorCategory: 'network_error', latencyMs: Date.now() - startedAt };
   } finally { clearTimeout(timer); }
 }
 
@@ -240,8 +240,8 @@ export async function callAI(
           }, result.error, typeof managed?.models?.openai === 'string' ? managed.models.openai : undefined);
         } else if (provider === 'deepseek' && env.DEEPSEEK_API_KEY?.trim()) {
           attempt = await callCompatibleProvider('deepseek', contents, env, {
-            ...overrides, temperature: overrides.temperature ?? config.temperature,
-            maxTokens: overrides.maxTokens ?? config.maxTokens, globalTimeoutMs: attemptBudget,
+            ...overrides, temperature: config.temperature,
+            maxTokens: config.maxTokens, globalTimeoutMs: attemptBudget,
           }, result.error, typeof managed?.models?.deepseek === 'string' ? managed.models.deepseek : undefined);
         } else continue;
       }
