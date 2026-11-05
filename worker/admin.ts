@@ -185,7 +185,8 @@ export async function handleAdminMutation(request: Request, env: AdminEnv) {
         if (!allowedIds.includes(id) || !providerOrder.length || !Number.isFinite(temperature) || temperature < 0 || temperature > 2 ||
             !Number.isInteger(maxTokens) || maxTokens < 1 || maxTokens > 8192 ||
             !Number.isInteger(timeoutMs) || timeoutMs < 1000 || timeoutMs > 60000) throw new Error('Paramètres IA invalides pour ' + id);
-        const models = item.models && typeof item.models === 'object' ? Object.fromEntries(Object.entries(item.models as Record<string, unknown>).filter(([provider, model]) => allowedProviders.includes(provider) && typeof model === 'string').map(([provider, model]) => [provider, String(model).trim().slice(0, 100)])) : {};\n        return { id, enabled: item.enabled !== false, providerOrder: [...new Set(providerOrder)], model: String(item.model || '').slice(0, 100), models, temperature, maxTokens, timeoutMs };
+        const models = item.models && typeof item.models === 'object' ? Object.fromEntries(Object.entries(item.models as Record<string, unknown>).filter(([provider, model]) => allowedProviders.includes(provider) && typeof model === 'string').map(([provider, model]) => [provider, String(model).trim().slice(0, 100)])) : {};
+        return { id, enabled: item.enabled !== false, providerOrder: [...new Set(providerOrder)], model: String(item.model || '').slice(0, 100), models, temperature, maxTokens, timeoutMs };
       });
       if (new Set(assistants.map(item => item.id)).size !== assistants.length) return json({ error: 'Un assistant est déclaré plusieurs fois.' }, 400);
       const record = { assistants, updatedAt: new Date().toISOString(), updatedBy: identity.uid };
