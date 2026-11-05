@@ -52,3 +52,7 @@ export function adminGetAiMonitoring<T = unknown>(): Promise<T> {
 export function adminSaveAiConfig(assistants: Array<Record<string, unknown>>) {
   return adminMutation<{ success: boolean }>({ action: 'save-ai-config', data: { assistants } });
 }
+
+export function adminGetAiModels<T = unknown>(): Promise<T> {
+  return adminMutation<T>({ action: 'get-ai-models' });
+}
