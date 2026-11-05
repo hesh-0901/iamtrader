@@ -47,8 +47,6 @@ export function AIMonitoringPanel() {
   const events = data?.events || [];
   const eventPages = Math.max(1, Math.ceil(events.length / pageSize));
   const visibleEvents = events.slice((eventPage - 1) * pageSize, eventPage * pageSize);
-  const firstVisibleOperation = events.length - (eventPage - 1) * pageSize;
-  const lastVisibleOperation = Math.max(0, events.length - eventPage * pageSize + 1);
   const summary = useMemo(() => {
     const successful = events.filter(event => event.outcome === 'success').length;
     const latencies = events.map(event => event.latencyMs).filter(value => value > 0);
