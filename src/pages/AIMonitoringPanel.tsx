@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Activity, AlertTriangle, CheckCircle2, Clock3, RefreshCw, Server, ShieldCheck, Zap, Save, SlidersHorizontal } from 'lucide-react';
-import { adminGetAiMonitoring, adminSaveAiConfig } from '../services/adminConsole';
+import { adminGetAiMonitoring, adminGetAiModels, adminSaveAiConfig } from '../services/adminConsole';
 
 type ProviderId = 'gemini' | 'openai' | 'deepseek';
 type AssistantConfig = { id: string; label: string; enabled: boolean; providerOrder: ProviderId[]; model: string; models: Record<ProviderId,string>; temperature: number; maxTokens: number; timeoutMs: number };
 type AIEvent = { assistant: string; provider: string; model: string; keyAlias: string; status: number | null; latencyMs: number; attempts: number; failovers: number; outcome: 'success' | 'failure'; errorCategory: string; createdAt: string };
-type MonitoringData = { success: boolean; keys: Array<{ alias: string; provider: ProviderId; configured: boolean }>; providers: Array<{ id: ProviderId; label: string; configured: boolean; models: string[] }>; assistants: AssistantConfig[]; configUpdatedAt?: string; events: AIEvent[] };
+type ModelCatalogue = { provider: ProviderId; models: string[]; source: string; verifiedWithApiKey: boolean; warning: string };\ntype MonitoringData = { success: boolean; catalogues?: ModelCatalogue[]; keys: Array<{ alias: string; provider: ProviderId; configured: boolean }>; providers: Array<{ id: ProviderId; label: string; configured: boolean; models: string[] }>; assistants: AssistantConfig[]; configUpdatedAt?: string; events: AIEvent[] };
 
 const assistantNames: Record<string, string> = { chloe: 'Chloé', vyra: 'VYRA', 'instrument-suggest': 'Suggestions instruments', 'economic-calendar-analysis': 'Analyse économique' };
 const providerNames: Record<ProviderId, string> = { gemini: 'Google Gemini', openai: 'OpenAI', deepseek: 'DeepSeek' };
@@ -19,7 +19,7 @@ const fallbackConfigs: AssistantConfig[] = [
 
 export function AIMonitoringPanel() {
   const [data, setData] = useState<MonitoringData | null>(null);
-  const [assistants, setAssistants] = useState<AssistantConfig[]>(fallbackConfigs);
+  const [assistants, setAssistants] = useState<AssistantConfig[]>(fallbackConfigs);\n  const [catalogues, setCatalogues] = useState<ModelCatalogue[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -89,9 +89,19 @@ export function AIMonitoringPanel() {
       <div className="mt-4 space-y-4">{assistants.map(assistant=><article key={assistant.id} className="rounded-xl border border-slate-200 p-4">
         <div className="flex flex-wrap items-center justify-between gap-3"><div><b className="text-sm text-slate-900">{assistant.label||assistantNames[assistant.id]||assistant.id}</b><p className="text-xs text-slate-500">{assistant.id}</p></div><label className="flex items-center gap-2 text-xs font-semibold text-slate-600"><input type="checkbox" checked={assistant.enabled} onChange={e=>patchAssistant(assistant.id,{enabled:e.target.checked})}/>Activé</label></div>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <label className="text-xs font-semibold text-slate-600">Modèle Gemini<input value={assistant.models?.gemini || assistant.model} onChange={e=>patchAssistant(assistant.id,{model:e.target.value,models:{...assistant.models,gemini:e.target.value}})} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 outline-none focus:border-teal-500"/></label>
-          <label className="text-xs font-semibold text-slate-600">Modèle OpenAI<input value={assistant.models?.openai || 'gpt-4o-mini'} onChange={e=>patchAssistant(assistant.id,{models:{...assistant.models,openai:e.target.value}})} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800"/></label>
-          <label className="text-xs font-semibold text-slate-600">Modèle DeepSeek<input value={assistant.models?.deepseek || 'deepseek-flash'} onChange={e=>patchAssistant(assistant.id,{models:{...assistant.models,deepseek:e.target.value}})} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800"/></label>
+          {(['gemini','openai','deepseek'] as ProviderId[]).map(provider => {
+            const catalogue = catalogues.find(item => item.provider === provider);
+            const available = catalogue?.models || [];
+            const selected = assistant.models?.[provider] || (provider === 'gemini' ? assistant.model : provider === 'openai' ? 'gpt-6-luna' : 'deepseek-flash');
+            const options = available.includes(selected) || !selected ? available : [selected, ...available];
+            return <label key={provider} className="text-xs font-semibold text-slate-600">Modèle {providerNames[provider]}
+              <select value={selected} onChange={e=>patchAssistant(assistant.id,{...(provider==='gemini'?{model:e.target.value}:{}),models:{...assistant.models,[provider]:e.target.value}})} className="mt-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800">
+                {!options.length && <option value={selected}>{selected || 'Catalogue indisponible'}</option>}
+                {options.map(model=><option key={model} value={model}>{model}</option>)}
+              </select>
+              <span className="mt-1 block text-[10px] font-normal text-slate-400">{catalogue?.verifiedWithApiKey ? 'Catalogue récupéré auprès de l’API' : 'Catalogue officiel indicatif · clé API non vérifiée'}{catalogue?.warning ? ' · '+catalogue.warning : ''}</span>
+            </label>;
+          })}
           <label className="text-xs font-semibold text-slate-600">Température · {assistant.temperature}<input type="range" min="0" max="2" step=".1" value={assistant.temperature} onChange={e=>patchAssistant(assistant.id,{temperature:Number(e.target.value)})} className="mt-3 w-full"/></label>
           <label className="text-xs font-semibold text-slate-600">Tokens maximum<input type="number" min="1" max="8192" value={assistant.maxTokens} onChange={e=>patchAssistant(assistant.id,{maxTokens:Number(e.target.value)})} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800"/></label>
           <label className="text-xs font-semibold text-slate-600">Délai maximum (ms)<input type="number" min="1000" max="60000" step="1000" value={assistant.timeoutMs} onChange={e=>patchAssistant(assistant.id,{timeoutMs:Number(e.target.value)})} className="mt-1 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800"/></label>
