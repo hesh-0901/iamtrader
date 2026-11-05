@@ -153,9 +153,10 @@ async function callCompatibleProvider(
     const data = JSON.parse(raw) as { choices?: Array<{ message?: { content?: string | null } }> };
     const text = data.choices?.[0]?.message?.content?.trim();
     if (!text) return { success: false, error: `${provider} a renvoyé une réponse vide.`, errorCategory: 'empty_provider_response', modelUsed: model, keyAlias: provider.toUpperCase() + '_PRIMARY', attempts: 1, latencyMs: Date.now() - startedAt };
-    return { success: true, text, modelUsed: model, httpStatus: response.status, keyAlias: provider.toUpperCase() + '_PRIMARY', attempts: 1, failovers: 1, latencyMs: Date.now() - startedAt };
+    return { success: true, text, modelUsed: model, httpStatus: response.status, keyAlias: provider.toUpperCase() + '_PRIMARY', attempts: 1, failovers: 0, latencyMs: Date.now() - startedAt };
   } catch (error) {
-    return { success: false, error: error instanceof Error ? error.message : `Erreur réseau ${provider}.`, errorCategory: 'network_error', modelUsed: model, keyAlias: provider.toUpperCase() + '_PRIMARY', attempts: 1, errorCategory: 'network_error', latencyMs: Date.now() - startedAt };
+    const timedOut = error instanceof Error && error.name === 'AbortError';
+    return { success: false, error: timedOut ? `Délai dépassé pour ${provider}.` : error instanceof Error ? error.message : `Erreur réseau ${provider}.`, errorCategory: timedOut ? 'timeout' : 'network_error', modelUsed: model, keyAlias: provider.toUpperCase() + '_PRIMARY', attempts: 1, latencyMs: Date.now() - startedAt };
   } finally { clearTimeout(timer); }
 }
 
@@ -209,13 +210,12 @@ export async function callAI(
   let attempted = 0;
   let totalAttempts = 0;
   let totalFailovers = 0;
-  let lastProvider: AIProvider = providerOrder[0] || 'gemini';
+  let lastProvider: AIProvider | 'none' = 'none';
   if (config.enabled === false) {
     result = { success: false, error: 'Cet assistant est désactivé depuis le moteur IA.', errorCategory: 'assistant_disabled' };
   } else {
     for (let index = 0; index < providerOrder.length; index += 1) {
       const provider = providerOrder[index];
-      lastProvider = provider;
       const remaining = deadline - Date.now();
       if (remaining <= 1000) break;
       const remainingProviders = providerOrder.length - index;
@@ -223,6 +223,7 @@ export async function callAI(
       let attempt: GeminiResponse;
       if (provider === 'gemini') {
         if (!isGeminiConfigured(env)) continue;
+        lastProvider = provider;
         attempt = await callGeminiUnified(contents, {
           apiKeys: [env.GEMINI_API_KEY, env.GEMINI_API_KEY_2, env.GEMINI_API_KEY_3, env.GEMINI_API_KEY_4],
           preferredModel: config.model(env),
@@ -235,10 +236,12 @@ export async function callAI(
         if (!canUseTextFallback) {
           attempt = { success: false, error: 'Contenu multimodal incompatible avec le fournisseur de secours.', errorCategory: 'fallback_payload_unsupported' };
         } else if (provider === 'openai' && env.OPENAI_API_KEY?.trim()) {
+          lastProvider = provider;
           attempt = await callCompatibleProvider('openai', contents, env, {
             ...overrides, temperature: config.temperature, maxTokens: config.maxTokens, globalTimeoutMs: attemptBudget,
           }, result.error, typeof managed?.models?.openai === 'string' ? managed.models.openai : undefined);
         } else if (provider === 'deepseek' && env.DEEPSEEK_API_KEY?.trim()) {
+          lastProvider = provider;
           attempt = await callCompatibleProvider('deepseek', contents, env, {
             ...overrides, temperature: config.temperature,
             maxTokens: config.maxTokens, globalTimeoutMs: attemptBudget,
@@ -255,7 +258,7 @@ export async function callAI(
       result = attempt;
     }
   }
-  const provider: AIProvider = result.keyAlias === 'OPENAI_PRIMARY' ? 'openai' : result.keyAlias === 'DEEPSEEK_PRIMARY' ? 'deepseek' : lastProvider;
+  const provider = result.keyAlias === 'OPENAI_PRIMARY' ? 'openai' : result.keyAlias === 'DEEPSEEK_PRIMARY' ? 'deepseek' : lastProvider;
   const telemetry = {
     assistant: assistantId, provider, model: result.modelUsed || (provider === 'openai' ? managed?.models?.openai : provider === 'deepseek' ? managed?.models?.deepseek : config.model(env)) || 'unknown', configSource,
     keyAlias: result.keyAlias || null, status: result.httpStatus || null,
