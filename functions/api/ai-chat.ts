@@ -209,10 +209,6 @@ export async function onRequest(context: { request: Request; env: Env }) {
 \
 BASE DE CONNAISSANCES IAMTRADER\
 ${IAMTRADER_KNOWLEDGE}`,
-      // Keep the cost-efficient Flash-Lite model first, then retry on the current stable Flash model.
-      fallbackModels: ['gemini-3.8-flash'],
-      timeoutMs: 15000,
-      globalTimeoutMs: 45000,
     });
 
     if (!result.success || !result.text) {
