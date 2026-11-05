@@ -178,7 +178,8 @@ export async function callAI(
   try {
     const saved = await firestoreGet(env, 'system/aiEngineConfig');
     managed = Array.isArray(saved?.assistants) ? saved.assistants.find((item: any) => item.id === assistantId) : undefined;
-    if (saved) configSource = 'firestore';
+    if (saved && !managed) return { success: false, error: `Configuration Firestore manquante pour l’assistant ${assistantId}.`, errorCategory: 'configuration_incomplete' };
+    if (managed) configSource = 'firestore';
   } catch (error) {
     console.error('[IAMTRADER_AI] Dynamic configuration read failed; request blocked:', error instanceof Error ? error.message : 'unknown');
     return { success: false, error: 'Impossible de charger la configuration IA active depuis Firestore.', errorCategory: 'configuration_unavailable' };
