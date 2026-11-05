@@ -51,10 +51,6 @@ interface AssistantConfig {
   globalTimeoutMs: number;
   enabled?: boolean;
   providerOrder?: AIProvider[];
-  model?: string;
-  temperature?: number;
-  maxTokens?: number;
-  timeoutMs?: number;
 }
 
 const ASSISTANT_CONFIG: Record<AIAssistantId, AssistantConfig> = {
