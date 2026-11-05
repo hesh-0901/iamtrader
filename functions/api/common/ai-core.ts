@@ -199,7 +199,7 @@ export async function callAI(
     } : {}),
   };
   const startedAt = Date.now();
-  const totalBudgetMs = Math.max(3000, baseConfig.globalTimeoutMs);
+  const totalBudgetMs = Math.max(3000, config.timeoutMs || baseConfig.globalTimeoutMs);
   const deadline = startedAt + totalBudgetMs;
   const canUseTextFallback = typeof contents === 'string' || (
     Array.isArray(contents) && contents.every(item =>
