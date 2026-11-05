@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Activity, AlertTriangle, CheckCircle2, Clock3, RefreshCw, Server, ShieldCheck, Zap, Save, Cpu, SlidersHorizontal } from 'lucide-react';
+import { Activity, AlertTriangle, CheckCircle2, Clock3, RefreshCw, Server, ShieldCheck, Zap, Save, SlidersHorizontal } from 'lucide-react';
 import { adminGetAiMonitoring, adminSaveAiConfig } from '../services/adminConsole';
 
 type ProviderId = 'gemini' | 'openai' | 'deepseek';
