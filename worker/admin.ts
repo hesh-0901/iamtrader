@@ -206,7 +206,7 @@ export async function handleAdminMutation(request: Request, env: AdminEnv) {
           { alias: 'DEEPSEEK_API_KEY', provider: 'deepseek', configured: Boolean((env as any).DEEPSEEK_API_KEY?.trim()) }
         ],
         events: events.map(event => ({
-          assistant: String(event.assistant || ''), provider: String(event.provider || 'gemini'),
+          assistant: String(event.assistant || ''), provider: String(event.provider || 'unknown'), configSource: String(event.configSource || 'legacy'),
           model: String(event.model || ''), keyAlias: String(event.keyAlias || ''),
           status: Number(event.status || 0) || null, latencyMs: Number(event.latencyMs || 0),
           attempts: Number(event.attempts || 0), failovers: Number(event.failovers || 0),
@@ -227,7 +227,7 @@ export async function handleAdminMutation(request: Request, env: AdminEnv) {
         const temperature = Number(item.temperature);
         const maxTokens = Number(item.maxTokens);
         const timeoutMs = Number(item.timeoutMs);
-        if (!allowedIds.includes(id) || !providerOrder.length || !Number.isFinite(temperature) || temperature < 0 || temperature > 2 ||
+        if (!allowedIds.includes(id) || providerOrder.length !== allowedProviders.length || new Set(providerOrder).size !== allowedProviders.length || providerOrder.some(provider => !allowedProviders.includes(provider)) || !Number.isFinite(temperature) || temperature < 0 || temperature > 2 ||
             !Number.isInteger(maxTokens) || maxTokens < 1 || maxTokens > 8192 ||
             !Number.isInteger(timeoutMs) || timeoutMs < 1000 || timeoutMs > 60000) throw new Error('Paramètres IA invalides pour ' + id);
         const models = item.models && typeof item.models === 'object' ? Object.fromEntries(Object.entries(item.models as Record<string, unknown>).filter(([provider, model]) => allowedProviders.includes(provider) && typeof model === 'string').map(([provider, model]) => [provider, String(model).trim().slice(0, 100)])) : {};
