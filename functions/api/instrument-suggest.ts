@@ -9,7 +9,7 @@ interface Env {
   GEMINI_CHLOE_MODEL?: string;
   GEMINI_INSTRUMENT_MODEL?: string;
   OPENAI_API_KEY?: string;
-  OPENAI_INSTRUMENT_MODEL?: string;
+  OPENAI_INSTRUMENT_MODEL?: string;\n  OPENAI_MODEL?: string;\n  DEEPSEEK_API_KEY?: string;\n  DEEPSEEK_MODEL?: string;\n  FIREBASE_SERVICE_ACCOUNT_JSON?: string;
 }
 
 const categories = ['forex', 'metal', 'index', 'futures', 'crypto', 'stock', 'other'] as const;
