@@ -292,7 +292,7 @@ N'invente pas de source ni de validation officielle.`;
   if (!result.success || !result.text) {
     console.warn('[InstrumentSuggest] All configured AI providers unavailable', {
       model: result.modelUsed, status: result.httpStatus,
-      provider: result.keyAlias === 'OPENAI_PRIMARY' ? 'openai' : 'gemini',
+      provider: result.keyAlias === 'OPENAI_PRIMARY' ? 'openai' : result.keyAlias === 'DEEPSEEK_PRIMARY' ? 'deepseek' : 'gemini',
     });
     return json({
       instrument: {
