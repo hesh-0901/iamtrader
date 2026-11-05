@@ -192,7 +192,7 @@ export async function callAI(
     ...(managed ? {
       enabled: managed.enabled !== false,
       providerOrder: Array.isArray(managed.providerOrder) ? managed.providerOrder.filter((value: unknown): value is AIProvider => ['gemini','openai','deepseek'].includes(String(value))) : undefined,
-      model: () => typeof managed.model === 'string' && managed.model.trim() ? managed.model.trim() : baseConfig.model(env),
+      model: () => typeof managed.models?.gemini === 'string' && managed.models.gemini.trim() ? managed.models.gemini.trim() : typeof managed.model === 'string' && managed.model.trim() ? managed.model.trim() : baseConfig.model(env),
       temperature: Number.isFinite(Number(managed.temperature)) ? Number(managed.temperature) : baseConfig.temperature,
       maxTokens: Number.isFinite(Number(managed.maxTokens)) ? Number(managed.maxTokens) : baseConfig.maxTokens,
       timeoutMs: Number.isFinite(Number(managed.timeoutMs)) ? Number(managed.timeoutMs) : baseConfig.timeoutMs,
@@ -242,12 +242,12 @@ export async function callAI(
           attempt = await callCompatibleProvider('openai', contents, env, {
             ...overrides, temperature: overrides.temperature ?? config.temperature,
             maxTokens: overrides.maxTokens ?? config.maxTokens, globalTimeoutMs: attemptBudget,
-          }, result.error, config.model(env));
+          }, result.error, typeof managed?.models?.openai === 'string' ? managed.models.openai : undefined);
         } else if (provider === 'deepseek' && env.DEEPSEEK_API_KEY?.trim()) {
           attempt = await callCompatibleProvider('deepseek', contents, env, {
             ...overrides, temperature: overrides.temperature ?? config.temperature,
             maxTokens: overrides.maxTokens ?? config.maxTokens, globalTimeoutMs: attemptBudget,
-          }, result.error, config.model(env));
+          }, result.error, typeof managed?.models?.deepseek === 'string' ? managed.models.deepseek : undefined);
         } else continue;
       }
       attempted += 1;
