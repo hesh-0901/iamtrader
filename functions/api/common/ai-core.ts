@@ -227,7 +227,7 @@ export async function callAI(
   let totalAttempts = 0;
   let totalFailovers = 0;
   let lastProvider: AIProvider | 'none' = 'none';
-  const providerTrace: Array<{ provider: AIProvider; model: string; status: number | null; category: string | null }> = [];
+  const providerTrace: Array<{ provider: AIProvider; model: string; status: number | null; category: string | null; message?: string }> = [];
   if (config.enabled === false) {
     result = { success: false, error: 'Cet assistant est désactivé depuis le moteur IA.', errorCategory: 'assistant_disabled' };
   } else {
@@ -239,7 +239,10 @@ export async function callAI(
       const attemptBudget = Math.max(1000, Math.floor(remaining / remainingProviders));
       let attempt: GeminiResponse;
       if (provider === 'gemini') {
-        if (!isGeminiConfigured(env)) continue;
+        if (!isGeminiConfigured(env)) {
+          providerTrace.push({ provider, model: config.model(env), status: null, category: 'configuration_missing', message: 'Aucune clé Gemini configurée.' });
+          continue;
+        }
         lastProvider = provider;
         attempt = await callGeminiUnified(contents, {
           apiKeys: [env.GEMINI_API_KEY, env.GEMINI_API_KEY_2, env.GEMINI_API_KEY_3, env.GEMINI_API_KEY_4],
@@ -252,6 +255,7 @@ export async function callAI(
       } else {
         if (!canUseTextFallback) {
           attempt = { success: false, error: 'Contenu multimodal incompatible avec le fournisseur de secours.', errorCategory: 'fallback_payload_unsupported' };
+          providerTrace.push({ provider, model: provider === 'openai' ? String(managed?.models?.openai || env.OPENAI_MODEL || 'gpt-4o-mini') : String(managed?.models?.deepseek || env.DEEPSEEK_MODEL || 'deepseek-flash'), status: null, category: attempt.errorCategory, message: attempt.error });
         } else if (provider === 'openai' && env.OPENAI_API_KEY?.trim()) {
           lastProvider = provider;
           attempt = await callCompatibleProvider('openai', contents, env, {
@@ -263,10 +267,15 @@ export async function callAI(
             ...overrides, temperature: config.temperature,
             maxTokens: config.maxTokens, globalTimeoutMs: attemptBudget,
           }, result.error, typeof managed?.models?.deepseek === 'string' ? managed.models.deepseek : undefined);
-        } else continue;
+        } else {
+          providerTrace.push({ provider, model: provider === 'openai' ? String(managed?.models?.openai || env.OPENAI_MODEL || 'gpt-4o-mini') : String(managed?.models?.deepseek || env.DEEPSEEK_MODEL || 'deepseek-flash'), status: null, category: 'configuration_missing', message: `Clé API ${provider} absente.` });
+          continue;
+        }
       }
       attempted += 1;
-      providerTrace.push({ provider, model: attempt.modelUsed || (provider === 'gemini' ? config.model(env) : provider === 'openai' ? String(managed?.models?.openai || env.OPENAI_MODEL || 'gpt-4o-mini') : String(managed?.models?.deepseek || env.DEEPSEEK_MODEL || 'deepseek-flash')), status: attempt.httpStatus || null, category: attempt.errorCategory || null });
+      if (!(provider === 'openai' || provider === 'deepseek') || canUseTextFallback) {
+        providerTrace.push({ provider, model: attempt.modelUsed || (provider === 'gemini' ? config.model(env) : provider === 'openai' ? String(managed?.models?.openai || env.OPENAI_MODEL || 'gpt-4o-mini') : String(managed?.models?.deepseek || env.DEEPSEEK_MODEL || 'deepseek-flash')), status: attempt.httpStatus || null, category: attempt.errorCategory || null, ...(attempt.error ? { message: attempt.error.slice(0, 500) } : {}) });
+      }
       totalAttempts += Math.max(1, attempt.attempts || 1);
       totalFailovers += Math.max(0, attempt.failovers || 0);
       if (attempt.success) {
@@ -283,7 +292,7 @@ export async function callAI(
     keyAlias: result.keyAlias || null, status: result.httpStatus || null,
     latencyMs: result.latencyMs || 0, attempts: totalAttempts || result.attempts || 0,
     failovers: totalFailovers + Math.max(0, attempted - 1) || result.failovers || 0, outcome: result.success ? 'success' : 'failure',
-    errorCategory: result.errorCategory || null, errorMessage: result.error || null, retryAfterMs: result.retryAfterMs || null, providerTrace, createdAt: new Date().toISOString(),
+    errorCategory: result.errorCategory || null, errorMessage: result.error || null, retryAfterMs: result.retryAfterMs || null, providerOrder, providerTrace, createdAt: new Date().toISOString(),
   };
   if (env.FIREBASE_SERVICE_ACCOUNT_JSON) {
     await firestoreSet(env, `aiTelemetry/${crypto.randomUUID()}`, telemetry)
@@ -294,7 +303,7 @@ export async function callAI(
     model: result.modelUsed || (provider === 'openai' ? managed?.models?.openai : provider === 'deepseek' ? managed?.models?.deepseek : config.model(env)) || 'unknown', keyAlias: result.keyAlias || null,
     status: result.httpStatus || null, latencyMs: result.latencyMs,
     attempts: totalAttempts || result.attempts || 0, failovers: totalFailovers + Math.max(0, attempted - 1) || result.failovers || 0,
-    outcome: result.success ? 'success' : 'failure', errorCategory: result.errorCategory || null, errorMessage: result.error || null, retryAfterMs: result.retryAfterMs || null, providerTrace,
+    outcome: result.success ? 'success' : 'failure', errorCategory: result.errorCategory || null, errorMessage: result.error || null, retryAfterMs: result.retryAfterMs || null, providerOrder, providerTrace,
   }));
   return result;
 }
