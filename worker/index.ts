@@ -30,7 +30,7 @@ interface Env {
   GEMINI_INSTRUMENT_MODEL?: string;
   GEMINI_ECONOMIC_MODEL?: string;
   OPENAI_API_KEY?: string;
-  OPENAI_INSTRUMENT_MODEL?: string;
+  OPENAI_INSTRUMENT_MODEL?: string;\n  OPENAI_MODEL?: string;\n  DEEPSEEK_API_KEY?: string;\n  DEEPSEEK_MODEL?: string;
   FINNHUB_API_KEY?: string;
   RESEND_API_KEY?: string;
   RESEND_FROM_EMAIL?: string;
