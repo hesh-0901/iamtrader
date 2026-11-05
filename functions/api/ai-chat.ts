@@ -8,7 +8,11 @@ interface Env {
   GEMINI_API_KEY_3?: string;
   GEMINI_API_KEY_4?: string;
   GEMINI_MODEL?: string;
-  GEMINI_VYRA_MODEL?: string;\n  OPENAI_API_KEY?: string;\n  OPENAI_MODEL?: string;\n  DEEPSEEK_API_KEY?: string;\n  DEEPSEEK_MODEL?: string;
+  GEMINI_VYRA_MODEL?: string;
+  OPENAI_API_KEY?: string;
+  OPENAI_MODEL?: string;
+  DEEPSEEK_API_KEY?: string;
+  DEEPSEEK_MODEL?: string;
 }
 
 type ChatMessage = {
@@ -201,7 +205,10 @@ export async function onRequest(context: { request: Request; env: Env }) {
 
   try {
     const result = await callAI('vyra', contents, context.env, {
-      systemInstruction: `${SYSTEM_INSTRUCTIONS}\\n\\nBASE DE CONNAISSANCES IAMTRADER\\n${IAMTRADER_KNOWLEDGE}`,
+      systemInstruction: `${SYSTEM_INSTRUCTIONS}\
+\
+BASE DE CONNAISSANCES IAMTRADER\
+${IAMTRADER_KNOWLEDGE}`,
       // Keep the cost-efficient Flash-Lite model first, then retry on the current stable Flash model.
       fallbackModels: ['gemini-3.8-flash'],
       timeoutMs: 15000,
