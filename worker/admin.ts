@@ -1,7 +1,7 @@
 import { firestoreGet, firestorePatch, firestoreDelete, firestoreSet, firestoreQueryCollection, verifyFirebaseIdToken, type PaymentEnv } from './firebaseAdmin';
 import { lifecycleFields, subscriptionFields, type SubscriptionAction } from './subscription';
 
-type AdminEnv = PaymentEnv & { GEMINI_API_KEY?: string; GEMINI_API_KEY_2?: string; GEMINI_API_KEY_3?: string; GEMINI_API_KEY_4?: string };
+type AdminEnv = PaymentEnv & { GEMINI_API_KEY?: string; GEMINI_API_KEY_2?: string; GEMINI_API_KEY_3?: string; GEMINI_API_KEY_4?: string; OPENAI_API_KEY?: string; DEEPSEEK_API_KEY?: string };
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
