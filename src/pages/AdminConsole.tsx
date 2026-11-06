@@ -410,75 +410,100 @@ export function AdminConsole() {
             </div>
           </header>
 
-          {adminTab==='overview' && <section className="space-y-6">
-            <div className="grid grid-cols-2 gap-3.5 md:grid-cols-3 xl:grid-cols-6">
-              {[
-                ['Utilisateurs actifs', users.filter(u => u.status === 'active').length, 'text-[#008f76]', 'border-[#b7eee3] bg-[#effcf9]', Users],
-                ['Revenu confirmé', '$ ' + overviewRevenue.toFixed(2), 'text-[#2860d8]', 'border-[#cbdcff] bg-[#f1f6ff]', CreditCard],
-                ['Abonnements actifs', overviewPaidUsers.length, 'text-[#7543df]', 'border-[#dfd0ff] bg-[#f8f4ff]', Sparkles],
-                ['Paiements à confirmer', overviewPendingPayments.length, 'text-[#c47708]', 'border-[#ffdfad] bg-[#fff8eb]', Clock3],
-                ['Tickets ouverts', overviewOpenTickets.length, 'text-[#087eb5]', 'border-[#bce7fb] bg-[#f0faff]', Mail],
-                ['Échéances ≤ 5 jours', overviewExpiringUsers.length, 'text-[#d33362]', 'border-[#ffc9d8] bg-[#fff3f6]', CalendarClock]
-              ].map(([label, value, accent, cardTone, Icon]) => (
-                <div key={String(label)} className={'group relative isolate overflow-hidden rounded-2xl border p-4 shadow-[0_5px_20px_rgba(15,35,55,0.055)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_16px_34px_rgba(15,35,55,0.11)] ' + String(cardTone)}>
-                  <Icon className={'pointer-events-none absolute -right-2 -top-2 h-20 w-20 opacity-[0.10] blur-[1.5px] transition duration-300 group-hover:scale-110 group-hover:opacity-[0.16] ' + String(accent)} strokeWidth={1.8} />
-                  <div className="relative flex min-h-[72px] flex-col items-start justify-between gap-3">
-                    <span className="text-[10px] font-extrabold uppercase tracking-[.11em] text-slate-500">{String(label)}</span>
-                    <span className={'flex h-11 w-11 items-center justify-center rounded-2xl bg-white shadow-sm ring-1 ring-black/[0.035] ' + String(accent)}><Icon className="h-6 w-6" strokeWidth={2.4} /></span>
-                  </div>
-                  <b className={'relative mt-4 block text-3xl font-extrabold tracking-[-0.04em] '+String(accent)}>{String(value)}</b>
-                  <div className={'mt-3 h-1 w-10 rounded-full opacity-80 '+String(accent).replace('text-','bg-')}></div>
+          {adminTab==='overview' && <section className="space-y-5">
+            <div className="rounded-2xl border border-[#dce7e3] bg-white p-5 shadow-[0_8px_24px_rgba(16,35,58,0.04)] sm:p-6">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[#c9eee1] bg-[#e7faf3] px-2.5 py-1 text-[9px] font-bold uppercase tracking-[.14em] text-[#087b59]"><Activity className="h-3 w-3"/> Situation actuelle</div>
+                  <h2 className="text-2xl font-bold tracking-tight text-[#10233a] sm:text-[28px]">Vue d’ensemble de la plateforme</h2>
+                  <p className="mt-1 max-w-2xl text-xs leading-5 text-[#71839a]">Lecture rapide de l’activité commerciale, des opérations et de la santé du trading IAMTRADER.</p>
                 </div>
-              ))}
+                <span className="inline-flex w-fit items-center gap-2 rounded-full border border-[#dce7e3] bg-[#fbfdfc] px-3 py-2 text-[10px] font-semibold text-[#087b59]"><span className="h-1.5 w-1.5 rounded-full bg-[#08b77a]"/> Données de la console</span>
+              </div>
+              <div className="mt-5 grid grid-cols-2 overflow-hidden rounded-2xl border border-[#dce7ee] bg-white sm:grid-cols-3 xl:grid-cols-6">
+                {[
+                  ['Utilisateurs actifs', users.filter(u => u.status === 'active').length, Users, 'mint'],
+                  ['Revenu confirmé', '$ ' + overviewRevenue.toFixed(2), CreditCard, 'blue'],
+                  ['Abonnements payants', overviewPaidUsers.length, Sparkles, 'indigo'],
+                  ['Paiements en attente', overviewPendingPayments.length, Clock3, 'amber'],
+                  ['Tickets ouverts', overviewOpenTickets.length, Mail, 'cyan'],
+                  ['Échéances ≤ 5 jours', overviewExpiringUsers.length, CalendarClock, 'rose']
+                ].map(([label,value,Icon,tone], index) => {
+                  const tones: Record<string,{icon:string;value:string;bar:string}> = {
+                    mint:{icon:'bg-[#e7faf3] text-[#087b59]',value:'text-[#087b59]',bar:'bg-[#08b77a]'},
+                    blue:{icon:'bg-blue-50 text-blue-700',value:'text-blue-700',bar:'bg-blue-500'},
+                    indigo:{icon:'bg-indigo-50 text-indigo-700',value:'text-indigo-700',bar:'bg-indigo-500'},
+                    amber:{icon:'bg-amber-50 text-amber-700',value:'text-amber-700',bar:'bg-amber-500'},
+                    cyan:{icon:'bg-sky-50 text-sky-700',value:'text-sky-700',bar:'bg-sky-500'},
+                    rose:{icon:'bg-rose-50 text-rose-700',value:'text-rose-700',bar:'bg-rose-500'}
+                  };
+                  const tone = tones[String(tone)];
+                  return <div key={String(label)} className={'min-w-0 border-b border-[#e7efec] p-3.5 sm:p-4 ' + (index % 2 ? 'sm:border-l' : '') + (index >= 2 ? ' xl:border-l' : '')}>
+                    <div className="flex items-center justify-between gap-2"><span className="text-[8px] font-bold uppercase tracking-[.1em] text-[#8798a8] sm:text-[9px]">{String(label)}</span><span className={'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ' + tone.icon}><Icon className="h-3.5 w-3.5"/></span></div>
+                    <b className={'mt-3 block break-words text-xl font-bold tracking-tight sm:text-2xl ' + tone.value}>{String(value)}</b>
+                    <div className="mt-3 h-1 overflow-hidden rounded-full bg-[#edf2f0]"><div className={'h-full w-2/3 rounded-full ' + tone.bar}/></div>
+                  </div>;
+                })}
+              </div>
             </div>
 
-            <div className="grid gap-5 xl:grid-cols-[1.45fr_.85fr]">
-              <section className="relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white p-6 shadow-[0_8px_30px_rgba(15,35,55,0.045)]">
-                <div className="pointer-events-none absolute right-0 top-0 h-40 w-40 rounded-full bg-emerald-50/80 blur-3xl" />
-                <div className="relative flex items-start justify-between gap-3">
-                  <div><span className="text-[10px] font-bold uppercase tracking-[.16em] text-emerald-700">Vue commerciale</span><h2 className="mt-1 text-base font-bold tracking-tight text-[#10243b]">Revenus & abonnements</h2><p className="mt-1 text-sm text-slate-500">Conversion et répartition des forfaits.</p></div>
-                  <button onClick={() => setAdminTab('payments')} className="shrink-0 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-emerald-200 hover:bg-emerald-50 hover:text-emerald-800">Paiements <span aria-hidden="true">↗</span></button>
+            <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(300px,.85fr)]">
+              <section className="rounded-2xl border border-[#dce7e3] bg-white p-5 shadow-[0_8px_24px_rgba(16,35,58,0.04)] sm:p-6">
+                <div className="mb-5 flex items-center justify-between gap-3">
+                  <div><span className="text-[9px] font-bold uppercase tracking-[.14em] text-[#087b59]">Performance commerciale</span><h3 className="mt-1 text-sm font-bold text-[#10233a]">Conversion & répartition des abonnements</h3><p className="mt-1 text-[10px] text-[#8798a8]">Lecture des profils gratuits et des plans payants.</p></div>
+                  <button onClick={() => setAdminTab('subscriptions')} className="shrink-0 rounded-lg border border-[#dce7e3] px-3 py-2 text-[10px] font-semibold text-[#087b59] transition hover:bg-[#f3faf7]">Abonnements <span aria-hidden="true">↗</span></button>
                 </div>
-                <div className="relative mt-6 grid grid-cols-2 gap-3">
-                  <div className="rounded-xl bg-[#f2faf7] p-4"><span className="text-xs font-semibold text-slate-500">Conversion payante</span><div className="mt-2"><b className="text-3xl font-bold tracking-tight text-[#087f78]">{users.length ? Math.round((overviewPaidUsers.length / users.length) * 100) : 0}%</b></div><div className="mt-3 h-1.5 overflow-hidden rounded-full bg-white"><div className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-teal-600" style={{width:(users.length ? Math.round((overviewPaidUsers.length / users.length) * 100) : 0)+'%'}} /></div></div>
-                  <div className="rounded-xl bg-[#f6f7ff] p-4"><span className="text-xs font-semibold text-slate-500">Abonnements payants</span><div className="mt-2 flex items-baseline gap-2"><b className="text-3xl font-bold tracking-tight text-[#4f46e5]">{overviewPaidUsers.length}</b><span className="text-xs text-slate-500">sur {users.length}</span></div><div className="mt-3 flex gap-1.5 text-[11px] font-semibold text-slate-500"><span className="rounded-md bg-white px-2 py-1 text-indigo-600">Plus {users.filter(u => u.plan === 'pro').length}</span><span className="rounded-md bg-white px-2 py-1 text-violet-600">Community {users.filter(u => u.plan === 'community').length}</span></div></div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-xl border border-[#e7efec] bg-[#fbfdfc] p-4"><span className="text-[9px] font-semibold uppercase tracking-wide text-[#71839a]">Conversion payante</span><div className="mt-2 flex items-baseline gap-1"><b className="text-3xl font-bold tracking-tight text-[#087b59]">{users.length ? Math.round(overviewPaidUsers.length / users.length * 100) : 0}%</b><span className="text-[9px] text-[#94a2ad]">des profils</span></div><div className="mt-3 h-2 overflow-hidden rounded-full bg-[#e9efed]"><div className="h-full rounded-full bg-[#08b77a] transition-all" style={{width:(users.length ? Math.min(100,overviewPaidUsers.length / users.length * 100) : 0)+'%'}}/></div></div>
+                  <div className="rounded-xl border border-[#e7efec] bg-[#fbfdfc] p-4"><span className="text-[9px] font-semibold uppercase tracking-wide text-[#71839a]">Revenu confirmé</span><b className="mt-2 block break-words text-2xl font-bold tracking-tight text-[#10233a]">$ {overviewRevenue.toFixed(2)}</b><p className="mt-1 text-[9px] text-[#94a2ad]">{overviewConfirmedPayments.length} paiement(s) confirmé(s)</p></div>
                 </div>
-                <div className="relative mt-5"><div className="mb-2 flex items-center justify-between"><span className="text-[10px] font-bold uppercase tracking-[.14em] text-slate-400">Mix des forfaits</span><span className="text-xs font-semibold text-slate-500">{overviewPaidUsers.length} abonnements</span></div><div className="flex h-2.5 overflow-hidden rounded-full bg-slate-100"><div className="bg-indigo-500 transition-all" style={{width:overviewPaidUsers.length ? (users.filter(u => u.plan === 'pro').length / overviewPaidUsers.length * 100)+'%' : '0%'}}/><div className="bg-violet-400 transition-all" style={{width:overviewPaidUsers.length ? (users.filter(u => u.plan === 'community').length / overviewPaidUsers.length * 100)+'%' : '0%'}}/></div></div>
+                <div className="mt-5">
+                  <div className="mb-2 flex items-center justify-between"><span className="text-[9px] font-bold uppercase tracking-wider text-[#71839a]">Mix des forfaits payants</span><span className="text-[9px] text-[#94a2ad]">{overviewPaidUsers.length} profil(s)</span></div>
+                  <div className="flex h-3 overflow-hidden rounded-full bg-[#edf2f0]"><div className="bg-[#08b77a] transition-all" style={{width:overviewPaidUsers.length ? users.filter(u=>u.plan==='pro').length / overviewPaidUsers.length * 100 + '%' : '0%'}}/><div className="bg-indigo-400 transition-all" style={{width:overviewPaidUsers.length ? users.filter(u=>u.plan==='community').length / overviewPaidUsers.length * 100 + '%' : '0%'}}/></div>
+                  <div className="mt-3 flex flex-wrap gap-4 text-[10px] font-semibold text-[#71839a]"><span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#08b77a]"/>Plus · {users.filter(u=>u.plan==='pro').length}</span><span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-indigo-400"/>Community · {users.filter(u=>u.plan==='community').length}</span><span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#cbd5e1]"/>Free · {users.filter(u=>u.plan==='free').length}</span></div>
+                </div>
+                <div className="mt-6 border-t border-[#e7efec] pt-5">
+                  <div className="mb-3 flex items-center justify-between"><div><h4 className="text-xs font-bold text-[#10233a]">Activité de trading</h4><p className="mt-0.5 text-[10px] text-[#8798a8]">Comptes et exécutions enregistrés.</p></div><button onClick={() => setAdminTab('analytics')} className="text-[10px] font-semibold text-[#087b59]">Explorer ↗</button></div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="rounded-xl bg-[#f7faf9] p-3"><span className="text-[8px] font-semibold uppercase tracking-wide text-[#8798a8]">Comptes</span><b className="mt-1 block text-xl font-bold text-[#10233a]">{accounts.length}</b></div>
+                    <div className="rounded-xl bg-[#f7faf9] p-3"><span className="text-[8px] font-semibold uppercase tracking-wide text-[#8798a8]">Trades</span><b className="mt-1 block text-xl font-bold text-[#10233a]">{trades.length}</b></div>
+                    <div className="rounded-xl bg-[#e7faf3] p-3"><span className="text-[8px] font-semibold uppercase tracking-wide text-[#087b59]">Traders actifs</span><b className="mt-1 block text-xl font-bold text-[#087b59]">{overviewActiveTraders}</b></div>
+                  </div>
+                </div>
               </section>
 
-              <section className="rounded-2xl bg-gradient-to-br from-[#0c2037] via-[#123653] to-[#12645f] p-6 text-white shadow-[0_18px_44px_rgba(16,36,59,0.20)]">
-                <div className="flex items-start justify-between"><div><div className="text-xs font-black uppercase tracking-[.18em] text-emerald-300">Centre opérationnel</div><h2 className="mt-2 text-lg font-black">À traiter maintenant</h2><p className="mt-1 text-sm text-slate-300">Les éléments qui nécessitent une intervention.</p></div><Activity className="h-5 w-5 text-emerald-300" /></div>
+              <section className="rounded-2xl bg-[#10233a] p-5 text-white shadow-[0_12px_32px_rgba(16,35,58,0.12)] sm:p-6">
+                <div className="flex items-center justify-between gap-3"><div><span className="text-[9px] font-bold uppercase tracking-[.14em] text-[#70dfb5]">Centre opérationnel</span><h3 className="mt-1 text-sm font-bold">Priorités à traiter</h3><p className="mt-1 text-[10px] text-white/55">Les points qui demandent une intervention.</p></div><ShieldCheck className="h-5 w-5 text-[#70dfb5]"/></div>
                 <div className="mt-5 space-y-2">
                   {[
-                    ['Paiements à confirmer', overviewPendingPayments.length, 'payments', 'amber'],
-                    ['Demandes de plan', users.filter(u => u.planRequest).length, 'subscriptions', 'blue'],
-                    ['Support non traité', overviewOpenTickets.length, 'support', 'violet'],
-                    ['Échéances proches', overviewExpiringUsers.length, 'subscriptions', 'rose']
-                  ].map(([label, value, target, tone]) => (
-                    <button key={String(label)} onClick={() => setAdminTab(target as typeof adminTab)} className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-white/5 px-3 py-3 text-left hover:bg-white/10">
-                      <span className="text-sm font-bold">{String(label)}</span>
-                      <span className={'rounded-full px-2 py-1 text-xs font-black ' + (tone === 'amber' ? 'bg-amber-100 text-amber-800' : tone === 'rose' ? 'bg-rose-100 text-rose-800' : tone === 'blue' ? 'bg-blue-100 text-blue-800' : 'bg-violet-100 text-violet-800')}>{String(value)} →</span>
-                    </button>
-                  ))}
+                    ['Paiements à confirmer',overviewPendingPayments.length,'payments','amber'],
+                    ['Demandes de plan',users.filter(u=>u.planRequest).length,'subscriptions','blue'],
+                    ['Support non traité',overviewOpenTickets.length,'support','violet'],
+                    ['Échéances proches',overviewExpiringUsers.length,'subscriptions','rose']
+                  ].map(([label,value,target,tone])=><button key={String(label)} onClick={()=>setAdminTab(target as typeof adminTab)} className="flex w-full items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.045] px-3.5 py-3 text-left transition hover:bg-white/10"><span className="text-[10px] font-semibold text-white/90">{String(label)}</span><span className="rounded-lg bg-white/10 px-2.5 py-1 text-[10px] font-bold tabular-nums text-[#a9f1d5]">{String(value)} <span aria-hidden="true">→</span></span></button>)}
                 </div>
+                <div className="mt-5 rounded-xl border border-white/10 bg-white/[0.045] p-3"><div className="text-[8px] font-bold uppercase tracking-wider text-white/45">Indicateur de vigilance</div><p className="mt-1 text-[10px] leading-5 text-white/80">{overviewPendingPayments.length + overviewOpenTickets.length + overviewExpiringUsers.length > 0 ? 'Des éléments opérationnels nécessitent un suivi.' : 'Aucun élément prioritaire en attente actuellement.'}</p></div>
               </section>
             </div>
 
-            <div className="grid gap-5 lg:grid-cols-[1.15fr_.85fr]">
-              <section className="overflow-hidden rounded-2xl border border-slate-200/70 bg-white shadow-[0_8px_30px_rgba(15,35,55,0.045)]">
-                <div className="flex items-center justify-between border-b border-slate-100 px-6 py-5"><div><span className="text-[10px] font-bold uppercase tracking-[.16em] text-slate-400">Nouveaux comptes</span><h2 className="mt-1 text-base font-bold tracking-tight text-[#10243b]">Activité récente</h2><p className="mt-1 text-sm text-slate-500">Les derniers traders arrivés sur IAMTRADER.</p></div><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700"><Users className="h-5 w-5"/></div></div>
-                <div className="px-6 py-2">
-                  {overviewRecentUsers.map((u,i) => <div key={u.uid} className="group flex items-center gap-3 border-b border-slate-100/80 py-3 last:border-0"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-slate-100 to-slate-200 text-xs font-bold text-slate-600">{String(u.displayName || u.email || '?').trim().slice(0,1).toUpperCase()}</div><div className="min-w-0 flex-1"><div className="truncate text-sm font-semibold text-slate-800">{u.displayName || u.email}</div><div className="mt-0.5 text-xs text-slate-400">{fmt(u.createdAt)}</div></div><span className={'rounded-lg px-2.5 py-1 text-[11px] font-semibold '+(u.plan === 'free' ? 'bg-slate-100 text-slate-500' : 'bg-emerald-50 text-emerald-700')}>{planLabel(u.plan)}</span><span className="text-xs font-bold text-slate-300">{String(i+1).padStart(2,'0')}</span></div>)}
-                  {!overviewRecentUsers.length && <div className="py-8 text-center text-sm text-slate-400">Aucun nouveau compte pour le moment.</div>}
+            <div className="grid items-start gap-4 xl:grid-cols-2">
+              <section className="overflow-hidden rounded-2xl border border-[#dce7e3] bg-white shadow-[0_8px_24px_rgba(16,35,58,0.04)]">
+                <div className="flex items-center justify-between border-b border-[#e7efec] px-5 py-4 sm:px-6"><div><span className="text-[9px] font-bold uppercase tracking-[.14em] text-[#087b59]">Communauté</span><h3 className="mt-1 text-sm font-bold text-[#10233a]">Nouveaux comptes</h3><p className="mt-1 text-[10px] text-[#8798a8]">Les derniers traders arrivés sur IAMTRADER.</p></div><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#e7faf3] text-[#087b59]"><Users className="h-4 w-4"/></span></div>
+                <div className="px-5 py-1 sm:px-6">
+                  {overviewRecentUsers.map((u,i)=><div key={u.uid} className="flex items-center gap-3 border-b border-[#edf2f0] py-3 last:border-0"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#edf4f1] text-xs font-bold text-[#314861]">{String(u.displayName||u.email||'?').trim().slice(0,1).toUpperCase()}</div><div className="min-w-0 flex-1"><div className="truncate text-xs font-bold text-[#10233a]">{u.displayName||u.email}</div><div className="mt-0.5 text-[9px] text-[#8798a8]">{fmt(u.createdAt)}</div></div><span className={'rounded-md px-2 py-1 text-[9px] font-bold '+(u.plan==='free'?'bg-slate-100 text-slate-500':'bg-[#e7faf3] text-[#087b59]')}>{planLabel(u.plan)}</span><span className="text-[9px] font-bold text-[#b5c1c9]">{String(i+1).padStart(2,'0')}</span></div>)}
+                  {!overviewRecentUsers.length&&<div className="py-8 text-center text-xs text-[#8798a8]">Aucun nouveau compte pour le moment.</div>}
                 </div>
-                <div className="border-t border-slate-100 bg-slate-50/70 px-6 py-3"><span className="text-xs text-slate-500">Inscrits récemment</span><span className="ml-2 text-xs font-bold text-[#10243b]">{newUsers.length} sur les 7 derniers jours</span></div>
+                <div className="border-t border-[#e7efec] bg-[#fbfdfc] px-5 py-3 sm:px-6"><span className="text-[9px] text-[#71839a]">Inscrits récemment</span><b className="ml-2 text-[10px] text-[#10233a]">{newUsers.length} sur les 7 derniers jours</b></div>
               </section>
-              <section className="relative overflow-hidden rounded-2xl border border-slate-200/70 bg-white p-6 shadow-[0_8px_30px_rgba(15,35,55,0.045)]">
-                <div className="pointer-events-none absolute -right-12 -top-12 h-36 w-36 rounded-full bg-indigo-100/70 blur-3xl"/>
-                <div className="relative flex items-center justify-between"><div><span className="text-[10px] font-bold uppercase tracking-[.16em] text-indigo-600">Performance</span><h2 className="mt-1 text-base font-bold tracking-tight text-[#10243b]">Santé du trading</h2><p className="mt-1 text-sm text-slate-500">Activité enregistrée par les traders.</p></div><div className="flex h-10 w-10 items-center justify-center rounded-xl bg-indigo-50 text-indigo-600"><Activity className="h-5 w-5"/></div></div>
-                <div className="relative mt-5 grid grid-cols-2 gap-3"><div className="rounded-xl bg-slate-50 p-4"><span className="text-xs font-medium text-slate-500">Comptes créés</span><b className="mt-2 block text-2xl font-bold tracking-tight text-[#10243b]">{accounts.length}</b></div><div className="rounded-xl bg-slate-50 p-4"><span className="text-xs font-medium text-slate-500">Trades enregistrés</span><b className="mt-2 block text-2xl font-bold tracking-tight text-[#10243b]">{trades.length}</b></div></div>
-                <div className="relative mt-3 flex items-center justify-between rounded-xl border border-emerald-100 bg-emerald-50/70 px-4 py-3"><div><span className="text-xs font-semibold text-emerald-800">Traders actifs</span><p className="mt-0.5 text-[11px] text-emerald-700">Avec compte ou trade enregistré</p></div><b className="text-2xl font-bold tracking-tight text-emerald-700">{overviewActiveTraders}</b></div>
-                <button onClick={() => setAdminTab('analytics')} className="relative mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#10243b] px-4 py-3 text-xs font-semibold text-white transition hover:bg-[#183d5a]">Explorer Analytics <span aria-hidden="true">→</span></button>
+              <section className="rounded-2xl border border-[#dce7e3] bg-white p-5 shadow-[0_8px_24px_rgba(16,35,58,0.04)] sm:p-6">
+                <div className="flex items-center justify-between gap-3"><div><span className="text-[9px] font-bold uppercase tracking-[.14em] text-[#087b59]">Qualité des données</span><h3 className="mt-1 text-sm font-bold text-[#10233a]">Santé du trading</h3><p className="mt-1 text-[10px] text-[#8798a8]">Couverture des données de performance.</p></div><Activity className="h-4 w-4 text-[#08b77a]"/></div>
+                <div className="mt-5 grid grid-cols-2 gap-3">
+                  <div className="rounded-xl border border-[#e7efec] bg-[#fbfdfc] p-4"><span className="text-[9px] text-[#71839a]">Comptes enregistrés</span><b className="mt-1 block text-2xl font-bold text-[#10233a]">{accounts.length}</b></div>
+                  <div className="rounded-xl border border-[#e7efec] bg-[#fbfdfc] p-4"><span className="text-[9px] text-[#71839a]">Trades journalisés</span><b className="mt-1 block text-2xl font-bold text-[#10233a]">{trades.length}</b></div>
+                </div>
+                <div className="mt-3 rounded-xl border border-[#c9eee1] bg-[#e7faf3] p-3"><div className="text-[9px] font-bold uppercase tracking-wide text-[#087b59]">Traders actifs</div><b className="mt-1 block text-2xl font-bold text-[#087b59]">{overviewActiveTraders}</b><p className="mt-0.5 text-[9px] text-[#4c806f]">Avec au moins un compte ou un trade enregistré.</p></div>
+                <div className="mt-4 flex items-center justify-between border-t border-[#e7efec] pt-4"><span className="text-[9px] text-[#8798a8]">Disponibilité des métriques</span><span className={'rounded-full px-2.5 py-1 text-[9px] font-bold '+(metricsReady?'bg-[#e7faf3] text-[#087b59]':'bg-amber-50 text-amber-700')}>{metricsReady?'Données chargées':'Données partielles'}</span></div>
+                <button onClick={() => setAdminTab('analytics')} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#10233a] px-4 py-3 text-[10px] font-semibold text-white transition hover:bg-[#1b3a56]">Ouvrir Analytics <span aria-hidden="true">→</span></button>
               </section>
             </div>
           </section>}
