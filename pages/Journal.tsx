@@ -22,25 +22,24 @@ import {
   ChevronRight
 } from 'lucide-react';
 
-// Keep the BE marker for exits that return very close to entry, not target hits.
+// Mark exits close to entry and still far from the configured take-profit.
 function isNearBreakEvenExit(trade: Trade): boolean {
   const entry = Number(trade.entryPrice);
   const exit = Number(trade.exitPrice);
-  const stopLoss = Number(trade.stopLoss);
-  if (!Number.isFinite(entry) || !Number.isFinite(exit) || !Number.isFinite(stopLoss)) return false;
-
-  const initialRiskDistance = Math.abs(entry - stopLoss);
-  const entryDeviation = Math.abs(exit - entry);
-  if (initialRiskDistance <= 0 || entryDeviation > initialRiskDistance * 0.05) return false;
-
   const takeProfit = Number(trade.takeProfit);
-  if (Number.isFinite(takeProfit) && takeProfit > 0) {
-    const targetDistance = Math.abs(takeProfit - entry);
-    const remainingToTarget = Math.abs(takeProfit - exit);
-    if (targetDistance > 0 && remainingToTarget <= Math.max(entryDeviation * 3, targetDistance * 0.5)) return false;
-  }
+  if (!Number.isFinite(entry) || !Number.isFinite(exit) || !Number.isFinite(takeProfit)) return false;
+  if (entry <= 0 || exit <= 0 || takeProfit <= 0) return false;
 
-  return true;
+  const targetDistance = Math.abs(takeProfit - entry);
+  if (targetDistance <= 0) return false;
+
+  const exitDistanceFromEntry = Math.abs(exit - entry);
+  const remainingDistanceToTarget = Math.abs(takeProfit - exit);
+
+  // BE tolerance: exit is within 5% of the entry-to-target distance,
+  // while at least half of that distance remains before the target.
+  return exitDistanceFromEntry <= targetDistance * 0.05
+    && remainingDistanceToTarget >= targetDistance * 0.5;
 }
 
 interface JournalProps {
