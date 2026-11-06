@@ -26,7 +26,8 @@ const steps = [
 
 function getSessionFromDate(value: string): TradingSession | '' {
   if (!value) return '';
-  const hour = new Date(value).getUTCHours();
+  // datetime-local values represent the user's local wall-clock time.
+  const hour = new Date(value).getHours();
   if (hour >= 0 && hour < 8) return 'Asia';
   if (hour >= 8 && hour < 13) return 'London';
   if (hour >= 13 && hour < 16) return 'Overlap';
@@ -38,8 +39,10 @@ function toLocalDateTimeInput(value?: string): string {
   if (!value) return '';
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
-  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60000);
-  return localDate.toISOString().slice(0, 16);
+
+  // Format using local date parts to avoid manual timezone-offset shifts.
+  const pad = (part: number) => String(part).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
 export function TradeModal({ isOpen, onClose, userId, accounts, selectedAccountId, tradeToEdit }: TradeModalProps) {
