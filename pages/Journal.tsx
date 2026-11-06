@@ -14,8 +14,9 @@ function isNearBreakEvenExit(trade: Trade): boolean {
 
   const takeProfit = Number(trade.takeProfit);
   if (Number.isFinite(takeProfit) && takeProfit > 0) {
+    const targetDistance = Math.abs(takeProfit - entry);
     const remainingToTarget = Math.abs(takeProfit - exit);
-    if (remainingToTarget <= entryDeviation * 3) return false;
+    if (targetDistance > 0 && remainingToTarget <= Math.max(entryDeviation * 3, targetDistance * 0.5)) return false;
   }
 
   return true;
