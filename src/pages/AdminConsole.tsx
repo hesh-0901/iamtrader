@@ -418,23 +418,11 @@ export function AdminConsole() {
   return (
     <div className="relative min-h-full overflow-hidden bg-[#f5f8fc] -m-4 lg:-m-6"><div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[radial-gradient(ellipse_at_top_right,rgba(20,184,166,0.12),transparent_55%),radial-gradient(ellipse_at_top_left,rgba(59,130,246,0.07),transparent_45%)]" />
       <div className="relative mx-auto min-h-screen w-full max-w-[1480px] px-4 py-5 sm:px-6 lg:px-8 lg:py-8">
-        <nav aria-label="Navigation de la console administrateur" className="mb-6 rounded-[22px] border border-slate-200 bg-white p-3 shadow-[0_10px_32px_rgba(15,35,55,.055)] sm:p-4">
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <nav aria-label="Navigation de la console administrateur" className="mb-6 -mx-1 overflow-x-auto overscroll-x-contain rounded-2xl border border-slate-200/80 bg-white p-1.5 shadow-[0_8px_28px_rgba(15,35,55,.05)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:p-2">
+          <div className="flex w-max min-w-full snap-x snap-mandatory gap-1 sm:flex-wrap sm:w-full sm:gap-1.5">
             {([
-              {title:'Pilotage',hint:'Vue globale et indicateurs',items:[['overview','Vue d’ensemble',Activity],['analytics','Analytics',ChartNoAxesCombined]]},
-              {title:'Gestion commerciale',hint:'Comptes, offres et revenus',items:[['users','Utilisateurs',Users],['subscriptions','Abonnements',Clock3],['payments','Paiements',CreditCard],['promotions','Promotions',Tag]]},
-              {title:'Relation traders',hint:'Demandes et accompagnement',items:[['support','Support',Mail]]},
-              {title:'Contrôle & système',hint:'Traçabilité et intelligence',items:[['audit','Journal d’audit',History],['ai-monitoring','Monitoring IA',Sparkles]]}
-            ] as const).map(group=><section key={group.title} className="min-w-0 rounded-2xl border border-slate-100 bg-[#f8fafc] p-2.5">
-              <div className="px-2 pb-2"><h2 className="text-[10px] font-extrabold uppercase tracking-[.14em] text-[#10243b]">{group.title}</h2><p className="mt-0.5 text-[9px] font-medium text-slate-500">{group.hint}</p></div>
-              <div className="grid gap-1">
-                {group.items.map(([key,label,Icon])=><button key={key} onClick={()=>setAdminTab(key)} aria-current={adminTab===key?'page':undefined} className={'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-[11px] font-bold transition '+(adminTab===key?'bg-[#102b45] text-white shadow-[0_4px_12px_rgba(16,36,59,.16)]':'text-slate-600 hover:bg-white hover:text-[#10243b]')}>
-                  <Icon className={'h-4 w-4 shrink-0 '+(adminTab===key?'text-[#55e1c3]':'text-slate-400')}/><span className="min-w-0 flex-1 truncate">{label}</span>
-                  {key==='support'&&contactMessages.filter(m=>m.status==='new').length>0&&<span className={'rounded-full px-2 py-0.5 text-[10px] font-extrabold '+(adminTab===key?'bg-[#55e1c3] text-[#10243b]':'bg-emerald-100 text-emerald-800')}>{contactMessages.filter(m=>m.status==='new').length}</span>}
-                  {adminTab===key&&<span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#55e1c3]"/>}
-                </button>)}
-              </div>
-            </section>)}
+              ['overview','Vue d’ensemble',Activity],['users','Utilisateurs',Users],['subscriptions','Abonnements',Clock3],['payments','Paiements',CreditCard],['promotions','Promotions & avantages',Tag],['support','Support',Mail],['analytics','Analytics',ChartNoAxesCombined],['audit','Journal d’audit',History],['ai-monitoring','Moteur IA',Sparkles]
+            ] as const).map(([key,label,Icon])=><button key={key} onClick={()=>setAdminTab(key)} aria-current={adminTab===key?'page':undefined} className={'relative flex min-h-10 shrink-0 snap-start items-center justify-center gap-1.5 rounded-xl px-3 py-2 text-[11px] font-bold transition-all duration-200 sm:min-h-10 sm:flex-1 sm:px-2 sm:text-[11px] lg:flex-none lg:gap-2 lg:px-3.5 lg:text-xs '+(adminTab===key?'bg-[#10243b] text-white shadow-[0_4px_12px_rgba(16,36,59,.18)]':'text-slate-600 hover:bg-slate-100 hover:text-[#10243b]')}><Icon className={'h-4 w-4 shrink-0 '+(adminTab===key?'text-[#55e1c3]':'text-slate-400')}/><span>{label}</span>{key==='support'&&contactMessages.filter(m=>m.status==='new').length>0&&<span className={'ml-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-extrabold '+(adminTab===key?'bg-[#55e1c3] text-[#10243b]':'bg-emerald-100 text-emerald-800')}>{contactMessages.filter(m=>m.status==='new').length}</span>}</button>)}
           </div>
         </nav>
         <main className="space-y-6">
