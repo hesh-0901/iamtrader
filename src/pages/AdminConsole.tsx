@@ -287,6 +287,7 @@ export function AdminConsole() {
   }, [trades, overviewConfirmedPayments]);
   const overviewMaxRevenue = Math.max(1, ...overviewTrend.map(item => item.revenue));
   const overviewMaxPnl = Math.max(1, ...overviewTrend.map(item => Math.abs(item.pnl)));
+  useEffect(() => { setOverviewUsersPage(current => Math.min(current, overviewUsersTotalPages)); }, [overviewUsersTotalPages]);
 
   const userMetrics = useMemo(() => {
     const result: Record<string, { initialCapital: number; totalPnl: number; tradeCount: number; pnlPercent: number | null; currency: string }> = {};
