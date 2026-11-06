@@ -1,27 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Trade, TradingAccount, TradeDirection, TradeResult, TradingSession } from '../types';
 
-// Keep the BE marker for exits that return very close to entry, not target hits.
-function isNearBreakEvenExit(trade: Trade): boolean {
-  const entry = Number(trade.entryPrice);
-  const exit = Number(trade.exitPrice);
-  const stopLoss = Number(trade.stopLoss);
-  if (!Number.isFinite(entry) || !Number.isFinite(exit) || !Number.isFinite(stopLoss)) return false;
-
-  const initialRiskDistance = Math.abs(entry - stopLoss);
-  const entryDeviation = Math.abs(exit - entry);
-  if (initialRiskDistance <= 0 || entryDeviation > initialRiskDistance * 0.05) return false;
-
-  const takeProfit = Number(trade.takeProfit);
-  if (Number.isFinite(takeProfit) && takeProfit > 0) {
-    const targetDistance = Math.abs(takeProfit - entry);
-    const remainingToTarget = Math.abs(takeProfit - exit);
-    if (targetDistance > 0 && remainingToTarget <= Math.max(entryDeviation * 3, targetDistance * 0.5)) return false;
-  }
-
-  return true;
-}
-
 import { DirectionBadge, ResultBadge, EmotionTag } from '../components/common/Badge';
 import { EmptyState } from '../components/common/EmptyState';
 import { formatCurrency } from '../utils/calculations';
@@ -42,6 +21,27 @@ import {
   ChevronLeft,
   ChevronRight
 } from 'lucide-react';
+
+// Keep the BE marker for exits that return very close to entry, not target hits.
+function isNearBreakEvenExit(trade: Trade): boolean {
+  const entry = Number(trade.entryPrice);
+  const exit = Number(trade.exitPrice);
+  const stopLoss = Number(trade.stopLoss);
+  if (!Number.isFinite(entry) || !Number.isFinite(exit) || !Number.isFinite(stopLoss)) return false;
+
+  const initialRiskDistance = Math.abs(entry - stopLoss);
+  const entryDeviation = Math.abs(exit - entry);
+  if (initialRiskDistance <= 0 || entryDeviation > initialRiskDistance * 0.05) return false;
+
+  const takeProfit = Number(trade.takeProfit);
+  if (Number.isFinite(takeProfit) && takeProfit > 0) {
+    const targetDistance = Math.abs(takeProfit - entry);
+    const remainingToTarget = Math.abs(takeProfit - exit);
+    if (targetDistance > 0 && remainingToTarget <= Math.max(entryDeviation * 3, targetDistance * 0.5)) return false;
+  }
+
+  return true;
+}
 
 interface JournalProps {
   trades: Trade[];
