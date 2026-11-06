@@ -428,7 +428,7 @@ export function AdminConsole() {
                   ['Paiements en attente', overviewPendingPayments.length, Clock3, 'amber'],
                   ['Tickets ouverts', overviewOpenTickets.length, Mail, 'cyan'],
                   ['Échéances ≤ 5 jours', overviewExpiringUsers.length, CalendarClock, 'rose']
-                ].map(([label,value,Icon,tone], index) => {
+                ] as const).map(([label,value,Icon,tone], index) => {
                   const tones: Record<string,{icon:string;value:string;bar:string}> = {
                     mint:{icon:'bg-[#e7faf3] text-[#087b59]',value:'text-[#087b59]',bar:'bg-[#08b77a]'},
                     blue:{icon:'bg-blue-50 text-blue-700',value:'text-blue-700',bar:'bg-blue-500'},
