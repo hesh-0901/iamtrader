@@ -437,11 +437,11 @@ export function AdminConsole() {
                     cyan:{icon:'bg-sky-50 text-sky-700',value:'text-sky-700',bar:'bg-sky-500'},
                     rose:{icon:'bg-rose-50 text-rose-700',value:'text-rose-700',bar:'bg-rose-500'}
                   };
-                  const tone = tones[String(tone)];
+                  const palette = tones[String(tone)];
                   return <div key={String(label)} className={'min-w-0 border-b border-[#e7efec] p-3.5 sm:p-4 ' + (index % 2 ? 'sm:border-l' : '') + (index >= 2 ? ' xl:border-l' : '')}>
-                    <div className="flex items-center justify-between gap-2"><span className="text-[8px] font-bold uppercase tracking-[.1em] text-[#8798a8] sm:text-[9px]">{String(label)}</span><span className={'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ' + tone.icon}><Icon className="h-3.5 w-3.5"/></span></div>
-                    <b className={'mt-3 block break-words text-xl font-bold tracking-tight sm:text-2xl ' + tone.value}>{String(value)}</b>
-                    <div className="mt-3 h-1 overflow-hidden rounded-full bg-[#edf2f0]"><div className={'h-full w-2/3 rounded-full ' + tone.bar}/></div>
+                    <div className="flex items-center justify-between gap-2"><span className="text-[8px] font-bold uppercase tracking-[.1em] text-[#8798a8] sm:text-[9px]">{String(label)}</span><span className={'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ' + palette.icon}><Icon className="h-3.5 w-3.5"/></span></div>
+                    <b className={'mt-3 block break-words text-xl font-bold tracking-tight sm:text-2xl ' + palette.value}>{String(value)}</b>
+                    <div className="mt-3 h-1 overflow-hidden rounded-full bg-[#edf2f0]"><div className={'h-full w-2/3 rounded-full ' + palette.bar}/></div>
                   </div>;
                 })}
               </div>
