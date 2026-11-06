@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Activity, Sparkles, CalendarClock, AlertTriangle, BellRing, Check, CheckCircle2, ChevronLeft, Eye, ChevronRight, Clock3, CreditCard, Edit3, History, Mail, ReceiptText, RefreshCw, Search, Send, ShieldCheck, Trash2, UserCheck, UserX, Users, X, XCircle, Copy, Paperclip, Smile, MoreVertical, Info, Plus, Filter, PenLine } from 'lucide-react';
+import { Activity, Sparkles, CalendarClock, AlertTriangle, BellRing, Check, CheckCircle2, ChevronLeft, Eye, ChevronRight, Clock3, CreditCard, Edit3, History, Mail, ReceiptText, RefreshCw, Search, Send, ShieldCheck, Trash2, UserCheck, UserX, Users, X, XCircle, Copy, Paperclip, Smile, MoreVertical, Info, Plus, Filter, PenLine, TrendingUp, ArrowUpRight, ArrowDownRight, Wallet, Crown, ChartNoAxesCombined, UserRoundPlus, CircleDollarSign, CalendarDays } from 'lucide-react';
 import { AdminLog, PaymentRecord, SubscriptionPlan, UserProfile, UserStatus, TradingAccount, Trade } from '../types';
 import { getAdminLogs, getAllAccounts, getAllTrades, getAllUsers, subscribeAllUsers, subscribeAllPayments, subscribeContactMessages } from '../services/firestore';
 import { adminAddLog, adminDeleteContact, adminGetPayments, adminMigrateSubscriptionExpiry, adminUpdateContact, adminUpdatePayment, adminUpdateUser } from '../services/adminConsole';
@@ -99,6 +99,8 @@ export function AdminConsole() {
   const [replyBusy, setReplyBusy] = useState(false);
   const [adminTab, setAdminTab] = useState<'overview' | 'users' | 'subscriptions' | 'payments' | 'promotions' | 'support' | 'analytics' | 'audit' | 'ai-monitoring'>('overview');
   const [analyticsTab, setAnalyticsTab] = useState<'profiles' | 'engagement' | 'trading' | 'subscriptions'>('profiles');
+  const [overviewUsersPage, setOverviewUsersPage] = useState(1);
+  const [overviewUsersPageSize, setOverviewUsersPageSize] = useState(5);
   const perPage = 10;
 
   function openManage(user: UserProfile) {
@@ -263,8 +265,28 @@ export function AdminConsole() {
   const overviewRevenue = overviewConfirmedPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0);
   const overviewActiveTraders = users.filter(u => accounts.some(a => a.userId === u.uid) || trades.some(t => t.userId === u.uid)).length;
   const overviewRecentUsers = [...users]
-    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
-    .slice(0, 5);
+    .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+  const overviewUsersTotalPages = Math.max(1, Math.ceil(overviewRecentUsers.length / overviewUsersPageSize));
+  const overviewUsersPageItems = overviewRecentUsers.slice((overviewUsersPage - 1) * overviewUsersPageSize, overviewUsersPage * overviewUsersPageSize);
+  const overviewTrend = useMemo(() => {
+    const now = new Date();
+    return Array.from({ length: 6 }, (_, index) => {
+      const date = new Date(now.getFullYear(), now.getMonth() - (5 - index), 1);
+      const key = date.getFullYear() + '-' + String(date.getMonth() + 1).padStart(2, '0');
+      const monthTrades = trades.filter(t => String(t.entryDate || '').slice(0, 7) === key);
+      const monthPayments = overviewConfirmedPayments.filter(p => String(p.paidAt || p.createdAt || '').slice(0, 7) === key);
+      return {
+        key,
+        label: date.toLocaleDateString('fr-FR', { month: 'short' }).replace('.', ''),
+        pnl: monthTrades.reduce((sum, t) => sum + Number(t.pnl || 0), 0),
+        revenue: monthPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0),
+        trades: monthTrades.length,
+        payments: monthPayments.length
+      };
+    });
+  }, [trades, overviewConfirmedPayments]);
+  const overviewMaxRevenue = Math.max(1, ...overviewTrend.map(item => item.revenue));
+  const overviewMaxPnl = Math.max(1, ...overviewTrend.map(item => Math.abs(item.pnl)));
 
   const userMetrics = useMemo(() => {
     const result: Record<string, { initialCapital: number; totalPnl: number; tradeCount: number; pnlPercent: number | null; currency: string }> = {};
@@ -410,100 +432,105 @@ export function AdminConsole() {
             </div>
           </header>
 
-          {adminTab==='overview' && <section className="space-y-5">
-            <div className="rounded-2xl border border-[#dce7e3] bg-white p-5 shadow-[0_8px_24px_rgba(16,35,58,0.04)] sm:p-6">
-              <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          {adminTab==='overview' && <section className="space-y-4">
+            <div className="relative isolate overflow-hidden rounded-[22px] bg-[#0b1f35] px-4 py-5 text-white shadow-[0_18px_45px_rgba(11,31,53,.18)] sm:px-6 sm:py-6">
+              <div className="pointer-events-none absolute -right-16 -top-28 h-72 w-72 rounded-full bg-[#00d6a0]/20 blur-3xl"/>
+              <div className="pointer-events-none absolute -bottom-32 right-1/3 h-56 w-56 rounded-full bg-cyan-400/10 blur-3xl"/>
+              <div className="relative flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
                 <div>
-                  <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-[#c9eee1] bg-[#e7faf3] px-2.5 py-1 text-[9px] font-bold uppercase tracking-[.14em] text-[#087b59]"><Activity className="h-3 w-3"/> Situation actuelle</div>
-                  <h2 className="text-2xl font-bold tracking-tight text-[#10233a] sm:text-[28px]">Vue d’ensemble de la plateforme</h2>
-                  <p className="mt-1 max-w-2xl text-xs leading-5 text-[#71839a]">Lecture rapide de l’activité commerciale, des opérations et de la santé du trading IAMTRADER.</p>
+                  <div className="mb-2 flex items-center gap-2 text-[10px] font-bold uppercase tracking-[.18em] text-[#69e8c1]"><span className="h-2 w-2 rounded-full bg-[#00d6a0] shadow-[0_0_12px_#00d6a0]"/> IAMTRADER · ADMIN INTELLIGENCE</div>
+                  <h2 className="text-[25px] font-extrabold tracking-[-.045em] sm:text-3xl">Vue d’ensemble</h2>
+                  <p className="mt-1 max-w-xl text-[11px] leading-5 text-slate-300 sm:text-xs">La plateforme en temps réel : croissance, revenus, activité trader et opérations prioritaires.</p>
                 </div>
-                <span className="inline-flex w-fit items-center gap-2 rounded-full border border-[#dce7e3] bg-[#fbfdfc] px-3 py-2 text-[10px] font-semibold text-[#087b59]"><span className="h-1.5 w-1.5 rounded-full bg-[#08b77a]"/> Données de la console</span>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[.07] px-3 py-2 text-[10px] font-semibold text-white/85"><span className="h-1.5 w-1.5 rounded-full bg-[#00d6a0]"/> Console synchronisée</span>
+                  <button onClick={load} className="inline-flex items-center gap-2 rounded-xl bg-[#00d6a0] px-3.5 py-2.5 text-[10px] font-extrabold text-[#082238] shadow-[0_5px_18px_rgba(0,214,160,.2)] transition hover:bg-[#49edbd]"><RefreshCw className="h-3.5 w-3.5"/> Actualiser</button>
+                </div>
               </div>
-              <div className="mt-5 grid grid-cols-2 overflow-hidden rounded-2xl border border-[#dce7ee] bg-white sm:grid-cols-3 xl:grid-cols-6">
-                {([
-                  ['Utilisateurs actifs', users.filter(u => u.status === 'active').length, Users, 'mint'],
-                  ['Revenu confirmé', '$ ' + overviewRevenue.toFixed(2), CreditCard, 'blue'],
-                  ['Abonnements payants', overviewPaidUsers.length, Sparkles, 'indigo'],
-                  ['Paiements en attente', overviewPendingPayments.length, Clock3, 'amber'],
-                  ['Tickets ouverts', overviewOpenTickets.length, Mail, 'cyan'],
-                  ['Échéances ≤ 5 jours', overviewExpiringUsers.length, CalendarClock, 'rose']
-                ] as const).map(([label,value,Icon,tone], index) => {
-                  const tones: Record<string,{icon:string;value:string;bar:string}> = {
-                    mint:{icon:'bg-[#e7faf3] text-[#087b59]',value:'text-[#087b59]',bar:'bg-[#08b77a]'},
-                    blue:{icon:'bg-blue-50 text-blue-700',value:'text-blue-700',bar:'bg-blue-500'},
-                    indigo:{icon:'bg-indigo-50 text-indigo-700',value:'text-indigo-700',bar:'bg-indigo-500'},
-                    amber:{icon:'bg-amber-50 text-amber-700',value:'text-amber-700',bar:'bg-amber-500'},
-                    cyan:{icon:'bg-sky-50 text-sky-700',value:'text-sky-700',bar:'bg-sky-500'},
-                    rose:{icon:'bg-rose-50 text-rose-700',value:'text-rose-700',bar:'bg-rose-500'}
-                  };
-                  const palette = tones[String(tone)];
-                  return <div key={String(label)} className={'min-w-0 border-b border-[#e7efec] p-3.5 sm:p-4 ' + (index % 2 ? 'sm:border-l' : '') + (index >= 2 ? ' xl:border-l' : '')}>
-                    <div className="flex items-center justify-between gap-2"><span className="text-[8px] font-bold uppercase tracking-[.1em] text-[#8798a8] sm:text-[9px]">{String(label)}</span><span className={'flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ' + palette.icon}><Icon className="h-3.5 w-3.5"/></span></div>
-                    <b className={'mt-3 block break-words text-xl font-bold tracking-tight sm:text-2xl ' + palette.value}>{String(value)}</b>
-                    <div className="mt-3 h-1 overflow-hidden rounded-full bg-[#edf2f0]"><div className={'h-full w-2/3 rounded-full ' + palette.bar}/></div>
-                  </div>;
-                })}
+              <div className="relative mt-6 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-white/10 bg-white/10 sm:grid-cols-3 xl:grid-cols-6">
+                {[
+                  {label:'Utilisateurs',value:users.length,detail:users.filter(u=>u.status==='active').length+' actifs',icon:Users,color:'text-[#65e8c1]',bg:'bg-[#00d6a0]/15'},
+                  {label:'Revenu confirmé',value:'$'+overviewRevenue.toLocaleString('en-US',{maximumFractionDigits:0}),detail:overviewConfirmedPayments.length+' paiements validés',icon:Wallet,color:'text-cyan-300',bg:'bg-cyan-400/15'},
+                  {label:'Abonnés payants',value:overviewPaidUsers.length,detail:(users.length?Math.round(overviewPaidUsers.length/users.length*100):0)+'% de conversion',icon:Crown,color:'text-violet-300',bg:'bg-violet-400/15'},
+                  {label:'Trades enregistrés',value:trades.length,detail:accounts.length+' comptes trading',icon:ChartNoAxesCombined,color:'text-blue-300',bg:'bg-blue-400/15'},
+                  {label:'Paiements en attente',value:overviewPendingPayments.length,detail:'À vérifier',icon:Clock3,color:'text-amber-300',bg:'bg-amber-400/15'},
+                  {label:'Tickets ouverts',value:overviewOpenTickets.length,detail:overviewExpiringUsers.length+' échéances proches',icon:BellRing,color:'text-rose-300',bg:'bg-rose-400/15'}
+                ].map((item,index)=><div key={item.label} className="min-w-0 bg-[#102b45]/90 p-3.5 sm:p-4">
+                  <div className="flex items-center justify-between gap-2"><span className="truncate text-[9px] font-bold uppercase tracking-[.12em] text-slate-400">{item.label}</span><span className={'flex h-8 w-8 shrink-0 items-center justify-center rounded-xl '+item.bg+' '+item.color}><item.icon className="h-4 w-4"/></span></div>
+                  <b className="mt-3 block truncate text-[25px] font-extrabold tracking-[-.04em] text-white tabular-nums sm:text-[28px]">{item.value}</b>
+                  <span className="mt-1 block truncate text-[9px] font-medium text-slate-400">{item.detail}</span>
+                </div>)}
               </div>
             </div>
 
-            <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(300px,.85fr)]">
-              <section className="rounded-2xl border border-[#dce7e3] bg-white p-5 shadow-[0_8px_24px_rgba(16,35,58,0.04)] sm:p-6">
-                <div className="mb-5 flex items-center justify-between gap-3">
-                  <div><span className="text-[9px] font-bold uppercase tracking-[.14em] text-[#087b59]">Performance commerciale</span><h3 className="mt-1 text-sm font-bold text-[#10233a]">Conversion & répartition des abonnements</h3><p className="mt-1 text-[10px] text-[#8798a8]">Lecture des profils gratuits et des plans payants.</p></div>
-                  <button onClick={() => setAdminTab('subscriptions')} className="shrink-0 rounded-lg border border-[#dce7e3] px-3 py-2 text-[10px] font-semibold text-[#087b59] transition hover:bg-[#f3faf7]">Abonnements <span aria-hidden="true">↗</span></button>
+            <div className="grid gap-4 xl:grid-cols-[minmax(0,1.7fr)_minmax(280px,.8fr)]">
+              <section className="min-w-0 rounded-[20px] border border-slate-200/80 bg-white p-4 shadow-[0_8px_28px_rgba(15,35,55,.045)] sm:p-5">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div><div className="flex items-center gap-2 text-[9px] font-extrabold uppercase tracking-[.16em] text-[#00a982]"><TrendingUp className="h-3.5 w-3.5"/> Performance & croissance</div><h3 className="mt-1 text-base font-extrabold tracking-tight text-[#10243b]">Activité sur les 6 derniers mois</h3><p className="mt-1 text-[10px] text-slate-400">Revenus confirmés et résultat de trading journalisé.</p></div>
+                  <button onClick={()=>setAdminTab('analytics')} className="inline-flex items-center gap-1 rounded-lg bg-[#e8fbf5] px-3 py-2 text-[10px] font-bold text-[#008f70] transition hover:bg-[#d5f8ed]">Analytics <ArrowUpRight className="h-3 w-3"/></button>
                 </div>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="rounded-xl border border-[#e7efec] bg-[#fbfdfc] p-4"><span className="text-[9px] font-semibold uppercase tracking-wide text-[#71839a]">Conversion payante</span><div className="mt-2 flex items-baseline gap-1"><b className="text-3xl font-bold tracking-tight text-[#087b59]">{users.length ? Math.round(overviewPaidUsers.length / users.length * 100) : 0}%</b><span className="text-[9px] text-[#94a2ad]">des profils</span></div><div className="mt-3 h-2 overflow-hidden rounded-full bg-[#e9efed]"><div className="h-full rounded-full bg-[#08b77a] transition-all" style={{width:(users.length ? Math.min(100,overviewPaidUsers.length / users.length * 100) : 0)+'%'}}/></div></div>
-                  <div className="rounded-xl border border-[#e7efec] bg-[#fbfdfc] p-4"><span className="text-[9px] font-semibold uppercase tracking-wide text-[#71839a]">Revenu confirmé</span><b className="mt-2 block break-words text-2xl font-bold tracking-tight text-[#10233a]">$ {overviewRevenue.toFixed(2)}</b><p className="mt-1 text-[9px] text-[#94a2ad]">{overviewConfirmedPayments.length} paiement(s) confirmé(s)</p></div>
+                <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2 text-[9px] font-semibold text-slate-500"><span className="inline-flex items-center gap-2"><i className="h-2.5 w-2.5 rounded-sm bg-[#00b98b]"/> Revenu encaissé</span><span className="inline-flex items-center gap-2"><i className="h-2.5 w-2.5 rounded-sm bg-[#4778ef]"/> P&L des trades</span><span className="ml-auto text-[9px] text-slate-400">USD · par mois</span></div>
+                <div className="mt-4 grid grid-cols-6 gap-2 sm:gap-4">
+                  {overviewTrend.map(item=><div key={item.key} className="min-w-0">
+                    <div className="flex h-36 items-end justify-center gap-1 rounded-xl bg-[#f6f9fb] px-1.5 pb-2 pt-3 sm:h-44 sm:gap-1.5 sm:px-2">
+                      <div title={'Revenu : $'+item.revenue.toFixed(2)} className="relative w-1/2 max-w-7 overflow-hidden rounded-t-md bg-[#00b98b] shadow-[0_3px_9px_rgba(0,185,139,.18)]" style={{height:Math.max(item.revenue>0?5:1,item.revenue/overviewMaxRevenue*100)+'%'}}/>
+                      <div title={'P&L : $'+item.pnl.toFixed(2)} className={'relative w-1/2 max-w-7 overflow-hidden rounded-t-md '+(item.pnl>=0?'bg-[#4778ef]':'bg-[#f05b70]')} style={{height:Math.max(item.pnl!==0?5:1,Math.abs(item.pnl)/overviewMaxPnl*100)+'%'}}/>
+                    </div>
+                    <div className="mt-2 truncate text-center text-[9px] font-bold uppercase tracking-wide text-slate-400">{item.label}</div>
+                    <div className="mt-1 text-center text-[8px] text-slate-400">{item.trades} trades</div>
+                  </div>)}
                 </div>
-                <div className="mt-5">
-                  <div className="mb-2 flex items-center justify-between"><span className="text-[9px] font-bold uppercase tracking-wider text-[#71839a]">Mix des forfaits payants</span><span className="text-[9px] text-[#94a2ad]">{overviewPaidUsers.length} profil(s)</span></div>
-                  <div className="flex h-3 overflow-hidden rounded-full bg-[#edf2f0]"><div className="bg-[#08b77a] transition-all" style={{width:overviewPaidUsers.length ? users.filter(u=>u.plan==='pro').length / overviewPaidUsers.length * 100 + '%' : '0%'}}/><div className="bg-indigo-400 transition-all" style={{width:overviewPaidUsers.length ? users.filter(u=>u.plan==='community').length / overviewPaidUsers.length * 100 + '%' : '0%'}}/></div>
-                  <div className="mt-3 flex flex-wrap gap-4 text-[10px] font-semibold text-[#71839a]"><span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#08b77a]"/>Plus · {users.filter(u=>u.plan==='pro').length}</span><span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-indigo-400"/>Community · {users.filter(u=>u.plan==='community').length}</span><span className="inline-flex items-center gap-1.5"><i className="h-2 w-2 rounded-full bg-[#cbd5e1]"/>Free · {users.filter(u=>u.plan==='free').length}</span></div>
+                <div className="mt-4 grid grid-cols-2 gap-2 sm:gap-3">
+                  <div className="rounded-xl bg-[#e9fbf5] px-3 py-3"><div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wide text-[#008f70]"><CircleDollarSign className="h-3.5 w-3.5"/> Revenu confirmé</div><b className="mt-1 block text-xl font-extrabold tracking-tight text-[#087b59]">$ {overviewRevenue.toLocaleString('en-US',{maximumFractionDigits:2})}</b></div>
+                  <div className="rounded-xl bg-[#edf3ff] px-3 py-3"><div className="flex items-center gap-1.5 text-[9px] font-bold uppercase tracking-wide text-blue-700"><Activity className="h-3.5 w-3.5"/> P&L cumulé</div><b className={'mt-1 block text-xl font-extrabold tracking-tight '+(trades.reduce((sum,t)=>sum+Number(t.pnl||0),0)>=0?'text-blue-700':'text-rose-600')}>$ {trades.reduce((sum,t)=>sum+Number(t.pnl||0),0).toLocaleString('en-US',{maximumFractionDigits:2})}</b></div>
                 </div>
-                <div className="mt-6 border-t border-[#e7efec] pt-5">
-                  <div className="mb-3 flex items-center justify-between"><div><h4 className="text-xs font-bold text-[#10233a]">Activité de trading</h4><p className="mt-0.5 text-[10px] text-[#8798a8]">Comptes et exécutions enregistrés.</p></div><button onClick={() => setAdminTab('analytics')} className="text-[10px] font-semibold text-[#087b59]">Explorer ↗</button></div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="rounded-xl bg-[#f7faf9] p-3"><span className="text-[8px] font-semibold uppercase tracking-wide text-[#8798a8]">Comptes</span><b className="mt-1 block text-xl font-bold text-[#10233a]">{accounts.length}</b></div>
-                    <div className="rounded-xl bg-[#f7faf9] p-3"><span className="text-[8px] font-semibold uppercase tracking-wide text-[#8798a8]">Trades</span><b className="mt-1 block text-xl font-bold text-[#10233a]">{trades.length}</b></div>
-                    <div className="rounded-xl bg-[#e7faf3] p-3"><span className="text-[8px] font-semibold uppercase tracking-wide text-[#087b59]">Traders actifs</span><b className="mt-1 block text-xl font-bold text-[#087b59]">{overviewActiveTraders}</b></div>
+                {!metricsReady&&<p className="mt-3 text-[9px] text-amber-700">Les données de trading sont momentanément partielles.</p>}
+              </section>
+
+              <section className="relative min-w-0 overflow-hidden rounded-[20px] bg-gradient-to-br from-[#102b45] via-[#123b55] to-[#075e58] p-4 text-white shadow-[0_12px_30px_rgba(9,47,65,.14)] sm:p-5">
+                <div className="pointer-events-none absolute -right-12 -top-12 h-40 w-40 rounded-full border-[22px] border-white/[.05]"/>
+                <div className="relative flex items-center justify-between"><div><div className="text-[9px] font-extrabold uppercase tracking-[.16em] text-[#69e8c1]">Action center</div><h3 className="mt-1 text-base font-extrabold">À traiter maintenant</h3></div><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10 text-[#69e8c1]"><Zap className="h-4 w-4"/></span></div>
+                <div className="relative mt-5 space-y-2">
+                  {[
+                    {label:'Paiements à confirmer',value:overviewPendingPayments.length,tab:'payments',tone:'text-amber-300',icon:CreditCard},
+                    {label:'Demandes de plan',value:users.filter(u=>u.planRequest).length,tab:'subscriptions',tone:'text-blue-300',icon:Crown},
+                    {label:'Support non résolu',value:overviewOpenTickets.length,tab:'support',tone:'text-violet-300',icon:Mail},
+                    {label:'Abonnements à échéance',value:overviewExpiringUsers.length,tab:'subscriptions',tone:'text-rose-300',icon:CalendarDays}
+                  ].map(item=><button key={item.label} onClick={()=>setAdminTab(item.tab as typeof adminTab)} className="group flex w-full items-center gap-3 rounded-xl border border-white/10 bg-white/[.055] px-3 py-3 text-left transition hover:border-[#00d6a0]/40 hover:bg-white/[.11]">
+                    <span className={'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-white/10 '+item.tone}><item.icon className="h-4 w-4"/></span><span className="min-w-0 flex-1 truncate text-[10px] font-semibold text-white/90">{item.label}</span><b className="text-sm font-extrabold tabular-nums text-white">{item.value}</b><ChevronRight className="h-3.5 w-3.5 text-white/35 transition group-hover:translate-x-0.5 group-hover:text-[#69e8c1]"/>
+                  </button>)}
+                </div>
+                <div className="relative mt-4 flex items-center justify-between rounded-xl border border-white/10 bg-black/10 px-3 py-3"><div><div className="text-[8px] font-bold uppercase tracking-[.12em] text-white/55">Santé des données</div><div className="mt-1 text-[10px] font-semibold text-white/90">{metricsReady?'Synchronisation opérationnelle':'Données trading partielles'}</div></div><span className={'h-2.5 w-2.5 rounded-full '+(metricsReady?'bg-[#00d6a0] shadow-[0_0_12px_#00d6a0]':'bg-amber-400')}/></div>
+              </section>
+            </div>
+
+            <div className="grid gap-4 xl:grid-cols-[minmax(0,1.15fr)_minmax(300px,.85fr)]">
+              <section className="min-w-0 overflow-hidden rounded-[20px] border border-slate-200/80 bg-white shadow-[0_8px_28px_rgba(15,35,55,.045)]">
+                <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-4 py-4 sm:px-5"><div><div className="flex items-center gap-2 text-[9px] font-extrabold uppercase tracking-[.16em] text-[#00a982]"><UserRoundPlus className="h-3.5 w-3.5"/> Communauté</div><h3 className="mt-1 text-sm font-extrabold text-[#10243b]">Derniers utilisateurs inscrits</h3><p className="mt-0.5 text-[9px] text-slate-400">Profils et statut des membres IAMTRADER.</p></div><button onClick={()=>setAdminTab('users')} className="inline-flex items-center gap-1 rounded-lg px-2.5 py-2 text-[10px] font-bold text-[#008f70] transition hover:bg-[#e8fbf5]">Tous les membres <ArrowUpRight className="h-3 w-3"/></button></div>
+                <div className="divide-y divide-slate-100">
+                  {overviewUsersPageItems.map((u,i)=><div key={u.uid} className="flex min-w-0 items-center gap-3 px-4 py-3 transition hover:bg-[#f7fbfa] sm:px-5">
+                    <div className="relative h-10 w-10 shrink-0 overflow-hidden rounded-full bg-gradient-to-br from-[#00c99a] to-[#4778ef] p-[2px]"><div className="flex h-full w-full items-center justify-center overflow-hidden rounded-full bg-[#e9f8f3] text-xs font-extrabold text-[#087b59]">{String(u.displayName||u.email||'?').trim().slice(0,1).toUpperCase()}</div>{(u.photoURL||u.avatarURL)&&<img src={u.photoURL||u.avatarURL} alt={u.displayName||'Utilisateur IAMTRADER'} loading="lazy" className="absolute inset-[2px] h-[calc(100%-4px)] w-[calc(100%-4px)] rounded-full object-cover" onError={event=>{event.currentTarget.style.display='none';}}/>}</div>
+                    <div className="min-w-0 flex-1"><div className="truncate text-[11px] font-extrabold text-[#10243b]">{u.displayName||'Trader IAMTRADER'}</div><div className="mt-0.5 truncate text-[9px] text-slate-400">{u.email}</div><div className="mt-1 text-[8px] text-slate-400">{fmt(u.createdAt)}</div></div>
+                    <div className="flex shrink-0 flex-col items-end gap-1"><span className={'rounded-md px-2 py-1 text-[8px] font-extrabold '+(u.plan==='pro'?'bg-[#e8fbf5] text-[#008f70]':u.plan==='community'?'bg-violet-50 text-violet-700':'bg-slate-100 text-slate-500')}>{planLabel(u.plan)}</span><span className={'text-[8px] font-bold '+(u.status==='active'?'text-[#009b78]':'text-rose-500')}>{u.status==='active'?'● Actif':'● Suspendu'}</span></div>
+                  </div>)}
+                  {!overviewUsersPageItems.length&&<div className="px-4 py-10 text-center text-[11px] text-slate-400">Aucun utilisateur enregistré.</div>}
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 bg-[#fbfcfd] px-4 py-3 sm:px-5">
+                  <div className="flex items-center gap-2"><span className="text-[9px] text-slate-400">Afficher</span><select value={overviewUsersPageSize} onChange={event=>{setOverviewUsersPageSize(Number(event.target.value));setOverviewUsersPage(1);}} className="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[10px] font-bold text-[#10243b] outline-none focus:border-[#00b98b]"><option value={5}>5</option><option value={10}>10</option><option value={50}>50</option></select><span className="text-[9px] text-slate-400">sur {overviewRecentUsers.length}</span></div>
+                  <div className="flex items-center gap-2"><span className="mr-1 text-[9px] tabular-nums text-slate-400">{overviewRecentUsers.length?((overviewUsersPage-1)*overviewUsersPageSize+1):0}–{Math.min(overviewUsersPage*overviewUsersPageSize,overviewRecentUsers.length)} / {overviewRecentUsers.length}</span><button disabled={overviewUsersPage<=1} onClick={()=>setOverviewUsersPage(p=>Math.max(1,p-1))} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:border-[#00b98b] hover:text-[#008f70] disabled:opacity-30"><ChevronLeft className="h-3.5 w-3.5"/></button><button disabled={overviewUsersPage>=overviewUsersTotalPages} onClick={()=>setOverviewUsersPage(p=>Math.min(overviewUsersTotalPages,p+1))} className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 transition hover:border-[#00b98b] hover:text-[#008f70] disabled:opacity-30"><ChevronRight className="h-3.5 w-3.5"/></button></div>
+                </div>
+              </section>
+
+              <section className="min-w-0 rounded-[20px] border border-slate-200/80 bg-white p-4 shadow-[0_8px_28px_rgba(15,35,55,.045)] sm:p-5">
+                <div className="flex items-center justify-between gap-3"><div><div className="text-[9px] font-extrabold uppercase tracking-[.16em] text-[#00a982]">Écosystème trader</div><h3 className="mt-1 text-sm font-extrabold text-[#10243b]">Répartition des abonnements</h3><p className="mt-0.5 text-[9px] text-slate-400">Structure actuelle de la communauté.</p></div><Crown className="h-5 w-5 text-violet-500"/></div>
+                <div className="mt-5 flex items-center gap-5">
+                  <div className="relative flex h-32 w-32 shrink-0 items-center justify-center rounded-full" style={{background:'conic-gradient(#00b98b 0 '+(users.length?users.filter(u=>u.plan==='pro').length/users.length*100:0)+'%, #8065e8 0 '+(users.length?(users.filter(u=>u.plan==='pro').length+users.filter(u=>u.plan==='community').length)/users.length*100:0)+'%, #e8edf2 0 100%)'}}><div className="flex h-[88px] w-[88px] flex-col items-center justify-center rounded-full bg-white"><b className="text-2xl font-extrabold tracking-tight text-[#10243b]">{users.length}</b><span className="text-[8px] font-bold uppercase tracking-wide text-slate-400">Membres</span></div></div>
+                  <div className="min-w-0 flex-1 space-y-3">
+                    {[{label:'Plus',count:users.filter(u=>u.plan==='pro').length,color:'bg-[#00b98b]',text:'text-[#008f70]'},{label:'Community',count:users.filter(u=>u.plan==='community').length,color:'bg-violet-500',text:'text-violet-700'},{label:'Starter',count:users.filter(u=>u.plan==='free').length,color:'bg-slate-300',text:'text-slate-500'}].map(item=><div key={item.label}><div className="mb-1 flex items-center justify-between gap-2"><span className="flex items-center gap-2 text-[10px] font-semibold text-slate-600"><i className={'h-2 w-2 rounded-full '+item.color}/>{item.label}</span><b className={'text-[11px] font-extrabold tabular-nums '+item.text}>{item.count}</b></div><div className="h-1.5 overflow-hidden rounded-full bg-slate-100"><div className={'h-full rounded-full '+item.color} style={{width:(users.length?item.count/users.length*100:0)+'%'}}/></div></div>)}
                   </div>
                 </div>
-              </section>
-
-              <section className="rounded-2xl bg-[#10233a] p-5 text-white shadow-[0_12px_32px_rgba(16,35,58,0.12)] sm:p-6">
-                <div className="flex items-center justify-between gap-3"><div><span className="text-[9px] font-bold uppercase tracking-[.14em] text-[#70dfb5]">Centre opérationnel</span><h3 className="mt-1 text-sm font-bold">Priorités à traiter</h3><p className="mt-1 text-[10px] text-white/55">Les points qui demandent une intervention.</p></div><ShieldCheck className="h-5 w-5 text-[#70dfb5]"/></div>
-                <div className="mt-5 space-y-2">
-                  {[
-                    ['Paiements à confirmer',overviewPendingPayments.length,'payments','amber'],
-                    ['Demandes de plan',users.filter(u=>u.planRequest).length,'subscriptions','blue'],
-                    ['Support non traité',overviewOpenTickets.length,'support','violet'],
-                    ['Échéances proches',overviewExpiringUsers.length,'subscriptions','rose']
-                  ].map(([label,value,target,tone])=><button key={String(label)} onClick={()=>setAdminTab(target as typeof adminTab)} className="flex w-full items-center justify-between gap-3 rounded-xl border border-white/10 bg-white/[0.045] px-3.5 py-3 text-left transition hover:bg-white/10"><span className="text-[10px] font-semibold text-white/90">{String(label)}</span><span className="rounded-lg bg-white/10 px-2.5 py-1 text-[10px] font-bold tabular-nums text-[#a9f1d5]">{String(value)} <span aria-hidden="true">→</span></span></button>)}
-                </div>
-                <div className="mt-5 rounded-xl border border-white/10 bg-white/[0.045] p-3"><div className="text-[8px] font-bold uppercase tracking-wider text-white/45">Indicateur de vigilance</div><p className="mt-1 text-[10px] leading-5 text-white/80">{overviewPendingPayments.length + overviewOpenTickets.length + overviewExpiringUsers.length > 0 ? 'Des éléments opérationnels nécessitent un suivi.' : 'Aucun élément prioritaire en attente actuellement.'}</p></div>
-              </section>
-            </div>
-
-            <div className="grid items-start gap-4 xl:grid-cols-2">
-              <section className="overflow-hidden rounded-2xl border border-[#dce7e3] bg-white shadow-[0_8px_24px_rgba(16,35,58,0.04)]">
-                <div className="flex items-center justify-between border-b border-[#e7efec] px-5 py-4 sm:px-6"><div><span className="text-[9px] font-bold uppercase tracking-[.14em] text-[#087b59]">Communauté</span><h3 className="mt-1 text-sm font-bold text-[#10233a]">Nouveaux comptes</h3><p className="mt-1 text-[10px] text-[#8798a8]">Les derniers traders arrivés sur IAMTRADER.</p></div><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#e7faf3] text-[#087b59]"><Users className="h-4 w-4"/></span></div>
-                <div className="px-5 py-1 sm:px-6">
-                  {overviewRecentUsers.map((u,i)=><div key={u.uid} className="flex items-center gap-3 border-b border-[#edf2f0] py-3 last:border-0"><div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#edf4f1] text-xs font-bold text-[#314861]">{String(u.displayName||u.email||'?').trim().slice(0,1).toUpperCase()}</div><div className="min-w-0 flex-1"><div className="truncate text-xs font-bold text-[#10233a]">{u.displayName||u.email}</div><div className="mt-0.5 text-[9px] text-[#8798a8]">{fmt(u.createdAt)}</div></div><span className={'rounded-md px-2 py-1 text-[9px] font-bold '+(u.plan==='free'?'bg-slate-100 text-slate-500':'bg-[#e7faf3] text-[#087b59]')}>{planLabel(u.plan)}</span><span className="text-[9px] font-bold text-[#b5c1c9]">{String(i+1).padStart(2,'0')}</span></div>)}
-                  {!overviewRecentUsers.length&&<div className="py-8 text-center text-xs text-[#8798a8]">Aucun nouveau compte pour le moment.</div>}
-                </div>
-                <div className="border-t border-[#e7efec] bg-[#fbfdfc] px-5 py-3 sm:px-6"><span className="text-[9px] text-[#71839a]">Inscrits récemment</span><b className="ml-2 text-[10px] text-[#10233a]">{newUsers.length} sur les 7 derniers jours</b></div>
-              </section>
-              <section className="rounded-2xl border border-[#dce7e3] bg-white p-5 shadow-[0_8px_24px_rgba(16,35,58,0.04)] sm:p-6">
-                <div className="flex items-center justify-between gap-3"><div><span className="text-[9px] font-bold uppercase tracking-[.14em] text-[#087b59]">Qualité des données</span><h3 className="mt-1 text-sm font-bold text-[#10233a]">Santé du trading</h3><p className="mt-1 text-[10px] text-[#8798a8]">Couverture des données de performance.</p></div><Activity className="h-4 w-4 text-[#08b77a]"/></div>
-                <div className="mt-5 grid grid-cols-2 gap-3">
-                  <div className="rounded-xl border border-[#e7efec] bg-[#fbfdfc] p-4"><span className="text-[9px] text-[#71839a]">Comptes enregistrés</span><b className="mt-1 block text-2xl font-bold text-[#10233a]">{accounts.length}</b></div>
-                  <div className="rounded-xl border border-[#e7efec] bg-[#fbfdfc] p-4"><span className="text-[9px] text-[#71839a]">Trades journalisés</span><b className="mt-1 block text-2xl font-bold text-[#10233a]">{trades.length}</b></div>
-                </div>
-                <div className="mt-3 rounded-xl border border-[#c9eee1] bg-[#e7faf3] p-3"><div className="text-[9px] font-bold uppercase tracking-wide text-[#087b59]">Traders actifs</div><b className="mt-1 block text-2xl font-bold text-[#087b59]">{overviewActiveTraders}</b><p className="mt-0.5 text-[9px] text-[#4c806f]">Avec au moins un compte ou un trade enregistré.</p></div>
-                <div className="mt-4 flex items-center justify-between border-t border-[#e7efec] pt-4"><span className="text-[9px] text-[#8798a8]">Disponibilité des métriques</span><span className={'rounded-full px-2.5 py-1 text-[9px] font-bold '+(metricsReady?'bg-[#e7faf3] text-[#087b59]':'bg-amber-50 text-amber-700')}>{metricsReady?'Données chargées':'Données partielles'}</span></div>
-                <button onClick={() => setAdminTab('analytics')} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#10233a] px-4 py-3 text-[10px] font-semibold text-white transition hover:bg-[#1b3a56]">Ouvrir Analytics <span aria-hidden="true">→</span></button>
+                <div className="mt-5 grid grid-cols-2 gap-2"><div className="rounded-xl bg-[#e8fbf5] p-3"><div className="text-[8px] font-bold uppercase tracking-wide text-[#008f70]">Conversion</div><b className="mt-1 block text-2xl font-extrabold text-[#087b59]">{users.length?Math.round(overviewPaidUsers.length/users.length*100):0}%</b></div><div className="rounded-xl bg-[#f2efff] p-3"><div className="text-[8px] font-bold uppercase tracking-wide text-violet-700">Traders actifs</div><b className="mt-1 block text-2xl font-extrabold text-violet-700">{overviewActiveTraders}</b></div></div>
+                <button onClick={()=>setAdminTab('subscriptions')} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#102b45] px-4 py-3 text-[10px] font-bold text-white transition hover:bg-[#174968]">Gérer les abonnements <ChevronRight className="h-3.5 w-3.5"/></button>
               </section>
             </div>
           </section>}
