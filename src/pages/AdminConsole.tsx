@@ -418,13 +418,26 @@ export function AdminConsole() {
   return (
     <div className="relative min-h-full overflow-hidden bg-[#f5f8fc] -m-4 lg:-m-6"><div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[radial-gradient(ellipse_at_top_right,rgba(20,184,166,0.12),transparent_55%),radial-gradient(ellipse_at_top_left,rgba(59,130,246,0.07),transparent_45%)]" />
       <div className="relative mx-auto min-h-screen w-full max-w-[1480px] px-4 py-5 sm:px-6 lg:px-8 lg:py-8">
-        <nav aria-label="Navigation de la console administrateur" className="mb-7 overflow-x-auto rounded-2xl border border-slate-200/70 bg-white/80 p-1.5 shadow-[0_8px_30px_rgba(15,35,55,0.045)] backdrop-blur-xl">
-          <div className="flex w-max min-w-full gap-1">
+        <nav aria-label="Navigation de la console administrateur" className="mb-6 rounded-[22px] border border-slate-200 bg-white p-3 shadow-[0_10px_32px_rgba(15,35,55,.055)] sm:p-4">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             {([
-              ['overview','Vue d’ensemble',Activity],['users','Utilisateurs',Users],['subscriptions','Abonnements',Clock3],['payments','Paiements',CreditCard],['promotions','Promotions & avantages',Tag],['support','Support',Mail],['analytics','Analytics',Activity],['audit','Journal d’audit',History],['ai-monitoring','Moteur IA',Sparkles]
-            ] as const).map(([key,label,Icon])=><button key={key} onClick={()=>setAdminTab(key)} aria-current={adminTab===key?'page':undefined} className={'relative flex shrink-0 items-center gap-2 rounded-xl px-4 py-2.5 text-[13px] font-semibold transition-all duration-200 '+(adminTab===key?'bg-[#10243b] text-white shadow-[0_4px_12px_rgba(16,36,59,0.18)]':'text-slate-500 hover:bg-slate-100/80 hover:text-[#10243b]')}><Icon className={'h-4 w-4 shrink-0 '+(adminTab===key?'text-[#55e1c3]':'text-slate-400')}/><span>{label}</span>{key==='support'&&contactMessages.filter(m=>m.status==='new').length>0&&<span className={'ml-1 rounded-full px-2 py-0.5 text-xs font-bold '+(adminTab===key?'bg-[#22c7c7] text-[#10243b]':'bg-teal-50 text-teal-700')}>{contactMessages.filter(m=>m.status==='new').length}</span>}</button>)}
+              {title:'Pilotage',hint:'Vue globale et indicateurs',items:[['overview','Vue d’ensemble',Activity],['analytics','Analytics',ChartNoAxesCombined]]},
+              {title:'Gestion commerciale',hint:'Comptes, offres et revenus',items:[['users','Utilisateurs',Users],['subscriptions','Abonnements',Clock3],['payments','Paiements',CreditCard],['promotions','Promotions',Tag]]},
+              {title:'Relation traders',hint:'Demandes et accompagnement',items:[['support','Support',Mail]]},
+              {title:'Contrôle & système',hint:'Traçabilité et intelligence',items:[['audit','Journal d’audit',History],['ai-monitoring','Monitoring IA',Sparkles]]}
+            ] as const).map(group=><section key={group.title} className="min-w-0 rounded-2xl border border-slate-100 bg-[#f8fafc] p-2.5">
+              <div className="px-2 pb-2"><h2 className="text-[10px] font-extrabold uppercase tracking-[.14em] text-[#10243b]">{group.title}</h2><p className="mt-0.5 text-[9px] font-medium text-slate-500">{group.hint}</p></div>
+              <div className="grid gap-1">
+                {group.items.map(([key,label,Icon])=><button key={key} onClick={()=>setAdminTab(key)} aria-current={adminTab===key?'page':undefined} className={'flex min-h-10 w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-[11px] font-bold transition '+(adminTab===key?'bg-[#102b45] text-white shadow-[0_4px_12px_rgba(16,36,59,.16)]':'text-slate-600 hover:bg-white hover:text-[#10243b]')}>
+                  <Icon className={'h-4 w-4 shrink-0 '+(adminTab===key?'text-[#55e1c3]':'text-slate-400')}/><span className="min-w-0 flex-1 truncate">{label}</span>
+                  {key==='support'&&contactMessages.filter(m=>m.status==='new').length>0&&<span className={'rounded-full px-2 py-0.5 text-[10px] font-extrabold '+(adminTab===key?'bg-[#55e1c3] text-[#10243b]':'bg-emerald-100 text-emerald-800')}>{contactMessages.filter(m=>m.status==='new').length}</span>}
+                  {adminTab===key&&<span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#55e1c3]"/>}
+                </button>)}
+              </div>
+            </section>)}
           </div>
-        </nav>        <main className="space-y-5">
+        </nav>
+        <main className="space-y-6">
           <header className="mb-6 flex flex-col gap-4 border-b border-slate-200/80 pb-6 md:flex-row md:items-end md:justify-between">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div><div className="mb-2 inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-white/90 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.16em] text-emerald-700 shadow-sm">Console administrateur</div><h1 className="text-3xl font-bold tracking-[-0.045em] text-[#10243b] sm:text-4xl">{adminTab==='overview'?'Dashboard admin':adminTab==='users'?'Utilisateurs':adminTab==='subscriptions'?'Abonnements':adminTab==='payments'?'Paiements':adminTab==='promotions'?'Promotions & avantages':adminTab==='support'?'Support':adminTab==='analytics'?'Analytics':adminTab==='ai-monitoring'?'Supervision du moteur IA':'Journal d’audit'}</h1><p className="mt-1 text-sm text-slate-400">{adminTab==='subscriptions'?'Suivi commercial des abonnements, répartition des plans et paiements à confirmer.':adminTab==='analytics'?'Lecture comportementale et performance des utilisateurs.':adminTab==='ai-monitoring'?'Disponibilité des clés, basculements et activité des assistants.':'Pilotage opérationnel de la plateforme IAMTRADER.'}</p></div>
