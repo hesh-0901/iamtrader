@@ -1,5 +1,26 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Trade, TradingAccount, TradeDirection, TradeResult, TradingSession } from '../types';
+
+// Keep the BE marker for exits that return very close to entry, not target hits.
+function isNearBreakEvenExit(trade: Trade): boolean {
+  const entry = Number(trade.entryPrice);
+  const exit = Number(trade.exitPrice);
+  const stopLoss = Number(trade.stopLoss);
+  if (!Number.isFinite(entry) || !Number.isFinite(exit) || !Number.isFinite(stopLoss)) return false;
+
+  const initialRiskDistance = Math.abs(entry - stopLoss);
+  const entryDeviation = Math.abs(exit - entry);
+  if (initialRiskDistance <= 0 || entryDeviation > initialRiskDistance * 0.05) return false;
+
+  const takeProfit = Number(trade.takeProfit);
+  if (Number.isFinite(takeProfit) && takeProfit > 0) {
+    const remainingToTarget = Math.abs(takeProfit - exit);
+    if (remainingToTarget <= entryDeviation * 3) return false;
+  }
+
+  return true;
+}
+
 import { DirectionBadge, ResultBadge, EmotionTag } from '../components/common/Badge';
 import { EmptyState } from '../components/common/EmptyState';
 import { formatCurrency } from '../utils/calculations';
@@ -18,8 +39,7 @@ import {
   FilterX,
   SlidersHorizontal,
   ChevronLeft,
-  ChevronRight,
-  CircleCheck
+  ChevronRight
 } from 'lucide-react';
 
 interface JournalProps {
@@ -397,9 +417,10 @@ export function Journal({
                         </td>
                         <td className="py-2.5 px-3 font-mono text-slate-400 tabular-nums text-[11px]">
                           <div className="flex flex-col items-center gap-1">
-                            {trade.result === 'BREAKEVEN' && trade.exitPrice !== undefined && (
-                              <span className="inline-flex items-center gap-0.5 text-[8px] leading-none font-semibold text-emerald-600">
-                                <CircleCheck className="w-2.5 h-2.5" /> BE
+                            {isNearBreakEvenExit(trade) && (
+                              <span className="inline-flex items-center gap-1 text-[8px] leading-none font-semibold text-emerald-600">
+                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                                BE
                               </span>
                             )}
                             <span>{trade.exitPrice ? trade.exitPrice.toLocaleString() : '—'}</span>
