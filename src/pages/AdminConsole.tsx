@@ -421,7 +421,7 @@ export function AdminConsole() {
                 <span className="inline-flex w-fit items-center gap-2 rounded-full border border-[#dce7e3] bg-[#fbfdfc] px-3 py-2 text-[10px] font-semibold text-[#087b59]"><span className="h-1.5 w-1.5 rounded-full bg-[#08b77a]"/> Données de la console</span>
               </div>
               <div className="mt-5 grid grid-cols-2 overflow-hidden rounded-2xl border border-[#dce7ee] bg-white sm:grid-cols-3 xl:grid-cols-6">
-                {[
+                {([
                   ['Utilisateurs actifs', users.filter(u => u.status === 'active').length, Users, 'mint'],
                   ['Revenu confirmé', '$ ' + overviewRevenue.toFixed(2), CreditCard, 'blue'],
                   ['Abonnements payants', overviewPaidUsers.length, Sparkles, 'indigo'],
