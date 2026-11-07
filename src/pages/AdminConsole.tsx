@@ -429,9 +429,9 @@ export function AdminConsole() {
   }
 
   return (
-    <div className="relative min-h-full overflow-clip bg-[#f5f8fc] -m-4 lg:-m-6"><div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[radial-gradient(ellipse_at_top_right,rgba(20,184,166,0.12),transparent_55%),radial-gradient(ellipse_at_top_left,rgba(59,130,246,0.07),transparent_45%)]" />
-      <div className="relative mx-auto min-h-screen w-full max-w-[1480px] px-4 py-5 sm:px-6 lg:px-8 lg:py-8">
-        <nav aria-label="Navigation de la console administrateur" className="sticky top-0 z-40 mb-6 -mx-1 overflow-x-auto overscroll-x-contain rounded-2xl border border-slate-200/80 bg-white/95 p-1.5 shadow-[0_8px_28px_rgba(15,35,55,.08)] backdrop-blur-xl [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:mx-0 sm:p-2">
+    <div className="relative -mx-4 min-h-full w-[calc(100%+2rem)] overflow-clip bg-[#f5f8fc] sm:-mx-6 sm:w-[calc(100%+3rem)] lg:-mx-8 lg:w-[calc(100%+4rem)]"><div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[radial-gradient(ellipse_at_top_right,rgba(20,184,166,0.12),transparent_55%),radial-gradient(ellipse_at_top_left,rgba(59,130,246,0.07),transparent_45%)]" />
+      <div className="relative mx-auto min-h-screen w-full max-w-[1480px] px-0 py-3 sm:px-6 sm:py-5 lg:px-8 lg:py-8">
+        <nav aria-label="Navigation de la console administrateur" className="sticky top-0 z-40 mb-4 sm:mb-6 mx-0 overflow-x-auto overscroll-x-contain rounded-none border-x-0 border-y border-slate-200/80 bg-white/95 p-1.5 shadow-[0_8px_28px_rgba(15,35,55,.08)] backdrop-blur-xl sm:mx-0 sm:rounded-2xl sm:border sm:p-2">
           <div className="flex w-max min-w-full snap-x snap-mandatory gap-1 sm:flex-wrap sm:w-full sm:gap-1.5">
             {([
               ['overview','Vue d’ensemble',Activity],['users','Utilisateurs',Users],['subscriptions','Abonnements',Clock3],['payments','Paiements',CreditCard],['promotions','Promotions & avantages',Tag],['support','Support',Mail],['analytics','Analytics',ChartNoAxesCombined],['audit','Journal d’audit',History],['ai-monitoring','Moteur IA',Sparkles]
