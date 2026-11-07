@@ -34,10 +34,17 @@ function isNearBreakEvenExit(trade: Trade): boolean {
   const entry = Number(trade.entryPrice);
   const exit = Number(trade.exitPrice);
   const takeProfit = Number(trade.takeProfit);
+  const rMultiple = Number(trade.rMultiple);
 
-  if (!Number.isFinite(entry) || !Number.isFinite(exit) || !Number.isFinite(takeProfit)) return false;
-  if (entry <= 0 || exit <= 0 || takeProfit <= 0) return false;
+  // Only classify a closed trade with a real exit price.
+  if (!Number.isFinite(entry) || !Number.isFinite(exit) || entry <= 0 || exit <= 0) return false;
 
+  // A near-zero realized R is the clearest indicator of a break-even-style exit.
+  if (Number.isFinite(rMultiple) && Math.abs(rMultiple) <= 0.1) return true;
+
+  // Fallback for records without a stored R multiple: compare exit to entry
+  // and ensure the target was still meaningfully distant.
+  if (!Number.isFinite(takeProfit) || takeProfit <= 0) return false;
   const targetDistance = Math.abs(takeProfit - entry);
   if (targetDistance === 0) return false;
 
@@ -447,6 +454,12 @@ export function Journal({
                         </td>
                         <td className="py-2.5 px-3 text-right">
                           <ResultBadge result={trade.result} />
+                      {isNearBreakEvenExit(trade) && (
+                        <span className="inline-flex items-center gap-1 text-[9px] font-semibold tracking-wide text-emerald-500">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                          BE
+                        </span>
+                      )}
                         </td>
                       </tr>
                     );
