@@ -9,7 +9,7 @@ import { AnalysisAdminPanel } from './AnalysisAdminPanel';
 
 type CommunityTab = 'home' | 'chat' | 'friends' | 'calendar' | 'courses' | 'analysis' | 'sentiment' | 'economic-data';
 
-export function CommunityView({ userProfile }: { userProfile: UserProfile | null }) {
+export function CommunityView({ userProfile, isVisible = true, onUnreadCountChange }: { userProfile: UserProfile | null; isVisible?: boolean; onUnreadCountChange?: (count: number) => void }) {
   const [activeTab, setActiveTab] = useState<CommunityTab>(() =>
     typeof window !== 'undefined' && (new URLSearchParams(window.location.search).has('piptalkInvite') || /^\/i\/[A-Za-z0-9]{6}\/?$/.test(window.location.pathname)) ? 'chat' : 'home'
   );
@@ -112,7 +112,7 @@ export function CommunityView({ userProfile }: { userProfile: UserProfile | null
 
       {activeTab === 'calendar' && <EconomicCalendarView />}
 
-      <div className={activeTab === 'chat' ? 'block' : 'hidden'} aria-hidden={activeTab !== 'chat'}><ChatView userProfile={userProfile} initialConversationId={pendingChatId} onUnreadCountChange={setUnreadChatCount} isVisible={activeTab === 'chat'} /></div>
+      <div className={activeTab === 'chat' ? 'block' : 'hidden'} aria-hidden={activeTab !== 'chat'}><ChatView userProfile={userProfile} initialConversationId={pendingChatId} onUnreadCountChange={count => { setUnreadChatCount(count); onUnreadCountChange?.(count); }} isVisible={isVisible && activeTab === 'chat'} /></div>
       {activeTab === 'friends' && <FriendsView userProfile={userProfile} onOpenChat={openChat} />}
       {activeTab === 'courses' && <CourseSpace isAdmin={isAdmin} />}
       {activeTab === 'analysis' && (
