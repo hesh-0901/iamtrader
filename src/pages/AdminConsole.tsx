@@ -430,9 +430,12 @@ export function AdminConsole({ onOpenSidebar }: { onOpenSidebar?: () => void }) 
 
   return (
     <div className="relative min-h-dvh w-full min-w-0 overflow-x-hidden bg-[#f5f8fc]"><div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[radial-gradient(ellipse_at_top_right,rgba(20,184,166,0.12),transparent_55%),radial-gradient(ellipse_at_top_left,rgba(59,130,246,0.07),transparent_45%)]" />
-      <div className="relative mx-auto min-h-dvh w-full min-w-0 max-w-[1480px] px-3 pb-5 pt-14 sm:px-6 sm:py-5 lg:px-8 lg:py-8">
-        <nav aria-label="Navigation de la console administrateur" className="sticky top-0 z-40 mb-4 sm:mb-6 mx-0 overflow-x-auto overscroll-x-contain rounded-none border-x-0 border-y border-slate-200/80 bg-white/95 p-1.5 shadow-[0_8px_28px_rgba(15,35,55,.08)] backdrop-blur-xl sm:mx-0 sm:rounded-2xl sm:border sm:p-2">
-          <div className="flex w-max min-w-full snap-x snap-mandatory gap-1 sm:flex-wrap sm:w-full sm:gap-1.5">
+      <div className="relative mx-auto min-h-dvh w-full min-w-0 max-w-[1480px] px-3 py-3 sm:px-6 sm:py-5 lg:px-8 lg:py-8">
+        <nav aria-label="Navigation de la console administrateur" className="sticky top-0 z-40 mb-4 sm:mb-6 mx-0 flex min-w-0 items-center gap-2 overflow-hidden rounded-none border-x-0 border-y border-slate-200/80 bg-white/95 p-1.5 shadow-[0_8px_28px_rgba(15,35,55,.08)] backdrop-blur-xl sm:mx-0 sm:rounded-2xl sm:border sm:p-2">
+          <button type="button" onClick={onOpenSidebar} className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-[#0b1f35] shadow-sm transition hover:bg-slate-50 active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-500/20 lg:hidden" aria-label="Ouvrir le menu administrateur">
+            <Menu className="h-5 w-5" />
+          </button>
+          <div className="flex min-w-0 flex-1 snap-x snap-mandatory gap-1 overflow-x-auto overscroll-x-contain sm:flex-wrap sm:overflow-visible sm:gap-1.5">
             {([
               ['overview','Vue d’ensemble',Activity],['users','Utilisateurs',Users],['subscriptions','Abonnements',Clock3],['payments','Paiements',CreditCard],['promotions','Promotions & avantages',Tag],['support','Support',Mail],['analytics','Analytics',ChartNoAxesCombined],['audit','Journal d’audit',History],['ai-monitoring','Moteur IA',Sparkles]
             ] as const).map(([key,label,Icon])=><button key={key} onClick={()=>setAdminTab(key)} aria-label={label} title={label} aria-current={adminTab===key?'page':undefined} className={'relative flex h-10 shrink-0 snap-start items-center justify-center rounded-xl py-2 text-[11px] font-bold transition-all duration-200 '+(adminTab===key?'gap-2 bg-[#10243b] px-4 text-white shadow-[0_4px_12px_rgba(16,36,59,.18)]':'w-10 px-0 text-slate-600 hover:bg-slate-100 hover:text-[#10243b]')}><Icon className={'h-4 w-4 shrink-0 '+(adminTab===key?'text-[#55e1c3]':'text-slate-400')}/><span className={adminTab===key?'whitespace-nowrap':'sr-only'}>{label}</span>{key==='support'&&contactMessages.filter(m=>m.status==='new').length>0&&<span className={'absolute -right-1 -top-1 flex h-[17px] min-w-[17px] items-center justify-center rounded-full px-1 text-[9px] font-extrabold '+(adminTab===key?'bg-[#55e1c3] text-[#10243b]':'bg-emerald-100 text-emerald-800')}>{contactMessages.filter(m=>m.status==='new').length}</span>}</button>)}
@@ -440,15 +443,10 @@ export function AdminConsole({ onOpenSidebar }: { onOpenSidebar?: () => void }) 
         </nav>
         <main className="min-w-0 space-y-4 sm:space-y-6">
           <header className="mb-6 flex flex-col gap-4 border-b border-slate-200/80 pb-6 md:flex-row md:items-end md:justify-between">
-            <div className="flex min-w-0 items-start gap-3">
-              <button type="button" onClick={onOpenSidebar} className="mt-0.5 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-[#0b1f35] shadow-sm transition hover:bg-slate-50 active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-500/20 lg:hidden" aria-label="Ouvrir le menu administrateur" aria-expanded={undefined}>
-                <Menu className="h-5 w-5" />
-              </button>
-              <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div><div className="mb-2 inline-flex items-center gap-2 rounded-full border border-emerald-100 bg-white/90 px-3 py-1.5 text-[10px] font-bold uppercase tracking-[.16em] text-emerald-700 shadow-sm">Console administrateur</div><h1 className="text-3xl font-bold tracking-[-0.045em] text-[#10243b] sm:text-4xl">{adminTab==='overview'?'Dashboard admin':adminTab==='users'?'Utilisateurs':adminTab==='subscriptions'?'Abonnements':adminTab==='payments'?'Paiements':adminTab==='promotions'?'Promotions & avantages':adminTab==='support'?'Support':adminTab==='analytics'?'Analytics':adminTab==='ai-monitoring'?'Supervision du moteur IA':'Journal d’audit'}</h1><p className="mt-1 text-sm text-slate-400">{adminTab==='subscriptions'?'Suivi commercial des abonnements, répartition des plans et paiements à confirmer.':adminTab==='analytics'?'Lecture comportementale et performance des utilisateurs.':adminTab==='ai-monitoring'?'Disponibilité des clés, basculements et activité des assistants.':'Pilotage opérationnel de la plateforme IAMTRADER.'}</p></div>
               <div className="hidden lg:flex items-center gap-2 rounded-full border border-emerald-100 bg-white/80 px-3 py-2 text-xs font-semibold text-emerald-700"><span className="relative flex h-2 w-2"><span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-50"></span><span className="relative inline-flex h-2 w-2 rounded-full bg-emerald-500"></span></span>Synchronisation active</div>
               {isPrimaryAdmin && <button type="button" onClick={migrateSubscriptionExpiry} disabled={migrationBusy} className="inline-flex items-center justify-center gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800 transition hover:bg-amber-100 disabled:cursor-wait disabled:opacity-60"><RefreshCw className={`h-3.5 w-3.5 ${migrationBusy ? 'animate-spin' : ''}`}/>{migrationBusy ? 'Migration…' : 'Migrer les échéances'}</button>}
-              </div>
             </div>
           </header>
 
