@@ -429,9 +429,9 @@ export function AdminConsole({ onOpenSidebar }: { onOpenSidebar?: () => void }) 
   }
 
   return (
-    <div className="relative min-h-dvh w-full min-w-0 overflow-x-hidden bg-[#f5f8fc]"><div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[radial-gradient(ellipse_at_top_right,rgba(20,184,166,0.12),transparent_55%),radial-gradient(ellipse_at_top_left,rgba(59,130,246,0.07),transparent_45%)]" />
+    <div className="relative min-h-dvh w-full min-w-0 overflow-x-clip bg-[#f5f8fc]"><div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[radial-gradient(ellipse_at_top_right,rgba(20,184,166,0.12),transparent_55%),radial-gradient(ellipse_at_top_left,rgba(59,130,246,0.07),transparent_45%)]" />
       <div className="relative mx-auto min-h-dvh w-full min-w-0 max-w-[1480px] px-3 py-3 sm:px-6 sm:py-5 lg:px-8 lg:py-8">
-        <nav aria-label="Navigation de la console administrateur" className="sticky top-0 z-40 mb-4 sm:mb-6 mx-0 flex min-w-0 items-center gap-2 overflow-hidden rounded-none border-x-0 border-y border-slate-200/80 bg-white/95 p-1.5 shadow-[0_8px_28px_rgba(15,35,55,.08)] backdrop-blur-xl sm:mx-0 sm:rounded-2xl sm:border sm:p-2">
+        <nav aria-label="Navigation de la console administrateur" className="sticky top-0 z-50 self-start mb-4 sm:mb-6 mx-0 flex min-w-0 items-center gap-2 overflow-hidden rounded-none border-x-0 border-y border-slate-200/80 bg-white/95 p-1.5 shadow-[0_8px_28px_rgba(15,35,55,.08)] backdrop-blur-xl sm:mx-0 sm:rounded-2xl sm:border sm:p-2">
           <button type="button" onClick={onOpenSidebar} className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-[#0b1f35] shadow-sm transition hover:bg-slate-50 active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-500/20 lg:hidden" aria-label="Ouvrir le menu administrateur">
             <Menu className="h-5 w-5" />
           </button>
