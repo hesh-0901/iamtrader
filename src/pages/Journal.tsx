@@ -448,12 +448,7 @@ export function Journal({
                         </td>
                         <td className="py-2.5 px-3 text-right">
                           <ResultBadge result={trade.result} />
-                      {Boolean(trade.isBreakEven) && (
-                        <span className="inline-flex items-center gap-1 text-[9px] font-semibold tracking-wide text-emerald-500">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                          BE
-                        </span>
-                      )}
+
                         </td>
                       </tr>
                     );
