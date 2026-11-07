@@ -431,7 +431,7 @@ export function AdminConsole({ onOpenSidebar }: { onOpenSidebar?: () => void }) 
   return (
     <div className="relative min-h-dvh w-full min-w-0 overflow-x-clip bg-[#f5f8fc]"><div className="pointer-events-none absolute inset-x-0 top-0 h-72 bg-[radial-gradient(ellipse_at_top_right,rgba(20,184,166,0.12),transparent_55%),radial-gradient(ellipse_at_top_left,rgba(59,130,246,0.07),transparent_45%)]" />
       <div className="relative mx-auto min-h-dvh w-full min-w-0 max-w-[1480px] px-3 py-3 sm:px-6 sm:py-5 lg:px-8 lg:py-8">
-        <nav aria-label="Navigation de la console administrateur" className="sticky top-0 z-50 self-start mb-4 sm:mb-6 mx-0 flex min-w-0 items-center gap-2 overflow-hidden rounded-none border-x-0 border-y border-slate-200/80 bg-white/95 p-1.5 shadow-[0_8px_28px_rgba(15,35,55,.08)] backdrop-blur-xl sm:mx-0 sm:rounded-2xl sm:border sm:p-2">
+        <nav aria-label="Navigation de la console administrateur" className="fixed inset-x-0 top-[env(safe-area-inset-top)] z-50 mx-auto flex w-full max-w-[1480px] min-w-0 items-center gap-2 overflow-hidden border-y border-slate-200/80 bg-white/95 px-3 py-1.5 shadow-[0_8px_28px_rgba(15,35,55,.08)] backdrop-blur-xl sm:top-0 sm:px-6 sm:py-2 sm:rounded-2xl sm:border lg:px-8">
           <button type="button" onClick={onOpenSidebar} className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-[#0b1f35] shadow-sm transition hover:bg-slate-50 active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-500/20 lg:hidden" aria-label="Ouvrir le menu administrateur">
             <Menu className="h-5 w-5" />
           </button>
@@ -441,6 +441,7 @@ export function AdminConsole({ onOpenSidebar }: { onOpenSidebar?: () => void }) 
             ] as const).map(([key,label,Icon])=><button key={key} onClick={()=>setAdminTab(key)} aria-label={label} title={label} aria-current={adminTab===key?'page':undefined} className={'relative flex h-10 shrink-0 snap-start items-center justify-center rounded-xl py-2 text-[11px] font-bold transition-all duration-200 '+(adminTab===key?'gap-2 bg-[#10243b] px-4 text-white shadow-[0_4px_12px_rgba(16,36,59,.18)]':'w-10 px-0 text-slate-600 hover:bg-slate-100 hover:text-[#10243b]')}><Icon className={'h-4 w-4 shrink-0 '+(adminTab===key?'text-[#55e1c3]':'text-slate-400')}/><span className={adminTab===key?'whitespace-nowrap':'sr-only'}>{label}</span>{key==='support'&&contactMessages.filter(m=>m.status==='new').length>0&&<span className={'absolute -right-1 -top-1 flex h-[17px] min-w-[17px] items-center justify-center rounded-full px-1 text-[9px] font-extrabold '+(adminTab===key?'bg-[#55e1c3] text-[#10243b]':'bg-emerald-100 text-emerald-800')}>{contactMessages.filter(m=>m.status==='new').length}</span>}</button>)}
           </div>
         </nav>
+        <div aria-hidden="true" className="h-[58px] shrink-0 sm:h-[60px]" />
         <main className="min-w-0 space-y-4 sm:space-y-6">
           <header className="mb-6 flex flex-col gap-4 border-b border-slate-200/80 pb-6 md:flex-row md:items-end md:justify-between">
             <div className="flex min-w-0 flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
