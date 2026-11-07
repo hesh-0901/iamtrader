@@ -45,6 +45,7 @@ function MainAppContent() {
   const [pendingPaymentReference, setPendingPaymentReference] = useState<string | null>(null);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState<boolean>(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState<boolean>(false);
+  const [unreadMessageCount, setUnreadMessageCount] = useState(0);
 
   // Domain Data State
   const [accounts, setAccounts] = useState<TradingAccount[]>([]);
@@ -427,7 +428,9 @@ function MainAppContent() {
           onCloseMobile={() => setIsMobileSidebarOpen(false)}
           isCollapsed={isSidebarCollapsed}
           onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+          unreadMessageCount={unreadMessageCount}
         />
+        <div className="hidden"><CommunityView userProfile={userProfile} isVisible={false} onUnreadCountChange={setUnreadMessageCount} /></div>
         <div className="flex-1 min-w-0 relative">
           <button
             onClick={() => setIsMobileSidebarOpen(true)}
@@ -453,6 +456,7 @@ function MainAppContent() {
         onCloseMobile={() => setIsMobileSidebarOpen(false)}
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+        unreadMessageCount={unreadMessageCount}
       />
 
       {/* Main Workspace Frame */}
@@ -539,9 +543,9 @@ function MainAppContent() {
             />
           )}
 
-          {currentPage === 'community' && (
-            <CommunityView userProfile={userProfile} />
-          )}
+          <div className={currentPage === 'community' ? 'block' : 'hidden'}>
+            <CommunityView userProfile={userProfile} isVisible={currentPage === 'community'} onUnreadCountChange={setUnreadMessageCount} />
+          </div>
 
           {currentPage === 'settings' && (
             <SettingsView
