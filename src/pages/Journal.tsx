@@ -30,12 +30,6 @@ interface JournalProps {
   onEditTrade: (trade: Trade) => void;
 }
 
-function isNearBreakEvenExit(trade: Trade): boolean {
-  const entry = Number(trade.entryPrice);
-  const exit = Number(trade.exitPrice);
-  const takeProfit = Number(trade.takeProfit);
-  const rMultiple = Number(trade.rMultiple);
-
   // Only classify a closed trade with a real exit price.
   if (!Number.isFinite(entry) || !Number.isFinite(exit) || entry <= 0 || exit <= 0) return false;
 
@@ -421,7 +415,7 @@ export function Journal({
                         </td>
                         <td className="py-2.5 px-3 font-mono text-slate-400 tabular-nums text-[11px]">
                           <div className="flex flex-col items-start gap-0.5">
-                            {isNearBreakEvenExit(trade) && (
+                            {Boolean(trade.isBreakEven) && (
                               <span className="inline-flex items-center gap-1 text-[9px] font-semibold tracking-wide text-emerald-500">
                                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                                 BE
@@ -454,7 +448,7 @@ export function Journal({
                         </td>
                         <td className="py-2.5 px-3 text-right">
                           <ResultBadge result={trade.result} />
-                      {isNearBreakEvenExit(trade) && (
+                      {Boolean(trade.isBreakEven) && (
                         <span className="inline-flex items-center gap-1 text-[9px] font-semibold tracking-wide text-emerald-500">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
                           BE
