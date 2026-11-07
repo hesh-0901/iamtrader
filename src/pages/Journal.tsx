@@ -30,6 +30,24 @@ interface JournalProps {
   onEditTrade: (trade: Trade) => void;
 }
 
+function isNearBreakEvenExit(trade: Trade): boolean {
+  const entry = Number(trade.entryPrice);
+  const exit = Number(trade.exitPrice);
+  const takeProfit = Number(trade.takeProfit);
+
+  if (!Number.isFinite(entry) || !Number.isFinite(exit) || !Number.isFinite(takeProfit)) return false;
+  if (entry <= 0 || exit <= 0 || takeProfit <= 0) return false;
+
+  const targetDistance = Math.abs(takeProfit - entry);
+  if (targetDistance === 0) return false;
+
+  const exitDistanceFromEntry = Math.abs(exit - entry);
+  const remainingDistanceToTarget = Math.abs(takeProfit - exit);
+
+  return exitDistanceFromEntry <= targetDistance * 0.05
+    && remainingDistanceToTarget >= targetDistance * 0.5;
+}
+
 export function Journal({
   trades,
   accounts,
@@ -395,7 +413,15 @@ export function Journal({
                           {trade.entryPrice ? trade.entryPrice.toLocaleString() : '—'}
                         </td>
                         <td className="py-2.5 px-3 font-mono text-slate-400 tabular-nums text-[11px]">
-                          {trade.exitPrice ? trade.exitPrice.toLocaleString() : '—'}
+                          <div className="flex flex-col items-start gap-0.5">
+                            {isNearBreakEvenExit(trade) && (
+                              <span className="inline-flex items-center gap-1 text-[9px] font-semibold tracking-wide text-emerald-500">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                                BE
+                              </span>
+                            )}
+                            <span>{trade.exitPrice ? trade.exitPrice.toLocaleString() : '—'}</span>
+                          </div>
                         </td>
                         <td className="py-2.5 px-3 font-mono text-slate-500 tabular-nums text-[11px]">
                           {trade.positionSize || '1'}
