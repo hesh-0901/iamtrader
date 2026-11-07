@@ -423,15 +423,7 @@ export function Journal({
                         </td>
                         <td className="py-2.5 px-3 text-right">
                           <div className="inline-flex items-center justify-end gap-1.5">
-                            <div className="inline-flex items-center gap-1.5">
-                        <ResultBadge result={trade.result} />
-                        {Boolean(trade.isBreakEven) && (
-                          <span className="inline-flex items-center gap-1 text-[9px] font-semibold tracking-wide text-emerald-500">
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                            BE
-                          </span>
-                        )}
-                      </div>
+                            <ResultBadge result={trade.result} />
                             {Boolean(trade.isBreakEven) && (
                               <span className="inline-flex items-center gap-1 text-[9px] font-semibold tracking-wide text-emerald-600">
                                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
