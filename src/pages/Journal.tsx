@@ -30,25 +30,6 @@ interface JournalProps {
   onEditTrade: (trade: Trade) => void;
 }
 
-  // Only classify a closed trade with a real exit price.
-  if (!Number.isFinite(entry) || !Number.isFinite(exit) || entry <= 0 || exit <= 0) return false;
-
-  // A near-zero realized R is the clearest indicator of a break-even-style exit.
-  if (Number.isFinite(rMultiple) && Math.abs(rMultiple) <= 0.1) return true;
-
-  // Fallback for records without a stored R multiple: compare exit to entry
-  // and ensure the target was still meaningfully distant.
-  if (!Number.isFinite(takeProfit) || takeProfit <= 0) return false;
-  const targetDistance = Math.abs(takeProfit - entry);
-  if (targetDistance === 0) return false;
-
-  const exitDistanceFromEntry = Math.abs(exit - entry);
-  const remainingDistanceToTarget = Math.abs(takeProfit - exit);
-
-  return exitDistanceFromEntry <= targetDistance * 0.05
-    && remainingDistanceToTarget >= targetDistance * 0.5;
-}
-
 export function Journal({
   trades,
   accounts,
