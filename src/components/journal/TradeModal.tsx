@@ -178,7 +178,7 @@ export function TradeModal({ isOpen, onClose, userId, accounts, selectedAccountI
     }
   }, [isOpen, tradeToEdit?.id]);
 
-  const inputClass = 'w-full rounded-xl border border-[#dfe9e5] bg-white px-3 py-2.5 text-sm text-[#10233a] outline-none transition focus:border-[#08b77a] focus:ring-4 focus:ring-[#08b77a]/10';
+  const inputClass = 'box-border h-[42px] w-full rounded-xl border border-[#dfe9e5] bg-white px-3 py-2 text-sm text-[#10233a] outline-none transition focus:border-[#08b77a] focus:ring-4 focus:ring-[#08b77a]/10';
   const labelClass = 'block mb-1.5 text-[11px] font-semibold text-[#5f748c]';
 
   const handleSubmit = async (event?: React.FormEvent) => {
@@ -272,7 +272,7 @@ export function TradeModal({ isOpen, onClose, userId, accounts, selectedAccountI
 
         {step === 1 && (
           <section className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
               <div><label className={labelClass}>Compte *</label><select value={accountId} onChange={e => setAccountId(e.target.value)} className={inputClass} required><option value="">Sélectionner</option>{accounts.map(acc => <option key={acc.id} value={acc.id}>{acc.name}</option>)}</select></div>
               <div>
                 <label className={labelClass}>Instrument *</label>
@@ -282,7 +282,7 @@ export function TradeModal({ isOpen, onClose, userId, accounts, selectedAccountI
                 </select>
                 {!instruments.length && <p className="mt-1.5 text-[10px] text-amber-600">Ajoutez d’abord vos instruments dans Paramètres &gt; Journal.</p>}
               </div>
-              <div><label className={labelClass}>Direction *</label><div className="grid grid-cols-2 gap-2"><button type="button" onClick={() => setDirection('BUY')} className={`rounded-xl border py-2.5 text-xs font-bold ${direction === 'BUY' ? 'bg-[#e7faf3] text-[#008f63] border-[#9de2ca]' : 'bg-white text-[#71839a] border-[#dfe9e5]'}`}>Acheteur</button><button type="button" onClick={() => setDirection('SELL')} className={`rounded-xl border py-2.5 text-xs font-bold ${direction === 'SELL' ? 'bg-[#fff0f2] text-[#f04f63] border-[#ffd0d8]' : 'bg-white text-[#71839a] border-[#dfe9e5]'}`}>Vendeur</button></div></div>
+              <div className="sm:col-span-2"><label className={labelClass}>Direction *</label><div className="grid grid-cols-2 gap-2"><button type="button" onClick={() => setDirection('BUY')} className={`rounded-xl border py-2.5 text-xs font-bold ${direction === 'BUY' ? 'bg-[#e7faf3] text-[#008f63] border-[#9de2ca]' : 'bg-white text-[#71839a] border-[#dfe9e5]'}`}>Acheteur</button><button type="button" onClick={() => setDirection('SELL')} className={`rounded-xl border py-2.5 text-xs font-bold ${direction === 'SELL' ? 'bg-[#fff0f2] text-[#f04f63] border-[#ffd0d8]' : 'bg-white text-[#71839a] border-[#dfe9e5]'}`}>Vendeur</button></div></div>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
