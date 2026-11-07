@@ -58,6 +58,7 @@ export function TradeModal({ isOpen, onClose, userId, accounts, selectedAccountI
   const [exitDate, setExitDate] = useState('');
   const [entryPrice, setEntryPrice] = useState('');
   const [exitPrice, setExitPrice] = useState('');
+  const [isBreakEven, setIsBreakEven] = useState(false);
   const [stopLoss, setStopLoss] = useState('');
   const [takeProfit, setTakeProfit] = useState('');
   const [commission, setCommission] = useState('');
@@ -144,6 +145,7 @@ export function TradeModal({ isOpen, onClose, userId, accounts, selectedAccountI
       setExitDate(toLocalDateTimeInput(tradeToEdit.exitDate));
       setEntryPrice(tradeToEdit.entryPrice?.toString() || '');
       setExitPrice(tradeToEdit.exitPrice?.toString() || '');
+      setIsBreakEven(Boolean(tradeToEdit.isBreakEven));
       setStopLoss(tradeToEdit.stopLoss?.toString() || '');
       setTakeProfit(tradeToEdit.takeProfit?.toString() || '');
       setCommission(tradeToEdit.commission?.toString() || '');
@@ -162,6 +164,7 @@ export function TradeModal({ isOpen, onClose, userId, accounts, selectedAccountI
       setExitDate('');
       setEntryPrice('');
       setExitPrice('');
+      setIsBreakEven(false);
       setStopLoss('');
       setTakeProfit('');
       setCommission('');
@@ -211,6 +214,7 @@ export function TradeModal({ isOpen, onClose, userId, accounts, selectedAccountI
         ...(exitDate ? { exitDate: new Date(exitDate).toISOString() } : {}),
         entryPrice: Number(entryPrice),
         ...(exitPrice ? { exitPrice: Number(exitPrice) } : {}),
+        isBreakEven: Boolean(exitPrice) && isBreakEven,
         ...(stopLoss ? { stopLoss: Number(stopLoss) } : {}),
         ...(takeProfit ? { takeProfit: Number(takeProfit) } : {}),
         ...(commission ? { commission: Math.max(0, Number(commission)) } : {}),
@@ -285,7 +289,23 @@ export function TradeModal({ isOpen, onClose, userId, accounts, selectedAccountI
               <div><label className={labelClass}>Date & heure d'entrée *</label><input type="datetime-local" value={entryDate} onChange={e => setEntryDate(e.target.value)} className={inputClass} required /></div>
               <div><label className={labelClass}>Date & heure de sortie</label><input type="datetime-local" value={exitDate} onChange={e => setExitDate(e.target.value)} className={inputClass} /></div>
               <div><label className={labelClass}>Prix d'entrée *</label><input type="number" step="any" min="0" value={entryPrice} onChange={e => setEntryPrice(e.target.value)} className={inputClass} required /></div>
-              <div><label className={labelClass}>Prix de sortie</label><input type="number" step="any" min="0" value={exitPrice} onChange={e => setExitPrice(e.target.value)} className={inputClass} /></div>
+              <div>
+                <div className="mb-1.5 flex items-center justify-between gap-2">
+                  <label className={labelClass + ' mb-0'}>Prix de sortie</label>
+                  <button
+                    type="button"
+                    onClick={() => setIsBreakEven(value => !value)}
+                    disabled={!exitPrice}
+                    aria-pressed={isBreakEven}
+                    className={`inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-[10px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 ${isBreakEven ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'}`}
+                    title="Confirmer si cette sortie est un break-even"
+                  >
+                    <span className={`h-1.5 w-1.5 rounded-full ${isBreakEven ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+                    BE
+                  </button>
+                </div>
+                <input type="number" step="any" min="0" value={exitPrice} onChange={e => { setExitPrice(e.target.value); if (!e.target.value) setIsBreakEven(false); }} className={inputClass} />
+              </div>
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
