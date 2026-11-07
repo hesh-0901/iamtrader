@@ -26,12 +26,22 @@ const steps = [
 
 function getSessionFromDate(value: string): TradingSession | '' {
   if (!value) return '';
-  const hour = new Date(value).getUTCHours();
+  // datetime-local values represent the user's local wall-clock time.
+  const hour = new Date(value).getHours();
   if (hour >= 0 && hour < 8) return 'Asia';
   if (hour >= 8 && hour < 13) return 'London';
   if (hour >= 13 && hour < 16) return 'Overlap';
   if (hour >= 16 && hour < 22) return 'New York';
   return 'Asia';
+}
+
+function toLocalDateTimeInput(value?: string): string {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+
+  const pad = (part: number) => String(part).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
 }
 
 export function TradeModal({ isOpen, onClose, userId, accounts, selectedAccountId, tradeToEdit }: TradeModalProps) {
@@ -130,8 +140,8 @@ export function TradeModal({ isOpen, onClose, userId, accounts, selectedAccountI
       setAccountId(tradeToEdit.accountId || '');
       setSymbol(tradeToEdit.symbol || '');
       setDirection(tradeToEdit.direction || '');
-      setEntryDate(tradeToEdit.entryDate ? tradeToEdit.entryDate.slice(0, 16) : '');
-      setExitDate(tradeToEdit.exitDate ? tradeToEdit.exitDate.slice(0, 16) : '');
+      setEntryDate(toLocalDateTimeInput(tradeToEdit.entryDate));
+      setExitDate(toLocalDateTimeInput(tradeToEdit.exitDate));
       setEntryPrice(tradeToEdit.entryPrice?.toString() || '');
       setExitPrice(tradeToEdit.exitPrice?.toString() || '');
       setStopLoss(tradeToEdit.stopLoss?.toString() || '');
@@ -163,7 +173,7 @@ export function TradeModal({ isOpen, onClose, userId, accounts, selectedAccountI
       setScreenshotBeforeUrl('');
       setScreenshotAfterUrl('');
     }
-  }, [isOpen, tradeToEdit]);
+  }, [isOpen, tradeToEdit?.id]);
 
   const inputClass = 'w-full rounded-xl border border-[#dfe9e5] bg-white px-3 py-2.5 text-sm text-[#10233a] outline-none transition focus:border-[#08b77a] focus:ring-4 focus:ring-[#08b77a]/10';
   const labelClass = 'block mb-1.5 text-[11px] font-semibold text-[#5f748c]';
