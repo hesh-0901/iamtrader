@@ -434,7 +434,7 @@ function MainAppContent() {
         <div className="flex-1 min-w-0 relative">
           <button
             onClick={() => setIsMobileSidebarOpen(true)}
-            className="lg:hidden fixed left-3 top-[calc(env(safe-area-inset-top)+0.75rem)] z-40 flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200/90 bg-white/95 text-[#0b1f35] shadow-[0_8px_24px_rgba(11,31,53,.16)] backdrop-blur-md transition active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-500/20"
+            className="lg:hidden fixed left-3 top-[calc(env(safe-area-inset-top)+3.5rem)] z-40 flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200/90 bg-white/95 text-[#0b1f35] shadow-[0_8px_24px_rgba(11,31,53,.16)] backdrop-blur-md transition active:scale-95 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-500/20"
             aria-label="Ouvrir le menu administrateur"
             aria-expanded={isMobileSidebarOpen}
             aria-controls="iamtrader-admin-sidebar"
