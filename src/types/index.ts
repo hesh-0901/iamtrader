@@ -48,6 +48,7 @@ export interface Trade {
   result: TradeResult;
   pnl: number;
   rMultiple?: number;
+  isBreakEven?: boolean;
   setup: string;
   session: TradingSession;
   timeframe: TradingTimeframe;
