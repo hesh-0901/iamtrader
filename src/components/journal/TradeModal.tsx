@@ -289,21 +289,19 @@ export function TradeModal({ isOpen, onClose, userId, accounts, selectedAccountI
               <div><label className={labelClass}>Date & heure d'entrée *</label><input type="datetime-local" value={entryDate} onChange={e => setEntryDate(e.target.value)} className={inputClass} required /></div>
               <div><label className={labelClass}>Date & heure de sortie</label><input type="datetime-local" value={exitDate} onChange={e => setExitDate(e.target.value)} className={inputClass} /></div>
               <div><label className={labelClass}>Prix d'entrée *</label><input type="number" step="any" min="0" value={entryPrice} onChange={e => setEntryPrice(e.target.value)} className={inputClass} required /></div>
-              <div>
-                <div className="mb-1.5 flex items-center justify-between gap-2">
-                  <label className={labelClass + ' mb-0'}>Prix de sortie</label>
-                  <button
-                    type="button"
-                    onClick={() => setIsBreakEven(value => !value)}
-                    disabled={!exitPrice}
-                    aria-pressed={isBreakEven}
-                    className={`inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-[10px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 ${isBreakEven ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'}`}
-                    title="Confirmer si cette sortie est un break-even"
-                  >
-                    <span className={`h-1.5 w-1.5 rounded-full ${isBreakEven ? 'bg-emerald-500' : 'bg-slate-300'}`} />
-                    BE
-                  </button>
-                </div>
+              <div className="relative">
+                <label className={labelClass}>Prix de sortie</label>
+                <button
+                  type="button"
+                  onClick={() => setIsBreakEven(value => !value)}
+                  disabled={!exitPrice}
+                  aria-pressed={isBreakEven}
+                  className={`absolute right-0 top-[-4px] inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-[10px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 ${isBreakEven ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-50 text-slate-400 hover:bg-slate-100'}`}
+                  title="Confirmer si cette sortie est un break-even"
+                >
+                  <span className={`h-1.5 w-1.5 rounded-full ${isBreakEven ? 'bg-emerald-500' : 'bg-slate-300'}`} />
+                  BE
+                </button>
                 <input type="number" step="any" min="0" value={exitPrice} onChange={e => { setExitPrice(e.target.value); if (!e.target.value) setIsBreakEven(false); }} className={inputClass} />
               </div>
             </div>
