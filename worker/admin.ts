@@ -329,15 +329,21 @@ export async function handleAdminMutation(request: Request, env: AdminEnv) {
     }
 
     if (body.action === 'update-user') {
-      if (!body.uid || !body.data) return json({ error: 'Utilisateur ou données manquants.' }, 400);
+      if (!body.uid || !body.data || typeof body.data !== 'object' || Array.isArray(body.data)) return json({ error: 'Utilisateur ou données manquants.' }, 400);
 
-      // Only the primary administrator may grant or revoke administrative roles.
+      // Le rôle admin donne accès à la console ; seul isAdmin=true autorise la gestion des utilisateurs.
+      const actorProfile = await firestoreGet(env, `users/${encodeURIComponent(identity.uid)}`);
+      if (actorProfile?.isAdmin !== true) {
+        return json({ error: 'Action réservée à un administrateur habilité (isAdmin=true).' }, 403);
+      }
       if (Object.prototype.hasOwnProperty.call(body.data, 'role')) {
-        if (String(identity.email || '').trim().toLowerCase() !== 'henochshungu@gmail.com') {
-          return json({ error: 'Seul l’administrateur principal peut modifier les rôles.' }, 403);
-        }
         if (body.data.role !== 'admin' && body.data.role !== 'trader') {
           return json({ error: 'Rôle utilisateur invalide.' }, 400);
+        }
+        const targetProfile = await firestoreGet(env, `users/${encodeURIComponent(body.uid)}`);
+        if (!targetProfile) return json({ error: 'Profil utilisateur introuvable.' }, 404);
+        if (targetProfile.isAdmin === true) {
+          return json({ error: 'Le rôle du compte administrateur protégé ne peut pas être modifié depuis cette console.' }, 403);
         }
       }
 
