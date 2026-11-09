@@ -253,6 +253,10 @@ export async function handleAdminMutation(request: Request, env: AdminEnv) {
       const payment = await firestoreGet(env, `payments/${encodeURIComponent(body.paymentId)}`);
       if (!payment) return json({ error: 'Paiement introuvable.' }, 404);
       if (data.status === 'paid' && payment.paymentMethod === 'bank_transfer') {
+        const actorProfile = await firestoreGet(env, `users/${encodeURIComponent(identity.uid)}`);
+        if (actorProfile?.isAdmin !== true) {
+          return json({ error: 'Seul un administrateur habilité (isAdmin=true) peut activer un abonnement.' }, 403);
+        }
         if (payment.status === 'paid' && payment.subscriptionActivatedAt) return json({ success: true, alreadyConfirmed: true });
         const planKey = payment.plan === 'community' ? 'community' : payment.plan === 'pro' ? 'pro' : null;
         if (!planKey) return json({ error: 'Formule du paiement invalide.' }, 400);
@@ -287,8 +291,9 @@ export async function handleAdminMutation(request: Request, env: AdminEnv) {
     }
 
     if (body.action === 'migrate-subscription-expiry') {
-      if (String(identity.email || '').trim().toLowerCase() !== 'henochshungu@gmail.com') {
-        return json({ error: 'Seul l’administrateur principal peut lancer cette migration.' }, 403);
+      const actorProfile = await firestoreGet(env, `users/${encodeURIComponent(identity.uid)}`);
+      if (actorProfile?.isAdmin !== true) {
+        return json({ error: 'Action réservée à un administrateur habilité (isAdmin=true).' }, 403);
       }
       const users = await firestoreQueryCollection(env, 'users', 500, 'createdAt');
       const now = Date.now();
