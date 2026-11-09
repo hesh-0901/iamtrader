@@ -165,6 +165,7 @@ export interface UserProfile {
   certificates?: UserCertificate[];
   plan: SubscriptionPlan;
   role: UserRole;
+  isAdmin?: boolean;
   status: UserStatus;
   createdAt: string;
   paymentDate?: string;
