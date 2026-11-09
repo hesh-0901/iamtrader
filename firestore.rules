@@ -133,9 +133,9 @@ service cloud.firestore {
           'updatedAt'
         ]);
 
-      // Seul l'administrateur principal peut modifier les privilèges et abonnements directement.
+      // Seul un compte explicitement marqué isAdmin=true peut modifier les privilèges et abonnements.
       // Les opérations de la console passent par le Worker authentifié.
-      allow update: if primaryAdmin()
+      allow update: if userManager()
         && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
           'role',
           'admin',
