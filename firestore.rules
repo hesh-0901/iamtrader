@@ -29,6 +29,13 @@ service cloud.firestore {
         && request.auth.token.email == 'henochshungu@gmail.com';
     }
 
+    // isAdmin est le privilège de gestion des comptes ; role=admin donne seulement accès à la console.
+    function userManager() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('isAdmin', false) == true;
+    }
+
     // PipTalk privé, amis et groupes ordinaires sont réservés aux abonnements payants actifs.
     function paidPipTalk() {
       return admin()
@@ -146,7 +153,7 @@ service cloud.firestore {
           'updatedAt'
         ]);
 
-      allow delete: if admin();
+      allow delete: if userManager();
     }
 
     // =====================================================
