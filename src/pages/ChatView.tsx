@@ -32,6 +32,8 @@ const formatDay = (value?: Timestamp | null) => value?.toDate
 
 export function ChatView({ userProfile, initialConversationId, onUnreadCountChange, isVisible = true }: { userProfile: UserProfile | null; initialConversationId?: string; onUnreadCountChange?: (count: number) => void; isVisible?: boolean }) {
   const uid = auth.currentUser?.uid || userProfile?.uid;
+  // Déclarer le nom avant les effets qui l'utilisent dans leurs dépendances.
+  const currentDisplayName = userProfile?.displayName?.trim() || auth.currentUser?.displayName?.trim() || auth.currentUser?.email?.split('@')[0] || 'Trader';
   const hasPaidPipTalk = (userProfile?.role === 'admin' || (userProfile as any)?.admin === true) || (
     (userProfile?.plan === 'pro' || userProfile?.plan === 'community')
     && userProfile?.subscriptionStatus === 'active'
@@ -633,7 +635,6 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
   const active = conversations.find(item => item.id === activeId);
   const otherUid = active?.members.find(member => member !== uid) || '';
   const activeName = active?.title || active?.memberNames?.[otherUid] || (otherUid ? `Trader ${otherUid.slice(0, 7)}` : 'Choisir une discussion');
-  const currentDisplayName = userProfile?.displayName?.trim() || auth.currentUser?.displayName?.trim() || auth.currentUser?.email?.split('@')[0] || 'Trader';
   const currentAvatar = userProfile?.photoURL || userProfile?.avatarURL || auth.currentUser?.photoURL || '';
   const avatarForMessage = (message: ChatMessage) => {
     const profile = publicProfiles.find(item => item.uid === message.senderId);
