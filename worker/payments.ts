@@ -78,9 +78,12 @@ function randomId() {
 
 function traderFullName(profile: Record<string, unknown>) {
   const traderProfile = profile.traderProfile as { firstName?: unknown; lastName?: unknown } | undefined;
-  return [traderProfile?.firstName, traderProfile?.lastName]
+  const firstName = traderProfile?.firstName ?? profile.firstName;
+  const lastName = traderProfile?.lastName ?? profile.lastName;
+  return [firstName, lastName]
     .filter((value): value is string => typeof value === 'string' && value.trim().length > 0)
-    .join(' ');
+    .join(' ')
+    .trim();
 }
 
 function paymentReference(paymentId: string, createdAt?: string) {
@@ -238,7 +241,8 @@ async function createSasPayCheckout(
     invoiceNumber: invoiceNumber(paymentId, now), createdAt: now
   });
   try {
-    const customerNames = String(profile.displayName || payerName || email).trim().split(/\s+/).filter(Boolean);
+    // SasPay must receive the account holder's legal/profile name, never the IAMTRADER username.
+    const customerNames = String(traderFullName(profile) || profile.displayName || payerName || email).trim().split(/\s+/).filter(Boolean);
     const firstName = customerNames.shift() || 'IAMTRADER';
     const lastName = customerNames.join(' ') || 'Trader';
     const response = await fetch('https://api.saspay.me/api/v1/payments/softpay/', {
