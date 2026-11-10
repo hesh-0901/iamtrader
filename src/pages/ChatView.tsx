@@ -289,13 +289,51 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
   }, [uid, hasPaidPipTalk]);
 
   useEffect(() => {
-    if (!uid) return;
-    return onSnapshot(doc(db, 'conversations', 'community-hub'), snapshot => {
-      if (!snapshot.exists()) return;
-      const hub = { id: snapshot.id, ...snapshot.data() } as ChatConversation;
+    if (!uid) {
+      setConversations(previous => previous.filter(item => item.id !== 'community-hub'));
+      return;
+    }
+
+    const hubRef = doc(db, 'conversations', 'community-hub');
+    return onSnapshot(hubRef, snapshot => {
+      // Keep the Community Hub visible even before its metadata document has
+      // been initialized by the primary administrator. Messages use the fixed
+      // community-hub path and are independently protected by Firestore rules.
+      const hub: ChatConversation = snapshot.exists()
+        ? { id: snapshot.id, ...snapshot.data() } as ChatConversation
+        : {
+            id: 'community-hub',
+            members: [uid],
+            group: true,
+            systemGroup: true,
+            title: 'Community Hub',
+            memberNames: { [uid]: currentDisplayName },
+            lastMessage: 'Bienvenue dans Community Hub.'
+          };
       setConversations(previous => [hub, ...previous.filter(item => item.id !== hub.id)]);
-    }, err => { setError(err.message); });
-  }, [uid]);
+      setLoadingChats(false);
+    }, err => {
+      console.error('[PipTalk] Lecture de Community Hub refusée', {
+        uid, code: err.code, message: err.message
+      });
+      // Do not silently remove the system conversation from the interface.
+      setConversations(previous => previous.some(item => item.id === 'community-hub')
+        ? previous
+        : [{
+            id: 'community-hub',
+            members: [uid],
+            group: true,
+            systemGroup: true,
+            title: 'Community Hub',
+            memberNames: { [uid]: currentDisplayName },
+            lastMessage: 'Bienvenue dans Community Hub.'
+          }, ...previous]);
+      setLoadingChats(false);
+      setError(err.code === 'permission-denied'
+        ? 'Firestore refuse la lecture de Community Hub. Publie les règles Firestore mises à jour dans le bon projet Firebase.'
+        : err.message);
+    });
+  }, [uid, currentDisplayName]);
 
   // Les aperçus proviennent du champ lastMessage de chaque conversation.
   // Éviter une lecture supplémentaire de tous les sous-collections messages : les règles
