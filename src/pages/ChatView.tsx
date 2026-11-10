@@ -116,6 +116,9 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
   const [publicProfiles, setPublicProfiles] = useState<Array<{ uid: string; displayName: string; avatarURL?: string; photoURL?: string }>>([]);
   const [mentionUids, setMentionUids] = useState<string[]>([]);
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const [mentionPickerPosition, setMentionPickerPosition] = useState<{ left: number; bottom: number; width: number } | null>(null);
+  const [mentionAlerts, setMentionAlerts] = useState<Array<{ conversationId: string; messageId: string; senderName: string; text: string; createdAt?: Timestamp | null }>>([]);
+  const [jumpToMessageId, setJumpToMessageId] = useState<string | null>(null);
 
   // Charger les profils publiés pour proposer les mentions @ dans le chat.
   useEffect(() => {
@@ -459,6 +462,28 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
     };
   }, [uid, conversations.map(conversation => conversation.id).join('|'), activeId, isVisible]);
 
+  useEffect(() => {
+    if (!uid || !conversations.length) { setMentionAlerts([]); return; }
+    const cache = new Map<string, { readAt: number; messages: ChatMessage[] }>();
+    const publish = () => {
+      const alerts: Array<{ conversationId: string; messageId: string; senderName: string; text: string; createdAt?: Timestamp | null }> = [];
+      cache.forEach((entry, conversationId) => entry.messages.forEach(message => {
+        const createdAt = message.createdAt?.toMillis?.() || 0;
+        if (message.senderId !== uid && createdAt > entry.readAt) alerts.push({ conversationId, messageId: message.id, senderName: message.senderName || 'Un trader', text: message.text || (message.type === 'image' ? 'Image' : 'Message vocal'), createdAt: message.createdAt });
+      }));
+      alerts.sort((a,b)=>(b.createdAt?.toMillis?.()||0)-(a.createdAt?.toMillis?.()||0));
+      setMentionAlerts(alerts);
+    };
+    const stops: Array<() => void> = [];
+    conversations.forEach(conversation => {
+      let readAt = 0, mentioned: ChatMessage[] = [];
+      const sync = () => { cache.set(conversation.id,{readAt,messages:mentioned}); publish(); };
+      stops.push(onSnapshot(doc(db,'conversations',conversation.id,'readStates',uid),snap=>{readAt=(snap.data()?.lastReadAt as Timestamp|undefined)?.toMillis?.()||0;sync();}));
+      stops.push(onSnapshot(query(collection(db,'conversations',conversation.id,'messages'),where('mentions','array-contains',uid)),snap=>{mentioned=snap.docs.map(item=>({id:item.id,...item.data()} as ChatMessage));sync();}));
+    });
+    return () => stops.forEach(stop=>stop());
+  }, [uid, conversations.map(item=>item.id).join('|')]);
+
   // Confirmations de lecture : ne refléter que les états réellement écrits par les destinataires.
   useEffect(() => {
     if (!uid || !activeId || !isVisible) { setReadReceiptsByUser({}); return; }
@@ -545,6 +570,11 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
   }, [uid, activeId, isVisible]);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+  useEffect(() => {
+    if (!jumpToMessageId || !messages.some(message => message.id === jumpToMessageId)) return;
+    const target = document.getElementById('piptalk-message-' + jumpToMessageId);
+    if (target) { target.scrollIntoView({behavior:'smooth',block:'center'}); target.classList.add('piptalk-mentioned-highlight'); window.setTimeout(()=>target.classList.remove('piptalk-mentioned-highlight'),2200); setJumpToMessageId(null); }
+  }, [jumpToMessageId,messages]);
 
   useEffect(() => {
     if (!viewerImage) return;
@@ -646,6 +676,10 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
     return name.toLowerCase().includes(queryText.toLowerCase()) || other.toLowerCase().includes(queryText.toLowerCase()) || (item.lastMessage || '').toLowerCase().includes(queryText.toLowerCase());
   }), [inboxItems, acceptedFriends, queryText, uid]);
 
+  const openMentionAlert = async (alert: {conversationId:string;messageId:string}) => {
+    setActiveId(alert.conversationId); setJumpToMessageId(alert.messageId); setMobileChatOpen(true); setShowEmojiPicker(false); setMentionQuery(null);
+    await markConversationRead(alert.conversationId);
+  };
   const closeMobileChat = () => {
     if (mobileCloseTimerRef.current) clearTimeout(mobileCloseTimerRef.current);
     setMobileChatClosing(true);
@@ -1365,13 +1399,13 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
   <div className="flex gap-1 overflow-x-auto border-b border-slate-100 px-2 py-2">{emojiCategories.map(category => <button key={category.name} type="button" onClick={() => setEmojiCategory(category.name)} title={category.name} className={`flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[10px] font-bold ${emojiCategory === category.name ? 'bg-emerald-100 text-emerald-800' : 'text-slate-500 hover:bg-slate-100'}`}><span className="text-base">{category.icon}</span><span>{category.name}</span></button>)}</div>
   <div className="grid max-h-52 grid-cols-8 gap-1 overflow-y-auto overscroll-contain p-2">{activeEmojiList.map((emoji, index) => <button key={emoji + index} type="button" onClick={() => insertEmoji(emoji)} aria-label={`Insérer ${emoji}`} className="flex h-9 w-full items-center justify-center rounded-lg text-xl hover:bg-emerald-50 active:scale-95">{emoji}</button>)}</div>
 </div>, document.body)}
-          {mentionQuery !== null && publicProfiles.some(profile => profile.displayName.toLocaleLowerCase().includes(mentionQuery)) && <div className="absolute bottom-full left-0 z-30 mb-2 max-h-52 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
+          {mentionQuery !== null && publicProfiles.some(profile => profile.displayName.toLocaleLowerCase().includes(mentionQuery)) && createPortal(<div role="dialog" aria-label="Suggestions de mention" style={{position:'fixed',left:mentionPickerPosition?.left??16,bottom:mentionPickerPosition?.bottom??90,width:mentionPickerPosition?.width??'min(320px, calc(100vw - 32px)'}} className="z-[2147483001] max-h-56 overflow-y-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-[0_18px_55px_rgba(15,23,42,.24)] ring-1 ring-slate-900/5">
             {publicProfiles.filter(profile => profile.displayName.toLocaleLowerCase().includes(mentionQuery)).slice(0, 8).map(profile => <button key={profile.uid} type="button" onMouseDown={event => event.preventDefault()} onClick={() => chooseMention(profile)} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left hover:bg-emerald-50">
               {profile.avatarURL ? <img src={profile.avatarURL} alt="" className="h-7 w-7 rounded-full object-cover" /> : <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-[10px] font-bold text-emerald-800">{profile.displayName.slice(0, 2).toUpperCase()}</span>}
               <span className="min-w-0 flex-1 truncate text-xs font-semibold text-slate-700">{profile.displayName}</span><span className="text-[10px] text-emerald-700">@Mentionner</span>
             </button>)}
-          </div>}
-          <textarea ref={draftTextareaRef} value={draft} onChange={e => handleDraftChange(e.target.value)} onPaste={handlePaste} onKeyDown={e => { if (e.key === 'Escape') setMentionQuery(null); if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (mentionQuery !== null) { setMentionQuery(null); return; } void sendMessage(); } }} disabled={!active || sending || !canSendInActive} placeholder={!active ? 'Sélectionnez une discussion…' : active.closed && !canSendInActive ? 'Groupe fermé : publication réservée aux responsables' : 'Écrire un message… tapez @ pour mentionner'} rows={1} className="max-h-36 sm:max-h-40 min-h-9 w-full resize-none overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[13px] leading-5 text-slate-700 outline-none transition focus:border-emerald-300 focus:bg-white focus:ring-2 focus:ring-emerald-50 disabled:opacity-50 sm:min-h-10 sm:px-3.5 sm:py-2.5 sm:text-xs" />
+          </div>, document.body)}
+          <textarea ref={draftTextareaRef} onKeyUp={event => { if (mentionQuery !== null) { const rect=event.currentTarget.getBoundingClientRect(); const width=Math.min(320,window.innerWidth-32); setMentionPickerPosition({left:Math.max(16,Math.min(rect.left,window.innerWidth-width-16)),bottom:Math.max(16,window.innerHeight-rect.top+8),width}); } }} value={draft} onChange={e => handleDraftChange(e.target.value)} onPaste={handlePaste} onKeyDown={e => { if (e.key === 'Escape') setMentionQuery(null); if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); if (mentionQuery !== null) { setMentionQuery(null); return; } void sendMessage(); } }} disabled={!active || sending || !canSendInActive} placeholder={!active ? 'Sélectionnez une discussion…' : active.closed && !canSendInActive ? 'Groupe fermé : publication réservée aux responsables' : 'Écrire un message… tapez @ pour mentionner'} rows={1} className="max-h-36 sm:max-h-40 min-h-9 w-full resize-none overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-[13px] leading-5 text-slate-700 outline-none transition focus:border-emerald-300 focus:bg-white focus:ring-2 focus:ring-emerald-50 disabled:opacity-50 sm:min-h-10 sm:px-3.5 sm:py-2.5 sm:text-xs" />
         </div>
         {draft.trim() ? <button onClick={() => void sendMessage()} disabled={!active || sending || uploadingMedia} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#00b98b] to-[#008f72] text-white shadow-md shadow-emerald-900/15 transition hover:brightness-105 disabled:opacity-40 sm:h-10 sm:w-10" title="Envoyer">{sending || uploadingMedia ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}</button> : <button type="button" disabled={!active || uploadingMedia} onClick={() => void startRecording()} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-slate-600 shadow-sm transition hover:bg-emerald-50 hover:text-emerald-700 disabled:opacity-40 sm:h-10 sm:w-10" title="Enregistrer un vocal" aria-label="Enregistrer un vocal"><Mic className="h-4 w-4" /></button>}
       </div>}
