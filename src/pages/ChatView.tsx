@@ -32,7 +32,7 @@ const formatDay = (value?: Timestamp | null) => value?.toDate
 
 export function ChatView({ userProfile, initialConversationId, onUnreadCountChange, isVisible = true }: { userProfile: UserProfile | null; initialConversationId?: string; onUnreadCountChange?: (count: number) => void; isVisible?: boolean }) {
   const uid = auth.currentUser?.uid || userProfile?.uid;
-  const hasPaidPipTalk = userProfile?.role === 'admin' || (
+  const hasPaidPipTalk = (userProfile?.role === 'admin' || (userProfile as any)?.admin === true) || (
     (userProfile?.plan === 'pro' || userProfile?.plan === 'community')
     && userProfile?.subscriptionStatus === 'active'
     && userProfile?.paymentStatus === 'paid'
@@ -393,7 +393,7 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
     if (
       !uid ||
       auth.currentUser?.email?.toLowerCase() !== 'henochshungu@gmail.com' ||
-      userProfile?.role !== 'admin'
+      userProfile?.role !== 'admin' && (userProfile as any)?.admin !== true
     ) return;
     const hubRef = doc(db, 'conversations', 'community-hub');
     void getDoc(hubRef).then(snapshot => {
