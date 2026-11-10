@@ -26,7 +26,7 @@ type ChatMessage = {
 type PipTalkErrorContext = 'conversations' | 'community' | 'messages';
 
 function formatPipTalkFirestoreError(error: any, context: PipTalkErrorContext) {
-  const code = String(error?.code || '').replace(/^firestore\\//, '');
+  const code = String(error?.code || '').replace('firestore/', '');
   const labels = {
     conversations: 'votre liste de conversations',
     community: 'Community Hub',
