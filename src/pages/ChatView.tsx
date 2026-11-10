@@ -351,7 +351,12 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
   // Create the fixed default group if it does not exist yet. Firestore rules
   // restrict this creation to the exact Community Hub system document.
   useEffect(() => {
-    if (!uid) return;
+    // Seul le compte administrateur principal peut initialiser le document système.
+    if (
+      !uid ||
+      auth.currentUser?.email?.toLowerCase() !== 'henochshungu@gmail.com' ||
+      userProfile?.role !== 'admin'
+    ) return;
     const hubRef = doc(db, 'conversations', 'community-hub');
     void getDoc(hubRef).then(snapshot => {
       if (snapshot.exists()) return;
@@ -365,7 +370,7 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
       console.error('[PipTalk] Initialisation de Community Hub impossible', err);
       setError(err?.message || 'Impossible d’initialiser Community Hub.');
     });
-  }, [uid, userProfile?.displayName, auth.currentUser?.displayName, auth.currentUser?.email]);
+  }, [uid, userProfile?.role, userProfile?.displayName, auth.currentUser?.displayName, auth.currentUser?.email]);
 
   // Initialiser le contexte audio après la première interaction utilisateur
   // pour respecter les restrictions d'autoplay des navigateurs mobiles.
