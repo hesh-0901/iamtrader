@@ -270,6 +270,16 @@ service cloud.firestore {
 
     match /conversations/{cid} {
 
+      // Lecture du document et des requêtes de conversations.
+      // Le Hub est accessible à tout utilisateur connecté ; les conversations
+      // privées et groupes ordinaires restent réservés aux membres payants.
+      allow get: if cid == 'community-hub'
+        ? signedIn()
+        : paidPipTalk() && member(cid);
+
+      allow list: if paidPipTalk()
+        && request.auth.uid in resource.data.members;
+
       // Lecture des conversations.
       allow get, list: if signedIn()
         && (
