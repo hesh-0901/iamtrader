@@ -391,10 +391,7 @@ service cloud.firestore {
                 .hasOnly([
                   'lastMessage',
                   'updatedAt',
-                  'memberNames',
-                  'title',
-                  'description',
-                  'avatarURL'
+                  'memberNames'
                 ])
             )
 
@@ -492,11 +489,12 @@ service cloud.firestore {
 
       match /readStates/{uid} {
 
+        // Chaque membre peut consulter l'état de lecture des autres membres
+        // d'une conversation privée. Dans Community Hub, chacun ne lit que le sien.
         allow get: if signedIn()
-          && request.auth.uid == uid
           && (
-            cid == 'community-hub'
-            || (paidPipTalk() && member(cid))
+            (cid == 'community-hub' && request.auth.uid == uid)
+            || (cid != 'community-hub' && paidPipTalk() && member(cid))
           );
 
         allow list: if false;
