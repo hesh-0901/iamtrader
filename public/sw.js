@@ -9,8 +9,6 @@ self.addEventListener('activate', event => {
   event.waitUntil(self.clients.claim());
 });
 
-// Keep requests network-only.
-self.addEventListener('fetch', () => {});
 
 // Display server-delivered Web Push notifications while the app is backgrounded or closed.
 self.addEventListener('push', event => {
