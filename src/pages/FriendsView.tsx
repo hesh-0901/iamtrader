@@ -13,7 +13,7 @@ type GroupConversation = { id: string; title?: string; name?: string; groupName?
 export function FriendsView({ userProfile, onOpenChat, initialTab = 'discover' }: { userProfile: UserProfile | null; onOpenChat?: (conversationId: string) => void; initialTab?: Tab }) {
   const uid = auth.currentUser?.uid || userProfile?.uid || '';
   const hasPaidPipTalk = userProfile?.role === 'admin' || (
-    userProfile?.plan !== 'free' &&
+    (userProfile?.plan === 'pro' || userProfile?.plan === 'community') &&
     userProfile?.subscriptionStatus === 'active' &&
     userProfile?.paymentStatus === 'paid' &&
     userProfile?.status === 'active' &&
