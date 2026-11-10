@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { UserProfile } from '../types';
 import { FriendsView } from './FriendsView';
 import { auth, db, app } from '../firebase/config';
+import { onAuthStateChanged } from 'firebase/auth';
 import { enablePipTalkPush, notifyPipTalkRecipients } from '../services/pushNotifications';
 import {
   addDoc, arrayRemove, arrayUnion, collection, deleteDoc, doc, getDoc, getDocs, limit, onSnapshot, orderBy, query,
@@ -31,7 +32,17 @@ const formatDay = (value?: Timestamp | null) => value?.toDate
   : '';
 
 export function ChatView({ userProfile, initialConversationId, onUnreadCountChange, isVisible = true }: { userProfile: UserProfile | null; initialConversationId?: string; onUnreadCountChange?: (count: number) => void; isVisible?: boolean }) {
-  const uid = auth.currentUser?.uid || userProfile?.uid;
+  const [authUid, setAuthUid] = useState<string | null>(null);
+  const [authReady, setAuthReady] = useState(false);
+
+  // Ne démarrer aucune requête Firestore avant la restauration réelle de Firebase Auth.
+  useEffect(() => onAuthStateChanged(auth, user => {
+    setAuthUid(user?.uid ?? null);
+    setAuthReady(true);
+  }), []);
+
+  // L'UID provient exclusivement de Firebase Authentication, jamais du profil React.
+  const uid = authReady ? authUid : null;
   // Déclarer le nom avant les effets qui l'utilisent dans leurs dépendances.
   const currentDisplayName = userProfile?.displayName?.trim() || auth.currentUser?.displayName?.trim() || auth.currentUser?.email?.split('@')[0] || 'Trader';
   const hasPaidPipTalk = (userProfile?.role === 'admin' || (userProfile as any)?.admin === true) || (
@@ -288,10 +299,10 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
       setError('');
       setLoadingChats(false);
     }, err => { console.error('[PipTalk] Lecture des conversations refusée', { uid, code: err.code, message: err.message, hasPaidPipTalk, plan: userProfile?.plan, subscriptionStatus: userProfile?.subscriptionStatus, paymentStatus: userProfile?.paymentStatus, accountStatus: userProfile?.status, subscriptionExpiresAtMs: userProfile?.subscriptionExpiresAtMs, query: 'conversations where members array-contains uid' }); setError(err.message); setLoadingChats(false); });
-  }, [uid, hasPaidPipTalk]);
+  }, [uid, hasPaidPipTalk, authReady]);
 
   useEffect(() => {
-    if (!uid) {
+    if (!authReady || !uid) {
       setConversations(previous => previous.filter(item => item.id !== 'community-hub'));
       return;
     }
@@ -335,7 +346,7 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
         ? 'Firestore refuse la lecture de Community Hub. Publie les règles Firestore mises à jour dans le bon projet Firebase.'
         : err.message);
     });
-  }, [uid, currentDisplayName]);
+  }, [uid, currentDisplayName, authReady]);
 
   // Les aperçus proviennent du champ lastMessage de chaque conversation.
   // Éviter une lecture supplémentaire de tous les sous-collections messages : les règles
