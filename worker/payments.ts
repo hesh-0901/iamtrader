@@ -313,8 +313,8 @@ async function createSasPayCheckout(
         currency,
         country: countryCode,
         network,
-        // Keep the email in IAMTRADER only: SasPay must not issue customer email receipts.
-        customer: { first_name: firstName, last_name: lastName, phone: e164Phone },
+        // The email identifies the payer in SasPay; receipt delivery must be controlled in merchant notification settings.
+        customer: { email, first_name: firstName, last_name: lastName, phone: e164Phone },
         reference,
         description: 'IAMTRADER-' + paymentId + '-' + plan.name + ' subscription'
       })
