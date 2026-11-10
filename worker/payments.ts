@@ -107,6 +107,63 @@ function paymentFailureMessage(status: string, providerMessage?: unknown) {
   return 'Le paiement a été refusé par le service Mobile Money. Vérifiez les informations et réessayez.';
 }
 
+function escapeInvoiceHtml(value: unknown) {
+  return String(value ?? '').replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
+}
+
+async function sendSasPayInvoiceEmail(env: SasPayEnv, payment: Record<string, any>, paidAt: string) {
+  if (payment.invoiceEmailSentAt) return;
+  const apiKey = String(env.RESEND_API_KEY || '').trim();
+  const from = String(env.RESEND_FROM_EMAIL || '').trim();
+  const to = String(payment.email || '').trim();
+  if (!apiKey || !from || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) {
+    console.error('IAMTRADER invoice email skipped: Resend configuration or customer email missing.', {
+      paymentId: payment.id, hasApiKey: Boolean(apiKey), hasFrom: Boolean(from), hasRecipient: Boolean(to)
+    });
+    return;
+  }
+  const invoice = String(payment.invoiceNumber || invoiceNumber(String(payment.id), String(payment.createdAt || paidAt)));
+  const amount = Number(payment.amount || 0).toFixed(2);
+  const currency = escapeInvoiceHtml(payment.currency || 'USD');
+  const plan = escapeInvoiceHtml(payment.planName || payment.plan || 'Abonnement IAMTRADER');
+  const customer = escapeInvoiceHtml(payment.fullName || payment.displayName || to);
+  const reference = escapeInvoiceHtml(payment.transactionReference || payment.reference || payment.id);
+  const date = escapeInvoiceHtml(new Date(paidAt).toLocaleString('fr-FR', { dateStyle: 'long', timeStyle: 'short', timeZone: 'Africa/Lubumbashi' }));
+  const html = `<div style="font-family:Arial,sans-serif;color:#172033;max-width:640px;margin:auto;padding:28px">
+    <img src="https://iamtrader.trade/brand/logo-iamtrader-full.png" alt="IAMTRADER" width="170" style="display:block;margin-bottom:28px">
+    <h1 style="font-size:22px">Confirmation de paiement</h1>
+    <p>Bonjour ${customer},</p><p>Votre paiement a été confirmé. Voici votre facture IAMTRADER.</p>
+    <table style="width:100%;border-collapse:collapse;margin:24px 0">
+      <tr><td style="padding:10px;border-bottom:1px solid #ddd">Facture</td><td style="padding:10px;border-bottom:1px solid #ddd;text-align:right"><strong>${escapeInvoiceHtml(invoice)}</strong></td></tr>
+      <tr><td style="padding:10px;border-bottom:1px solid #ddd">Abonnement</td><td style="padding:10px;border-bottom:1px solid #ddd;text-align:right">${plan}</td></tr>
+      <tr><td style="padding:10px;border-bottom:1px solid #ddd">Référence</td><td style="padding:10px;border-bottom:1px solid #ddd;text-align:right">${reference}</td></tr>
+      <tr><td style="padding:10px;border-bottom:1px solid #ddd">Date</td><td style="padding:10px;border-bottom:1px solid #ddd;text-align:right">${date}</td></tr>
+      <tr><td style="padding:14px 10px;font-weight:bold">Total payé</td><td style="padding:14px 10px;text-align:right;font-weight:bold">${amount} ${currency}</td></tr>
+    </table>
+    <p>Cette confirmation est émise par IAMTRADER. Vous pouvez retrouver votre facture dans votre espace utilisateur.</p>
+    <p style="margin-top:30px;color:#64748b;font-size:12px">IAMTRADER · <a href="https://iamtrader.trade">iamtrader.trade</a> · hello@iamtrader.trade</p>
+  </div>`;
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { Authorization: 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      from, to: [to], subject: 'Votre facture IAMTRADER ' + invoice, html,
+      text: `Paiement confirmé\nFacture : ${invoice}\nAbonnement : ${plan}\nRéférence : ${reference}\nDate : ${date}\nTotal payé : ${amount} ${currency}\nRetrouvez votre facture sur https://iamtrader.trade`,
+      ...(env.RESEND_REPLY_TO ? { reply_to: env.RESEND_REPLY_TO } : {}),
+      headers: { 'X-IAMTRADER-Payment-ID': String(payment.id || '') }
+    })
+  });
+  const result = await response.json().catch(() => ({})) as { id?: string; message?: string };
+  if (!response.ok) {
+    console.error('IAMTRADER invoice email failed:', response.status, result);
+    return;
+  }
+  await firestorePatch(env, 'payments/' + encodeURIComponent(String(payment.id)), {
+    invoiceEmailSentAt: new Date().toISOString(),
+    invoiceEmailProviderId: String(result.id || '')
+  }, ['invoiceEmailSentAt', 'invoiceEmailProviderId']);
+}
+
 function publicPayment(payment: Record<string, unknown>) {
   return {
     id: payment.id,
@@ -130,6 +187,9 @@ type SasPayEnv = PaymentEnv & {
   SASPAY_API_KEY?: string;
   SASPAY_WEBHOOK_SECRET?: string;
   SASPAY_COUNTRY?: string;
+  RESEND_API_KEY?: string;
+  RESEND_FROM_EMAIL?: string;
+  RESEND_REPLY_TO?: string;
 };
 
 type CinetPayEnv = SasPayEnv & {
@@ -253,7 +313,8 @@ async function createSasPayCheckout(
         currency,
         country: countryCode,
         network,
-        customer: { email, first_name: firstName, last_name: lastName, phone: e164Phone },
+        // Keep the email in IAMTRADER only: SasPay must not issue customer email receipts.
+        customer: { first_name: firstName, last_name: lastName, phone: e164Phone },
         reference,
         description: 'IAMTRADER-' + paymentId + '-' + plan.name + ' subscription'
       })
@@ -354,6 +415,7 @@ export async function handleSasPayVerifyRequest(request: Request, env: SasPayEnv
         subscriptionFields(profile, planKey, action, start, expires, paidAt),
         ['plan', 'paymentDate', 'subscriptionStartAt', 'subscriptionExpiresAt', 'subscriptionExpiresAtMs', 'subscriptionStatus', 'paymentStatus', 'planChangeConfirmedAt', 'pendingPlan', 'planChangeRequestedAt', 'scheduledPlan', 'scheduledStartAt', 'scheduledExpiresAt', 'scheduledExpiresAtMs', 'updatedAt']);
       const updated = await firestoreGet(env, 'payments/' + paymentId);
+      await sendSasPayInvoiceEmail(env, updated || { ...payment, id: paymentId, status: 'paid', paidAt }, paidAt);
       return json({ success: true, status: 'paid', payment: publicPayment(updated || { ...payment, status: 'paid', paidAt }) });
     }
 
@@ -1008,6 +1070,7 @@ export async function handleSasPayWebhook(
         ['plan', 'paymentDate', 'subscriptionStartAt', 'subscriptionExpiresAt', 'subscriptionExpiresAtMs', 'subscriptionStatus', 'paymentStatus', 'planChangeConfirmedAt', 'pendingPlan', 'planChangeRequestedAt', 'scheduledPlan', 'scheduledStartAt', 'scheduledExpiresAt', 'scheduledExpiresAtMs', 'updatedAt']
       );
       await markReferralFirstPayment(env, String(payment.uid), paidAt);
+      await sendSasPayInvoiceEmail(env, { ...payment, id: paymentId, status: 'paid', paidAt }, paidAt);
       return json({ received: true });
     }
 
