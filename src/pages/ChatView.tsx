@@ -26,6 +26,7 @@ type ChatMessage = {
 type PipTalkErrorContext = 'conversations' | 'community' | 'messages';
 
 function formatPipTalkFirestoreError(error: any, context: PipTalkErrorContext) {
+  // Normalisation du code Firestore sans regex pour garantir la compatibilité du build.
   const code = String(error?.code || '').replace('firestore/', '');
   const labels = {
     conversations: 'votre liste de conversations',
