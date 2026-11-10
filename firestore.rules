@@ -270,22 +270,23 @@ service cloud.firestore {
 
     match /conversations/{cid} {
 
-      // Lecture du document et des requêtes de conversations.
-      // Le Hub est accessible à tout utilisateur connecté ; les conversations
-      // privées et groupes ordinaires restent réservés aux membres payants.
-      allow get: if cid == 'community-hub'
-        ? signedIn()
-        : paidPipTalk() && member(cid);
-
-      allow list: if paidPipTalk()
-        && request.auth.uid in resource.data.members;
-
-      // Lecture des conversations.
-      allow get, list: if signedIn()
+      // Lecture du Community Hub : tout utilisateur authentifié.
+      // Lecture des conversations privées : uniquement leurs membres.
+      // Le contrôle d'abonnement reste appliqué à la création et aux écritures.
+      allow get: if signedIn()
         && (
           cid == 'community-hub'
-          || (paidPipTalk() && request.auth.uid in resource.data.members)
+          || (
+            resource.data.get('members', []) is list
+            && request.auth.uid in resource.data.members
+          )
         );
+
+      // Les requêtes de liste doivent retourner uniquement les conversations
+      // dont l'utilisateur est membre (array-contains request.auth.uid).
+      allow list: if signedIn()
+        && resource.data.get('members', []) is list
+        && request.auth.uid in resource.data.members;
 
       // -------------------------------------------------
       // CRÉATION DES GROUPES
