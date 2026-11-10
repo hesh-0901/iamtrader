@@ -47,7 +47,7 @@ service cloud.firestore {
           && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('paymentStatus', '') == 'paid'
           && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('status', '') == 'active'
           && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('subscriptionExpiresAtMs', 0) is number
-          && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('subscriptionExpiresAtMs', 0) > request.time.toMillis()
+          && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('subscriptionExpiresAtMs', 0) > request.time.seconds * 1000
         );
     }
 
