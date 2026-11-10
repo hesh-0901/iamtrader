@@ -1044,7 +1044,7 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
     finally { setSending(false); }
   };
 
-  const isPrimaryAdmin = userProfile?.role === 'admin' && userProfile?.admin === true;
+  const isPrimaryAdmin = userProfile?.role === 'admin' || (userProfile as any)?.admin === true;
   const isGroupAdmin = !!uid && !!active && (active.admins || []).includes(uid);
   const isMentor = !!uid && !!active && (active.mentors || []).includes(uid);
   const canManageGroup = isPrimaryAdmin || isGroupAdmin;
