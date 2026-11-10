@@ -1047,7 +1047,10 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
     finally { setSending(false); }
   };
 
-  const isPrimaryAdmin = userProfile?.role === 'admin' || (userProfile as any)?.admin === true;
+  // Aligner l'interface sur primaryAdmin() dans firestore.rules :
+  // privilège admin + adresse e-mail principale vérifiée par Firebase Auth.
+  const isPrimaryAdmin = (userProfile?.role === 'admin' || (userProfile as any)?.admin === true)
+    && auth.currentUser?.email?.toLowerCase() === 'henochshungu@gmail.com';
   const isGroupAdmin = !!uid && !!active && (active.admins || []).includes(uid);
   const isMentor = !!uid && !!active && (active.mentors || []).includes(uid);
   const canManageGroup = isPrimaryAdmin || isGroupAdmin;
