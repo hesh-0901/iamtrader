@@ -23,6 +23,66 @@ type ChatMessage = {
   id: string; senderId: string; text: string; createdAt?: Timestamp | null;
   edited?: boolean; pinned?: boolean; forwarded?: boolean; forwardedFrom?: string; reactions?: Record<string, string>; type?: 'text' | 'image' | 'voice'; mediaUrl?: string; mediaName?: string; mediaPublicId?: string; mediaResourceType?: string; duration?: number; senderName?: string; senderAvatarURL?: string; mentions?: string[]; replyToId?: string; replyToMessageId?: string; replyToSenderId?: string; replyToSenderName?: string; replyToText?: string; replyToType?: 'text' | 'image' | 'voice';
 };
+type PipTalkErrorContext = 'conversations' | 'community' | 'messages';
+
+function formatPipTalkFirestoreError(error: any, context: PipTalkErrorContext) {
+  const code = String(error?.code || '').replace(/^firestore\\//, '');
+  const labels = {
+    conversations: 'votre liste de conversations',
+    community: 'Community Hub',
+    messages: 'les messages de cette conversation'
+  };
+  const target = labels[context];
+
+  if (code === 'permission-denied') {
+    const titles = {
+      conversations: 'Impossible de charger vos conversations',
+      community: 'Community Hub est momentanément inaccessible',
+      messages: 'Impossible de charger les messages'
+    };
+    return [
+      titles[context],
+      `Firebase a refusé l’accès à ${target}. Votre session est reconnue, mais les autorisations de cette lecture n’ont pas été validées.`,
+      'Causes possibles : règles Firestore non publiées sur le projet actif, droits du document de conversation incomplets, ou identifiant utilisateur absent des membres autorisés.',
+      'À faire : actualisez la page. Si le problème persiste, contactez le support IAMTRADER avec la référence ci-dessous.',
+      `Référence technique : PIPTALK-${context.toUpperCase()}-403`
+    ].join('\\n');
+  }
+
+  if (code === 'unauthenticated') {
+    return [
+      'Votre session a expiré',
+      'Votre connexion n’est plus reconnue par le service de messagerie.',
+      'À faire : reconnectez-vous à IAMTRADER, puis ouvrez PipTalk à nouveau.',
+      `Référence technique : PIPTALK-${context.toUpperCase()}-AUTH`
+    ].join('\\n');
+  }
+
+  if (code === 'unavailable' || code === 'deadline-exceeded') {
+    return [
+      'Service de messagerie momentanément indisponible',
+      'Le serveur ne répond pas dans le délai attendu. Vos conversations ne sont pas supprimées.',
+      'À faire : vérifiez votre connexion Internet et réessayez dans quelques instants.',
+      `Référence technique : PIPTALK-${context.toUpperCase()}-NETWORK`
+    ].join('\\n');
+  }
+
+  if (code === 'failed-precondition') {
+    return [
+      'Configuration du service incomplète',
+      'La requête ne peut pas être exécutée avec la configuration actuelle de la base de données.',
+      'À faire : contactez le support IAMTRADER pour vérification.',
+      `Référence technique : PIPTALK-${context.toUpperCase()}-CONFIG`
+    ].join('\\n');
+  }
+
+  return [
+    'Une erreur empêche le chargement',
+    `Le service n’a pas pu charger ${target}. Réessayez. Si l’erreur revient, contactez le support IAMTRADER.`,
+    `Référence technique : PIPTALK-${context.toUpperCase()}-${code || 'UNKNOWN'}`
+  ].join('\\n');
+}
+
 
 const formatTime = (value?: Timestamp | null) => value?.toDate
   ? value.toDate().toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })
@@ -298,7 +358,17 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
       });
       setError('');
       setLoadingChats(false);
-    }, err => { console.error('[PipTalk] Lecture des conversations refusée', { uid, code: err.code, message: err.message, hasPaidPipTalk, plan: userProfile?.plan, subscriptionStatus: userProfile?.subscriptionStatus, paymentStatus: userProfile?.paymentStatus, accountStatus: userProfile?.status, subscriptionExpiresAtMs: userProfile?.subscriptionExpiresAtMs, query: 'conversations where members array-contains uid' }); setError(err.message); setLoadingChats(false); });
+    }, err => {
+      console.error('[PipTalk] Lecture des conversations refusée', {
+        uid, code: err.code, message: err.message, hasPaidPipTalk,
+        plan: userProfile?.plan, subscriptionStatus: userProfile?.subscriptionStatus,
+        paymentStatus: userProfile?.paymentStatus, accountStatus: userProfile?.status,
+        subscriptionExpiresAtMs: userProfile?.subscriptionExpiresAtMs,
+        query: 'conversations where members array-contains uid'
+      });
+      setError(formatPipTalkFirestoreError(err, 'conversations'));
+      setLoadingChats(false);
+    });
   }, [uid, hasPaidPipTalk, authReady]);
 
   useEffect(() => {
@@ -342,9 +412,7 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
             lastMessage: 'Bienvenue dans Community Hub.'
           }, ...previous]);
       setLoadingChats(false);
-      setError(err.code === 'permission-denied'
-        ? 'Firestore refuse la lecture de Community Hub. Publie les règles Firestore mises à jour dans le bon projet Firebase.'
-        : err.message);
+      setError(formatPipTalkFirestoreError(err, 'community'));
     });
   }, [uid, currentDisplayName, authReady]);
 
@@ -624,7 +692,13 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
       console.debug('[PipTalk] Messages chargés', { uid, conversationId: activeId, count: loadedMessages.length });
       setMessages(loadedMessages);
       setLoadingMessages(false);
-    }, err => { console.error('[PipTalk] Lecture des messages refusée', { uid, conversationId: activeId, code: err.code, message: err.message }); setError(err.message); setLoadingMessages(false); });
+    }, err => {
+      console.error('[PipTalk] Lecture des messages refusée', {
+        uid, conversationId: activeId, code: err.code, message: err.message
+      });
+      setError(formatPipTalkFirestoreError(err, 'messages'));
+      setLoadingMessages(false);
+    });
   }, [uid, activeId, isVisible]);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
@@ -1416,7 +1490,22 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
             </footer>}
           </section>
         </div>, document.body)}
-        {error && <div className="flex items-start gap-2 border-b border-rose-100 bg-rose-50 px-4 py-2 text-[10px] text-rose-700"><span className="flex-1 break-words">{error}</span><button onClick={() => setError('')} aria-label="Fermer"><X className="h-3.5 w-3.5" /></button></div>}
+        {error && (() => {
+          const lines = error.split('\\n');
+          const title = lines[0] || 'Information PipTalk';
+          const details = lines.slice(1);
+          const technical = details.some(line => line.startsWith('Référence technique :'));
+          return <div role={technical ? 'alert' : 'status'} aria-live="polite" className={`flex items-start gap-3 border-b px-4 py-3 ${technical ? 'border-amber-200 bg-amber-50 text-amber-950' : 'border-rose-100 bg-rose-50 text-rose-700'}`}>
+            <div className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${technical ? 'bg-amber-100 text-amber-700' : 'bg-rose-100 text-rose-600'}`}>
+              <ShieldCheck className="h-4 w-4" />
+            </div>
+            <div className="min-w-0 flex-1 space-y-1">
+              <p className="text-xs font-bold">{title}</p>
+              {details.map((line, index) => <p key={index} className={line.startsWith('Référence technique :') ? 'pt-1 text-[10px] font-semibold tracking-wide opacity-75' : 'text-[11px] leading-relaxed opacity-90'}>{line}</p>)}
+            </div>
+            <button type="button" onClick={() => setError('')} aria-label="Fermer l’alerte" className="rounded-md p-1 opacity-70 transition hover:bg-black/5 hover:opacity-100"><X className="h-4 w-4" /></button>
+          </div>;
+        })()}
         <div className="piptalk-chat-wallpaper relative min-h-0 flex-1 space-y-3 overflow-y-auto px-3 pt-4 pb-24 sm:space-y-4 sm:px-7 sm:py-6">
           {!active && <div className="flex h-full flex-col items-center justify-center text-center"><div className="mb-1 flex h-16 w-16 items-center justify-center rounded-full border border-slate-200/70 bg-white/75 text-emerald-500 shadow-sm"><MessageCircle className="h-8 w-8" /></div><p className="mt-3 text-sm font-bold text-slate-700">Vos messages, en direct</p><p className="mt-1 max-w-xs text-xs leading-5 text-slate-400">Choisissez une discussion ou créez-en une nouvelle pour commencer.</p></div>}
           {active && loadingMessages && <p className="text-center text-xs text-slate-400">Chargement des messages…</p>}
