@@ -287,7 +287,7 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
       });
       setError('');
       setLoadingChats(false);
-    }, err => { console.error('[PipTalk] Lecture des conversations refusée', { uid, code: err.code, message: err.message }); setError(err.message); setLoadingChats(false); });
+    }, err => { console.error('[PipTalk] Lecture des conversations refusée', { uid, code: err.code, message: err.message, hasPaidPipTalk, plan: userProfile?.plan, subscriptionStatus: userProfile?.subscriptionStatus, paymentStatus: userProfile?.paymentStatus, accountStatus: userProfile?.status, subscriptionExpiresAtMs: userProfile?.subscriptionExpiresAtMs, query: 'conversations where members array-contains uid' }); setError(err.message); setLoadingChats(false); });
   }, [uid, hasPaidPipTalk]);
 
   useEffect(() => {
