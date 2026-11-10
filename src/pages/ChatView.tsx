@@ -297,8 +297,10 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
     }, err => { setError(err.message); });
   }, [uid]);
 
-  // Repair inbox previews from the actual latest message. Older app versions
-  // sometimes wrote messages without updating conversations.lastMessage.
+  // Les aperçus proviennent du champ lastMessage de chaque conversation.
+  // Éviter une lecture supplémentaire de tous les sous-collections messages : les règles
+  // peuvent légitimement refuser les conversations fermées ou auxquelles l'accès a expiré.
+
   useEffect(() => {
     if (!uid || !conversations.length) return;
     let cancelled = false;
