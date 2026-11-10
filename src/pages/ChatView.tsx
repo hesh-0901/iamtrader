@@ -46,7 +46,7 @@ function formatPipTalkFirestoreError(error: any, context: PipTalkErrorContext) {
       'Causes possibles : règles Firestore non publiées sur le projet actif, droits du document de conversation incomplets, ou identifiant utilisateur absent des membres autorisés.',
       'À faire : actualisez la page. Si le problème persiste, contactez le support IAMTRADER avec la référence ci-dessous.',
       `Référence technique : PIPTALK-${context.toUpperCase()}-403`
-    ].join('\\n');
+    ].join('\n');
   }
 
   if (code === 'unauthenticated') {
@@ -55,7 +55,7 @@ function formatPipTalkFirestoreError(error: any, context: PipTalkErrorContext) {
       'Votre connexion n’est plus reconnue par le service de messagerie.',
       'À faire : reconnectez-vous à IAMTRADER, puis ouvrez PipTalk à nouveau.',
       `Référence technique : PIPTALK-${context.toUpperCase()}-AUTH`
-    ].join('\\n');
+    ].join('\n');
   }
 
   if (code === 'unavailable' || code === 'deadline-exceeded') {
@@ -64,7 +64,7 @@ function formatPipTalkFirestoreError(error: any, context: PipTalkErrorContext) {
       'Le serveur ne répond pas dans le délai attendu. Vos conversations ne sont pas supprimées.',
       'À faire : vérifiez votre connexion Internet et réessayez dans quelques instants.',
       `Référence technique : PIPTALK-${context.toUpperCase()}-NETWORK`
-    ].join('\\n');
+    ].join('\n');
   }
 
   if (code === 'failed-precondition') {
@@ -73,14 +73,14 @@ function formatPipTalkFirestoreError(error: any, context: PipTalkErrorContext) {
       'La requête ne peut pas être exécutée avec la configuration actuelle de la base de données.',
       'À faire : contactez le support IAMTRADER pour vérification.',
       `Référence technique : PIPTALK-${context.toUpperCase()}-CONFIG`
-    ].join('\\n');
+    ].join('\n');
   }
 
   return [
     'Une erreur empêche le chargement',
     `Le service n’a pas pu charger ${target}. Réessayez. Si l’erreur revient, contactez le support IAMTRADER.`,
     `Référence technique : PIPTALK-${context.toUpperCase()}-${code || 'UNKNOWN'}`
-  ].join('\\n');
+  ].join('\n');
 }
 
 
@@ -1491,7 +1491,7 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
           </section>
         </div>, document.body)}
         {error && (() => {
-          const lines = error.split('\\n');
+          const lines = error.split('\n');
           const title = lines[0] || 'Information PipTalk';
           const details = lines.slice(1);
           const technical = details.some(line => line.startsWith('Référence technique :'));
