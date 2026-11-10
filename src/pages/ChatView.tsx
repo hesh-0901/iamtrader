@@ -47,6 +47,9 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
   const [activeId, setActiveId] = useState(initialConversationId || '');
   const [draft, setDraft] = useState('');
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [emojiCategory, setEmojiCategory] = useState('Smileys');
+  const [emojiPickerPosition, setEmojiPickerPosition] = useState<{ left: number; bottom: number } | null>(null);
+  const emojiButtonRef = useRef<HTMLButtonElement>(null);
   const [reactionMessageId, setReactionMessageId] = useState<string | null>(null);
   const [messageMenuPosition, setMessageMenuPosition] = useState<{ left: number; top: number } | null>(null);
   const draftTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -885,6 +888,36 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
     textarea.style.height = Math.min(textarea.scrollHeight, maxHeight) + 'px';
   }, [draft]);
 
+  const emojiCategories = [
+    { name: 'Smileys', icon: '😀', emojis: '😀 😃 😄 😁 😆 😅 😂 🤣 🥹 😊 😇 😉 😍 🥰 😘 😋 😜 🤪 😎 🤩 🥳 😏 😒 😔 😟 😕 🙁 😣 😫 🥺 😢 😭 😤 😠 🤬 🤯 😳 🥵 🥶 😱 😨 😰 🤗 🤔 🫣 🤭 🫡 🤫 😶 😐 😬 🙄 😮 😴 🤤 🤢 🤮 🤧 😷 🤒 🤕'.split(' ') },
+    { name: 'Personnes', icon: '👋', emojis: '👋 🤚 🖐️ ✋ 👌 🤌 🤏 ✌️ 🤞 🤟 🤘 🤙 👈 👉 👆 👇 ☝️ 👍 👎 ✊ 👊 👏 🙌 🫶 👐 🤲 🤝 🙏 💪 🦾 🦵 🦶 👂 👃 🧠 👀 👁️ 👅 👄'.split(' ') },
+    { name: 'Nature', icon: '🐻', emojis: '🐶 🐱 🐭 🐹 🐰 🦊 🐻 🐼 🐨 🐯 🦁 🐮 🐷 🐸 🐵 🐔 🐧 🐦 🦆 🦅 🦉 🐺 🐴 🦄 🐝 🦋 🐌 🐞 🐜 🕷️ 🐢 🐍 🦎 🐙 🦑 🦀 🐠 🐟 🐬 🐳 🦈 🐘 🦒 🐎 🐑 🦌 🐕 🐈 🦜 🌵 🌲 🌳 🌴 🌱 🌿 🍀 🍁 🍂'.split(' ') },
+    { name: 'Nourriture', icon: '🍕', emojis: '🍇 🍉 🍊 🍋 🍌 🍍 🥭 🍎 🍐 🍑 🍒 🍓 🫐 🥝 🍅 🥑 🍆 🥔 🥕 🌽 🌶️ 🥒 🥬 🥦 🧄 🧅 🍄 🍞 🥐 🥖 🥨 🥯 🥞 🧇 🧀 🍖 🍗 🥩 🥓 🍔 🍟 🍕 🌭 🥪 🌮 🌯 🥙 🍳 🍲 🥗 🍿 🍱 🍚 🍜 🍝 🍣 🍤 🍦 🍧 🍨 🍩 🍪 🎂 🍰 🧁 🍫 🍬 🍭 ☕ 🧃 🥤'.split(' ') },
+    { name: 'Activités', icon: '⚽', emojis: '⚽ 🏀 🏈 ⚾ 🎾 🏐 🏉 🎱 🏓 🏸 🏒 🏑 🥅 ⛳ 🏹 🎣 🥊 🥋 🛹 🛼 ⛸️ 🎿 🏋️ 🤸 🧘 🏄 🏊 🚴 🏆 🥇 🥈 🥉 🎖️ 🎫 🎪 🎭 🎨 🎬 🎤 🎧 🎼 🎹 🥁 🎷 🎺 🎸 🎻 🎲 ♟️ 🎯 🎳 🎮 🧩'.split(' ') },
+    { name: 'Objets', icon: '💡', emojis: '⌚ 📱 💻 ⌨️ 🖥️ 🖨️ 🖱️ 📷 📸 📹 🎥 📞 ☎️ 📺 📻 🎙️ ⏱️ ⏰ ⌛ 📡 🔋 🔌 💡 🔦 🕯️ 💸 💵 💶 💷 🪙 💰 💳 💎 🔧 🔨 🛠️ ⚙️ 🧲 🧪 🔬 💊 🩺 🚪 🪞 🛏️ 🛋️ 🚿 🛁 🧹 🧺 🧻 🧼 🛒 🎁 🎈 🎀 🧸'.split(' ') },
+    { name: 'Symboles', icon: '❤️', emojis: '❤️ 🧡 💛 💚 💙 💜 🖤 🤍 🤎 💔 ❤️‍🔥 💕 💞 💓 💗 💖 💘 💝 💟 ☮️ ✝️ ☪️ ☯️ ♈ ♉ ♊ ♋ ♌ ♍ ♎ ♏ ♐ ♑ ♒ ♓ 🔀 🔁 ▶️ ⏩ ⏸️ ⏹️ ♻️ ✅ ☑️ ✔️ ❌ ❎ ➕ ➖ ➗ ✖️ 💯 🔥 ✨ ⭐ 🌟 💫 💥 💢 💦 💤 💬 💭 🚀 📈 📉 ⚠️ 🚩 🎉 🎊'.split(' ') }
+  ];
+  const activeEmojiList = emojiCategories.find(category => category.name === emojiCategory)?.emojis || emojiCategories[0].emojis;
+  const openEmojiPicker = () => {
+    const rect = emojiButtonRef.current?.getBoundingClientRect();
+    if (rect) {
+      const width = Math.min(336, window.innerWidth - 24);
+      setEmojiPickerPosition({ left: Math.max(12, Math.min(rect.left, window.innerWidth - width - 12)), bottom: Math.max(12, window.innerHeight - rect.top + 8) });
+    }
+    setShowEmojiPicker(value => !value);
+  };
+  useEffect(() => {
+    if (!showEmojiPicker) return;
+    const outside = (event: PointerEvent) => {
+      const target = event.target as HTMLElement;
+      if (target.closest('[data-piptalk-emoji-picker]') || target.closest('[data-piptalk-emoji-button]')) return;
+      setShowEmojiPicker(false);
+    };
+    const escape = (event: KeyboardEvent) => { if (event.key === 'Escape') setShowEmojiPicker(false); };
+    document.addEventListener('pointerdown', outside);
+    document.addEventListener('keydown', escape);
+    return () => { document.removeEventListener('pointerdown', outside); document.removeEventListener('keydown', escape); };
+  }, [showEmojiPicker]);
   const insertEmoji = (emoji: string) => {
     handleDraftChange(draft + emoji);
     setShowEmojiPicker(false);
@@ -1317,9 +1350,13 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
       </div> : recording ? <div className="flex items-center gap-3 rounded-2xl border border-rose-100 bg-rose-50/70 px-3 py-2.5"><span className="h-2.5 w-2.5 animate-pulse rounded-full bg-rose-500" /><span className="flex-1 text-xs font-medium text-slate-700">Enregistrement en cours…</span><button type="button" onClick={() => { if (recorderRef.current?.state === 'recording') { recorderRef.current.onstop = () => { recorderRef.current?.stream?.getTracks().forEach(track => track.stop()); }; recorderRef.current.stop(); } setRecording(false); recordingChunksRef.current = []; }} className="rounded-full px-3 py-2 text-xs font-semibold text-rose-600 hover:bg-rose-100">Annuler</button><button type="button" onClick={stopRecording} className="flex h-9 w-9 items-center justify-center rounded-full bg-rose-600 text-white" aria-label="Arrêter et préécouter"><Square className="h-4 w-4 fill-current" /></button></div> : <div className="flex items-end gap-2">
         <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={e => void handleFile(e.target.files?.[0])} />
         <button type="button" disabled={!active || uploadingMedia} onClick={() => fileInputRef.current?.click()} title="Envoyer une image" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:border-emerald-200 hover:bg-emerald-50 disabled:opacity-40 sm:h-10 sm:w-10"><ImageIcon className="h-4 w-4" /></button>
-        <button type="button" disabled={!active || uploadingMedia} onClick={() => setShowEmojiPicker(value => !value)} title="Insérer un émoji" aria-label="Insérer un émoji" aria-expanded={showEmojiPicker} className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border shadow-sm transition sm:h-10 sm:w-10 ${showEmojiPicker ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-500 hover:border-emerald-200 hover:bg-emerald-50'}`}><Smile className="h-4 w-4" /></button>
+        <button ref={emojiButtonRef} data-piptalk-emoji-button type="button" disabled={!active || uploadingMedia} onClick={openEmojiPicker} title="Insérer un émoji" aria-label="Insérer un émoji" aria-expanded={showEmojiPicker} className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border shadow-sm transition sm:h-10 sm:w-10 ${showEmojiPicker ? 'border-emerald-300 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-500 hover:border-emerald-200 hover:bg-emerald-50'}`}><Smile className="h-4 w-4" /></button>
         <div className="relative min-w-0 flex-1">
-          {showEmojiPicker && <div role="dialog" aria-label="Choisir un émoji" className="absolute bottom-full left-0 z-40 mb-2 grid w-[min(280px,calc(100vw-24px))] grid-cols-7 gap-1 rounded-2xl border border-slate-200 bg-white p-2 shadow-xl">{['😀','😂','🥹','😍','😎','🤔','😮','😭','🙏','👏','👍','👎','❤️','🔥','🎉','💯','💪','🤝','📈','📉','🚀','💰','✅','❌','⚠️','💡','🙌','✨'].map(emoji => <button key={emoji} type="button" onClick={() => insertEmoji(emoji)} aria-label={`Insérer ${emoji}`} className="flex h-9 w-9 items-center justify-center rounded-lg text-xl hover:bg-emerald-50 active:scale-95">{emoji}</button>)}</div>}
+          {showEmojiPicker && emojiPickerPosition && createPortal(<div data-piptalk-emoji-picker role="dialog" aria-label="Choisir un émoji" style={{ position: 'fixed', left: emojiPickerPosition.left, bottom: emojiPickerPosition.bottom, width: 'min(336px, calc(100vw - 24px))' }} className="z-[2147483000] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_20px_60px_rgba(15,23,42,.24)] ring-1 ring-slate-900/5">
+  <div className="flex items-center justify-between border-b border-slate-100 px-3 py-2.5"><span className="text-xs font-extrabold text-slate-800">Émojis</span><button type="button" onClick={() => setShowEmojiPicker(false)} aria-label="Fermer le sélecteur" className="rounded-lg p-1 text-slate-400 hover:bg-slate-100"><X className="h-4 w-4"/></button></div>
+  <div className="flex gap-1 overflow-x-auto border-b border-slate-100 px-2 py-2">{emojiCategories.map(category => <button key={category.name} type="button" onClick={() => setEmojiCategory(category.name)} title={category.name} className={`flex shrink-0 items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-[10px] font-bold ${emojiCategory === category.name ? 'bg-emerald-100 text-emerald-800' : 'text-slate-500 hover:bg-slate-100'}`}><span className="text-base">{category.icon}</span><span>{category.name}</span></button>)}</div>
+  <div className="grid max-h-52 grid-cols-8 gap-1 overflow-y-auto overscroll-contain p-2">{activeEmojiList.map((emoji, index) => <button key={emoji + index} type="button" onClick={() => insertEmoji(emoji)} aria-label={`Insérer ${emoji}`} className="flex h-9 w-full items-center justify-center rounded-lg text-xl hover:bg-emerald-50 active:scale-95">{emoji}</button>)}</div>
+</div>, document.body)}
           {mentionQuery !== null && publicProfiles.some(profile => profile.displayName.toLocaleLowerCase().includes(mentionQuery)) && <div className="absolute bottom-full left-0 z-30 mb-2 max-h-52 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-xl">
             {publicProfiles.filter(profile => profile.displayName.toLocaleLowerCase().includes(mentionQuery)).slice(0, 8).map(profile => <button key={profile.uid} type="button" onMouseDown={event => event.preventDefault()} onClick={() => chooseMention(profile)} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left hover:bg-emerald-50">
               {profile.avatarURL ? <img src={profile.avatarURL} alt="" className="h-7 w-7 rounded-full object-cover" /> : <span className="flex h-7 w-7 items-center justify-center rounded-full bg-emerald-100 text-[10px] font-bold text-emerald-800">{profile.displayName.slice(0, 2).toUpperCase()}</span>}
