@@ -12,6 +12,14 @@ type GroupConversation = { id: string; title?: string; name?: string; groupName?
 
 export function FriendsView({ userProfile, onOpenChat, initialTab = 'discover' }: { userProfile: UserProfile | null; onOpenChat?: (conversationId: string) => void; initialTab?: Tab }) {
   const uid = auth.currentUser?.uid || userProfile?.uid || '';
+  const hasPaidPipTalk = userProfile?.role === 'admin' || (
+    userProfile?.plan !== 'free' &&
+    userProfile?.subscriptionStatus === 'active' &&
+    userProfile?.paymentStatus === 'paid' &&
+    userProfile?.status === 'active' &&
+    typeof userProfile?.subscriptionExpiresAtMs === 'number' &&
+    userProfile.subscriptionExpiresAtMs > Date.now()
+  );
   const [tab, setTab] = useState<Tab>(initialTab);
   const [term, setTerm] = useState('');
   const [allProfiles, setAllProfiles] = useState<Profile[]>([]);
@@ -32,6 +40,11 @@ export function FriendsView({ userProfile, onOpenChat, initialTab = 'discover' }
     console.info('[FriendsView] Initialisation des abonnements Firestore', { uid: uid || null, authenticated: !!auth.currentUser });
     if (!uid) {
       setError('Aucun utilisateur connecté : UID absent.');
+      return;
+    }
+    if (!hasPaidPipTalk) {
+      setIncoming([]);
+      setOutgoing([]);
       return;
     }
 
@@ -78,11 +91,14 @@ export function FriendsView({ userProfile, onOpenChat, initialTab = 'discover' }
       a();
       b();
     };
-  }, [uid]);
+  }, [uid, hasPaidPipTalk]);
 
   // Live list of groups the current user belongs to; reuse PipTalk conversations.
   useEffect(() => {
-    if (!uid) return;
+    if (!uid || !hasPaidPipTalk) {
+      setGroups([]);
+      return;
+    }
     const unsubscribe = onSnapshot(
       query(collection(db, 'conversations'), where('members', 'array-contains', uid)),
       snapshot => {
@@ -98,7 +114,7 @@ export function FriendsView({ userProfile, onOpenChat, initialTab = 'discover' }
       }
     );
     return unsubscribe;
-  }, [uid]);
+  }, [uid, hasPaidPipTalk]);
 
   // Load the platform's published trader directory independently of the search dialog.
   // This lists registered profiles, not only users currently online.
