@@ -64,10 +64,10 @@ export function Sidebar({ currentPage, onNavigate, userRole, isMobileOpen, onClo
                     className={`w-full min-h-11 flex items-center gap-3 px-3 py-2.5 rounded-xl text-[12.5px] font-medium transition-all duration-150 text-left relative cursor-pointer group ${isActive ? 'bg-[#123A3A] text-[#5BE2BE] border border-[#1D6659]' : 'text-[#A8BACB] hover:text-white hover:bg-[#102D49] border border-transparent'}`}>
                     <span className={`relative w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors ${isActive ? 'bg-[#0F2A42] text-[#00C796] shadow-sm' : 'text-[#8299AF] group-hover:text-white'}`}>
                       <Icon className="w-4 h-4 stroke-[2]" />
-                      {item.id === 'community' && unreadMessageCount > 0 && isCollapsed && <span className="absolute -right-1.5 -top-1.5 h-4 min-w-4 rounded-full bg-rose-500 px-1 text-[9px] font-extrabold leading-4 text-white shadow ring-2 ring-[#0A192F]">{unreadMessageCount > 99 ? '99+' : unreadMessageCount}</span>}
+                      {item.id === 'community' && unreadMessageCount > 0 && isCollapsed && <span className="absolute -right-1.5 -top-1.5 h-4 min-w-4 rounded-full bg-[#00C796] px-1 text-[9px] font-extrabold leading-4 text-white shadow ring-2 ring-[#0A192F]">{unreadMessageCount > 99 ? '99+' : unreadMessageCount}</span>}
                     </span>
                     {!isCollapsed && <span className="truncate flex-1">{item.label}</span>}
-                    {item.id === 'community' && unreadMessageCount > 0 && !isCollapsed && <span aria-label={`${unreadMessageCount} messages non lus`} className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1.5 text-[10px] font-extrabold leading-none text-white shadow-sm">{unreadMessageCount > 99 ? '99+' : unreadMessageCount}</span>}
+                    {item.id === 'community' && unreadMessageCount > 0 && !isCollapsed && <span aria-label={`${unreadMessageCount} messages non lus`} className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#00C796] px-1.5 text-[10px] font-extrabold leading-none text-white shadow-sm">{unreadMessageCount > 99 ? '99+' : unreadMessageCount}</span>}
                     {!isCollapsed && item.tag && <span className="text-[8px] font-mono font-bold px-1.5 py-0.5 rounded border uppercase bg-[#123A3A] text-[#5BE2BE] border-[#1D6659]">{item.tag}</span>}
                     {isActive && <span className="absolute left-0 top-2 bottom-2 w-0.5 rounded-r bg-[#00C796]" />}
                   </button>;
