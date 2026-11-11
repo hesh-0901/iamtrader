@@ -92,7 +92,7 @@ const formatDay = (value?: Timestamp | null) => value?.toDate
   ? value.toDate().toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
   : '';
 
-export function ChatView({ userProfile, initialConversationId, onUnreadCountChange, isVisible = true }: { userProfile: UserProfile | null; initialConversationId?: string; onUnreadCountChange?: (count: number) => void; isVisible?: boolean }) {
+export function ChatView({ userProfile, initialConversationId, onUnreadCountChange, isVisible = true, onOpenSettings }: { userProfile: UserProfile | null; initialConversationId?: string; onUnreadCountChange?: (count: number) => void; isVisible?: boolean; onOpenSettings?: () => void }) {
   const [authUid, setAuthUid] = useState<string | null>(null);
   const [authReady, setAuthReady] = useState(false);
 
@@ -139,7 +139,14 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
+  const [accessModalOpen, setAccessModalOpen] = useState(false);
   const [pushStatus, setPushStatus] = useState('');
+  useEffect(() => {
+    const message = error.toLowerCase();
+    if (message.includes('permission-denied') || message.includes('missing or insufficient permissions') || message.includes('firebase a refusé l’accès')) {
+      setAccessModalOpen(true);
+    }
+  }, [error]);
   const [pushBusy, setPushBusy] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(() => typeof window !== 'undefined' && window.localStorage.getItem('piptalk-notifications-enabled') === 'true');
   const [showNotificationOptions, setShowNotificationOptions] = useState(false);
@@ -1639,7 +1646,28 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
       <p className="px-3 pt-2 text-xs font-medium text-white drop-shadow">{viewerAvatar.name}</p>
     </div>
   </div>}
-  </div></>;
+  </div>
+  {accessModalOpen && createPortal(
+    <div role="dialog" aria-modal="true" aria-labelledby="piptalk-access-title" className="fixed inset-0 z-[2147483001] flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm" onMouseDown={event => { if (event.target === event.currentTarget) setAccessModalOpen(false); }}>
+      <section className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+        <div className="border-b border-slate-100 px-5 py-5">
+          <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-rose-50 text-rose-600"><ShieldCheck className="h-5 w-5" /></div>
+          <p className="text-[10px] font-extrabold uppercase tracking-[.16em] text-rose-600">Accès non autorisé</p>
+          <h2 id="piptalk-access-title" className="mt-1 text-lg font-extrabold text-slate-900">Impossible d’ouvrir cette ressource</h2>
+          <p className="mt-2 text-sm leading-6 text-slate-600">{hasPaidPipTalk
+            ? "La base de données a refusé cette opération. Votre abonnement ne semble pas être le problème : les droits de votre compte, votre appartenance à la conversation ou la configuration Firestore doivent être vérifiés. Réessayez ; si le refus persiste, transmettez la référence technique au support IAMTRADER."
+            : "Votre compte ne dispose pas d’un abonnement actif donnant accès aux conversations privées et à cette fonctionnalité. Choisissez un forfait éligible ou renouvelez votre abonnement depuis les paramètres IAMTRADER."}</p>
+          <p className="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-[10px] leading-4 text-slate-500">Détail : {error.replace(/\n/g, ' · ')}</p>
+        </div>
+        <div className="flex flex-col-reverse gap-2 p-4 sm:flex-row sm:justify-end">
+          <button type="button" onClick={() => setAccessModalOpen(false)} className="rounded-xl border border-slate-200 px-4 py-3 text-xs font-bold text-slate-600">Fermer</button>
+          {!hasPaidPipTalk && <button type="button" onClick={() => { setAccessModalOpen(false); onOpenSettings?.(); }} className="rounded-xl bg-[#00a982] px-4 py-3 text-xs font-bold text-white">Voir les forfaits et renouveler</button>}
+          {hasPaidPipTalk && <button type="button" onClick={() => { setAccessModalOpen(false); setError(''); }} className="rounded-xl bg-slate-900 px-4 py-3 text-xs font-bold text-white">J’ai compris</button>}
+        </div>
+      </section>
+    </div>, document.body
+  )}
+  </>;
 }
 
 
