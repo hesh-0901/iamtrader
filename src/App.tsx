@@ -537,7 +537,7 @@ function MainAppContent() {
           )}
 
           <div className={currentPage === 'community' ? 'block' : 'hidden'}>
-            <CommunityView userProfile={userProfile} isVisible={currentPage === 'community'} onUnreadCountChange={setUnreadMessageCount} />
+            <CommunityView userProfile={userProfile} isVisible={currentPage === 'community'} onUnreadCountChange={setUnreadMessageCount} onOpenSettings={() => setCurrentPage('settings')} />
           </div>
 
           {currentPage === 'settings' && (
