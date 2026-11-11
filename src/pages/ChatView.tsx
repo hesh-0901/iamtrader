@@ -386,9 +386,23 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
 
     const hubRef = doc(db, 'conversations', 'community-hub');
     return onSnapshot(hubRef, snapshot => {
-      // Keep the Community Hub visible even before its metadata document has
-      // been initialized by the primary administrator. Messages use the fixed
-      // community-hub path and are independently protected by Firestore rules.
+      // Chaque utilisateur connecté rejoint automatiquement le groupe système.
+      // La règle Firestore n'autorise que l'ajout de son propre UID.
+      if (snapshot.exists()) {
+        const members = Array.isArray(snapshot.data().members) ? snapshot.data().members : [];
+        if (!members.includes(uid)) {
+          void updateDoc(hubRef, {
+            members: arrayUnion(uid),
+            [`memberNames.${uid}`]: currentDisplayName,
+            updatedAt: serverTimestamp()
+          }).catch(error => {
+            console.error('[PipTalk] Inscription automatique au Community Hub refusée', {
+              uid, code: error?.code, message: error?.message
+            });
+          });
+        }
+      }
+
       const hub: ChatConversation = snapshot.exists()
         ? { id: snapshot.id, ...snapshot.data() } as ChatConversation
         : {
