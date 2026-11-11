@@ -15,8 +15,6 @@ export function FriendsView({ userProfile, onOpenChat, initialTab = 'discover' }
   const hasPaidPipTalk = (userProfile?.role === 'admin' || (userProfile as any)?.admin === true) || (
     (userProfile?.plan === 'pro' || userProfile?.plan === 'community') &&
     userProfile?.subscriptionStatus === 'active' &&
-    userProfile?.paymentStatus === 'paid' &&
-    userProfile?.status === 'active' &&
     typeof userProfile?.subscriptionExpiresAtMs === 'number' &&
     userProfile.subscriptionExpiresAtMs > Date.now()
   );
