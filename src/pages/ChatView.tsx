@@ -570,7 +570,7 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
   };
 
   useEffect(() => {
-    if (!uid || !conversations.length) { setUnreadByConversation({}); return; }
+    if (!uid || !hasPaidPipTalk || !conversations.length) { setUnreadByConversation({}); return; }
     const unsubscribers: Array<() => void> = [];
     const messageUnsubscribers = new Map<string, () => void>();
     const liveCounts = new Map<string, number>();
@@ -1656,7 +1656,7 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
                 <div className="sticky bottom-0 flex gap-2 border-t border-slate-100 bg-white px-0 pb-[calc(env(safe-area-inset-bottom)+0.5rem)] pt-3"><button type="button" onClick={() => setShowCreateGroup(false)} className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-xs font-semibold text-slate-600">Annuler</button><button type="button" disabled={creatingGroup || !newGroupTitle.trim()} onClick={() => void createGroup()} className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-3 text-xs font-bold text-white disabled:opacity-50">{creatingGroup && <Loader2 className="h-4 w-4 animate-spin" />}{creatingGroup ? 'Création…' : 'Créer le groupe'}</button></div>
               </div>
             </div>
-          ) : <FriendsView userProfile={userProfile} initialTab="friends" onOpenChat={conversationId => { setShowFriendsModal(false); setError(''); setActiveId(conversationId); setMobileChatOpen(true); }} />}
+          ) : <FriendsView userProfile={userProfile} subscriptionAccess={subscriptionAccess} initialTab="friends" onOpenChat={conversationId => { setShowFriendsModal(false); setError(''); setActiveId(conversationId); setMobileChatOpen(true); }} />}
         </div>
       </div>
     </div>, document.body)}
