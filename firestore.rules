@@ -290,7 +290,6 @@ service cloud.firestore {
       allow list: if admin()
         || (
           signedIn()
-          && resource.data.get('members', []) is list
           && request.auth.uid in resource.data.members
         );
 
