@@ -314,6 +314,7 @@ service cloud.firestore {
             paidPipTalk()
             && request.resource.data.group == false
             && request.resource.data.get('systemGroup', false) == false
+            && cid == 'dm_' + request.resource.data.members[0] + '_' + request.resource.data.members[1]
             && request.resource.data.createdBy == request.auth.uid
             && request.resource.data.members is list
             && request.resource.data.members.size() == 2
