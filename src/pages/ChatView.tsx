@@ -481,56 +481,8 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
     });
   }, [uid, currentDisplayName, authReady]);
 
-  // Les aperçus proviennent du champ lastMessage de chaque conversation.
-  // Éviter une lecture supplémentaire de tous les sous-collections messages : les règles
-  // peuvent légitimement refuser les conversations fermées ou auxquelles l'accès a expiré.
-
-  useEffect(() => {
-    if (!uid || !conversations.length) return;
-    let cancelled = false;
-    const refreshLatestPreviews = async () => {
-      const previews = await Promise.all(conversations.map(async conversation => {
-        try {
-          const latestQuery = query(
-            collection(db, 'conversations', conversation.id, 'messages'),
-            orderBy('createdAt', 'desc'),
-            limit(1)
-          );
-          const snapshot = await getDocs(latestQuery);
-          if (snapshot.empty) return null;
-          const latest = snapshot.docs[0].data() as Partial<ChatMessage>;
-          const preview = latest.type === 'image'
-            ? '📷 Image'
-            : latest.type === 'voice'
-              ? '🎤 Message vocal'
-              : (typeof latest.text === 'string' ? latest.text.trim().slice(0, 500) : '');
-          if (!preview) return null;
-          return { id: conversation.id, preview, createdAt: latest.createdAt };
-        } catch (err) {
-          // A preview refresh must never break the conversation list.
-          console.warn('[PipTalk] Aperçu du dernier message indisponible', conversation.id, err);
-          return null;
-        }
-      }));
-      if (cancelled) return;
-      const latestById = new Map(previews.filter((item): item is NonNullable<typeof item> => !!item).map(item => [item.id, item]));
-      setConversations(previous => {
-        let changed = false;
-        const next = previous.map(conversation => {
-          const latest = latestById.get(conversation.id);
-          if (!latest) return conversation;
-          // The conversation's updatedAt can be a few milliseconds newer than
-          // the message's createdAt, so it cannot reliably determine preview freshness.
-          if (conversation.lastMessage === latest.preview) return conversation;
-          changed = true;
-          return { ...conversation, lastMessage: latest.preview };
-        });
-        return changed ? next : previous;
-      });
-    };
-    void refreshLatestPreviews();
-    return () => { cancelled = true; };
-  }, [uid, conversations.map(conversation => conversation.id).join('|')]);
+  // Inbox previews are read exclusively from conversations.lastMessage.
+  // Message subcollections are loaded only after a conversation is opened.
 
   // Create the fixed default group if it does not exist yet. Firestore rules
   // restrict this creation to the exact Community Hub system document.
@@ -651,10 +603,10 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
       unsubscribers.forEach(unsubscribe => unsubscribe());
       messageUnsubscribers.forEach(unsubscribe => unsubscribe());
     };
-  }, [uid, conversations.map(conversation => conversation.id).join('|'), activeId, isVisible]);
+  }, [uid, conversations.map(conversation => conversation.id).join('|'), activeId, isVisible, hasPaidPipTalk]);
 
   useEffect(() => {
-    if (!uid || !conversations.length) { setMentionAlerts([]); return; }
+    if (!uid || !hasPaidPipTalk || !conversations.length) { setMentionAlerts([]); return; }
     const cache = new Map<string, { readAt: number; messages: ChatMessage[] }>();
     const publish = () => {
       const alerts: Array<{ conversationId: string; messageId: string; senderName: string; text: string; createdAt?: Timestamp | null }> = [];
@@ -673,7 +625,7 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
       stops.push(onSnapshot(query(collection(db,'conversations',conversation.id,'messages'),where('mentions','array-contains',uid)),snap=>{mentioned=snap.docs.map(item=>({id:item.id,...item.data()} as ChatMessage));sync();}));
     });
     return () => stops.forEach(stop=>stop());
-  }, [uid, conversations.map(item=>item.id).join('|')]);
+  }, [uid, conversations.map(item=>item.id).join('|'), hasPaidPipTalk]);
 
   // Confirmations de lecture : ne refléter que les états réellement écrits par les destinataires.
   useEffect(() => {
@@ -845,21 +797,24 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
   // sender's display name and avatar at send time.
 
   const inboxItems = useMemo(() => {
-    const items = [...conversations];
+    const groups: ChatConversation[] = [];
+    const directByPair = new Map<string, ChatConversation>();
+    const timeOf = (item: ChatConversation) => item.updatedAt?.toMillis?.() || item.createdAt?.toMillis?.() || 0;
+    conversations.forEach(item => {
+      if (item.id === 'community-hub' || item.group === true || item.members?.length !== 2) { groups.push(item); return; }
+      const key = [...item.members].sort().join('_');
+      const previous = directByPair.get(key);
+      if (!previous || timeOf(item) > timeOf(previous)) directByPair.set(key, item);
+    });
+    const items = [...groups, ...directByPair.values()];
     acceptedFriends.forEach(friend => {
-      const existing = items.some(item => item.members?.length === 2 && item.group !== true && item.members.includes(uid || '') && item.members.includes(friend.uid));
-      if (!existing) items.push({
-        id: 'dm_' + [uid || '', friend.uid].sort().join('_'),
-        members: [uid || '', friend.uid],
-        memberNames: { [friend.uid]: friend.name },
-        avatarURL: friend.avatarURL,
-        lastMessage: '',
-        updatedAt: null,
-        createdAt: null,
-        group: false
+      const key = [uid || '', friend.uid].sort().join('_');
+      if (!directByPair.has(key)) items.push({
+        id: 'dm_' + key, members: [uid || '', friend.uid], memberNames: { [friend.uid]: friend.name },
+        avatarURL: friend.avatarURL, lastMessage: '', updatedAt: null, createdAt: null, group: false
       });
     });
-    return items.sort((a, b) => (b.updatedAt?.toMillis?.() || b.createdAt?.toMillis?.() || 0) - (a.updatedAt?.toMillis?.() || a.createdAt?.toMillis?.() || 0));
+    return items.sort((a, b) => timeOf(b) - timeOf(a));
   }, [conversations, acceptedFriends, uid]);
 
   const totalUnread = Object.entries(unreadByConversation).filter(([conversationId]) => !isVisible || conversationId !== activeId).reduce((total, [, count]) => total + count, 0);
@@ -949,33 +904,27 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
       let conversationId = item.id;
       if (item.id.startsWith('dm_')) {
         const members = [uid, other].sort();
-        const existing = conversations.find(candidate =>
-          candidate.members?.length === 2
-          && candidate.group !== true
-          && candidate.members.includes(uid)
-          && candidate.members.includes(other)
-        );
-        if (existing) {
-          conversationId = existing.id;
-        } else {
-          // Ne jamais réutiliser un ancien ID déterministe avec merge :
-          // un document orphelin portant cet ID serait traité comme une mise à jour
-          // et refusé si l'utilisateur n'est pas déjà dans ses membres.
-          const newConversationRef = doc(collection(db, 'conversations'));
-          await setDoc(newConversationRef, {
-            members,
-            group: false,
-            systemGroup: false,
-            createdBy: uid,
-            memberNames: {
-              [uid]: currentDisplayName,
-              [other]: acceptedFriends.find(friend => friend.uid === other)?.name || 'Trader'
-            },
-            lastMessage: '',
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp()
-          });
-          conversationId = newConversationRef.id;
+        const existing = conversations
+          .filter(candidate => candidate.members?.length === 2 && candidate.group !== true
+            && candidate.members.includes(uid) && candidate.members.includes(other))
+          .sort((a, b) => (b.updatedAt?.toMillis?.() || b.createdAt?.toMillis?.() || 0)
+            - (a.updatedAt?.toMillis?.() || a.createdAt?.toMillis?.() || 0))[0];
+        if (existing) conversationId = existing.id;
+        else {
+          const stableId = 'dm_' + members.join('_');
+          try {
+            await setDoc(doc(db, 'conversations', stableId), {
+              members, group: false, systemGroup: false, createdBy: uid,
+              memberNames: { [uid]: currentDisplayName, [other]: acceptedFriends.find(friend => friend.uid === other)?.name || 'Trader' },
+              lastMessage: '', createdAt: serverTimestamp(), updatedAt: serverTimestamp()
+            });
+            conversationId = stableId;
+          } catch (createError: any) {
+            const latest = await getDocs(query(collection(db, 'conversations'), where('members', 'array-contains', uid)));
+            const raced = latest.docs.find(item => item.id === stableId && item.data().members?.includes(other));
+            if (!raced) throw createError;
+            conversationId = raced.id;
+          }
         }
       }
       setActiveId(conversationId);
@@ -990,19 +939,27 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
     if (!uid) { setError('Connectez-vous pour utiliser PipTalk.'); return; }
     if (!target || target === uid) { setError('Saisissez l’identifiant UID d’un autre trader.'); return; }
     setError('');
-    const existing = conversations.find(item => item.members.includes(target) && item.members.includes(uid) && item.members.length === 2 && !item.group);
+    const existing = conversations
+      .filter(item => item.members.includes(target) && item.members.includes(uid) && item.members.length === 2 && !item.group)
+      .sort((a, b) => (b.updatedAt?.toMillis?.() || b.createdAt?.toMillis?.() || 0)
+        - (a.updatedAt?.toMillis?.() || a.createdAt?.toMillis?.() || 0))[0];
     if (existing) {
       setActiveId(existing.id); setMobileChatOpen(true); setShowNewChat(false); setTargetUid(''); return;
     }
     try {
-      const ref = doc(collection(db, 'conversations'));
-      await setDoc(ref, {
-        members: [uid, target], group: false,
-        memberNames: { [uid]: userProfile?.displayName || auth.currentUser?.displayName || 'Moi' },
-        lastMessage: '', createdAt: serverTimestamp(), updatedAt: serverTimestamp(),
-        createdBy: uid
-      });
-      setActiveId(ref.id); setMobileChatOpen(true); setShowNewChat(false); setTargetUid('');
+      const members = [uid, target].sort();
+      const stableId = 'dm_' + members.join('_');
+      try {
+        await setDoc(doc(db, 'conversations', stableId), {
+          members, group: false, systemGroup: false,
+          memberNames: { [uid]: userProfile?.displayName || auth.currentUser?.displayName || 'Moi' },
+          lastMessage: '', createdAt: serverTimestamp(), updatedAt: serverTimestamp(), createdBy: uid
+        });
+      } catch (createError: any) {
+        const latest = await getDocs(query(collection(db, 'conversations'), where('members', 'array-contains', uid)));
+        if (!latest.docs.some(item => item.id === stableId)) throw createError;
+      }
+      setActiveId(stableId); setMobileChatOpen(true); setShowNewChat(false); setTargetUid('');
     } catch (err: any) { setError(err?.message || 'Impossible de créer la conversation.'); }
   };
 
