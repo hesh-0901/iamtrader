@@ -7,7 +7,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { enablePipTalkPush, notifyPipTalkRecipients } from '../services/pushNotifications';
 import {
   addDoc, arrayRemove, arrayUnion, collection, deleteDoc, doc, getDoc, getDocs, limit, onSnapshot, orderBy, query,
-  serverTimestamp, setDoc, updateDoc, where, Timestamp, writeBatch
+  runTransaction, serverTimestamp, setDoc, updateDoc, where, Timestamp, writeBatch
 } from 'firebase/firestore';
 import {
   Search, MoreVertical, Send, Pin, Pencil, Trash2, X, CheckCheck, Copy, Forward, Link2, Eye, EyeOff, RefreshCw,
@@ -565,8 +565,26 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
   const markConversationRead = async (conversationId: string, lastMessageAt?: Timestamp | null) => {
     if (!uid || !conversationId) return;
     try {
-      await setDoc(doc(db, 'conversations', conversationId, 'readStates', uid), { userId: uid, lastReadAt: lastMessageAt || serverTimestamp(), updatedAt: serverTimestamp() }, { merge: true });
-    } catch (err) { console.warn('[PipTalk] État de lecture non synchronisé', conversationId, err); }
+      const readStateRef = doc(db, 'conversations', conversationId, 'readStates', uid);
+      await runTransaction(db, async transaction => {
+        const readStateSnapshot = await transaction.get(readStateRef);
+        const currentReadAt = readStateSnapshot.data()?.lastReadAt as Timestamp | undefined;
+        const currentReadMs = currentReadAt?.toMillis?.() || 0;
+        const requestedReadMs = lastMessageAt?.toMillis?.() || 0;
+
+        // Ne jamais remplacer un curseur de lecture plus récent par un ancien.
+        if (currentReadAt && (!requestedReadMs || requestedReadMs <= currentReadMs)) return;
+
+        transaction.set(readStateRef, {
+          userId: uid,
+          lastReadAt: lastMessageAt || serverTimestamp(),
+          updatedAt: serverTimestamp()
+        }, { merge: true });
+      });
+      setUnreadByConversation(current => ({ ...current, [conversationId]: 0 }));
+    } catch (err) {
+      console.warn('[PipTalk] État de lecture non synchronisé', conversationId, err);
+    }
   };
 
   useEffect(() => {
