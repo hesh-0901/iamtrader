@@ -10,13 +10,16 @@ type Request = { id: string; senderId: string; receiverId: string; status: strin
 type Tab = 'discover' | 'requests' | 'friends' | 'groups';
 type GroupConversation = { id: string; title?: string; name?: string; groupName?: string; group?: boolean; members?: string[]; memberNames?: Record<string, string>; avatarURL?: string; photoURL?: string; lastMessage?: string; closed?: boolean; };
 
-export function FriendsView({ userProfile, onOpenChat, initialTab = 'discover' }: { userProfile: UserProfile | null; onOpenChat?: (conversationId: string) => void; initialTab?: Tab }) {
+export function FriendsView({ userProfile, onOpenChat, initialTab = 'discover', subscriptionAccess }: { userProfile: UserProfile | null; onOpenChat?: (conversationId: string) => void; initialTab?: Tab; subscriptionAccess?: { plan?: string; subscriptionStatus?: string; subscriptionExpiresAtMs?: number | null } | null }) {
   const uid = auth.currentUser?.uid || userProfile?.uid || '';
+  const effectivePlan = subscriptionAccess?.plan || userProfile?.plan;
+  const effectiveStatus = subscriptionAccess?.subscriptionStatus || userProfile?.subscriptionStatus;
+  const effectiveExpiry = typeof subscriptionAccess?.subscriptionExpiresAtMs === 'number' ? subscriptionAccess.subscriptionExpiresAtMs : userProfile?.subscriptionExpiresAtMs;
   const hasPaidPipTalk = (userProfile?.role === 'admin' || (userProfile as any)?.admin === true) || (
-    (userProfile?.plan === 'pro' || userProfile?.plan === 'community') &&
-    userProfile?.subscriptionStatus === 'active' &&
-    typeof userProfile?.subscriptionExpiresAtMs === 'number' &&
-    userProfile.subscriptionExpiresAtMs > Date.now()
+    (effectivePlan === 'pro' || effectivePlan === 'community') &&
+    effectiveStatus === 'active' &&
+    typeof effectiveExpiry === 'number' &&
+    effectiveExpiry > Date.now()
   );
   const [tab, setTab] = useState<Tab>(initialTab);
   const [term, setTerm] = useState('');
@@ -275,10 +278,15 @@ export function FriendsView({ userProfile, onOpenChat, initialTab = 'discover' }
           updatedAt: serverTimestamp()
         });
       } else {
-        await setDoc(doc(db, 'conversations', conversationId), {
-          members, group: false, createdBy: uid, memberNames,
-          lastMessage: '', createdAt: serverTimestamp(), updatedAt: serverTimestamp()
-        });
+        try {
+          await setDoc(doc(db, 'conversations', conversationId), {
+            members, group: false, systemGroup: false, createdBy: uid, memberNames,
+            lastMessage: '', createdAt: serverTimestamp(), updatedAt: serverTimestamp()
+          });
+        } catch (createError: any) {
+          const latest = await getDocs(query(collection(db, 'conversations'), where('members', 'array-contains', uid)));
+          if (!latest.docs.some(item => item.id === conversationId)) throw createError;
+        }
       }
       setNotice('Conversation ouverte dans PipTalk.');
       onOpenChat?.(targetConversationId);
