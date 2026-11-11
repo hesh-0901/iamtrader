@@ -430,7 +430,6 @@ function MainAppContent() {
           onToggleCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
           unreadMessageCount={unreadMessageCount}
         />
-        <div className="hidden"><CommunityView userProfile={userProfile} isVisible={false} onUnreadCountChange={setUnreadMessageCount} /></div>
         <div className="flex-1 min-w-0 relative">
           <AdminConsole onOpenSidebar={() => setIsMobileSidebarOpen(true)} canManageUsers={userProfile?.isAdmin === true} />
         </div>
@@ -536,9 +535,14 @@ function MainAppContent() {
             />
           )}
 
-          <div className={currentPage === 'community' ? 'block' : 'hidden'}>
-            <CommunityView userProfile={userProfile} isVisible={currentPage === 'community'} onUnreadCountChange={setUnreadMessageCount} onOpenSettings={() => setCurrentPage('settings')} />
-          </div>
+          {currentPage === 'community' && (
+            <CommunityView
+              userProfile={userProfile}
+              isVisible
+              onUnreadCountChange={setUnreadMessageCount}
+              onOpenSettings={() => setCurrentPage('settings')}
+            />
+          )}
 
           {currentPage === 'settings' && (
             <SettingsView
