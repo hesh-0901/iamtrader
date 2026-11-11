@@ -104,13 +104,57 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
 
   // L'UID provient exclusivement de Firebase Authentication, jamais du profil React.
   const uid = authReady ? authUid : null;
+  const [subscriptionAccess, setSubscriptionAccess] = useState<{
+    plan?: string; subscriptionStatus?: string; subscriptionExpiresAtMs?: number | null;
+  } | null>(null);
+
+  // Synchroniser le cycle d'abonnement côté serveur avant de décider des accès PipTalk.
+  // Cette route répare notamment subscriptionExpiresAtMs lorsqu'il manque mais que
+  // subscriptionExpiresAt (source ISO conservée par le backend) est disponible.
+  useEffect(() => {
+    let cancelled = false;
+    if (!authReady || !uid || !auth.currentUser || (userProfile?.role === 'admin' || (userProfile as any)?.admin === true)) {
+      setSubscriptionAccess(null);
+      return;
+    }
+    void (async () => {
+      try {
+        const token = await auth.currentUser!.getIdToken();
+        const response = await fetch('/api/subscription/status', {
+          method: 'GET',
+          headers: { Authorization: `Bearer ${token}` },
+          cache: 'no-store'
+        });
+        const result = await response.json() as {
+          success?: boolean;
+          subscription?: { plan?: string; subscriptionStatus?: string; subscriptionExpiresAtMs?: number | null };
+        };
+        if (!response.ok || !result.success || !result.subscription) {
+          throw new Error('Synchronisation de l’abonnement indisponible.');
+        }
+        if (!cancelled) setSubscriptionAccess(result.subscription);
+      } catch (error) {
+        console.warn('[PipTalk] Synchronisation de l’abonnement impossible.', error);
+        if (!cancelled) setSubscriptionAccess(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [authReady, uid, userProfile?.role, (userProfile as any)?.admin]);
+
   // Déclarer le nom avant les effets qui l'utilisent dans leurs dépendances.
   const currentDisplayName = userProfile?.displayName?.trim() || auth.currentUser?.displayName?.trim() || auth.currentUser?.email?.split('@')[0] || 'Trader';
+  const effectivePlan = subscriptionAccess?.plan || userProfile?.plan;
+  const effectiveSubscriptionStatus = subscriptionAccess?.subscriptionStatus || userProfile?.subscriptionStatus;
+  const effectiveExpiryMs = typeof subscriptionAccess?.subscriptionExpiresAtMs === 'number'
+    ? subscriptionAccess.subscriptionExpiresAtMs
+    : typeof userProfile?.subscriptionExpiresAtMs === 'number'
+      ? userProfile.subscriptionExpiresAtMs
+      : Number.NaN;
   const hasPaidPipTalk = (userProfile?.role === 'admin' || (userProfile as any)?.admin === true) || (
-    (userProfile?.plan === 'pro' || userProfile?.plan === 'community')
-    && userProfile?.subscriptionStatus === 'active'
-    && typeof userProfile?.subscriptionExpiresAtMs === 'number'
-    && userProfile.subscriptionExpiresAtMs > Date.now()
+    (effectivePlan === 'pro' || effectivePlan === 'community')
+    && effectiveSubscriptionStatus === 'active'
+    && Number.isFinite(effectiveExpiryMs)
+    && effectiveExpiryMs > Date.now()
   );
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [unreadByConversation, setUnreadByConversation] = useState<Record<string, number>>({});
