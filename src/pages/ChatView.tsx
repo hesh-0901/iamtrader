@@ -109,9 +109,8 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
   const hasPaidPipTalk = (userProfile?.role === 'admin' || (userProfile as any)?.admin === true) || (
     (userProfile?.plan === 'pro' || userProfile?.plan === 'community')
     && userProfile?.subscriptionStatus === 'active'
-    && userProfile?.paymentStatus === 'paid'
-    && userProfile?.status === 'active'
-    && Number(userProfile?.subscriptionExpiresAtMs) > Date.now()
+    && typeof userProfile?.subscriptionExpiresAtMs === 'number'
+    && userProfile.subscriptionExpiresAtMs > Date.now()
   );
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [unreadByConversation, setUnreadByConversation] = useState<Record<string, number>>({});
