@@ -20,13 +20,12 @@ export function CommunityView({ userProfile, isVisible = true, onUnreadCountChan
     setPendingChatId(conversationId);
     setActiveTab('chat');
   };
-  const isAdmin = userProfile?.role === 'admin';
+  const isAdmin = userProfile?.role === 'admin' || (userProfile as any)?.admin === true;
   const hasPaidPipTalk = isAdmin || (
     (userProfile?.plan === 'pro' || userProfile?.plan === 'community')
     && userProfile?.subscriptionStatus === 'active'
-    && userProfile?.paymentStatus === 'paid'
-    && userProfile?.status === 'active'
-    && Number(userProfile?.subscriptionExpiresAtMs) > Date.now()
+    && typeof userProfile?.subscriptionExpiresAtMs === 'number'
+    && userProfile.subscriptionExpiresAtMs > Date.now()
   );
 
   useEffect(() => {
