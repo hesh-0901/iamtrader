@@ -905,18 +905,33 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
       let conversationId = item.id;
       if (item.id.startsWith('dm_')) {
         const members = [uid, other].sort();
-        conversationId = 'dm_' + members.join('_');
-        const existing = conversations.find(candidate => candidate.members?.length === 2 && candidate.group !== true && candidate.members.includes(uid) && candidate.members.includes(other));
-        if (existing) conversationId = existing.id;
-        else {
-          await setDoc(doc(db, 'conversations', conversationId), {
-            members, group: false, createdBy: uid,
+        const existing = conversations.find(candidate =>
+          candidate.members?.length === 2
+          && candidate.group !== true
+          && candidate.members.includes(uid)
+          && candidate.members.includes(other)
+        );
+        if (existing) {
+          conversationId = existing.id;
+        } else {
+          // Ne jamais réutiliser un ancien ID déterministe avec merge :
+          // un document orphelin portant cet ID serait traité comme une mise à jour
+          // et refusé si l'utilisateur n'est pas déjà dans ses membres.
+          const newConversationRef = doc(collection(db, 'conversations'));
+          await setDoc(newConversationRef, {
+            members,
+            group: false,
+            systemGroup: false,
+            createdBy: uid,
             memberNames: {
               [uid]: currentDisplayName,
               [other]: acceptedFriends.find(friend => friend.uid === other)?.name || 'Trader'
             },
-            lastMessage: '', createdAt: serverTimestamp(), updatedAt: serverTimestamp()
-          }, { merge: true });
+            lastMessage: '',
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+          });
+          conversationId = newConversationRef.id;
         }
       }
       setActiveId(conversationId);
