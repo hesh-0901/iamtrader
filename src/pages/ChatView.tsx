@@ -1652,11 +1652,10 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
         <div className="border-b border-slate-100 px-5 py-5">
           <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-rose-50 text-rose-600"><ShieldCheck className="h-5 w-5" /></div>
           <p className="text-[10px] font-extrabold uppercase tracking-[.16em] text-rose-600">Accès non autorisé</p>
-          <h2 id="piptalk-access-title" className="mt-1 text-lg font-extrabold text-slate-900">Impossible d’ouvrir cette ressource</h2>
+          <h2 id="piptalk-access-title" className="mt-1 text-lg font-extrabold text-slate-900">Accès momentanément indisponible</h2>
           <p className="mt-2 text-sm leading-6 text-slate-600">{hasPaidPipTalk
-            ? "La base de données a refusé cette opération. Votre abonnement ne semble pas être le problème : les droits de votre compte, votre appartenance à la conversation ou la configuration Firestore doivent être vérifiés. Réessayez ; si le refus persiste, transmettez la référence technique au support IAMTRADER."
-            : "Votre compte ne dispose pas d’un abonnement actif donnant accès aux conversations privées et à cette fonctionnalité. Choisissez un forfait éligible ou renouvelez votre abonnement depuis les paramètres IAMTRADER."}</p>
-          <p className="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-[10px] leading-4 text-slate-500">Détail : {error.replace(/\n/g, ' · ')}</p>
+            ? "Impossible de charger vos conversations pour le moment. Réessayez dans quelques instants. Si le problème persiste, contactez notre support."
+            : "Cette fonctionnalité nécessite un abonnement actif. Consultez nos forfaits pour y accéder."}</p>
         </div>
         <div className="flex flex-col-reverse gap-2 p-4 sm:flex-row sm:justify-end">
           <button type="button" onClick={() => setAccessModalOpen(false)} className="rounded-xl border border-slate-200 px-4 py-3 text-xs font-bold text-slate-600">Fermer</button>
