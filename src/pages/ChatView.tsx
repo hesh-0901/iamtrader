@@ -693,7 +693,7 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
       err => console.warn('[PipTalk] Confirmation de lecture indisponible', memberUid, err)
     ));
     return () => unsubscribers.forEach(unsubscribe => unsubscribe());
-  }, [uid, activeId, isVisible, conversations]);
+  }, [uid, activeId, isVisible, conversations, hasPaidPipTalk]);
 
   useEffect(() => {
     firstMessageSnapshotRef.current = true;
@@ -764,7 +764,7 @@ export function ChatView({ userProfile, initialConversationId, onUnreadCountChan
       setError(formatPipTalkFirestoreError(err, 'messages'));
       setLoadingMessages(false);
     });
-  }, [uid, activeId, isVisible]);
+  }, [uid, activeId, isVisible, hasPaidPipTalk]);
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
   useEffect(() => {
