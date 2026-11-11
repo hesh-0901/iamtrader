@@ -9,12 +9,13 @@ import { AnalysisAdminPanel } from './AnalysisAdminPanel';
 
 type CommunityTab = 'home' | 'chat' | 'friends' | 'calendar' | 'courses' | 'analysis' | 'sentiment' | 'economic-data';
 
-export function CommunityView({ userProfile, isVisible = true, onUnreadCountChange }: { userProfile: UserProfile | null; isVisible?: boolean; onUnreadCountChange?: (count: number) => void }) {
+export function CommunityView({ userProfile, isVisible = true, onUnreadCountChange, onOpenSettings }: { userProfile: UserProfile | null; isVisible?: boolean; onUnreadCountChange?: (count: number) => void; onOpenSettings?: () => void }) {
   const [activeTab, setActiveTab] = useState<CommunityTab>(() =>
     typeof window !== 'undefined' && (new URLSearchParams(window.location.search).has('piptalkInvite') || /^\/i\/[A-Za-z0-9]{6}\/?$/.test(window.location.pathname)) ? 'chat' : 'home'
   );
   const [pendingChatId, setPendingChatId] = useState('');
   const [unreadChatCount, setUnreadChatCount] = useState(0);
+  const [lockedAccessOpen, setLockedAccessOpen] = useState(false);
   const openChat = (conversationId: string) => {
     setPendingChatId(conversationId);
     setActiveTab('chat');
@@ -34,7 +35,7 @@ export function CommunityView({ userProfile, isVisible = true, onUnreadCountChan
 
   const tabs = [
     { id: 'chat' as const, label: 'PipTalk', icon: MessageCircle },
-    ...(hasPaidPipTalk ? [{ id: 'friends' as const, label: 'Traders & amis', icon: Users }] : []),
+    { id: 'friends' as const, label: 'Traders & amis', icon: Users },
     { id: 'calendar' as const, label: 'Calendrier', icon: CalendarDays },
     { id: 'courses' as const, label: 'Cours', icon: BookOpen },
     { id: 'analysis' as const, label: 'Analyse', icon: BarChart3 },
@@ -51,7 +52,7 @@ export function CommunityView({ userProfile, isVisible = true, onUnreadCountChan
             return (
               <button
                 key={id}
-                onClick={() => setActiveTab(id)}
+                onClick={() => { if (id === 'friends' && !hasPaidPipTalk) { setLockedAccessOpen(true); return; } setActiveTab(id); }}
                 className={`flex shrink-0 items-center gap-2 border-b-2 px-4 py-3 text-xs font-bold transition-all ${isActive ? 'border-[#00a982] text-[#0b1f35]' : 'border-transparent text-slate-500 hover:text-[#0b1f35]'}`}
               >
                 <Icon className="h-4 w-4" />
@@ -112,7 +113,7 @@ export function CommunityView({ userProfile, isVisible = true, onUnreadCountChan
 
       {activeTab === 'calendar' && <EconomicCalendarView />}
 
-      <div className={activeTab === 'chat' ? 'block' : 'hidden'} aria-hidden={activeTab !== 'chat'}><ChatView userProfile={userProfile} initialConversationId={pendingChatId} onUnreadCountChange={count => { setUnreadChatCount(count); onUnreadCountChange?.(count); }} isVisible={isVisible && activeTab === 'chat'} /></div>
+      <div className={activeTab === 'chat' ? 'block' : 'hidden'} aria-hidden={activeTab !== 'chat'}><ChatView userProfile={userProfile} initialConversationId={pendingChatId} onUnreadCountChange={count => { setUnreadChatCount(count); onUnreadCountChange?.(count); }} isVisible={isVisible && activeTab === 'chat'} onOpenSettings={onOpenSettings} /></div>
       {activeTab === 'friends' && <FriendsView userProfile={userProfile} onOpenChat={openChat} />}
       {activeTab === 'courses' && <CourseSpace isAdmin={isAdmin} />}
       {activeTab === 'analysis' && (
@@ -122,6 +123,22 @@ export function CommunityView({ userProfile, isVisible = true, onUnreadCountChan
         <Placeholder title="Trader Sentiment" icon={Activity} text="Le sentiment des traders et les indicateurs de positionnement seront disponibles ici." />
       )}
       {activeTab === 'economic-data' && isAdmin && <EconomicDataProgress />}
+      {lockedAccessOpen && (
+        <div role="dialog" aria-modal="true" aria-labelledby="community-access-title" className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-950/55 p-4 backdrop-blur-sm" onMouseDown={event => { if (event.target === event.currentTarget) setLockedAccessOpen(false); }}>
+          <section className="w-full max-w-md overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+            <div className="border-b border-slate-100 px-5 py-5">
+              <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-xl bg-amber-50 text-amber-700"><Users className="h-5 w-5" /></div>
+              <p className="text-[10px] font-extrabold uppercase tracking-[.16em] text-amber-700">Accès réservé</p>
+              <h2 id="community-access-title" className="mt-1 text-lg font-extrabold text-slate-900">Débloquez Traders & amis</h2>
+              <p className="mt-2 text-sm leading-6 text-slate-600">Cette fonctionnalité nécessite un abonnement IAMTRADER actif. Passez à un forfait éligible ou renouvelez votre abonnement pour retrouver les demandes d’amitié, vos contacts et les conversations privées.</p>
+            </div>
+            <div className="flex flex-col-reverse gap-2 p-4 sm:flex-row sm:justify-end">
+              <button type="button" onClick={() => setLockedAccessOpen(false)} className="rounded-xl border border-slate-200 px-4 py-3 text-xs font-bold text-slate-600">Plus tard</button>
+              <button type="button" onClick={() => { setLockedAccessOpen(false); onOpenSettings?.(); }} className="rounded-xl bg-[#00a982] px-4 py-3 text-xs font-bold text-white">Voir les forfaits et renouveler</button>
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   );
 }
