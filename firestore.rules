@@ -285,9 +285,14 @@ service cloud.firestore {
 
       // Les requêtes de liste doivent retourner uniquement les conversations
       // dont l'utilisateur est membre (array-contains request.auth.uid).
-      allow list: if signedIn()
-        && resource.data.get('members', []) is list
-        && request.auth.uid in resource.data.members;
+      // L'administrateur IAMTRADER peut charger la liste complète pour le support.
+      // Les autres utilisateurs restent limités aux conversations dont ils sont membres.
+      allow list: if admin()
+        || (
+          signedIn()
+          && resource.data.get('members', []) is list
+          && request.auth.uid in resource.data.members
+        );
 
       // -------------------------------------------------
       // CRÉATION DES GROUPES
