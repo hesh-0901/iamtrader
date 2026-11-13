@@ -42,7 +42,7 @@ function printInvoice(item: PaymentHistoryItem, number: number, onInvoiceReady: 
   const discount = money(item.discountAmount || 0, item.currency);
   const netBase = money(Math.max(0, (item.originalAmount ?? item.baseAmount) - (item.discountAmount || 0)), item.currency);
   const fee = money(item.paymentFee, item.currency);
-  const method = item.paymentMethod === 'bank_transfer' ? 'Virement bancaire' : 'Mobile Money';
+  const method = item.paymentMethod === 'card' ? 'Carte bancaire' : item.paymentMethod === 'bank_transfer' ? 'Virement bancaire' : 'Mobile Money';
   const durationLabel = String(item.months || 1) + ' mois';
   const promo = escapeHtml(item.promoCode || item.promotionName || '—');
 

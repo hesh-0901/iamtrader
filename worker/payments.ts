@@ -338,6 +338,144 @@ async function createSasPayCheckout(
   }
 }
 
+
+async function createSasPayCardCheckout(
+  request: Request, env: SasPayEnv, user: any, body: any, profile: any,
+  planKey: keyof typeof PLANS, plan: (typeof PLANS)[keyof typeof PLANS],
+  amounts: ReturnType<typeof calculatePaymentAmounts>, decision: any, payerName: string
+) {
+  if (!env.SASPAY_API_KEY || !env.SASPAY_WEBHOOK_SECRET) {
+    return json({ success: false, message: 'Le paiement par carte est temporairement indisponible. Réessayez ultérieurement.' }, 503);
+  }
+  const idempotencyKey = String(body.idempotencyKey || '');
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(idempotencyKey)) {
+    return json({ success: false, message: 'Clé d’idempotence invalide. Réessayez le paiement.' }, 400);
+  }
+
+  const email = String(user.email || profile.email || '').trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return json({ success: false, message: 'Une adresse e-mail valide est nécessaire pour payer par carte.' }, 400);
+  }
+  const countryCode = String(body.countryCode || 'CD').toUpperCase();
+  if (!/^[A-Z]{2}$/.test(countryCode)) return json({ success: false, message: 'Pays de paiement invalide.' }, 400);
+
+  const paymentId = randomId();
+  const reference = 'IMAT-' + paymentId.toUpperCase();
+  const now = new Date().toISOString();
+  const amount = amounts.total;
+  const currency = 'USD';
+  const promotion = body._promotion as AppliedPromotion | null | undefined;
+  const customerNames = String(traderFullName(profile) || profile.displayName || payerName || email)
+    .trim().split(/\s+/).filter(Boolean);
+  const firstName = customerNames.shift() || 'IAMTRADER';
+  const lastName = customerNames.join(' ') || 'Trader';
+  const customerPhone = String(profile.phone || profile.whatsapp || profile.traderProfile?.phone || '').trim();
+  const returnUrl = new URL('/?payment=callback&reference=' + encodeURIComponent(paymentId), request.url).toString();
+
+  await firestoreCreate(env, 'payments', paymentId, {
+    id: paymentId, uid: user.uid, email, displayName: profile.displayName || email,
+    fullName: traderFullName(profile), countryCode, network: 'card',
+    plan: planKey, planName: plan.name, months: Math.max(1, Math.min(12, Math.floor(Number(body.months) || 1))),
+    amount, amountUsd: amount, baseAmount: amounts.baseAmount, paymentFee: amounts.fee,
+    paymentFeeRate: PAYMENT_FEE_RATE, currency, payerName,
+    ...(promotion ? {
+      originalAmount: promotion.baseAmount, discountAmount: promotion.discountAmount,
+      promotionId: promotion.promotionId, promotionKind: promotion.promotionKind,
+      promotionName: promotion.promotionName, promoCode: promotion.promoCode
+    } : {}),
+    paymentMethod: 'card', paymentProvider: 'card', provider: 'SASPAY',
+    subscriptionAction: decision.action, currentPlanAtPurchase: decision.currentPlan,
+    activationStartAt: decision.start.toISOString(), activationExpiresAt: decision.expires.toISOString(),
+    status: 'initiated', reference, transactionReference: reference, idempotencyKey,
+    invoiceNumber: invoiceNumber(paymentId, now), createdAt: now
+  });
+
+  try {
+    const response = await fetch('https://api.saspay.me/api/v1/payments/softpay/', {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer ' + env.SASPAY_API_KEY,
+        'Content-Type': 'application/json',
+        'Idempotency-Key': idempotencyKey
+      },
+      body: JSON.stringify({
+        amount: amount.toFixed(2),
+        currency,
+        country: countryCode,
+        network: 'card',
+        customer: {
+          email,
+          first_name: firstName,
+          last_name: lastName,
+          ...(customerPhone ? { phone: customerPhone } : {})
+        },
+        description: 'IAMTRADER-' + paymentId + '-' + plan.name + ' subscription',
+        reference,
+        metadata: { iamtrader_payment_id: paymentId, plan: planKey, months: Math.max(1, Math.min(12, Math.floor(Number(body.months) || 1))) },
+        return_url: returnUrl
+      })
+    });
+
+    const raw = await response.text();
+    let result: any = {};
+    try { result = raw ? JSON.parse(raw) : {}; } catch { result = {}; }
+    const data = result?.data || result;
+    const transactionId = String(data?.id || data?.payment_id || data?.transaction_id || '').trim();
+    const paymentUrl = String(data?.checkout_url || data?.checkoutUrl || '').trim();
+    let safePaymentUrl = false;
+    try {
+      const parsedUrl = new URL(paymentUrl);
+      safePaymentUrl = parsedUrl.protocol === 'https:' && parsedUrl.hostname === 'pay.saspay.me';
+    } catch {
+      safePaymentUrl = false;
+    }
+
+    if (!response.ok || !transactionId || !safePaymentUrl) {
+      await firestorePatch(env, 'payments/' + paymentId, {
+        status: 'failed',
+        failureMessage: 'SasPay n’a pas pu préparer le paiement par carte. Vérifiez la disponibilité de cette option sur votre compte marchand.',
+        saspayHttpStatus: response.status,
+        updatedAt: new Date().toISOString()
+      }, ['status', 'failureMessage', 'saspayHttpStatus', 'updatedAt']);
+      console.error('SasPay card initialization failed:', response.status, raw.slice(0, 400));
+      return json({
+        success: false,
+        message: result?.message || result?.detail || 'Le paiement par carte bancaire n’est pas disponible pour cette transaction.'
+      }, 502);
+    }
+
+    await firestorePatch(env, 'payments/' + paymentId, {
+      status: 'processing',
+      saspayTransactionId: transactionId,
+      saspayStatus: String(data?.status || 'PENDING').toUpperCase(),
+      saspayNetwork: 'card',
+      saspayPaymentUrl: paymentUrl,
+      updatedAt: new Date().toISOString()
+    }, ['status', 'saspayTransactionId', 'saspayStatus', 'saspayNetwork', 'saspayPaymentUrl', 'updatedAt']);
+
+    return json({
+      success: true,
+      payment: {
+        id: paymentId, plan: planKey, planName: plan.name,
+        amount, baseAmount: amounts.baseAmount, paymentFee: amounts.fee,
+        currency, status: 'processing', reference, paymentUrl,
+        subscriptionAction: decision.action,
+        activationStartAt: decision.start.toISOString(),
+        activationExpiresAt: decision.expires.toISOString(),
+        message: 'Votre session de paiement par carte est prête. Vous allez être redirigé vers SasPay.'
+      }
+    });
+  } catch (error) {
+    await firestorePatch(env, 'payments/' + paymentId, {
+      status: 'failed',
+      failureMessage: 'Impossible de joindre le service de paiement par carte.',
+      updatedAt: new Date().toISOString()
+    }, ['status', 'failureMessage', 'updatedAt']);
+    console.error('SasPay card network error:', error);
+    return json({ success: false, message: 'Impossible de joindre SasPay. Réessayez ultérieurement.' }, 502);
+  }
+}
+
 export async function handleSasPayVerifyRequest(request: Request, env: SasPayEnv) {
   if (request.method !== 'GET') return json({ success: false, message: 'Méthode non autorisée.' }, 405);
   const token = authHeader(request);
@@ -499,7 +637,7 @@ export async function handlePaymentRequest(request: Request, env: CinetPayEnv) {
       months?: number;
       phone?: string;
       countryCode?: string;
-      paymentMethod?: 'mobile_money' | 'bank_transfer';
+      paymentMethod?: 'mobile_money' | 'card' | 'bank_transfer';
       paymentProvider?: string;
       payerName?: string;
       promoCode?: string;
@@ -509,7 +647,7 @@ export async function handlePaymentRequest(request: Request, env: CinetPayEnv) {
     const months = planKey === 'community' ? 6 : Math.max(1, Math.min(12, Math.floor(Number(body.months) || 1)));
     // Keep every downstream provider branch and stored payment aligned with the server-enforced duration.
     body.months = months;
-    const paymentMethod = body.paymentMethod === 'bank_transfer' ? 'bank_transfer' : 'mobile_money';
+    const paymentMethod = body.paymentMethod === 'bank_transfer' ? 'bank_transfer' : body.paymentMethod === 'card' ? 'card' : 'mobile_money';
     if (paymentMethod === 'bank_transfer') {
       return json({ success: false, message: 'Le virement bancaire est temporairement indisponible. Utilisez Mobile Money.' }, 503);
     }
@@ -604,6 +742,9 @@ export async function handlePaymentRequest(request: Request, env: CinetPayEnv) {
           instructions: String(env.BANK_TRANSFER_INSTRUCTIONS || '')
         }
       } });
+    }
+    if (paymentMethod === 'card') {
+      return await createSasPayCardCheckout(request, env, user, body, profile, planKey, plan, amounts, decision, payerName);
     }
     if (isSasPay) {
       return await createSasPayCheckout(request, env, user, body, profile, planKey, plan, phone!, amounts, decision, payerName);
@@ -991,12 +1132,13 @@ export async function handleSasPayWebhook(
     // Correlate only from SasPay's canonical transaction response, never webhook fields.
     const description = String(transaction?.description || '');
     const canonicalReference = String(transaction?.reference || transaction?.metadata?.reference || '');
+    const metadataPaymentId = String(transaction?.metadata?.iamtrader_payment_id || '').trim();
     const match = description.match(/IAMTRADER-([a-f0-9]{24})-/i) || canonicalReference.match(/^IMAT-([a-f0-9]{24})$/i);
-    if (!match) {
+    const paymentId = match?.[1]?.toLowerCase() || (/^[a-f0-9]{24}$/i.test(metadataPaymentId) ? metadataPaymentId.toLowerCase() : '');
+    if (!paymentId) {
       console.error('SasPay transaction description has no IAMTRADER reference:', transactionId);
       return json({ received: false, message: 'Référence IAMTRADER absente de la transaction.' }, 400);
     }
-    const paymentId = match[1].toLowerCase();
     const payment = await readDocument(env, 'payments/' + paymentId);
     if (!payment || payment.provider !== 'SASPAY') return json({ received: false, message: 'Paiement IAMTRADER introuvable.' }, 404);
 
@@ -1077,7 +1219,7 @@ export async function handleSasPayWebhook(
     if (['FAILED', 'FAILURE', 'CANCELLED', 'CANCELED', 'EXPIRED'].includes(canonicalStatus)) {
       await patchDocument(env, 'payments/' + paymentId, {
         status: 'failed',
-        failureMessage: 'Paiement mobile ' + canonicalStatus + '.',
+        failureMessage: payment.paymentMethod === 'card' ? 'Paiement par carte ' + canonicalStatus + '.' : 'Paiement mobile ' + canonicalStatus + '.',
         saspayStatus: canonicalStatus,
         updatedAt: now().toISOString()
       }, ['status', 'failureMessage', 'saspayStatus', 'updatedAt']);

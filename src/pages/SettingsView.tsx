@@ -112,7 +112,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
   const [dashboardMode, setDashboardMode] = useState<'standard' | 'focus' | 'analysis' | 'compact'>(() => (localStorage.getItem('iamtrader-dashboard-mode') as any) || 'standard');
   const [paymentPlan, setPaymentPlan] = useState<PaidPlan | null>(null);
   const [paymentMonths, setPaymentMonths] = useState(1);
-  const [paymentMethod] = useState<'mobile_money' | 'bank_transfer'>('mobile_money');
+  const [paymentMethod, setPaymentMethod] = useState<'mobile_money' | 'card' | 'bank_transfer'>('mobile_money');
   const [paymentStep, setPaymentStep] = useState<'duration' | 'details' | 'summary'>('duration');
   const [paymentBankDetails, setPaymentBankDetails] = useState<{ bankName: string; accountName: string; accountNumber: string; swift?: string; branch?: string; currency?: string; instructions?: string } | null>(null);
   const [paymentPhone, setPaymentPhone] = useState('');
@@ -466,7 +466,13 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
       setPaymentStatus('processing');
       setPaymentMessage(payment.message || (paymentMethod === 'bank_transfer'
         ? 'Demande enregistrée. Effectuez le virement puis transmettez la preuve à IAMTRADER.'
-        : 'Demande envoyée. Confirmez le paiement sur votre téléphone.'));
+        : paymentMethod === 'card'
+          ? 'Vous allez être redirigé vers la page sécurisée de SasPay pour régler par carte.'
+          : 'Demande envoyée. Confirmez le paiement sur votre téléphone.'));
+      if (paymentMethod === 'card') {
+        if (!payment.paymentUrl) throw new Error('Le lien sécurisé de paiement par carte est introuvable.');
+        window.location.assign(payment.paymentUrl);
+      }
     } catch (error: any) {
       setPaymentStatus('failed');
       setPaymentMessage(error?.message || 'Impossible d’initier le paiement.');
@@ -900,12 +906,17 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                           <div><label className="block text-base font-extrabold text-slate-900">Choisissez votre moyen de paiement</label><p className="mt-0.5 text-[11px] text-slate-500">Sélectionnez comment régler votre abonnement.</p></div>
                           <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide text-emerald-700">Disponible</span>
                         </div>
-                        <div className="grid gap-2 sm:grid-cols-2">
-                          <div className="flex min-w-0 items-center gap-3 rounded-2xl border-2 border-emerald-500 bg-emerald-50 p-4 shadow-sm shadow-emerald-100/70"> 
-                            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-emerald-700 shadow-sm"><Smartphone className="h-5 w-5" /></span>
-                            <span className="min-w-0 flex-1"><span className="block text-sm font-extrabold text-slate-950">Mobile Money</span><span className="mt-1 block text-xs leading-4 text-slate-600">Paiement mobile sécurisé</span></span>
-                            <span className="h-4 w-4 shrink-0 rounded-full border-[5px] border-emerald-600 bg-white" />
-                          </div>
+                        <div className="grid gap-2 sm:grid-cols-3">
+                          <button type="button" aria-pressed={paymentMethod === 'mobile_money'} onClick={() => setPaymentMethod('mobile_money')} className={`flex min-w-0 items-center gap-3 rounded-2xl border-2 p-3.5 text-left transition ${paymentMethod === 'mobile_money' ? 'border-emerald-500 bg-emerald-50 shadow-sm shadow-emerald-100/70' : 'border-slate-200 bg-white hover:border-emerald-200'}`}>
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-emerald-700 shadow-sm"><Smartphone className="h-5 w-5" /></span>
+                            <span className="min-w-0 flex-1"><span className="block text-sm font-extrabold text-slate-950">Mobile Money</span><span className="mt-1 block text-[11px] leading-4 text-slate-600">Paiement mobile</span></span>
+                            <span className={`h-4 w-4 shrink-0 rounded-full border-[5px] bg-white ${paymentMethod === 'mobile_money' ? 'border-emerald-600' : 'border-slate-300'}`} />
+                          </button>
+                          <button type="button" aria-pressed={paymentMethod === 'card'} onClick={() => setPaymentMethod('card')} className={`flex min-w-0 items-center gap-3 rounded-2xl border-2 p-3.5 text-left transition ${paymentMethod === 'card' ? 'border-emerald-500 bg-emerald-50 shadow-sm shadow-emerald-100/70' : 'border-slate-200 bg-white hover:border-emerald-200'}`}>
+                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-emerald-700 shadow-sm"><CreditCard className="h-5 w-5" /></span>
+                            <span className="min-w-0 flex-1"><span className="block text-sm font-extrabold text-slate-950">Carte bancaire</span><span className="mt-1 block text-[11px] leading-4 text-slate-600">Visa / Mastercard</span></span>
+                            <span className={`h-4 w-4 shrink-0 rounded-full border-[5px] bg-white ${paymentMethod === 'card' ? 'border-emerald-600' : 'border-slate-300'}`} />
+                          </button>
                           <div aria-disabled="true" className="flex min-w-0 items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3.5 opacity-65">
                             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-slate-400"><WalletCards className="h-5 w-5" /></span>
                             <span className="min-w-0 flex-1"><span className="block text-sm font-bold text-slate-500">Virement bancaire</span><span className="mt-0.5 block text-[11px] leading-4 text-slate-400">Bientôt disponible</span></span>
@@ -929,6 +940,11 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                           <div><label className="mb-1.5 block text-xs font-bold text-slate-700">Numéro de téléphone</label><div className="flex min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white"><span className="flex shrink-0 items-center border-r border-slate-200 bg-slate-50 px-3 text-sm font-bold text-slate-700">{countryOptions.find(item => item.code === paymentCountryCode)?.dialCode || '+243'}</span><input type="tel" inputMode="numeric" autoComplete="tel-national" value={paymentPhone} onChange={event => setPaymentPhone(event.target.value.replace(/[^0-9]/g, '').replace(/^0+/, '').slice(0, countryOptions.find(item => item.code === paymentCountryCode)?.phoneLength || 9))} placeholder={'X'.repeat(countryOptions.find(item => item.code === paymentCountryCode)?.phoneLength || 9)} className="min-w-0 flex-1 px-3 py-3 text-sm text-slate-900 outline-none" /></div><p className="mt-1 text-[10px] text-slate-500">Sans le zéro initial. L’indicatif est ajouté automatiquement.</p></div>
                           <div><label className="mb-1.5 block text-xs font-bold text-slate-700">Réseau Mobile Money</label><select value={paymentProvider} onChange={event => setPaymentProvider(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none focus:border-emerald-500">{(countryOptions.find(item => item.code === paymentCountryCode)?.networks || []).map(network => <option key={network.value} value={network.value}>{network.label}</option>)}</select></div>
                         </>
+                      ) : paymentMethod === 'card' ? (
+                        <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
+                          <div className="flex items-center gap-2 text-sm font-extrabold text-emerald-900"><CreditCard className="h-5 w-5" /> Paiement par carte bancaire</div>
+                          <p className="mt-2 text-xs leading-5 text-emerald-900/80">Vous serez redirigé vers la page sécurisée de SasPay pour saisir les informations de votre carte. IAMTRADER ne collecte ni ne stocke vos données bancaires.</p>
+                        </div>
                       ) : (
                         <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4">
                           <div className="flex items-center gap-2 text-sm font-extrabold text-sky-900"><WalletCards className="h-5 w-5" /> Virement bancaire</div>
@@ -945,7 +961,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                       <div className="divide-y divide-slate-100 rounded-2xl border border-slate-200 bg-white px-4">
                         <div className="flex justify-between gap-3 py-3 text-sm"><span className="text-slate-500">Abonnement</span><strong>{paymentPlan === 'pro' ? 'Plus' : 'Community'}</strong></div>
                         <div className="flex justify-between gap-3 py-3 text-sm"><span className="text-slate-500">Durée</span><strong>{paymentMonths} mois</strong></div>
-                        <div className="flex justify-between gap-3 py-3 text-sm"><span className="text-slate-500">Paiement</span><strong>{paymentMethod === 'mobile_money' ? 'Mobile Money' : 'Virement bancaire'}</strong></div>
+                        <div className="flex justify-between gap-3 py-3 text-sm"><span className="text-slate-500">Paiement</span><strong>{paymentMethod === 'mobile_money' ? 'Mobile Money' : paymentMethod === 'card' ? 'Carte bancaire' : 'Virement bancaire'}</strong></div>
                         {paymentMethod === 'mobile_money' && <div className="flex justify-between gap-3 py-3 text-sm"><span className="text-slate-500">Téléphone</span><strong className="max-w-[60%] break-all text-right">{countryOptions.find(item => item.code === paymentCountryCode)?.dialCode}{paymentPhone}</strong></div>}
                         <div className="flex justify-between gap-3 py-4"><span className="text-sm font-bold text-slate-700">Total à payer</span><strong className="text-xl font-black text-emerald-700">${(promoQuote?.finalAmount ?? getPaymentAmounts(paymentPlan, paymentMonths).total).toFixed(2)} USD</strong></div>
                       </div>
