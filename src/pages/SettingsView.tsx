@@ -28,8 +28,6 @@ const starterLimit = 5;
 
 const PAYMENT_FEE_RATE = 0;
 const PAYMENT_PRICES = { pro: 9.99, community: 89.99 } as const;
-const CINETPAY_CDF_PRICES = { pro: 23335, community: 210196 } as const;
-
 function getPaymentAmounts(plan: PaidPlan, months = 1) {
   const safeMonths = Math.max(1, Math.min(12, Math.floor(months)));
   const baseAmount = plan === 'pro'
@@ -37,8 +35,7 @@ function getPaymentAmounts(plan: PaidPlan, months = 1) {
     : Math.round((PAYMENT_PRICES.community / 6 * safeMonths) * 100) / 100;
   const paymentFee = Math.round(baseAmount * PAYMENT_FEE_RATE * 100) / 100;
   const total = Math.round((baseAmount + paymentFee) * 100) / 100;
-  const cdfTotal = Math.round(CINETPAY_CDF_PRICES[plan] * (safeMonths / (plan === 'community' ? 6 : 1)));
-  return { baseAmount, paymentFee, total, cdfTotal };
+  return { baseAmount, paymentFee, total };
 }
 
 function formatDate(value?: string) {
@@ -116,6 +113,8 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
   const [paymentStep, setPaymentStep] = useState<'duration' | 'details' | 'summary'>('duration');
   const [paymentBankDetails, setPaymentBankDetails] = useState<{ bankName: string; accountName: string; accountNumber: string; swift?: string; branch?: string; currency?: string; instructions?: string } | null>(null);
   const [paymentPhone, setPaymentPhone] = useState('');
+  const [paymentCardholderName, setPaymentCardholderName] = useState(userProfile?.displayName || [userProfile?.traderProfile?.firstName, userProfile?.traderProfile?.lastName].filter(Boolean).join(' '));
+  const [paymentCardholderEmail, setPaymentCardholderEmail] = useState(userProfile?.email || '');
   const [promoCode, setPromoCode] = useState('');
   const [isPromoModalOpen, setIsPromoModalOpen] = useState(false);
   const [promoQuote, setPromoQuote] = useState<{ baseAmount: number; discountAmount: number; finalAmount: number; promotionName: string; promoCode: string | null } | null>(null);
@@ -456,7 +455,8 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
         countryCode: paymentCountryCode,
         paymentMethod,
         paymentProvider: paymentMethod === 'mobile_money' ? paymentProvider : undefined,
-        payerName: userProfile?.displayName || [userProfile?.traderProfile?.firstName, userProfile?.traderProfile?.lastName].filter(Boolean).join(' ') || '',
+        payerName: paymentMethod === 'card' ? paymentCardholderName.trim() : userProfile?.displayName || [userProfile?.traderProfile?.firstName, userProfile?.traderProfile?.lastName].filter(Boolean).join(' ') || '',
+        cardholderEmail: paymentMethod === 'card' ? paymentCardholderEmail.trim() : undefined,
         promoCode: promoCode.trim().toUpperCase() || undefined
       };
       const payment = await createPayment(paymentPlan, details);
@@ -941,9 +941,23 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                           <div><label className="mb-1.5 block text-xs font-bold text-slate-700">Réseau Mobile Money</label><select value={paymentProvider} onChange={event => setPaymentProvider(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none focus:border-emerald-500">{(countryOptions.find(item => item.code === paymentCountryCode)?.networks || []).map(network => <option key={network.value} value={network.value}>{network.label}</option>)}</select></div>
                         </>
                       ) : paymentMethod === 'card' ? (
-                        <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
-                          <div className="flex items-center gap-2 text-sm font-extrabold text-emerald-900"><CreditCard className="h-5 w-5" /> Paiement par carte bancaire</div>
-                          <p className="mt-2 text-xs leading-5 text-emerald-900/80">Vous serez redirigé vers la page sécurisée de SasPay pour saisir les informations de votre carte. IAMTRADER ne collecte ni ne stocke vos données bancaires.</p>
+                        <div className="space-y-3 rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
+                          <div className="flex items-center gap-2 text-sm font-extrabold text-emerald-900"><CreditCard className="h-5 w-5" /> Informations du titulaire</div>
+                          <div>
+                            <label htmlFor="cardholder-name" className="mb-1.5 block text-xs font-bold text-slate-700">Nom complet sur la carte</label>
+                            <input id="cardholder-name" type="text" autoComplete="cc-name" value={paymentCardholderName} onChange={event => setPaymentCardholderName(event.target.value)} placeholder="Nom et prénom du titulaire" className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100" required />
+                          </div>
+                          <div>
+                            <label htmlFor="cardholder-email" className="mb-1.5 block text-xs font-bold text-slate-700">Adresse e-mail</label>
+                            <input id="cardholder-email" type="email" autoComplete="email" value={paymentCardholderEmail} onChange={event => setPaymentCardholderEmail(event.target.value)} placeholder="nom@exemple.com" className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100" required />
+                          </div>
+                          <div>
+                            <label htmlFor="card-billing-country" className="mb-1.5 block text-xs font-bold text-slate-700">Pays de facturation</label>
+                            <select id="card-billing-country" value={paymentCountryCode} onChange={event => setPaymentCountryCode(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-900 outline-none focus:border-emerald-500">
+                              {countryOptions.map(item => <option key={item.code} value={item.code}>{item.name}</option>)}
+                            </select>
+                          </div>
+                          <p className="text-[11px] leading-5 text-emerald-900/80">Après validation, SasPay vous demandera le numéro de carte, la date d’expiration et le code de sécurité (CVV) sur sa page sécurisée. Ces données ne passent jamais par IAMTRADER.</p>
                         </div>
                       ) : (
                         <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4">
@@ -951,7 +965,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                           <p className="mt-2 text-xs leading-5 text-sky-900/80">Les coordonnées du compte bancaire IAMTRADER seront affichées après l’enregistrement de votre demande. Votre abonnement restera en attente jusqu’à la vérification effective du virement.</p>
                         </div>
                       )}
-                      <div className="flex gap-2 pt-2"><button type="button" onClick={() => setPaymentStep('duration')} className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-600">Retour</button><button type="button" onClick={() => setPaymentStep('summary')} disabled={paymentMethod === 'mobile_money' && (!paymentPhone.trim() || !paymentProvider)} className="flex-[1.5] rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-40">Continuer</button></div>
+                      <div className="flex gap-2 pt-2"><button type="button" onClick={() => setPaymentStep('duration')} className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-600">Retour</button><button type="button" onClick={() => setPaymentStep('summary')} disabled={(paymentMethod === 'mobile_money' && (!paymentPhone.trim() || !paymentProvider)) || (paymentMethod === 'card' && (!paymentCardholderName.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(paymentCardholderEmail.trim())))} className="flex-[1.5] rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-40">Continuer</button></div>
                     </div>
                   )}
 
@@ -963,6 +977,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                         <div className="flex justify-between gap-3 py-3 text-sm"><span className="text-slate-500">Durée</span><strong>{paymentMonths} mois</strong></div>
                         <div className="flex justify-between gap-3 py-3 text-sm"><span className="text-slate-500">Paiement</span><strong>{paymentMethod === 'mobile_money' ? 'Mobile Money' : paymentMethod === 'card' ? 'Carte bancaire' : 'Virement bancaire'}</strong></div>
                         {paymentMethod === 'mobile_money' && <div className="flex justify-between gap-3 py-3 text-sm"><span className="text-slate-500">Téléphone</span><strong className="max-w-[60%] break-all text-right">{countryOptions.find(item => item.code === paymentCountryCode)?.dialCode}{paymentPhone}</strong></div>}
+                        {paymentMethod === 'card' && <><div className="flex justify-between gap-3 py-3 text-sm"><span className="text-slate-500">Titulaire</span><strong className="max-w-[60%] break-all text-right">{paymentCardholderName}</strong></div><div className="flex justify-between gap-3 py-3 text-sm"><span className="text-slate-500">E-mail</span><strong className="max-w-[60%] break-all text-right">{paymentCardholderEmail}</strong></div><div className="flex justify-between gap-3 py-3 text-sm"><span className="text-slate-500">Pays</span><strong>{countryOptions.find(item => item.code === paymentCountryCode)?.name || paymentCountryCode}</strong></div></>}
                         <div className="flex justify-between gap-3 py-4"><span className="text-sm font-bold text-slate-700">Total à payer</span><strong className="text-xl font-black text-emerald-700">${(promoQuote?.finalAmount ?? getPaymentAmounts(paymentPlan, paymentMonths).total).toFixed(2)} USD</strong></div>
                       </div>
                       <button type="button" onClick={() => { setPromoMessage(''); setIsPromoModalOpen(true); }} className="inline-flex items-center gap-2 rounded-lg px-2 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-50"><Tag className="h-4 w-4" /> Ajouter un code promo</button>
