@@ -109,9 +109,8 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
   const [dashboardMode, setDashboardMode] = useState<'standard' | 'focus' | 'analysis' | 'compact'>(() => (localStorage.getItem('iamtrader-dashboard-mode') as any) || 'standard');
   const [paymentPlan, setPaymentPlan] = useState<PaidPlan | null>(null);
   const [paymentMonths, setPaymentMonths] = useState(1);
-  const [paymentMethod, setPaymentMethod] = useState<'mobile_money' | 'card' | 'bank_transfer'>('mobile_money');
+  const [paymentMethod, setPaymentMethod] = useState<'mobile_money' | 'card'>('mobile_money');
   const [paymentStep, setPaymentStep] = useState<'duration' | 'details' | 'summary'>('duration');
-  const [paymentBankDetails, setPaymentBankDetails] = useState<{ bankName: string; accountName: string; accountNumber: string; swift?: string; branch?: string; currency?: string; instructions?: string } | null>(null);
   const [paymentPhone, setPaymentPhone] = useState('');
   const [paymentCardholderName, setPaymentCardholderName] = useState(userProfile?.displayName || [userProfile?.traderProfile?.firstName, userProfile?.traderProfile?.lastName].filter(Boolean).join(' '));
   const [paymentCardholderEmail, setPaymentCardholderEmail] = useState(userProfile?.email || '');
@@ -409,7 +408,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
     setPaymentCountryCode(initialCountry.code);
     setPaymentPhone(nationalDigits.replace(/^0+/, '').slice(0, initialCountry.phoneLength));
     const initialMonths = plan === 'community' ? 6 : 1;
-    setPaymentPlan(plan); setPaymentMonths(initialMonths); setPaymentStep('duration'); setPaymentBankDetails(null); setPromoCode(''); setPromoQuote(null); setPromoMessage(''); setIsPromoModalOpen(false); void loadAutomaticPromotion(plan, initialMonths);
+    setPaymentPlan(plan); setPaymentMonths(initialMonths); setPaymentStep('duration'); setPromoCode(''); setPromoQuote(null); setPromoMessage(''); setIsPromoModalOpen(false); void loadAutomaticPromotion(plan, initialMonths);
     setPaymentProvider(initialCountry.networks[0]?.value || '');
     setPaymentId(null); setPaymentReference(null); setPaymentStatus('idle'); setPaymentMessage(''); setPaymentLastCheckedAt(null); setPaymentCheckError(''); setPaymentPollTimedOut(false);
   };
@@ -462,13 +461,10 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
       const payment = await createPayment(paymentPlan, details);
       setPaymentId(payment.id);
       setPaymentReference(payment.reference || null);
-      setPaymentBankDetails(payment.bankDetails || null);
       setPaymentStatus('processing');
-      setPaymentMessage(payment.message || (paymentMethod === 'bank_transfer'
-        ? 'Demande enregistrée. Effectuez le virement puis transmettez la preuve à IAMTRADER.'
-        : paymentMethod === 'card'
-          ? 'Vous allez être redirigé vers la page sécurisée de SasPay pour régler par carte.'
-          : 'Demande envoyée. Confirmez le paiement sur votre téléphone.'));
+      setPaymentMessage(payment.message || (paymentMethod === 'card'
+        ? 'Vous allez être redirigé vers la page sécurisée de SasPay pour régler par carte.'
+        : 'Demande envoyée. Confirmez le paiement sur votre téléphone.'));
       if (paymentMethod === 'card') {
         if (!payment.paymentUrl) throw new Error('Le lien sécurisé de paiement par carte est introuvable.');
         window.location.assign(payment.paymentUrl);
@@ -480,7 +476,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
   };
 
   React.useEffect(() => {
-    if (!paymentId || paymentStatus !== 'processing' || paymentMethod === 'bank_transfer') return;
+    if (!paymentId || paymentStatus !== 'processing') return;
     let cancelled = false;
     let attempts = 0;
     let timer: number | undefined;
@@ -906,7 +902,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                           <div><label className="block text-base font-extrabold text-slate-900">Choisissez votre moyen de paiement</label><p className="mt-0.5 text-[11px] text-slate-500">Sélectionnez comment régler votre abonnement.</p></div>
                           <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide text-emerald-700">Disponible</span>
                         </div>
-                        <div className="grid gap-2 sm:grid-cols-3">
+                        <div className="grid gap-2 sm:grid-cols-2">
                           <button type="button" aria-pressed={paymentMethod === 'mobile_money'} onClick={() => setPaymentMethod('mobile_money')} className={`flex min-w-0 items-center gap-3 rounded-2xl border-2 p-3.5 text-left transition ${paymentMethod === 'mobile_money' ? 'border-emerald-500 bg-emerald-50 shadow-sm shadow-emerald-100/70' : 'border-slate-200 bg-white hover:border-emerald-200'}`}>
                             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-emerald-700 shadow-sm"><Smartphone className="h-5 w-5" /></span>
                             <span className="min-w-0 flex-1"><span className="block text-sm font-extrabold text-slate-950">Mobile Money</span><span className="mt-1 block text-[11px] leading-4 text-slate-600">Paiement mobile</span></span>
@@ -917,11 +913,6 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                             <span className="min-w-0 flex-1"><span className="block text-sm font-extrabold text-slate-950">Carte bancaire</span><span className="mt-1 block text-[11px] leading-4 text-slate-600">Paiement via SasPay</span></span>
                             <span className={`h-4 w-4 shrink-0 rounded-full border-[5px] bg-white ${paymentMethod === 'card' ? 'border-emerald-600' : 'border-slate-300'}`} />
                           </button>
-                          <div aria-disabled="true" className="flex min-w-0 items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3.5 opacity-65">
-                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-slate-400"><WalletCards className="h-5 w-5" /></span>
-                            <span className="min-w-0 flex-1"><span className="block text-sm font-bold text-slate-500">Virement bancaire</span><span className="mt-0.5 block text-[11px] leading-4 text-slate-400">Bientôt disponible</span></span>
-                            <span className="shrink-0 rounded-full border border-slate-200 bg-white px-2 py-1 text-[9px] font-bold uppercase tracking-wide text-slate-400">Indisponible</span>
-                          </div>
                         </div>
                       </div>
                       <div className="flex flex-col gap-2 sm:flex-row">
@@ -959,11 +950,6 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                           </div>
                           <p className="text-[11px] leading-5 text-emerald-900/80">Après validation, SasPay vous demandera le numéro de carte, la date d’expiration et le code de sécurité (CVV) sur sa page sécurisée. Ces données ne passent jamais par IAMTRADER.</p>
                         </div>
-                      ) : (
-                        <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4">
-                          <div className="flex items-center gap-2 text-sm font-extrabold text-sky-900"><WalletCards className="h-5 w-5" /> Virement bancaire</div>
-                          <p className="mt-2 text-xs leading-5 text-sky-900/80">Les coordonnées du compte bancaire IAMTRADER seront affichées après l’enregistrement de votre demande. Votre abonnement restera en attente jusqu’à la vérification effective du virement.</p>
-                        </div>
                       )}
                       <div className="flex gap-2 pt-2"><button type="button" onClick={() => setPaymentStep('duration')} className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-600">Retour</button><button type="button" onClick={() => setPaymentStep('summary')} disabled={(paymentMethod === 'mobile_money' && (!paymentPhone.trim() || !paymentProvider)) || (paymentMethod === 'card' && (!paymentCardholderName.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(paymentCardholderEmail.trim())))} className="flex-[1.5] rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-40">Continuer</button></div>
                     </div>
@@ -975,7 +961,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                       <div className="divide-y divide-slate-100 rounded-2xl border border-slate-200 bg-white px-4">
                         <div className="flex justify-between gap-3 py-3 text-sm"><span className="text-slate-500">Abonnement</span><strong>{paymentPlan === 'pro' ? 'Plus' : 'Community'}</strong></div>
                         <div className="flex justify-between gap-3 py-3 text-sm"><span className="text-slate-500">Durée</span><strong>{paymentMonths} mois</strong></div>
-                        <div className="flex justify-between gap-3 py-3 text-sm"><span className="text-slate-500">Paiement</span><strong>{paymentMethod === 'mobile_money' ? 'Mobile Money' : paymentMethod === 'card' ? 'Carte bancaire' : 'Virement bancaire'}</strong></div>
+                        <div className="flex justify-between gap-3 py-3 text-sm"><span className="text-slate-500">Paiement</span><strong>{paymentMethod === 'mobile_money' ? 'Mobile Money' : 'Carte bancaire'}</strong></div>
                         {paymentMethod === 'mobile_money' && <div className="flex justify-between gap-3 py-3 text-sm"><span className="text-slate-500">Téléphone</span><strong className="max-w-[60%] break-all text-right">{countryOptions.find(item => item.code === paymentCountryCode)?.dialCode}{paymentPhone}</strong></div>}
                         {paymentMethod === 'card' && <><div className="flex justify-between gap-3 py-3 text-sm"><span className="text-slate-500">Titulaire</span><strong className="max-w-[60%] break-all text-right">{paymentCardholderName}</strong></div><div className="flex justify-between gap-3 py-3 text-sm"><span className="text-slate-500">E-mail</span><strong className="max-w-[60%] break-all text-right">{paymentCardholderEmail}</strong></div><div className="flex justify-between gap-3 py-3 text-sm"><span className="text-slate-500">Pays</span><strong>{countryOptions.find(item => item.code === paymentCountryCode)?.name || paymentCountryCode}</strong></div></>}
                         <div className="flex justify-between gap-3 py-4"><span className="text-sm font-bold text-slate-700">Total à payer</span><strong className="text-xl font-black text-emerald-700">${(promoQuote?.finalAmount ?? getPaymentAmounts(paymentPlan, paymentMonths).total).toFixed(2)} USD</strong></div>
@@ -997,28 +983,6 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                     {promoMessage && <p className={'mt-2 text-xs font-semibold ' + (promoQuote ? 'text-emerald-700' : 'text-rose-600')}>{promoMessage}</p>}
                     <div className="mt-5 flex gap-2"><button type="button" onClick={() => setIsPromoModalOpen(false)} className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-xs font-bold text-slate-600">Annuler</button><button type="button" onClick={() => void applyPromoCode()} disabled={isPromoApplying || !promoCode.trim()} className="flex-1 rounded-xl bg-emerald-600 px-4 py-3 text-xs font-extrabold text-white disabled:opacity-50">{isPromoApplying ? 'Vérification…' : 'Appliquer'}</button></div>
                   </div>
-                </div>
-              )}
-
-              {paymentStatus === 'processing' && paymentMethod === 'bank_transfer' && (
-                <div className="mx-auto max-w-lg space-y-4 py-2">
-                  <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4"><div className="flex items-center gap-2 text-sm font-extrabold text-amber-900"><Clock3 className="h-5 w-5" /> Paiement en attente de vérification</div><p className="mt-2 text-xs leading-5 text-amber-900/80">{paymentMessage}</p></div>
-                  {paymentBankDetails ? (
-                    <div className="rounded-2xl border border-slate-200 p-4 sm:p-5">
-                      <h4 className="text-sm font-black">Coordonnées bancaires</h4>
-                      <dl className="mt-3 space-y-3 text-sm">
-                        <div className="flex flex-col gap-1 sm:flex-row sm:justify-between"><dt className="text-slate-500">Banque</dt><dd className="font-bold sm:text-right">{paymentBankDetails.bankName}</dd></div>
-                        <div className="flex flex-col gap-1 sm:flex-row sm:justify-between"><dt className="text-slate-500">Titulaire</dt><dd className="font-bold sm:text-right">{paymentBankDetails.accountName}</dd></div>
-                        <div className="flex flex-col gap-1 sm:flex-row sm:justify-between"><dt className="text-slate-500">Numéro de compte</dt><dd className="break-all font-mono font-bold sm:text-right">{paymentBankDetails.accountNumber}</dd></div>
-                        {paymentBankDetails.swift && <div className="flex flex-col gap-1 sm:flex-row sm:justify-between"><dt className="text-slate-500">SWIFT / BIC</dt><dd className="font-mono font-bold sm:text-right">{paymentBankDetails.swift}</dd></div>}
-                        {paymentBankDetails.branch && <div className="flex flex-col gap-1 sm:flex-row sm:justify-between"><dt className="text-slate-500">Agence</dt><dd className="font-bold sm:text-right">{paymentBankDetails.branch}</dd></div>}
-                        <div className="flex flex-col gap-1 sm:flex-row sm:justify-between"><dt className="text-slate-500">Devise</dt><dd className="font-bold sm:text-right">{paymentBankDetails.currency || 'USD'}</dd></div>
-                      </dl>
-                      {paymentBankDetails.instructions && <p className="mt-4 rounded-xl bg-slate-50 p-3 text-xs leading-5 text-slate-600">{paymentBankDetails.instructions}</p>}
-                    </div>
-                  ) : <p className="rounded-xl border border-slate-200 bg-slate-50 p-4 text-xs leading-5 text-slate-600">Les coordonnées bancaires ne sont pas encore disponibles. Votre demande n’a pas été enregistrée ; contactez l’assistance IAMTRADER.</p>}
-                  <div className="rounded-xl border border-slate-200 p-4"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Référence à communiquer</p><p className="mt-1 break-all font-mono text-base font-black">{paymentReference || paymentId}</p><p className="mt-2 text-xs leading-5 text-slate-500">Après le virement, transmettez la preuve de paiement à l’assistance en indiquant cette référence. L’abonnement sera activé uniquement après vérification.</p></div>
-                  <button type="button" onClick={() => setPaymentPlan(null)} className="w-full rounded-xl bg-slate-900 px-4 py-3 text-sm font-bold text-white">Terminer</button>
                 </div>
               )}
 
