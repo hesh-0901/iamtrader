@@ -914,7 +914,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                           </button>
                           <button type="button" aria-pressed={paymentMethod === 'card'} onClick={() => setPaymentMethod('card')} className={`flex min-w-0 items-center gap-3 rounded-2xl border-2 p-3.5 text-left transition ${paymentMethod === 'card' ? 'border-emerald-500 bg-emerald-50 shadow-sm shadow-emerald-100/70' : 'border-slate-200 bg-white hover:border-emerald-200'}`}>
                             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-emerald-700 shadow-sm"><CreditCard className="h-5 w-5" /></span>
-                            <span className="min-w-0 flex-1"><span className="block text-sm font-extrabold text-slate-950">Carte bancaire</span><span className="mt-1 block text-[11px] leading-4 text-slate-600">Visa / Mastercard</span></span>
+                            <span className="min-w-0 flex-1"><span className="block text-sm font-extrabold text-slate-950">Carte bancaire</span><span className="mt-1 block text-[11px] leading-4 text-slate-600">Paiement via SasPay</span></span>
                             <span className={`h-4 w-4 shrink-0 rounded-full border-[5px] bg-white ${paymentMethod === 'card' ? 'border-emerald-600' : 'border-slate-300'}`} />
                           </button>
                           <div aria-disabled="true" className="flex min-w-0 items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-3.5 opacity-65">
