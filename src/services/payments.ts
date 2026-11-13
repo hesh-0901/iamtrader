@@ -21,7 +21,7 @@ export interface PaymentInitResult {
   activationExpiresAt?: string;
 }
 
-export interface PaymentDetails { months: number; phone?: string; countryCode?: string; paymentMethod: 'mobile_money' | 'card' | 'bank_transfer'; paymentProvider?: string; payerName: string; promoCode?: string; }
+export interface PaymentDetails { months: number; phone?: string; countryCode?: string; paymentMethod: 'mobile_money' | 'card' | 'bank_transfer'; paymentProvider?: string; payerName: string; cardholderEmail?: string; promoCode?: string; }
 type PaymentResponse = { success?: boolean; message?: string; payment?: unknown; subscription?: unknown };
 
 export async function createPayment(plan: PaidPlan, details: PaymentDetails): Promise<PaymentInitResult> {
