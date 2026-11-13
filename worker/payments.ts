@@ -284,7 +284,7 @@ async function createSasPayCheckout(
 
   // Do not pre-block a route using the rates endpoint: its catalogue shape/route codes can differ
   // from the Softpay API and cause false negatives. Softpay itself is the authoritative validator.
-  const email = String(user.email || profile.email || '').trim();
+  const email = String(body.cardholderEmail || user.email || profile.email || '').trim();
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ success: false, message: 'Une adresse e-mail valide est nécessaire pour créer le paiement.' }, 400);
   const paymentId = randomId(), reference = 'IMAT-' + paymentId.toUpperCase(), now = new Date().toISOString();
   const amount = amounts.total, currency = 'USD', e164Phone = phone;
@@ -365,8 +365,9 @@ async function createSasPayCardCheckout(
   const amount = amounts.total;
   const currency = 'USD';
   const promotion = body._promotion as AppliedPromotion | null | undefined;
-  const customerNames = String(traderFullName(profile) || profile.displayName || payerName || email)
-    .trim().split(/\s+/).filter(Boolean);
+  const cardholderName = String(payerName || traderFullName(profile) || profile.displayName || '').trim();
+  if (!cardholderName) return json({ success: false, message: 'Le nom du titulaire de la carte est obligatoire.' }, 400);
+  const customerNames = cardholderName.split(/\s+/).filter(Boolean);
   const firstName = customerNames.shift() || 'IAMTRADER';
   const lastName = customerNames.join(' ') || 'Trader';
   const customerPhone = String(profile.phone || profile.whatsapp || profile.traderProfile?.phone || '').trim();
@@ -374,10 +375,10 @@ async function createSasPayCardCheckout(
 
   await firestoreCreate(env, 'payments', paymentId, {
     id: paymentId, uid: user.uid, email, displayName: profile.displayName || email,
-    fullName: traderFullName(profile), countryCode, network: 'card',
+    fullName: cardholderName, countryCode, network: 'card',
     plan: planKey, planName: plan.name, months: Math.max(1, Math.min(12, Math.floor(Number(body.months) || 1))),
     amount, amountUsd: amount, baseAmount: amounts.baseAmount, paymentFee: amounts.fee,
-    paymentFeeRate: PAYMENT_FEE_RATE, currency, payerName,
+    paymentFeeRate: PAYMENT_FEE_RATE, currency, payerName: cardholderName, cardholderEmail: email,
     ...(promotion ? {
       originalAmount: promotion.baseAmount, discountAmount: promotion.discountAmount,
       promotionId: promotion.promotionId, promotionKind: promotion.promotionKind,
