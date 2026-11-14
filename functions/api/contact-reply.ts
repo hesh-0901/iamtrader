@@ -49,39 +49,34 @@ export async function onRequestPost(context:{request:Request;env:Env}) {
   const safeReply=escapeHtml(reply);
   const logoUrl='https://iamtrader.trade/brand/logo-iamtrader-full.png';
   const linkStyle='color:#009d78;text-decoration:none;';
-  const html=`<style>
-    @keyframes iamtraderGlow { 0% { opacity:.55; transform:translateX(-35%); } 50% { opacity:1; } 100% { opacity:.55; transform:translateX(35%); } }
-    .iamtrader-glow { animation:iamtraderGlow 4s ease-in-out infinite alternate; }
-    @media (prefers-reduced-motion:reduce) { .iamtrader-glow { animation:none !important; } }
-  </style>
-  <div style="margin:0;padding:32px 16px;background:#f2f8f6;font-family:Arial,Helvetica,sans-serif;color:#18352f">
-    <div style="max-width:680px;margin:0 auto;overflow:hidden;background:#ffffff;border:1px solid #dceee7;border-radius:16px">
-      <div style="height:6px;background:linear-gradient(90deg,#00b889 0%,#55dfb5 48%,#f4fffa 100%);font-size:0;line-height:0"><span class="iamtrader-glow" style="display:block;width:34%;height:6px;background:rgba(255,255,255,.75);filter:blur(5px)">&nbsp;</span></div>
-      <div style="padding:30px 34px 25px;background:linear-gradient(115deg,#e4fff4 0%,#ffffff 72%,#f5fffa 100%)">
-        <img src="${logoUrl}" alt="IAMTRADER" width="174" style="display:block;width:174px;max-width:100%;height:auto;border:0;outline:none;text-decoration:none">
-        <div style="margin-top:22px;color:#009d78;font-size:10px;font-weight:700;letter-spacing:1.8px;text-transform:uppercase">Journal de trading · Outils de performance · Communauté</div>
-      </div>
-      <div style="padding:30px 34px 28px;background:#ffffff">
-        <div style="font-size:15px;line-height:1.85;color:#263f38;white-space:pre-wrap;overflow-wrap:anywhere">${safeReply}</div>
-        <div style="margin-top:30px;padding-top:21px;border-top:1px solid #e3eee9">
-          <div style="font-size:14px;font-weight:700;color:#087f63">Iamtrader team</div>
-          <div style="margin-top:7px;font-size:13px;font-weight:600;line-height:1.6;color:#245b4b">Ce que tu ne mesures pas, tu ne le maîtrises pas.</div>
-          <div style="margin-top:13px;font-size:12px;line-height:1.8;color:#475569">
-            <a href="mailto:hello@iamtrader.trade" style="${linkStyle}">hello@iamtrader.trade</a>
-            <span style="color:#a0b7ae"> · </span>
-            <a href="https://iamtrader.trade" style="${linkStyle}">iamtrader.trade</a>
-          </div>
+  const html=`<div style="margin:0;padding:28px 14px;background:#f1f7f5;font-family:Arial,Helvetica,sans-serif;color:#18352f">
+  <div style="max-width:640px;margin:0 auto;overflow:hidden;background:#ffffff;border:1px solid #dcebe5;border-radius:14px">
+    <div style="height:5px;background:linear-gradient(90deg,#00b889 0%,#42d6aa 55%,#dffaf0 100%);font-size:0;line-height:0">&nbsp;</div>
+    <div style="padding:30px 34px 25px;background:linear-gradient(120deg,#e6fff5 0%,#ffffff 76%,#f4fcf8 100%)">
+      <img src="https://iamtrader.trade/brand/logo-iamtrader-full.png" alt="IAMTRADER" width="196" style="display:block;width:196px;max-width:100%;height:auto;border:0;outline:none;text-decoration:none;filter:contrast(1.18) saturate(1.12)">
+      <div style="margin-top:19px;color:#008d6c;font-size:11px;font-weight:700;letter-spacing:1.35px;line-height:1.7;text-transform:uppercase">Journal de trading&nbsp; · &nbsp;Outils de performance&nbsp; · &nbsp;Communauté</div>
+    </div>
+    <div style="padding:30px 34px 30px;background:#ffffff">
+      <div style="font-size:15px;line-height:1.85;color:#263f38;white-space:pre-wrap;overflow-wrap:anywhere">${safeReply}</div>
+      <div style="margin-top:30px;padding-top:21px;border-top:1px solid #e3eee9">
+        <div style="font-size:14px;font-weight:700;color:#087f63">Iamtrader team</div>
+        <div style="margin-top:8px;font-size:15px;font-weight:700;line-height:1.5;color:#174d3e">Le trader que vous devez être !</div>
+        <div style="margin-top:13px;font-size:12px;line-height:1.9;color:#647d73">
+          <a href="mailto:hello@iamtrader.trade" style="color:#009d78;text-decoration:none">hello@iamtrader.trade</a>
+          <span style="color:#a0b7ae">&nbsp; · &nbsp;</span>
+          <a href="https://iamtrader.trade" style="color:#009d78;text-decoration:none">iamtrader.trade</a>
         </div>
       </div>
-      <div style="padding:14px 22px;background:#f4fbf8;border-top:1px solid #e3eee9;text-align:center;color:#829b91;font-size:10px;line-height:1.6">Trading Journal &amp; Performance Analytics</div>
     </div>
-  </div>`;
+    <div style="padding:15px 22px;background:#f4fbf8;border-top:1px solid #e3eee9;text-align:center;color:#789187;font-size:10px;line-height:1.7">Journal de trading · Outils de performance · Communauté</div>
+  </div>
+</div>`;
   const text=`${reply}
 
 ---
 Iamtrader team
 Journal de trading · Outils de performance · Communauté
-Ce que tu ne mesures pas, tu ne le maîtrises pas.
+Le trader que vous devez être !
 hello@iamtrader.trade
 iamtrader.trade`;
   let resendResponse: Response;
