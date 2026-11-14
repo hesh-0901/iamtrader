@@ -10,7 +10,7 @@ function escapeHtml(value: string): string {
 }
 
 function sanitizeRichHtml(input: string): string {
-  const allowedTags = new Set(['p','br','div','span','strong','b','em','i','u','ul','ol','li','blockquote','a','h1','h2','h3']);
+  const allowedTags = new Set(['p','br','div','span','strong','b','em','i','u','ul','ol','li','blockquote','a','h1','h2','h3','font']);
   return input
     .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
     .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
@@ -23,7 +23,11 @@ function sanitizeRichHtml(input: string): string {
       const style = attrs.match(/style=["']([^"']*)["']/i)?.[1] || '';
       const safeStyle = style.split(';').map(rule => rule.trim()).filter(rule => /^(font-family|font-size|color|text-align|font-weight|font-style|text-decoration):\s*[#(),.% a-zA-Z0-9_-]+$/.test(rule)).join(';');
       const href = tag === 'a' ? attrs.match(/href=["'](https?:\/\/[^"']+|mailto:[^"']+)["']/i)?.[1] : '';
-      return `<${tag}${safeStyle ? ` style="${safeStyle}"` : ''}${href ? ` href="${href}" target="_blank" rel="noopener noreferrer"` : ''}>`;
+      const fontSize = tag === 'font' ? ({'1':'10px','2':'13px','3':'16px','4':'18px','5':'24px','6':'32px','7':'40px'} as Record<string,string>)[attrs.match(/size=["']([1-7])["']/i)?.[1] || ''] : '';
+      const fontColor = tag === 'font' ? attrs.match(/color=["'](#[0-9a-f]{3,8}|[a-z]{3,20})["']/i)?.[1] : '';
+      const fontFace = tag === 'font' ? attrs.match(/face=["']([a-zA-Z ,'-]{1,60})["']/i)?.[1] : '';
+      const extraStyle = [fontSize ? `font-size:${fontSize}` : '', fontColor ? `color:${fontColor}` : '', fontFace ? `font-family:${fontFace}` : ''].filter(Boolean).join(';');
+      return `<${tag === 'font' ? 'span' : tag}${safeStyle || extraStyle ? ` style="${[safeStyle,extraStyle].filter(Boolean).join(';')}"` : ''}${href ? ` href="${href}" target="_blank" rel="noopener noreferrer"` : ''}>`;
     });
 }
 
