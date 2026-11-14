@@ -956,7 +956,7 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
                               <span className="font-semibold text-slate-700">{selectedMessage.name || selectedMessage.email}</span>
                               <span className="text-slate-300">&lt;{selectedMessage.email}&gt;</span>
                             </div>
-                            <div className="mt-1 text-xs text-slate-500">À <span className="font-medium text-slate-700">hello@iamtrader.trade</span></div>
+                            <div className="mt-1 text-xs text-slate-500">À <span className="font-medium text-slate-700">{(selectedMessage as any).to || "hello@iamtrader.trade"}</span></div>
                             {Boolean((selectedMessage as any).cc) && <div className="mt-1 text-xs text-slate-500">Cc <span className="text-slate-700">{Array.isArray((selectedMessage as any).cc) ? (selectedMessage as any).cc.join(', ') : (selectedMessage as any).cc}</span></div>}
                             <div className="mt-1 text-[11px] text-slate-400">{selectedMessage.createdAt ? new Date(selectedMessage.createdAt).toLocaleString('fr-FR', {dateStyle:'long',timeStyle:'short'}) : ''}</div>
                           </div>
