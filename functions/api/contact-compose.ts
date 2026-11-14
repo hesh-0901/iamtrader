@@ -41,11 +41,14 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
   const message = String(body.message || '').trim();
 
   if (!action || !id) return json({ error: 'Action ou identifiant invalide.' }, 400);
+  const existing = await firestoreGet(context.env as any, `contactMessages/${encodeURIComponent(id)}`);
+  if (existing && (existing.source !== 'admin-compose' || (existing.status !== 'draft' && action === 'send'))) {
+    return json({ error: 'Ce message ne peut pas être modifié depuis la composition.' }, 403);
+  }
   if (action === 'draft') {
     if (to && !validEmail(to)) return json({ error: 'Adresse e-mail invalide.' }, 400);
     if (message.length > 30000) return json({ error: 'Le brouillon est trop long.' }, 400);
     const now = new Date().toISOString();
-    const existing = await firestoreGet(context.env as any, `contactMessages/${encodeURIComponent(id)}`);
     const record = {
       id, name: to, email: to, subject, message, status: 'draft', folder: 'drafts',
       source: 'admin-compose', updatedAt: now, createdAt: String(existing?.createdAt || now),
