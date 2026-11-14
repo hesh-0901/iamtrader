@@ -233,9 +233,14 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
   }
   useEffect(() => {
     if (adminTab !== 'support') return;
-    const previousOverflow = document.body.style.overflow;
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousRootOverflow = document.documentElement.style.overflow;
     document.body.style.overflow = 'hidden';
-    return () => { document.body.style.overflow = previousOverflow; };
+    document.documentElement.style.overflow = 'hidden';
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+      document.documentElement.style.overflow = previousRootOverflow;
+    };
   }, [adminTab]);
 
   useEffect(() => {
@@ -814,7 +819,7 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
 
           {adminTab === 'support' && (
             <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_8px_30px_rgba(11,31,53,.05)]">
-              <div className="flex h-[calc(100dvh-250px)] min-h-0 flex-col lg:flex-row">
+              <div className="flex h-[calc(100svh-250px)] min-h-0 flex-col lg:flex-row">
                 <aside className={'w-full shrink-0 flex-col border-b border-slate-200 bg-white lg:flex lg:w-[360px] lg:border-b-0 lg:border-r ' + (selectedMessage ? 'hidden' : 'flex')}>
                   <div className="border-b border-slate-200 px-4 py-3">
                     <div className="flex items-center justify-between gap-2">
