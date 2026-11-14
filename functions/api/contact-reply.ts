@@ -35,7 +35,9 @@ export async function onRequestPost(context:{request:Request;env:Env}) {
     return json({error:'Accès administrateur requis.'},403);
   }
   const resendApiKey = String(context.env.RESEND_API_KEY || '').trim();
-  const resendFromEmail = String(context.env.RESEND_FROM_EMAIL || '').trim();
+  const configuredFrom = String(context.env.RESEND_FROM_EMAIL || '').trim();
+  const resendFromEmail = (configuredFrom.match(/<([^<>]+)>/)?.[1] || configuredFrom).trim();
+  const resendFromHeader = `IAMTRADER Team <${resendFromEmail}>`;
   const resendReplyTo = String(context.env.RESEND_REPLY_TO || '').trim();
   if(!resendApiKey || !resendFromEmail) {
     return json({
@@ -45,35 +47,38 @@ export async function onRequestPost(context:{request:Request;env:Env}) {
   }
 
   const safeReply=escapeHtml(reply);
-  const logoUrl='https://iamtrader.trade/brand/logo-iamtrader-full.png';
-  const linkStyle='color:#2563eb;text-decoration:underline;text-decoration-color:#93c5fd;text-underline-offset:2px;';
-  const html=`<div style="margin:0;padding:32px 20px;background:#f5f8fb;font-family:Arial,Helvetica,sans-serif;color:#172033">
-    <div style="max-width:680px;margin:0 auto;background:#ffffff;border:1px solid #e6ebf0">
-      <div style="padding:30px 34px 28px">
-        <div style="margin:0 0 28px">
-          <img src="${logoUrl}" alt="IAMTRADER" width="170" style="display:block;width:170px;max-width:100%;height:auto;border:0">
-        </div>
-        <div style="font-size:15px;line-height:1.75;color:#172033;white-space:pre-wrap">${safeReply}</div>
-        <div style="margin-top:34px;padding-top:20px;border-top:1px solid #e5e7eb">
-          <div style="font-size:13px;font-weight:700;color:#0b1f35">Équipe Support IAMTRADER</div>
-          <div style="margin-top:3px;font-size:11px;color:#64748b">Trading Performance Management</div>
-          <div style="margin-top:13px;font-size:11px;line-height:1.8;color:#475569">
-            <a href="mailto:hello@iamtrader.trade" style="${linkStyle}">hello@iamtrader.trade</a><br>
+  const logoUrl='https://iamtrader.trade/brand/logo-iamtrader-full-white.png';
+  const linkStyle='color:#009d78;text-decoration:none;';
+  const html=`<div style="margin:0;padding:36px 16px;background:#f1f6f8;font-family:Arial,Helvetica,sans-serif;color:#14263a">
+    <div style="max-width:680px;margin:0 auto;overflow:hidden;background:#ffffff;border:1px solid #dce7e9;border-radius:16px">
+      <div style="height:5px;background:#00c99a;font-size:0;line-height:0">&nbsp;</div>
+      <div style="padding:28px 34px;background:#10243b">
+        <img src="${logoUrl}" alt="IAMTRADER" width="166" style="display:block;width:166px;max-width:100%;height:auto;border:0">
+        <div style="margin-top:22px;color:#68e6c4;font-size:10px;font-weight:700;letter-spacing:2px;text-transform:uppercase">Trading Performance Management</div>
+        <div style="margin-top:7px;color:#ffffff;font-size:20px;font-weight:700;line-height:1.35">Un message de l'équipe IAMTRADER</div>
+      </div>
+      <div style="padding:34px 34px 30px;background:#ffffff">
+        <div style="font-size:15px;line-height:1.85;color:#26384b;white-space:pre-wrap;overflow-wrap:anywhere">${safeReply}</div>
+        <div style="margin-top:32px;padding-top:22px;border-top:1px solid #e6eef0">
+          <div style="font-size:14px;font-weight:700;color:#10243b">IAMTRADER Team</div>
+          <div style="margin-top:5px;font-size:12px;line-height:1.7;color:#718096">Trade. Measure. Improve.</div>
+          <div style="margin-top:13px;font-size:12px;line-height:1.8;color:#475569">
+            <a href="mailto:hello@iamtrader.trade" style="${linkStyle}">hello@iamtrader.trade</a>
+            <span style="color:#a0aec0"> · </span>
             <a href="https://iamtrader.trade" style="${linkStyle}">iamtrader.trade</a>
           </div>
-          <div style="margin-top:14px;font-size:10px;font-weight:700;letter-spacing:.08em;color:#94a3b8">TRADE. MEASURE. IMPROVE.</div>
         </div>
       </div>
+      <div style="padding:15px 24px;background:#f6faf9;border-top:1px solid #e6eef0;text-align:center;color:#91a0ad;font-size:10px;line-height:1.6">© IAMTRADER · Trading Journal &amp; Performance Analytics</div>
     </div>
   </div>`;
   const text=`${reply}
 
 ---
-Équipe Support IAMTRADER
-Trading Performance Management
+IAMTRADER Team
+Trade. Measure. Improve.
 hello@iamtrader.trade
-iamtrader.trade
-Trade. Measure. Improve.`;
+iamtrader.trade`;
   let resendResponse: Response;
   let resendData: unknown = {};
   const threadReplyTo = resendReplyTo || resendFromEmail;
@@ -83,7 +88,7 @@ Trade. Measure. Improve.`;
       method:'POST',
       headers:{Authorization:'Bearer '+resendApiKey,'Content-Type':'application/json'},
       body:JSON.stringify({
-        from:resendFromEmail,
+        from:resendFromHeader,
         to:[to],
         subject:/^re:/i.test(subject)?subject:'Re: '+subject,
         html,
