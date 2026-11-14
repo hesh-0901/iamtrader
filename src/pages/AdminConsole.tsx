@@ -413,8 +413,9 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
     if (composeBusy) return;
     setComposeBusy(true);
     try {
-      if (composeEditorRef.current) { setComposeHtml(composeEditorRef.current.innerHTML); setComposeBody(composeEditorRef.current.innerText.trim()); }
-      const result = await adminComposeEmail({ id: composeId || undefined, to: composeTo.trim(), cc: composeCc.trim(), subject: composeSubject.trim(), message: composeBody.trim(), messageHtml: composeEditorRef.current?.innerHTML || composeHtml, attachments: await Promise.all(composeFiles.map(async file => ({ filename: file.name, content: await new Promise<string>((resolve,reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result || '').split(',')[1] || ''); reader.onerror = () => reject(new Error('Lecture de pièce jointe impossible.')); reader.readAsDataURL(file); }) }))) });
+      const currentHtml = composeEditorRef.current?.innerHTML || composeHtml;
+      const currentBody = composeEditorRef.current?.innerText.trim() || composeBody.trim();
+      const result = await adminComposeEmail({ id: composeId || undefined, to: composeTo.trim(), cc: composeCc.trim(), subject: composeSubject.trim(), message: currentBody, messageHtml: currentHtml, attachments: await Promise.all(composeFiles.map(async file => ({ filename: file.name, content: await new Promise<string>((resolve,reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result || '').split(',')[1] || ''); reader.onerror = () => reject(new Error('Lecture de pièce jointe impossible.')); reader.readAsDataURL(file); }) }))) });
       setComposeOpen(false); setComposeId(''); setComposeTo(''); setComposeCc(''); setComposeCcOpen(false); setComposeSubject(''); setComposeBody(''); setComposeHtml(''); setComposeFiles([]); setComposeFormattingOpen(false); setComposeEmojiOpen(false);
       setMailboxFolder('sent');
       if (result.historySaved === false) showToast(result.warning || 'E-mail envoyé, mais historique non enregistré.', 'error');
@@ -1062,7 +1063,7 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
                                 </button>
                                 {emailExpanded && <div className="px-4 py-4 sm:px-5">
                                   {!outbound && <div className="mb-3 text-sm font-bold text-[#173b31]">{decodeMimeSubject(selectedMessage.subject)||'(Sans objet)'}</div>}
-                                  <div className="email-rich-content break-words text-[13px] leading-7 text-slate-700" dangerouslySetInnerHTML={{__html: (item as any).bodyHtml || bodyParts.message || "(Message vide)"}} />
+                                  <div className="email-rich-content break-words text-[13px] leading-7 text-slate-700" dangerouslySetInnerHTML={{__html: (item as any).bodyHtml || (outbound && (selectedMessage as any).messageHtml) || bodyParts.message || "(Message vide)"}} />
                                   {bodyParts.signature&&<div className="mt-4 border-t border-slate-100 pt-3 text-xs leading-6 text-slate-500"><div className="mb-1 text-[9px] font-bold uppercase tracking-wider text-slate-400">Signature</div><div className="whitespace-pre-wrap break-words">{bodyParts.signature}</div></div>}
                                 </div>}
                               </article>;
