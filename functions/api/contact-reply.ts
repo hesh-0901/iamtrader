@@ -1,5 +1,5 @@
 import { verifyFirebaseIdToken, firestoreGet, firestorePatch, firestoreSet } from '../../worker/firebaseAdmin';
-import { buildIamtraderEmail } from '../_shared/iamtraderEmail';
+import { buildIamtraderEmail, sanitizeRichHtml } from '../_shared/iamtraderEmail';
 interface Env {
   RESEND_API_KEY?: string;
   RESEND_FROM_EMAIL?: string;
@@ -11,9 +11,10 @@ function json(data: unknown, status=200) {
 export async function onRequestPost(context:{request:Request;env:Env}) {
   const authHeader=context.request.headers.get('Authorization')||'';
   if(!authHeader.startsWith('Bearer ')) return json({error:'Authentification requise.'},401);
-  let body:{to?:string;subject?:string;reply?:string;originalMessage?:string;name?:string;inReplyTo?:string;references?:string;conversationId?:string};
+  let body:{to?:string;subject?:string;reply?:string;replyHtml?:string;originalMessage?:string;name?:string;inReplyTo?:string;references?:string;conversationId?:string};
   try { body=await context.request.json(); } catch { return json({error:'Requête invalide.'},400); }
   const to=String(body.to||'').trim(), subject=String(body.subject||'').trim(), reply=String(body.reply||'').trim();
+  const replyHtml=sanitizeRichHtml(String(body.replyHtml||''));
   const inReplyTo=String(body.inReplyTo||'').trim();
   const references=String(body.references||'').trim();
   const conversationId=String(body.conversationId||'').trim();
@@ -44,7 +45,7 @@ export async function onRequestPost(context:{request:Request;env:Env}) {
     },500);
   }
 
-  const html = buildIamtraderEmail(reply, 'support-reply');
+  const html = buildIamtraderEmail(reply, 'support-reply', replyHtml);
   const text=`${reply}
 
 ---
@@ -115,6 +116,7 @@ iamtrader.trade`;
       id: 'outbound-' + crypto.randomUUID(),
       direction: 'outbound',
       body: reply,
+      bodyHtml: replyHtml,
       at: sentAt,
       from: resendFromEmail,
       to,
@@ -139,6 +141,7 @@ iamtrader.trade`;
       email: to,
       subject: /^re:/i.test(subject) ? subject : 'Re: ' + subject,
       message: reply,
+      messageHtml: replyHtml,
       status: 'sent',
       folder: 'sent',
       source: 'admin-reply',
