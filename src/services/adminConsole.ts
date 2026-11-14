@@ -72,7 +72,7 @@ export async function adminComposeEmail(input: { id?: string; to: string; cc?: s
   return payload;
 }
 
-export async function adminSaveEmailDraft(input: { id?: string; to: string; subject: string; message: string }) {
+export async function adminSaveEmailDraft(input: { id?: string; to: string; cc?: string; subject: string; message: string; messageHtml?: string }) {
   const user = auth.currentUser;
   if (!user) throw new Error('Session administrateur introuvable.');
   const token = await user.getIdToken();
