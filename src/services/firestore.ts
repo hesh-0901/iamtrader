@@ -500,6 +500,7 @@ export interface ContactConversationMessage {
   at: string;
   from?: string;
   to?: string;
+  cc?: string;
   messageId?: string;
   inReplyTo?: string;
   references?: string;
@@ -509,6 +510,8 @@ export interface ContactMessage {
   id: string;
   name: string;
   email: string;
+  to?: string;
+  cc?: string;
   subject: string;
   message: string;
   status: ContactMessageStatus;
