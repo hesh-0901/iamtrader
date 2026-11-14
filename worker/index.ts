@@ -3,6 +3,7 @@ import { onRequest as handleChloeChat } from '../functions/api/chloe-chat';
 import { onRequest as handleInstrumentSuggest } from '../functions/api/instrument-suggest';
 import { onRequest as handleMarketData } from '../functions/api/market-data';
 import { onRequestPost as handleContactReply } from '../functions/api/contact-reply';
+import { onRequestPost as handleContactCompose } from '../functions/api/contact-compose';
 import { handlePaymentRequest, handlePaymentCallback, handleCinetPayNotification, handleSasPayWebhook, handleSasPayVerifyRequest, handleSasPayStatusRequest } from './payments';
 import { resolvePromotion } from './promotions';
 import type { PaymentEnv } from './firebaseAdmin';
@@ -122,6 +123,10 @@ export default {
 
     if (url.pathname === '/api/contact-reply') {
       return handleContactReply({ request, env });
+    }
+
+    if (url.pathname === '/api/contact-compose') {
+      return handleContactCompose({ request, env });
     }
 
     if (url.pathname === '/api/subscription/status') {
