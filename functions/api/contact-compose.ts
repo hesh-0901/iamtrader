@@ -78,8 +78,8 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
             <img src="https://iamtrader.trade/brand/logo-iamtrader-full.png" alt="IAMTRADER" width="112" style="display:block;width:112px;max-width:112px;height:auto;border:0;outline:none;text-decoration:none">
           </td>
           <td style="vertical-align:middle">
-            <div style="font-size:20px;font-weight:800;letter-spacing:1.25px;line-height:1.2;color:#123f32">IAMTRADER JOURNAL</div>
-            <div style="margin-top:6px;font-size:10px;font-weight:700;letter-spacing:1.1px;line-height:1.5;color:#07966f;text-transform:uppercase">Le trader que vous devez être !</div>
+            <div style="text-align:left;font-size:14px;font-weight:700;letter-spacing:.35px;line-height:1.3;color:#123f32">iamtrader</div>
+            <div style="margin-top:4px;text-align:left;font-size:10px;font-weight:600;letter-spacing:.2px;line-height:1.5;color:#07966f">le trader que vous devez être !</div>
           </td>
         </tr>
       </table>
@@ -95,7 +95,7 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
         </div>
       </div>
     </div>
-    <div style="padding:15px 22px;background:#f4fbf8;border-top:1px solid #e3eee9;text-align:center;color:#789187;font-size:10px;line-height:1.7">IAMTRADER JOURNAL</div>
+    <div style="padding:15px 22px;background:#f4fbf8;border-top:1px solid #e3eee9;text-align:center;color:#789187;font-size:10px;line-height:1.7">iamtrader</div>
   </div>
 </div>`;
   let sent: Response;
