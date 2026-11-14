@@ -68,18 +68,30 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
   const replyTo = String(context.env.RESEND_REPLY_TO || senderAddress).trim();
   if (!apiKey || !senderAddress) return json({ error: 'Configuration e-mail du serveur incomplète.' }, 500);
 
-  const html = `<div style="margin:0;padding:28px 14px;background:#f1f7f5;font-family:Arial,Helvetica,sans-serif;color:#18352f">
+  const html= `<div style="margin:0;padding:28px 14px;background:#f1f7f5;font-family:Arial,Helvetica,sans-serif;color:#18352f">
   <div style="max-width:640px;margin:0 auto;overflow:hidden;background:#ffffff;border:1px solid #dcebe5;border-radius:14px">
-    <div style="height:5px;background:linear-gradient(90deg,#00b889 0%,#42d6aa 55%,#dffaf0 100%);font-size:0;line-height:0">&nbsp;</div>
-    <div style="padding:30px 34px 25px;background:linear-gradient(120deg,#e6fff5 0%,#ffffff 76%,#f4fcf8 100%)">
-      <img src="https://iamtrader.trade/brand/logo-iamtrader-full.png" alt="IAMTRADER" width="196" style="display:block;width:196px;max-width:100%;height:auto;border:0;outline:none;text-decoration:none;filter:contrast(1.18) saturate(1.12)">
-      <div style="margin-top:19px;color:#008d6c;font-size:11px;font-weight:700;letter-spacing:1.35px;line-height:1.7;text-transform:uppercase">Journal de trading&nbsp; · &nbsp;Outils de performance&nbsp; · &nbsp;Communauté</div>
+    <div style="height:5px;background:#00b889;font-size:0;line-height:0">&nbsp;</div>
+    <div style="padding:28px 34px 25px;background:#ffffff;border-bottom:1px solid #e4f0eb">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse">
+        <tr>
+          <td style="vertical-align:middle;width:1%;padding-right:15px">
+            <img src="https://iamtrader.trade/brand/logo-iamtrader-full.png" alt="" width="112" style="display:block;width:112px;max-width:112px;height:auto;border:0;outline:none;text-decoration:none">
+          </td>
+          <td style="vertical-align:middle">
+            <div style="font-size:21px;font-weight:800;letter-spacing:1.5px;line-height:1.2;color:#123f32">IAMTRADER</div>
+            <div style="margin-top:5px;font-size:11px;font-weight:700;letter-spacing:1.15px;line-height:1.4;color:#07966f;text-transform:uppercase">TRADING JOURNAL &amp; PERFORMANCE</div>
+          </td>
+        </tr>
+      </table>
+      <div style="margin-top:25px;padding:17px 19px;background:#e9fbf3;border-left:4px solid #00b889;border-radius:5px">
+        <div style="font-size:20px;font-weight:700;line-height:1.35;letter-spacing:-.25px;color:#174d3e">Le trader que vous devez être !</div>
+      </div>
+      <div style="margin-top:17px;font-size:10px;font-weight:700;letter-spacing:1.05px;line-height:1.8;color:#52786a;text-transform:uppercase">Journal de trading <span style="color:#00a77b">&nbsp;·&nbsp;</span> Outils de performance <span style="color:#00a77b">&nbsp;·&nbsp;</span> Communauté</div>
     </div>
     <div style="padding:30px 34px 30px;background:#ffffff">
       <div style="font-size:15px;line-height:1.85;color:#263f38;white-space:pre-wrap;overflow-wrap:anywhere">${escapeHtml(message)}</div>
       <div style="margin-top:30px;padding-top:21px;border-top:1px solid #e3eee9">
         <div style="font-size:14px;font-weight:700;color:#087f63">Iamtrader team</div>
-        <div style="margin-top:8px;font-size:15px;font-weight:700;line-height:1.5;color:#174d3e">Le trader que vous devez être !</div>
         <div style="margin-top:13px;font-size:12px;line-height:1.9;color:#647d73">
           <a href="mailto:hello@iamtrader.trade" style="color:#009d78;text-decoration:none">hello@iamtrader.trade</a>
           <span style="color:#a0b7ae">&nbsp; · &nbsp;</span>
@@ -87,7 +99,7 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
         </div>
       </div>
     </div>
-    <div style="padding:15px 22px;background:#f4fbf8;border-top:1px solid #e3eee9;text-align:center;color:#789187;font-size:10px;line-height:1.7">Journal de trading · Outils de performance · Communauté</div>
+    <div style="padding:15px 22px;background:#f4fbf8;border-top:1px solid #e3eee9;text-align:center;color:#789187;font-size:10px;line-height:1.7">IAMTRADER&nbsp; · &nbsp;Le trader que vous devez être !</div>
   </div>
 </div>`;
   let sent: Response;
