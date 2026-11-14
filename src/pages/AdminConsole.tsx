@@ -256,7 +256,7 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
   }, [adminTab]);
 
   useEffect(() => {
-    if (!selectedMessage) return;
+    if (!selectedMessage || (selectedMessage as any).__groupedSent) return;
     const liveMessage = contactMessages.find(message => message.id === selectedMessage.id);
     if (liveMessage) setSelectedMessage(liveMessage);
   }, [contactMessages, selectedMessage?.id]);
@@ -469,6 +469,7 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
 
       setSelectedMessage(prev => prev ? { ...prev, status:'resolved', handledBy:currentUser.uid, handledAt:now, lastReply:replyText.trim(), repliedAt:now, repliedBy:currentUser.uid, conversation } : prev);
       setReplyText('');
+      setShowReplyComposer(false);
       if (payload.historySaved === false) showToast(payload.warning || 'E-mail envoyé, mais historique non enregistré.', 'error');
       else showToast('Message envoyé et enregistré.', 'success');
     } catch (e:any) {
@@ -891,13 +892,13 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
                           const rowKey = rowParent || [String(row.email || '').toLowerCase(), decodeMimeSubject(row.subject).trim().toLowerCase()].join('|');
                           return rowKey === groupKey;
                         });
-                        if (existingIndex < 0) return [...rows, m];
+                        if (existingIndex < 0) return [...rows, { ...m, __groupedSent: mailboxFolder === 'sent' } as any];
                         const next = [...rows];
                         const previous = next[existingIndex];
                         const mergedConversation = [...(Array.isArray(previous.conversation) ? previous.conversation : []), ...(Array.isArray(m.conversation) ? m.conversation : [])]
                           .filter((item, index, all) => all.findIndex(candidate => candidate.id === item.id || (candidate.at === item.at && candidate.body === item.body)) === index)
                           .sort((a, b) => new Date(a.at || 0).getTime() - new Date(b.at || 0).getTime());
-                        next[existingIndex] = { ...previous, ...m, conversation: mergedConversation };
+                        next[existingIndex] = { ...previous, ...m, __groupedSent: true, conversation: mergedConversation } as any;
                         return next;
                       }, [] as typeof contactMessages)
                       .map(m => {
@@ -1007,7 +1008,7 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
                                   <div className="flex items-center gap-2 text-[11px] text-slate-400">
                                     <span>{at&&!Number.isNaN(at.getTime())?at.toLocaleString('fr-FR',{dateStyle:'medium',timeStyle:'short'}):'—'}</span>
                                     <button type="button" onClick={()=>setShowReplyComposer(true)} className="rounded-lg p-1.5 text-slate-400 hover:bg-[#effaf5] hover:text-[#087f63]" title="Répondre à cet e-mail"><Send className="h-3.5 w-3.5"/></button>
-                                    <button type="button" className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100" title="Plus d’actions"><MoreVertical className="h-3.5 w-3.5"/></button>
+                                    
                                   </div>
                                 </div>
                                 <div className="px-4 py-4 sm:px-5">
