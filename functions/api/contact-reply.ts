@@ -37,7 +37,7 @@ export async function onRequestPost(context:{request:Request;env:Env}) {
   const resendApiKey = String(context.env.RESEND_API_KEY || '').trim();
   const configuredFrom = String(context.env.RESEND_FROM_EMAIL || '').trim();
   const resendFromEmail = (configuredFrom.match(/<([^<>]+)>/)?.[1] || configuredFrom).trim();
-  const resendFromHeader = `IAMTRADER Team <${resendFromEmail}>`;
+  const resendFromHeader = `Iamtrader team <${resendFromEmail}>`;
   const resendReplyTo = String(context.env.RESEND_REPLY_TO || '').trim();
   if(!resendApiKey || !resendFromEmail) {
     return json({
@@ -64,7 +64,7 @@ export async function onRequestPost(context:{request:Request;env:Env}) {
       <div style="padding:30px 34px 28px;background:#ffffff">
         <div style="font-size:15px;line-height:1.85;color:#263f38;white-space:pre-wrap;overflow-wrap:anywhere">${safeReply}</div>
         <div style="margin-top:30px;padding-top:21px;border-top:1px solid #e3eee9">
-          <div style="font-size:14px;font-weight:700;color:#087f63">IAMTRADER Team</div>
+          <div style="font-size:14px;font-weight:700;color:#087f63">Iamtrader team</div>
           <div style="margin-top:7px;font-size:13px;font-weight:600;line-height:1.6;color:#245b4b">Ce que tu ne mesures pas, tu ne le maîtrises pas.</div>
           <div style="margin-top:13px;font-size:12px;line-height:1.8;color:#475569">
             <a href="mailto:hello@iamtrader.trade" style="${linkStyle}">hello@iamtrader.trade</a>
@@ -79,7 +79,7 @@ export async function onRequestPost(context:{request:Request;env:Env}) {
   const text=`${reply}
 
 ---
-IAMTRADER Team
+Iamtrader team
 Journal de trading · Outils de performance · Communauté
 Ce que tu ne mesures pas, tu ne le maîtrises pas.
 hello@iamtrader.trade
