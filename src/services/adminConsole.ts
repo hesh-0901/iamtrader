@@ -58,7 +58,7 @@ export function adminGetAiModels<T = unknown>(): Promise<T> {
 }
 
 
-export async function adminComposeEmail(input: { id?: string; to: string; subject: string; message: string; messageHtml?: string; attachments?: Array<{ filename: string; content: string }> }) {
+export async function adminComposeEmail(input: { id?: string; to: string; cc?: string; subject: string; message: string; messageHtml?: string; attachments?: Array<{ filename: string; content: string }> }) {
   const user = auth.currentUser;
   if (!user) throw new Error('Session administrateur introuvable.');
   const token = await user.getIdToken();
