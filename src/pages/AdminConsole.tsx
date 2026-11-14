@@ -396,6 +396,28 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
     }).length
   };
 
+  function rememberComposeSelection() {
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount && composeEditorRef.current?.contains(selection.anchorNode)) {
+      composeSelectionRef.current = selection.getRangeAt(0).cloneRange();
+    }
+  }
+
+  function applyComposeCommand(command: string, value?: string) {
+    composeEditorRef.current?.focus();
+    const selection = window.getSelection();
+    if (selection && composeSelectionRef.current) {
+      selection.removeAllRanges();
+      selection.addRange(composeSelectionRef.current);
+    }
+    document.execCommand(command, false, value);
+    rememberComposeSelection();
+    if (composeEditorRef.current) {
+      setComposeBody(composeEditorRef.current.innerText);
+      setComposeHtml(composeEditorRef.current.innerHTML);
+    }
+  }
+
   async function saveComposeDraft() {
     if (composeBusy) return;
     setComposeBusy(true);
@@ -847,18 +869,18 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
                   <input required maxLength={200} value={composeSubject} onChange={event=>setComposeSubject(event.target.value)} placeholder="Objet" className="h-10 w-full border-b border-slate-200 bg-white text-[13px] text-slate-800 outline-none placeholder:text-slate-500 focus:border-[#0b57d0]"/>
                 </div>
                 <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
-                  <div ref={composeEditorRef} contentEditable suppressContentEditableWarning onInput={event=>{setComposeBody(event.currentTarget.innerText);setComposeHtml(event.currentTarget.innerHTML);}} onKeyUp={event=>{setComposeBody(event.currentTarget.innerText);setComposeHtml(event.currentTarget.innerHTML);}} onPaste={event=>{event.preventDefault();const html=event.clipboardData.getData("text/html");const plain=event.clipboardData.getData("text/plain");if(html){document.execCommand("insertHTML",false,html);}else{document.execCommand("insertText",false,plain);}setTimeout(()=>{if(composeEditorRef.current){setComposeBody(composeEditorRef.current.innerText);setComposeHtml(composeEditorRef.current.innerHTML);}},0);}} onBlur={event=>{setComposeBody(event.currentTarget.innerText);setComposeHtml(event.currentTarget.innerHTML);}} className="min-h-full w-full whitespace-pre-wrap text-[13px] leading-6 text-slate-800 outline-none" style={{fontFamily:composeFont}}/>
+                  <div ref={composeEditorRef} contentEditable suppressContentEditableWarning onInput={event=>{setComposeBody(event.currentTarget.innerText);setComposeHtml(event.currentTarget.innerHTML);}} onKeyUp={event=>{setComposeBody(event.currentTarget.innerText);setComposeHtml(event.currentTarget.innerHTML);rememberComposeSelection();}} onMouseUp={rememberComposeSelection} onPaste={event=>{event.preventDefault();const html=event.clipboardData.getData("text/html");const plain=event.clipboardData.getData("text/plain");if(html){document.execCommand("insertHTML",false,html);}else{document.execCommand("insertText",false,plain);}setTimeout(()=>{if(composeEditorRef.current){setComposeBody(composeEditorRef.current.innerText);setComposeHtml(composeEditorRef.current.innerHTML);}},0);}} onBlur={event=>{setComposeBody(event.currentTarget.innerText);setComposeHtml(event.currentTarget.innerHTML);}} className="min-h-full w-full whitespace-pre-wrap text-[13px] leading-6 text-slate-800 outline-none" style={{fontFamily:composeFont}}/>
                   {!!composeFiles.length && <div className="mt-4 flex flex-wrap gap-2">{composeFiles.map((file,index)=><div key={file.name+index} className="flex max-w-full items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 text-xs text-slate-600"><Paperclip className="h-3.5 w-3.5 shrink-0"/><span className="max-w-[180px] truncate">{file.name}</span><span className="text-slate-400">{(file.size/1024).toFixed(0)} Ko</span><button type="button" onClick={()=>setComposeFiles(files=>files.filter((_,i)=>i!==index))} className="text-slate-400 hover:text-rose-600" aria-label="Retirer la pièce jointe"><X className="h-3.5 w-3.5"/></button></div>)}</div>}
                 </div>
                 {composeFormattingOpen && <div className="mx-4 mb-2 flex flex-wrap items-center gap-1 rounded-xl bg-[#f1f4f9] p-2" onMouseDown={event=>{if((event.target as HTMLElement).tagName!=='SELECT'&&(event.target as HTMLElement).tagName!=='INPUT')event.preventDefault();}}>
-                  <select value={composeFont} onChange={e=>{document.execCommand('fontName',false,e.target.value);setComposeFont(e.target.value);composeEditorRef.current?.focus();}} className="h-8 max-w-[125px] rounded-md border-0 bg-transparent px-2 text-xs text-slate-700"><option>Arial</option><option>Georgia</option><option>Verdana</option><option>Tahoma</option><option>Courier New</option></select>
-                  <select onChange={e=>{document.execCommand('fontSize',false,e.target.value);composeEditorRef.current?.focus();}} defaultValue="3" className="h-8 rounded-md border-0 bg-transparent px-2 text-xs text-slate-700"><option value="2">Petit</option><option value="3">Normal</option><option value="4">Grand</option><option value="5">Très grand</option><option value="6">Titre</option></select>
-                  <button type="button" onClick={()=>document.execCommand('bold')} className="h-8 w-8 rounded hover:bg-white" title="Gras"><b>B</b></button><button type="button" onClick={()=>document.execCommand('italic')} className="h-8 w-8 rounded hover:bg-white" title="Italique"><i>I</i></button><button type="button" onClick={()=>document.execCommand('underline')} className="h-8 w-8 rounded hover:bg-white" title="Souligné"><u>U</u></button><button type="button" onClick={()=>document.execCommand('strikeThrough')} className="h-8 w-8 rounded text-xs hover:bg-white" title="Barré">S̶</button>
-                  <input type="color" defaultValue="#183b32" onChange={e=>{document.execCommand('foreColor',false,e.target.value);composeEditorRef.current?.focus();}} title="Couleur du texte" className="h-7 w-8 cursor-pointer border-0 bg-transparent"/>
-                  <button type="button" onClick={()=>document.execCommand('justifyLeft')} className="h-8 w-8 rounded text-xs hover:bg-white" title="Aligner à gauche">≡</button><button type="button" onClick={()=>document.execCommand('justifyCenter')} className="h-8 w-8 rounded text-xs hover:bg-white" title="Centrer">≡</button>
-                  <button type="button" onClick={()=>document.execCommand('insertUnorderedList')} className="h-8 rounded px-2 text-xs hover:bg-white" title="Liste à puces">• Liste</button><button type="button" onClick={()=>document.execCommand('insertOrderedList')} className="h-8 rounded px-2 text-xs hover:bg-white" title="Liste numérotée">1. Liste</button>
+                  <select value={composeFont} onChange={e=>{applyComposeCommand('fontName',e.target.value);setComposeFont(e.target.value);}} className="h-8 max-w-[125px] rounded-md border-0 bg-transparent px-2 text-xs text-slate-700"><option>Arial</option><option>Georgia</option><option>Verdana</option><option>Tahoma</option><option>Courier New</option></select>
+                  <select onChange={e=>{applyComposeCommand('fontSize',e.target.value);}} defaultValue="3" className="h-8 rounded-md border-0 bg-transparent px-2 text-xs text-slate-700"><option value="2">Petit</option><option value="3">Normal</option><option value="4">Grand</option><option value="5">Très grand</option><option value="6">Titre</option></select>
+                  <button type="button" onClick={()=>applyComposeCommand('bold')} className="h-8 w-8 rounded hover:bg-white" title="Gras"><b>B</b></button><button type="button" onClick={()=>applyComposeCommand('italic')} className="h-8 w-8 rounded hover:bg-white" title="Italique"><i>I</i></button><button type="button" onClick={()=>applyComposeCommand('underline')} className="h-8 w-8 rounded hover:bg-white" title="Souligné"><u>U</u></button><button type="button" onClick={()=>applyComposeCommand('strikeThrough')} className="h-8 w-8 rounded text-xs hover:bg-white" title="Barré">S̶</button>
+                  <input type="color" defaultValue="#183b32" onChange={e=>{applyComposeCommand('foreColor',e.target.value);}} title="Couleur du texte" className="h-7 w-8 cursor-pointer border-0 bg-transparent"/>
+                  <button type="button" onClick={()=>applyComposeCommand('justifyLeft')} className="h-8 w-8 rounded text-xs hover:bg-white" title="Aligner à gauche">≡</button><button type="button" onClick={()=>applyComposeCommand('justifyCenter')} className="h-8 w-8 rounded text-xs hover:bg-white" title="Centrer">≡</button>
+                  <button type="button" onClick={()=>applyComposeCommand('insertUnorderedList')} className="h-8 rounded px-2 text-xs hover:bg-white" title="Liste à puces">• Liste</button><button type="button" onClick={()=>applyComposeCommand('insertOrderedList')} className="h-8 rounded px-2 text-xs hover:bg-white" title="Liste numérotée">1. Liste</button>
                 </div>}
-                {composeEmojiOpen && <div className="mx-4 mb-2 flex flex-wrap gap-1 rounded-xl border border-slate-200 bg-white p-2">{['😀','😊','😂','😉','😍','🙏','👍','🎉','❤️','📌','📈','✅','⚠️','💡'].map(emoji=><button key={emoji} type="button" onClick={()=>{document.execCommand('insertText',false,emoji);if(composeEditorRef.current){setComposeBody(composeEditorRef.current.innerText);setComposeHtml(composeEditorRef.current.innerHTML);}setComposeEmojiOpen(false);}} className="rounded-md p-1.5 text-lg hover:bg-slate-100">{emoji}</button>)}</div>}
+                {composeEmojiOpen && <div className="mx-4 mb-2 flex flex-wrap gap-1 rounded-xl border border-slate-200 bg-white p-2">{['😀','😊','😂','😉','😍','🙏','👍','🎉','❤️','📌','📈','✅','⚠️','💡'].map(emoji=><button key={emoji} type="button" onClick={()=>{applyComposeCommand('insertText',emoji);if(composeEditorRef.current){setComposeBody(composeEditorRef.current.innerText);setComposeHtml(composeEditorRef.current.innerHTML);}setComposeEmojiOpen(false);}} className="rounded-md p-1.5 text-lg hover:bg-slate-100">{emoji}</button>)}</div>}
                 <input ref={composeFileInputRef} type="file" multiple className="hidden" onChange={event=>{const incoming=Array.from(event.target.files||[]);const total=[...composeFiles,...incoming].reduce((sum,file)=>sum+file.size,0);if(total>8*1024*1024){showToast('Les pièces jointes ne peuvent pas dépasser 8 Mo au total.','error');event.target.value='';return;}setComposeFiles(files=>[...files,...incoming]);event.target.value='';}}/>
                 <footer className="flex shrink-0 items-center justify-between gap-2 px-4 pb-3 pt-2">
                   <div className="flex min-w-0 items-center gap-1.5">
