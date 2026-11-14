@@ -831,9 +831,9 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
           {adminTab === 'support' && (
             <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_8px_30px_rgba(11,31,53,.05)]">
               <div className="flex h-[calc(100svh-250px)] min-h-0 flex-col lg:flex-row">
-                <aside className={'h-full min-h-0 w-full min-w-0 flex-1 flex-row border-b border-slate-200 bg-white lg:flex lg:w-[470px] lg:flex-none lg:border-b-0 lg:border-r ' + (selectedMessage ? 'hidden' : 'flex')}>
-                  <nav aria-label="Dossiers de messagerie" className={'flex h-full shrink-0 flex-col border-r border-emerald-100 bg-[#f4fbf8] py-3 transition-[width] duration-200 ' + (folderSidebarOpen ? 'w-[148px] px-2.5' : 'w-[58px] items-center px-1.5')}>
-                    <div className={'mb-3 flex items-center ' + (folderSidebarOpen ? 'justify-between px-1' : 'justify-center')}>
+                <aside className={'h-full min-h-0 w-full min-w-0 flex-1 flex-row border-b border-slate-200 bg-white lg:flex lg:w-[500px] lg:flex-none lg:border-b-0 lg:border-r ' + (selectedMessage ? 'hidden' : 'flex')}>
+                  <nav aria-label="Dossiers de messagerie" className={'flex h-full shrink-0 flex-col border-r border-emerald-100 bg-[#f4fbf8] py-3 transition-[width] duration-200 ' + (folderSidebarOpen ? 'w-[184px] px-3' : 'w-[68px] items-center px-2')}>
+                    <div className={'mb-3 flex items-center ' + (folderSidebarOpen ? 'justify-between px-1.5' : 'justify-center')}>
                       {folderSidebarOpen && <span className="text-[9px] font-black uppercase tracking-[.14em] text-[#78968c]">Dossiers</span>}
                       <button type="button" onClick={() => setFolderSidebarOpen(value => !value)} className="flex h-8 w-8 items-center justify-center rounded-lg text-[#66877c] transition hover:bg-emerald-100 hover:text-[#008f6b]" title={folderSidebarOpen ? 'Réduire les dossiers' : 'Déployer les dossiers'} aria-label={folderSidebarOpen ? 'Réduire les dossiers' : 'Déployer les dossiers'}>
                         {folderSidebarOpen ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
@@ -850,9 +850,9 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
                     ] as const).map(([folder,label,FolderIcon]) => {
                       const active = mailboxFolder === folder;
                       const count = folder === 'unread' ? contactMessages.filter(m => m.status === 'new' && m.folder !== 'archive' && m.folder !== 'trash').length : folder === 'inbox' ? contactMessages.filter(m => (!m.folder || m.folder === 'inbox') && m.status === 'new').length : 0;
-                      return <button key={folder} type="button" onClick={() => { setMailboxFolder(folder); setSelectedMessage(null); }} title={folderSidebarOpen ? undefined : label} aria-label={label} className={'mb-1 flex min-h-10 items-center rounded-xl text-left transition-all ' + (folderSidebarOpen ? 'w-full gap-2.5 px-2.5' : 'w-10 justify-center') + (active ? ' bg-[#dff5ec] text-[#008f6b] ring-1 ring-[#b8e8d7]' : ' text-slate-500 hover:bg-emerald-50 hover:text-[#008f6b]')}>
+                      return <button key={folder} type="button" onClick={() => { setMailboxFolder(folder); setSelectedMessage(null); }} title={folderSidebarOpen ? undefined : label} aria-label={label} className={'mb-1.5 flex min-h-11 items-center rounded-xl text-left transition-all ' + (folderSidebarOpen ? 'w-full gap-3 px-3' : 'w-10 justify-center') + (active ? ' bg-[#dff5ec] text-[#008f6b] ring-1 ring-[#b8e8d7]' : ' text-slate-500 hover:bg-emerald-50 hover:text-[#008f6b]')}>
                         <FolderIcon className={'h-[17px] w-[17px] shrink-0 ' + (active ? 'text-[#009b73]' : 'text-slate-400')} />
-                        {folderSidebarOpen && <span className="min-w-0 flex-1 truncate text-[11px] font-bold">{label}</span>}
+                        {folderSidebarOpen && <span className="min-w-0 flex-1 truncate text-xs font-bold">{label}</span>}
                         {folderSidebarOpen && count > 0 && <span className="rounded-full bg-[#00a982] px-1.5 py-0.5 text-[9px] font-black text-white">{count}</span>}
                         {!folderSidebarOpen && count > 0 && <span className="absolute ml-6 -mt-6 h-2 w-2 rounded-full bg-[#00a982]" />}
                       </button>;
