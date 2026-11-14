@@ -862,8 +862,8 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
                       </button>;
                     })}
                   </nav>
-                  <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-                  <div className="border-b border-emerald-100 bg-white/90 px-4 py-4">
+                  <div className={'flex min-h-0 min-w-0 flex-1 flex-col ' + (!messageListOpen ? 'hidden' : '')}>
+                  <div className="border-b border-slate-200 bg-white px-4 py-4">
                     <div className="flex items-center justify-between gap-2">
                       <div>
                         <div className="text-[13px] font-black text-[#0b1f35]">Boîte de réception</div>
@@ -913,7 +913,7 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
                         const unread = m.status === 'new';
                         const email = emailParts(m.email);
                         return (
-                          <button key={m.id} onClick={() => { if (m.status === 'draft' || m.folder === 'drafts') { setComposeId(m.id); setComposeTo(m.email || ''); setComposeSubject(m.subject || ''); setComposeBody(m.message || ''); setComposeOpen(true); return; } if (m.status === 'new') { const now = new Date().toISOString(); setSelectedMessage({ ...m, status: 'in_progress', handledBy: auth.currentUser?.uid || '', handledAt: now }); void adminUpdateContact(m.id, { status: 'in_progress', handledBy: auth.currentUser?.uid || '', handledAt: now }).catch(() => showToast('Impossible de marquer le message comme lu.', 'error')); } else setSelectedMessage(m); setContactNote(m.adminNote || ''); setReplyText(''); setShowReplyComposer(false); }} className={'flex w-full gap-3 border-b border-slate-100/80 px-4 py-4 text-left transition-all ' + (selectedItem ? 'bg-gradient-to-r from-[#e5f7ef] to-[#f4fbf8] shadow-[inset_3px_0_0_#00a982]' : unread ? 'bg-[#f8fcfa] hover:bg-[#eff9f4]' : 'bg-white hover:bg-[#f7fbf9]')}>
+                          <button key={m.id} onClick={() => { if (m.status === 'draft' || m.folder === 'drafts') { setComposeId(m.id); setComposeTo(m.email || ''); setComposeSubject(m.subject || ''); setComposeBody(m.message || ''); setComposeOpen(true); return; } if (m.status === 'new') { const now = new Date().toISOString(); setSelectedMessage({ ...m, status: 'in_progress', handledBy: auth.currentUser?.uid || '', handledAt: now }); void adminUpdateContact(m.id, { status: 'in_progress', handledBy: auth.currentUser?.uid || '', handledAt: now }).catch(() => showToast('Impossible de marquer le message comme lu.', 'error')); } else setSelectedMessage(m); setContactNote(m.adminNote || ''); setReplyText(''); setShowReplyComposer(false); setExpandedEmailIds([]); }} className={'flex w-full gap-3 border-b border-slate-100/80 px-4 py-4 text-left transition-all ' + (selectedItem ? 'bg-gradient-to-r from-[#e5f7ef] to-[#f4fbf8] shadow-[inset_3px_0_0_#00a982]' : unread ? 'bg-[#f8fcfa] hover:bg-[#eff9f4]' : 'bg-white hover:bg-[#f7fbf9]')}>
                             <div className={'mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-black ' + (unread ? 'bg-gradient-to-br from-[#00a982] to-[#087d65] text-white shadow-sm' : 'bg-[#edf4f1] text-[#6d8b80]')}>
                               {(m.name || m.email || '?').trim().charAt(0).toUpperCase()}
                             </div>
