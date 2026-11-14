@@ -56,3 +56,32 @@ export function adminSaveAiConfig(assistants: Array<Record<string, unknown>>) {
 export function adminGetAiModels<T = unknown>(): Promise<T> {
   return adminMutation<T>({ action: 'get-ai-models' });
 }
+
+
+export async function adminComposeEmail(input: { id?: string; to: string; subject: string; message: string }) {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Session administrateur introuvable.');
+  const token = await user.getIdToken();
+  const response = await fetch('/api/contact-compose', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+    body: JSON.stringify({ action: 'send', ...input })
+  });
+  const payload = await response.json().catch(() => ({})) as { error?: string; success?: boolean; historySaved?: boolean; id?: string; warning?: string };
+  if (!response.ok || !payload.success) throw new Error(payload.error || 'Envoi impossible.');
+  return payload;
+}
+
+export async function adminSaveEmailDraft(input: { id?: string; to: string; subject: string; message: string }) {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Session administrateur introuvable.');
+  const token = await user.getIdToken();
+  const response = await fetch('/api/contact-compose', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token },
+    body: JSON.stringify({ action: 'draft', ...input })
+  });
+  const payload = await response.json().catch(() => ({})) as { error?: string; success?: boolean; id?: string };
+  if (!response.ok || !payload.success) throw new Error(payload.error || 'Enregistrement du brouillon impossible.');
+  return payload;
+}
