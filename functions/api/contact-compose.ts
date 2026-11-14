@@ -29,12 +29,14 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
   }
   if (!profile || profile.role !== 'admin' || profile.status === 'suspended') return json({ error: 'Accès administrateur requis.' }, 403);
 
-  let body: { action?: string; id?: string; to?: string; subject?: string; message?: string; messageHtml?: string; attachments?: Array<{ filename?: string; content?: string }> };
+  let body: { action?: string; id?: string; to?: string; subject?: string; message?: string; messageHtml?: string; cc?: string; attachments?: Array<{ filename?: string; content?: string }> };
   try { body = await context.request.json(); } catch { return json({ error: 'Requête invalide.' }, 400); }
 
   const action = body.action === 'draft' ? 'draft' : body.action === 'send' ? 'send' : '';
   const id = String(body.id || crypto.randomUUID()).replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 100);
-  const to = String(body.to || '').trim().toLowerCase();
+  const toList = String(body.to || '').split(/[;,\\s]+/).map(value => value.trim().toLowerCase()).filter(Boolean);
+  const ccList = String(body.cc || '').split(/[;,\\s]+/).map(value => value.trim().toLowerCase()).filter(Boolean);
+  const to = toList[0] || '';
   const subject = String(body.subject || '').trim().slice(0, 200);
   const message = String(body.message || '').trim();
   const messageHtml = String(body.messageHtml || '');
@@ -58,7 +60,7 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
     return json({ success: true, id, savedAt: now });
   }
 
-  if (!validEmail(to) || !subject || !message) return json({ error: 'Destinataire, sujet et message sont obligatoires.' }, 400);
+  if (!toList.length || toList.some(value => !validEmail(value)) || ccList.some(value => !validEmail(value)) || new Set([...toList,...ccList]).size !== toList.length + ccList.length || !subject || !message) return json({ error: 'Destinataire, sujet et message sont obligatoires.' }, 400);
   if (message.length > 10000) return json({ error: 'Le message dépasse 10 000 caractères.' }, 400);
   const attachmentBytes = attachments.reduce((sum, file) => sum + Math.floor(String(file.content || '').length * 0.75), 0);
   if (attachments.length > 10 || attachmentBytes > 8 * 1024 * 1024 || attachments.some(file => !file.filename || !/^[a-zA-Z0-9._ -]{1,120}$/.test(file.filename) || !file.content || !/^[A-Za-z0-9+/]+={0,2}$/.test(file.content))) return json({ error: 'Pièces jointes invalides ou trop volumineuses (10 fichiers, 8 Mo au total maximum).' }, 400);
@@ -78,7 +80,7 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
     sent = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from, to: [to], subject, html, text, ...(attachments.length ? { attachments } : {}), ...(replyTo ? { reply_to: replyTo } : {}) })
+      body: JSON.stringify({ from, to: toList, ...(ccList.length ? { cc: ccList } : {}), subject, html, text, ...(attachments.length ? { attachments } : {}), ...(replyTo ? { reply_to: replyTo } : {}) })
     });
     payload = await sent.json().catch(() => ({}));
   } catch {
@@ -88,10 +90,10 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
 
   const now = new Date().toISOString();
   const sentId = String(payload.id || id);
-  const entry = { id: 'outbound-' + crypto.randomUUID(), direction: 'outbound', body: message, at: now, from: senderAddress, to, resendId: sentId };
+  const entry = { id: 'outbound-' + crypto.randomUUID(), direction: 'outbound', body: message, bodyHtml: messageHtml ? html.replace(/^.*?<div style=\"font-size:15px;line-height:1.85;color:#263f38;overflow-wrap:anywhere\">([\\s\\S]*?)<\\/div>.*$/s, '$1') : '', at: now, from: senderAddress, to: toList.join(', '), cc: ccList.join(', '), resendId: sentId };
   try {
     await firestoreSet(context.env as any, `contactMessages/${encodeURIComponent(id)}`, {
-      id, name: to, email: to, subject, message, status: 'resolved', folder: 'sent',
+      id, name: toList.join(', '), email: toList.join(', '), to: toList.join(', '), cc: ccList.join(', '), subject, message, messageHtml, status: 'resolved', folder: 'sent',
       source: 'admin-compose', createdAt: now, updatedAt: now, repliedAt: now, repliedBy: identity.uid,
       conversation: [entry], resendId: sentId
     });
