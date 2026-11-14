@@ -5,7 +5,7 @@ import { getAdminLogs, getAllAccounts, getAllTrades, getAllUsers, subscribeAllUs
 import { adminAddLog, adminComposeEmail, adminDeleteContact, adminGetPayments, adminMigrateSubscriptionExpiry, adminSaveEmailDraft, adminUpdateContact, adminUpdatePayment, adminUpdateUser } from '../services/adminConsole';
 import { useToast } from '../components/common/Toast';
 import { auth } from '../firebase/config';
-import { Tag, Inbox, Archive, FileText, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { Inbox, Archive, FileText, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { PromotionCenter } from './PromotionCenter';
 import { AIMonitoringPanel } from './AIMonitoringPanel';
 
@@ -831,10 +831,10 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
           {adminTab === 'support' && (
             <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_8px_30px_rgba(11,31,53,.05)]">
               <div className="flex h-[calc(100svh-250px)] min-h-0 flex-col lg:flex-row">
-                <aside className={'h-full min-h-0 w-full min-w-0 flex-1 flex-row border-b border-slate-200 bg-white lg:flex lg:w-[500px] lg:flex-none lg:border-b-0 lg:border-r ' + (selectedMessage ? 'hidden' : 'flex')}>
-                  <nav aria-label="Dossiers de messagerie" className={'flex h-full shrink-0 flex-col border-r border-emerald-100 bg-[#f4fbf8] py-3 transition-[width] duration-200 ' + (folderSidebarOpen ? 'w-[184px] px-3' : 'w-[68px] items-center px-2')}>
+                <aside className={'h-full min-h-0 w-full min-w-0 flex-1 flex-row border-b border-slate-200 bg-white lg:flex lg:w-[650px] lg:flex-none lg:border-b-0 lg:border-r ' + (selectedMessage ? 'hidden' : 'flex')}>
+                  <nav aria-label="Dossiers de messagerie" className={'flex h-full shrink-0 flex-col border-r border-emerald-100 bg-gradient-to-b from-[#f0fbf6] via-[#f7fcfa] to-[#edf8f3] py-4 transition-[width] duration-200 ' + (folderSidebarOpen ? 'w-[224px] px-4' : 'w-[76px] items-center px-2.5')}>
                     <div className={'mb-3 flex items-center ' + (folderSidebarOpen ? 'justify-between px-1.5' : 'justify-center')}>
-                      {folderSidebarOpen && <span className="text-[9px] font-black uppercase tracking-[.14em] text-[#78968c]">Dossiers</span>}
+                      {folderSidebarOpen && <span className="text-[10px] font-black uppercase tracking-[.16em] text-[#6d9184]">Dossiers</span>}
                       <button type="button" onClick={() => setFolderSidebarOpen(value => !value)} className="flex h-8 w-8 items-center justify-center rounded-lg text-[#66877c] transition hover:bg-emerald-100 hover:text-[#008f6b]" title={folderSidebarOpen ? 'Réduire les dossiers' : 'Déployer les dossiers'} aria-label={folderSidebarOpen ? 'Réduire les dossiers' : 'Déployer les dossiers'}>
                         {folderSidebarOpen ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
                       </button>
@@ -850,7 +850,7 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
                     ] as const).map(([folder,label,FolderIcon]) => {
                       const active = mailboxFolder === folder;
                       const count = folder === 'unread' ? contactMessages.filter(m => m.status === 'new' && m.folder !== 'archive' && m.folder !== 'trash').length : folder === 'inbox' ? contactMessages.filter(m => (!m.folder || m.folder === 'inbox') && m.status === 'new').length : 0;
-                      return <button key={folder} type="button" onClick={() => { setMailboxFolder(folder); setSelectedMessage(null); }} title={folderSidebarOpen ? undefined : label} aria-label={label} className={'mb-1.5 flex min-h-11 items-center rounded-xl text-left transition-all ' + (folderSidebarOpen ? 'w-full gap-3 px-3' : 'w-10 justify-center') + (active ? ' bg-[#dff5ec] text-[#008f6b] ring-1 ring-[#b8e8d7]' : ' text-slate-500 hover:bg-emerald-50 hover:text-[#008f6b]')}>
+                      return <button key={folder} type="button" onClick={() => { setMailboxFolder(folder); setSelectedMessage(null); }} title={folderSidebarOpen ? undefined : label} aria-label={label} className={'mb-2 flex min-h-12 items-center rounded-xl text-left transition-all ' + (folderSidebarOpen ? 'w-full gap-3.5 px-3.5' : 'w-11 justify-center') + (active ? ' bg-white text-[#008f6b] shadow-[0_4px_12px_rgba(0,143,107,.10)] ring-1 ring-[#bce9d8]' : ' text-[#668579] hover:bg-white/80 hover:text-[#008f6b]')}>
                         <FolderIcon className={'h-[17px] w-[17px] shrink-0 ' + (active ? 'text-[#009b73]' : 'text-slate-400')} />
                         {folderSidebarOpen && <span className="min-w-0 flex-1 truncate text-xs font-bold">{label}</span>}
                         {folderSidebarOpen && count > 0 && <span className="rounded-full bg-[#00a982] px-1.5 py-0.5 text-[9px] font-black text-white">{count}</span>}
@@ -859,15 +859,15 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
                     })}
                   </nav>
                   <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-                  <div className="border-b border-slate-200 px-4 py-3">
+                  <div className="border-b border-emerald-100 bg-white/90 px-4 py-4">
                     <div className="flex items-center justify-between gap-2">
                       <div>
                         <div className="text-[13px] font-black text-[#0b1f35]">Boîte de réception</div>
                         <div className="mt-0.5 text-xs text-slate-400">{contactMessages.length} éléments · {contactMessages.filter(m => m.status === 'new').length} non lus</div>
                       </div>
-                      <div className="flex shrink-0 items-center gap-1"><button type="button" onClick={() => { setComposeId(''); setComposeTo(''); setComposeSubject(''); setComposeBody(''); setComposeOpen(true); }} className="inline-flex items-center gap-1 rounded-lg bg-[#0b1f35] px-2.5 py-2 text-[11px] font-bold text-white"><Plus className="h-3.5 w-3.5" />Écrire</button><button onClick={() => { setSupportSearch(''); load(); }} disabled={loading} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100" title="Actualiser"><RefreshCw className={'h-3.5 w-3.5 '+(loading?'animate-spin':'')} /></button></div>
+                      <div className="flex shrink-0 items-center gap-1"><button type="button" onClick={() => { setComposeId(''); setComposeTo(''); setComposeSubject(''); setComposeBody(''); setComposeOpen(true); }} className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#009b73] to-[#13b88a] px-3 py-2.5 text-[11px] font-extrabold text-white shadow-[0_5px_14px_rgba(0,155,115,.20)] transition hover:brightness-105"><Plus className="h-3.5 w-3.5" />Écrire</button><button onClick={() => { setSupportSearch(''); load(); }} disabled={loading} className="rounded-xl bg-[#f0f8f5] p-2.5 text-[#729488] transition hover:bg-[#e1f4eb] hover:text-[#008f6b]" title="Actualiser"><RefreshCw className={'h-3.5 w-3.5 '+(loading?'animate-spin':'')} /></button></div>
                     </div>
-                    <div className="mt-3 flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                    <div className="mt-3 flex items-center gap-2 rounded-xl border border-[#e0eee8] bg-[#f7fbf9] px-3.5 py-2.5 shadow-inner shadow-white">
                       <Search className="h-3.5 w-3.5 shrink-0 text-slate-400" />
                       <input value={supportSearch} onChange={e => setSupportSearch(e.target.value)} placeholder="Rechercher une conversation…" className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-slate-400" />
                       <Filter className="h-3 w-3 text-slate-300" />
@@ -891,22 +891,22 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
                         const unread = m.status === 'new';
                         const email = emailParts(m.email);
                         return (
-                          <button key={m.id} onClick={() => { if (m.status === 'draft' || m.folder === 'drafts') { setComposeId(m.id); setComposeTo(m.email || ''); setComposeSubject(m.subject || ''); setComposeBody(m.message || ''); setComposeOpen(true); return; } if (m.status === 'new') { const now = new Date().toISOString(); setSelectedMessage({ ...m, status: 'in_progress', handledBy: auth.currentUser?.uid || '', handledAt: now }); void adminUpdateContact(m.id, { status: 'in_progress', handledBy: auth.currentUser?.uid || '', handledAt: now }).catch(() => showToast('Impossible de marquer le message comme lu.', 'error')); } else setSelectedMessage(m); setContactNote(m.adminNote || ''); setReplyText(''); }} className={'flex w-full gap-3 border-b border-slate-100 px-4 py-3.5 text-left transition ' + (selectedItem ? 'bg-blue-50/50 shadow-[inset_3px_0_0_#2563eb]' : 'hover:bg-slate-50')}>
-                            <div className={'mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-black ' + (unread ? 'bg-[#0b1f35] text-white' : 'bg-slate-100 text-slate-500')}>
+                          <button key={m.id} onClick={() => { if (m.status === 'draft' || m.folder === 'drafts') { setComposeId(m.id); setComposeTo(m.email || ''); setComposeSubject(m.subject || ''); setComposeBody(m.message || ''); setComposeOpen(true); return; } if (m.status === 'new') { const now = new Date().toISOString(); setSelectedMessage({ ...m, status: 'in_progress', handledBy: auth.currentUser?.uid || '', handledAt: now }); void adminUpdateContact(m.id, { status: 'in_progress', handledBy: auth.currentUser?.uid || '', handledAt: now }).catch(() => showToast('Impossible de marquer le message comme lu.', 'error')); } else setSelectedMessage(m); setContactNote(m.adminNote || ''); setReplyText(''); }} className={'flex w-full gap-3 border-b border-slate-100/80 px-4 py-4 text-left transition-all ' + (selectedItem ? 'bg-gradient-to-r from-[#e5f7ef] to-[#f4fbf8] shadow-[inset_3px_0_0_#00a982]' : unread ? 'bg-[#f8fcfa] hover:bg-[#eff9f4]' : 'bg-white hover:bg-[#f7fbf9]')}>
+                            <div className={'mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-black ' + (unread ? 'bg-gradient-to-br from-[#00a982] to-[#087d65] text-white shadow-sm' : 'bg-[#edf4f1] text-[#6d8b80]')}>
                               {(m.name || m.email || '?').trim().charAt(0).toUpperCase()}
                             </div>
                             <div className="min-w-0 flex-1">
                               <div className="flex items-center gap-2">
                                 <div className="min-w-0 flex-1">
-                                  <span className={'block truncate text-sm ' + (unread ? 'font-black text-[#0b1f35]' : 'font-semibold text-slate-700')}>{m.name || m.email}</span>
+                                  <span className={'block truncate text-sm ' + (unread ? 'font-black text-[#087d65]' : 'font-semibold text-slate-700')}>{m.name || m.email}</span>
                                   <span className="mt-0.5 block truncate text-xs text-slate-400">{email.local}<span className="text-slate-300">{email.domain}</span></span>
                                 </div>
                                 <span className="shrink-0 text-xs text-slate-400">{date && !Number.isNaN(date.getTime()) ? date.toLocaleTimeString('fr-FR', {hour:'2-digit', minute:'2-digit'}) : '—'}</span>
                               </div>
-                              <div className={'mt-1 truncate text-sm ' + (unread ? 'font-bold text-slate-700' : 'font-semibold text-slate-600')}>{decodeMimeSubject(m.subject) || '(Sans objet)'}</div>
+                              <div className={'mt-1 truncate text-sm ' + (unread ? 'font-bold text-[#315b4d]' : 'font-semibold text-slate-600')}>{decodeMimeSubject(m.subject) || '(Sans objet)'}</div>
                               <div className="mt-0.5 flex items-center gap-1.5">
                                 <span className="min-w-0 truncate text-xs text-slate-400">{preview}</span>
-                                {thread.length > 1 && <span className="shrink-0 rounded-full bg-blue-50 px-1.5 py-0.5 text-[7px] font-black text-blue-600">{thread.length}</span>}
+                                {thread.length > 1 && <span className="shrink-0 rounded-full bg-[#e4f5ed] px-1.5 py-0.5 text-[8px] font-black text-[#008f6b]">{thread.length}</span>}
                               </div>
                             </div>
                           </button>
@@ -1029,11 +1029,11 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
                       </details>
                     </div>
                   ) : (
-                    <div className="flex h-full items-center justify-center bg-slate-50/60 text-center">
+                    <div className="flex h-full w-full min-w-0 flex-1 items-center justify-center bg-gradient-to-br from-[#f4faf7] via-white to-[#f1f7fb] px-6 text-center">
                       <div>
-                        <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-white ring-1 ring-slate-200"><Mail className="h-5 w-5 text-slate-300" /></div>
-                        <p className="mt-3 text-[12px] font-bold text-slate-500">Sélectionnez une conversation</p>
-                        <p className="mt-1 text-xs text-slate-400">Le fil complet s'affichera ici.</p>
+                        <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-white text-[#00a982] shadow-[0_8px_24px_rgba(0,143,107,.10)] ring-1 ring-[#dcefe6]"><Mail className="h-7 w-7" /></div>
+                        <p className="mt-3 text-sm font-extrabold text-[#234c3f]">Sélectionnez une conversation</p>
+                        <p className="mt-1 text-[13px] text-slate-500">Le fil complet s'affichera ici.</p>
                       </div>
                     </div>
                   )}
