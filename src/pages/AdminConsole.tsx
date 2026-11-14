@@ -876,7 +876,7 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
 
                   <div className="min-h-0 flex-1 overflow-y-auto">
                     {contactMessages
-                      .filter(m => mailboxFolder === 'inbox' ? (!m.folder || m.folder === 'inbox') : mailboxFolder === 'sent' ? (m.folder === 'sent' || (Array.isArray(m.conversation) && m.conversation.some(item => item.direction === 'outbound'))) : mailboxFolder === 'drafts' ? m.folder === 'drafts' : mailboxFolder === 'unread' ? m.status === 'new' && m.folder !== 'archive' && m.folder !== 'trash' : mailboxFolder === 'in_progress' ? m.status === 'in_progress' && m.folder !== 'archive' && m.folder !== 'trash' : m.folder === mailboxFolder)
+                      .filter(m => mailboxFolder === 'inbox' ? (!m.folder || m.folder === 'inbox') : mailboxFolder === 'sent' ? m.folder === 'sent' : mailboxFolder === 'drafts' ? m.folder === 'drafts' : mailboxFolder === 'unread' ? m.status === 'new' && m.folder !== 'archive' && m.folder !== 'trash' : mailboxFolder === 'in_progress' ? m.status === 'in_progress' && m.folder !== 'archive' && m.folder !== 'trash' : m.folder === mailboxFolder)
                       .filter(m => {
                         const q = supportSearch.trim().toLowerCase();
                         return !q || [m.name, m.email, decodeMimeSubject(m.subject), m.message].some(v => String(v || '').toLowerCase().includes(q));
@@ -912,7 +912,7 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
                           </button>
                         );
                       })}
-                    {contactMessages.filter(m => mailboxFolder === 'inbox' ? (!m.folder || m.folder === 'inbox') : mailboxFolder === 'sent' ? (m.folder === 'sent' || (Array.isArray(m.conversation) && m.conversation.some(item => item.direction === 'outbound'))) : mailboxFolder === 'drafts' ? m.folder === 'drafts' : mailboxFolder === 'unread' ? m.status === 'new' && m.folder !== 'archive' && m.folder !== 'trash' : mailboxFolder === 'in_progress' ? m.status === 'in_progress' && m.folder !== 'archive' && m.folder !== 'trash' : m.folder === mailboxFolder).filter(m => {
+                    {contactMessages.filter(m => mailboxFolder === 'inbox' ? (!m.folder || m.folder === 'inbox') : mailboxFolder === 'sent' ? m.folder === 'sent' : mailboxFolder === 'drafts' ? m.folder === 'drafts' : mailboxFolder === 'unread' ? m.status === 'new' && m.folder !== 'archive' && m.folder !== 'trash' : mailboxFolder === 'in_progress' ? m.status === 'in_progress' && m.folder !== 'archive' && m.folder !== 'trash' : m.folder === mailboxFolder).filter(m => {
                       const q = supportSearch.trim().toLowerCase();
                       return !q || [m.name, m.email, decodeMimeSubject(m.subject), m.message].some(v => String(v || '').toLowerCase().includes(q));
                     }).length === 0 && <div className="p-10 text-center text-sm text-slate-400">Aucune conversation.</div>}
