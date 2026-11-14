@@ -449,6 +449,74 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
     });
   }
 
+  function applyComposeTextSize(size: string) {
+    const editor = composeEditorRef.current;
+    if (!editor) return;
+    editor.focus();
+    const selection = window.getSelection();
+    if (selection && composeSelectionRef.current) {
+      selection.removeAllRanges();
+      selection.addRange(composeSelectionRef.current);
+    }
+    const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
+    if (range && !range.collapsed && editor.contains(range.commonAncestorContainer)) {
+      const span = document.createElement('span');
+      span.style.fontSize = size;
+      span.appendChild(range.extractContents());
+      range.insertNode(span);
+      const next = document.createRange();
+      next.selectNodeContents(span);
+      selection?.removeAllRanges();
+      selection?.addRange(next);
+      composeSelectionRef.current = next.cloneRange();
+    } else {
+      document.execCommand('fontSize', false, '7');
+      editor.querySelectorAll('font[size="7"]').forEach(node => {
+        const span = document.createElement('span');
+        span.style.fontSize = size;
+        span.innerHTML = node.innerHTML;
+        node.replaceWith(span);
+      });
+    }
+    setComposeBody(editor.innerText);
+    setComposeHtml(editor.innerHTML);
+    rememberComposeSelection();
+  }
+
+  function applyReplyTextSize(size: string) {
+    const editor = replyEditorRef.current;
+    if (!editor) return;
+    editor.focus();
+    const selection = window.getSelection();
+    if (selection && replySelectionRef.current) {
+      selection.removeAllRanges();
+      selection.addRange(replySelectionRef.current);
+    }
+    const range = selection?.rangeCount ? selection.getRangeAt(0) : null;
+    if (range && !range.collapsed && editor.contains(range.commonAncestorContainer)) {
+      const span = document.createElement('span');
+      span.style.fontSize = size;
+      span.appendChild(range.extractContents());
+      range.insertNode(span);
+      const next = document.createRange();
+      next.selectNodeContents(span);
+      selection?.removeAllRanges();
+      selection?.addRange(next);
+      replySelectionRef.current = next.cloneRange();
+    } else {
+      document.execCommand('fontSize', false, '7');
+      editor.querySelectorAll('font[size="7"]').forEach(node => {
+        const span = document.createElement('span');
+        span.style.fontSize = size;
+        span.innerHTML = node.innerHTML;
+        node.replaceWith(span);
+      });
+    }
+    setReplyText(editor.innerText);
+    setReplyHtml(editor.innerHTML);
+    rememberReplySelection();
+  }
+
   function applyComposeCommand(command: string, value?: string) {
     composeEditorRef.current?.focus();
     const selection = window.getSelection();
@@ -949,7 +1017,7 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
                     <button type="button" onClick={()=>applyComposeCommand('redo')} className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-500 transition hover:bg-white hover:text-slate-800" title="Rétablir">↷</button>
                     <span className="mx-1 h-6 w-px shrink-0 bg-slate-300/80"/>
                     <select value={composeFont} onChange={e=>{applyComposeCommand('fontName',e.target.value);setComposeFont(e.target.value);}} className="h-8 w-[112px] shrink-0 rounded-lg border border-slate-200 bg-white px-2.5 text-xs text-slate-700 outline-none focus:border-[#9bd8c2]"><option>Arial</option><option>Georgia</option><option>Verdana</option><option>Tahoma</option><option>Courier New</option></select>
-                    <select onChange={e=>applyComposeCommand('fontSize',e.target.value)} defaultValue="3" aria-label="Taille de police" className="h-8 w-[92px] shrink-0 rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-700 outline-none focus:border-[#9bd8c2]"><option value="2">Petit</option><option value="3">Normal</option><option value="4">Grand</option><option value="5">Très grand</option><option value="6">Titre</option></select>
+                    <select onChange={e=>{const value=e.target.value;if(value==='heading')applyComposeCommand('formatBlock','h2');else applyComposeTextSize(value);}} defaultValue="15px" aria-label="Taille et titre" className="h-8 w-[112px] shrink-0 rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-700 outline-none focus:border-[#9bd8c2]"><option value="13px">Petit</option><option value="15px">Normal</option><option value="18px">Grand</option><option value="22px">Très grand</option><option value="heading">Titre</option></select>
                     <span className="mx-1 h-6 w-px shrink-0 bg-slate-300/80"/>
                     {(['bold','italic','underline','strikeThrough'] as const).map(command=><button key={command} type="button" onClick={()=>applyComposeCommand(command)} className={'flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-sm transition '+(composeFormatState[command]?'bg-white text-[#087f63] shadow-sm ring-1 ring-[#c5e8d8]':'text-slate-600 hover:bg-white hover:text-slate-900')} title={command==='bold'?'Gras':command==='italic'?'Italique':command==='underline'?'Souligné':'Barré'}>{command==='bold'?<b>B</b>:command==='italic'?<i>I</i>:command==='underline'?<u>U</u>:'S̶'}</button>)}
                     <label className="relative flex h-8 w-9 shrink-0 cursor-pointer items-center justify-center rounded-lg text-slate-600 transition hover:bg-white" title="Couleur du texte"><span className="relative text-sm font-bold">A<span className="absolute -bottom-1 left-0 right-0 h-[3px] rounded-full bg-[#183b32]"/></span><input type="color" defaultValue="#183b32" onChange={e=>applyComposeCommand('foreColor',e.target.value)} className="absolute inset-0 h-full w-full cursor-pointer opacity-0"/></label>
@@ -1190,7 +1258,7 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
                             <div className="mb-2 px-1 text-[9px] font-bold uppercase tracking-[.12em] text-slate-400">Mise en forme</div>
                             <div className="flex flex-wrap items-center gap-1" onMouseDown={event=>{if((event.target as HTMLElement).tagName!=='SELECT'&&(event.target as HTMLElement).tagName!=='INPUT')event.preventDefault();}}>
                               <select value={replyFont} onChange={e=>{applyReplyCommand('fontName',e.target.value);setReplyFont(e.target.value);}} className="h-8 max-w-[120px] rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-700"><option>Arial</option><option>Georgia</option><option>Verdana</option><option>Tahoma</option><option>Courier New</option></select>
-                              <select onChange={e=>applyReplyCommand('fontSize',e.target.value)} defaultValue="3" className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-700"><option value="2">Petit</option><option value="3">Normal</option><option value="4">Grand</option><option value="5">Très grand</option><option value="6">Titre</option></select>
+                              <select onChange={e=>{const value=e.target.value;if(value==='heading')applyReplyCommand('formatBlock','h2');else applyReplyTextSize(value);}} defaultValue="15px" className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-700" aria-label="Taille et titre"><option value="13px">Petit</option><option value="15px">Normal</option><option value="18px">Grand</option><option value="22px">Très grand</option><option value="heading">Titre</option></select>
                               <span className="mx-1 h-5 w-px bg-slate-200"/>
                               {(['bold','italic','underline','strikeThrough'] as const).map((command)=><button key={command} type="button" onClick={()=>applyReplyCommand(command)} className={'flex h-8 w-8 items-center justify-center rounded-lg transition '+(replyFormatState[command]?'bg-[#dff4e9] text-[#087f63] ring-1 ring-[#b9e5d0]':'text-slate-600 hover:bg-white')} title={command==='bold'?'Gras':command==='italic'?'Italique':command==='underline'?'Souligné':'Barré'}>{command==='bold'?<b>B</b>:command==='italic'?<i>I</i>:command==='underline'?<u>U</u>:'S̶'}</button>)}
                               <label className="flex h-8 cursor-pointer items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 text-[10px] font-semibold text-slate-600" title="Couleur du texte"><input type="color" defaultValue="#475569" onChange={e=>applyReplyCommand('foreColor',e.target.value)} className="h-5 w-5 cursor-pointer border-0 bg-transparent p-0"/>Couleur</label>
