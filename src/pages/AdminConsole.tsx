@@ -421,7 +421,7 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
           conversationId: selectedMessage.id
         })
       });
-      const payload = (await response.json().catch(() => ({}))) as { error?: string; messageId?: string; id?: string };
+      const payload = (await response.json().catch(() => ({}))) as { error?: string; messageId?: string; id?: string; historySaved?: boolean; warning?: string };
       if (!response.ok) throw new Error(payload?.error || 'Envoi impossible');
 
       const now = new Date().toISOString();
@@ -451,18 +451,10 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
           ]);
       const conversation = [...existingConversation, outbound];
 
-      await adminUpdateContact(selectedMessage.id, {
-        status:'resolved',
-        handledBy:currentUser.uid,
-        handledAt:now,
-        lastReply:replyText.trim(),
-        repliedAt:now,
-        repliedBy:currentUser.uid,
-        conversation
-      });
-      setSelectedMessage(prev => prev ? { ...prev, status:'resolved', lastReply:replyText.trim(), repliedAt:now, repliedBy:currentUser.uid, conversation } : prev);
+      setSelectedMessage(prev => prev ? { ...prev, status:'resolved', handledBy:currentUser.uid, handledAt:now, lastReply:replyText.trim(), repliedAt:now, repliedBy:currentUser.uid, conversation } : prev);
       setReplyText('');
-      showToast('Message envoyé.', 'success');
+      if (payload.historySaved === false) showToast(payload.warning || 'E-mail envoyé, mais historique non enregistré.', 'error');
+      else showToast('Message envoyé et enregistré.', 'success');
     } catch (e:any) {
       showToast(e?.message || 'Envoi impossible.', 'error');
     } finally {
