@@ -497,6 +497,7 @@ export interface ContactConversationMessage {
   id?: string;
   direction: 'inbound' | 'outbound';
   body: string;
+  bodyHtml?: string;
   at: string;
   from?: string;
   to?: string;
@@ -514,6 +515,7 @@ export interface ContactMessage {
   cc?: string;
   subject: string;
   message: string;
+  messageHtml?: string;
   status: ContactMessageStatus;
   createdAt: string;
   updatedAt?: string;
