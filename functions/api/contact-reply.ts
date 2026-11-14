@@ -1,4 +1,4 @@
-import { verifyFirebaseIdToken, firestoreGet } from '../../worker/firebaseAdmin';
+import { verifyFirebaseIdToken, firestoreGet, firestorePatch } from '../../worker/firebaseAdmin';
 interface Env {
   RESEND_API_KEY?: string;
   RESEND_FROM_EMAIL?: string;
@@ -116,5 +116,47 @@ Trade. Measure. Improve.`;
     }
   }
 
-  return json({success:true,id:resendEmailId||null,messageId:messageId||null,replyTo:threadReplyTo||null});
+  const sentAt = new Date().toISOString();
+  let historySaved = false;
+  try {
+    const existing = await firestoreGet(context.env as any, `contactMessages/${encodeURIComponent(conversationId)}`);
+    if (!existing || String(existing.email || '').trim().toLowerCase() !== to.toLowerCase()) {
+      throw new Error('Support conversation not found or recipient mismatch.');
+    }
+    const previousConversation = Array.isArray(existing.conversation) && existing.conversation.length
+      ? existing.conversation
+      : [{
+          id: 'legacy-inbound',
+          direction: 'inbound',
+          body: String(existing.message || ''),
+          at: String(existing.createdAt || sentAt),
+          from: to,
+          to: resendFromEmail
+        }];
+    const outbound = {
+      id: 'outbound-' + crypto.randomUUID(),
+      direction: 'outbound',
+      body: reply,
+      at: sentAt,
+      from: resendFromEmail,
+      to,
+      messageId: messageId || undefined,
+      resendId: resendEmailId || undefined
+    };
+    await firestorePatch(context.env as any, `contactMessages/${encodeURIComponent(conversationId)}`, {
+      status: 'resolved',
+      handledBy: identity.uid,
+      handledAt: sentAt,
+      lastReply: reply,
+      repliedAt: sentAt,
+      repliedBy: identity.uid,
+      updatedAt: sentAt,
+      conversation: [...previousConversation, outbound]
+    }, ['status','handledBy','handledAt','lastReply','repliedAt','repliedBy','updatedAt','conversation']);
+    historySaved = true;
+  } catch (error) {
+    console.error('IAMTRADER support reply history persistence failed:', error);
+  }
+
+  return json({success:true,sent:true,historySaved,id:resendEmailId||null,messageId:messageId||null,replyTo:threadReplyTo||null,warning:historySaved?undefined:'E-mail envoyé, mais l’historique n’a pas pu être enregistré.'});
 }
