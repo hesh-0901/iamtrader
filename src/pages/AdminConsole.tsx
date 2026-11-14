@@ -5,7 +5,7 @@ import { getAdminLogs, getAllAccounts, getAllTrades, getAllUsers, subscribeAllUs
 import { adminAddLog, adminComposeEmail, adminDeleteContact, adminGetPayments, adminMigrateSubscriptionExpiry, adminSaveEmailDraft, adminUpdateContact, adminUpdatePayment, adminUpdateUser } from '../services/adminConsole';
 import { useToast } from '../components/common/Toast';
 import { auth } from '../firebase/config';
-import { Tag } from 'lucide-react';
+import { Tag, Inbox, Archive, FileText, PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import { PromotionCenter } from './PromotionCenter';
 import { AIMonitoringPanel } from './AIMonitoringPanel';
 
@@ -95,6 +95,7 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
   const [selectedMessage, setSelectedMessage] = useState<import('../services/firestore').ContactMessage | null>(null);
   const [supportSearch, setSupportSearch] = useState('');
   const [mailboxFolder, setMailboxFolder] = useState<'inbox' | 'sent' | 'drafts' | 'unread' | 'in_progress' | 'archive' | 'trash'>('inbox');
+  const [folderSidebarOpen, setFolderSidebarOpen] = useState(true);
   const [composeOpen, setComposeOpen] = useState(false);
   const [composeId, setComposeId] = useState('');
   const [composeTo, setComposeTo] = useState('');
@@ -820,7 +821,34 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
           {adminTab === 'support' && (
             <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_8px_30px_rgba(11,31,53,.05)]">
               <div className="flex h-[calc(100svh-250px)] min-h-0 flex-col lg:flex-row">
-                <aside className={'h-full min-h-0 w-full min-w-0 flex-1 flex-col border-b border-slate-200 bg-white lg:flex lg:w-[360px] lg:flex-none lg:border-b-0 lg:border-r ' + (selectedMessage ? 'hidden' : 'flex')}>
+                <aside className={'h-full min-h-0 w-full min-w-0 flex-1 flex-row border-b border-slate-200 bg-white lg:flex lg:w-[470px] lg:flex-none lg:border-b-0 lg:border-r ' + (selectedMessage ? 'hidden' : 'flex')}>
+                  <nav aria-label="Dossiers de messagerie" className={'flex h-full shrink-0 flex-col border-r border-emerald-100 bg-[#f4fbf8] py-3 transition-[width] duration-200 ' + (folderSidebarOpen ? 'w-[148px] px-2.5' : 'w-[58px] items-center px-1.5')}>
+                    <div className={'mb-3 flex items-center ' + (folderSidebarOpen ? 'justify-between px-1' : 'justify-center')}>
+                      {folderSidebarOpen && <span className="text-[9px] font-black uppercase tracking-[.14em] text-[#78968c]">Dossiers</span>}
+                      <button type="button" onClick={() => setFolderSidebarOpen(value => !value)} className="flex h-8 w-8 items-center justify-center rounded-lg text-[#66877c] transition hover:bg-emerald-100 hover:text-[#008f6b]" title={folderSidebarOpen ? 'Réduire les dossiers' : 'Déployer les dossiers'} aria-label={folderSidebarOpen ? 'Réduire les dossiers' : 'Déployer les dossiers'}>
+                        {folderSidebarOpen ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
+                      </button>
+                    </div>
+                    {([
+                      ['inbox','Réception',Inbox],
+                      ['sent','Envoyés',Send],
+                      ['drafts','Brouillons',FileText],
+                      ['unread','Non lus',Mail],
+                      ['in_progress','En cours',Clock3],
+                      ['archive','Archivés',Archive],
+                      ['trash','Corbeille',Trash2]
+                    ] as const).map(([folder,label,FolderIcon]) => {
+                      const active = mailboxFolder === folder;
+                      const count = folder === 'unread' ? contactMessages.filter(m => m.status === 'new' && m.folder !== 'archive' && m.folder !== 'trash').length : folder === 'inbox' ? contactMessages.filter(m => (!m.folder || m.folder === 'inbox') && m.status === 'new').length : 0;
+                      return <button key={folder} type="button" onClick={() => { setMailboxFolder(folder); setSelectedMessage(null); }} title={folderSidebarOpen ? undefined : label} aria-label={label} className={'mb-1 flex min-h-10 items-center rounded-xl text-left transition-all ' + (folderSidebarOpen ? 'w-full gap-2.5 px-2.5' : 'w-10 justify-center') + (active ? ' bg-[#dff5ec] text-[#008f6b] ring-1 ring-[#b8e8d7]' : ' text-slate-500 hover:bg-emerald-50 hover:text-[#008f6b]')}>
+                        <FolderIcon className={'h-[17px] w-[17px] shrink-0 ' + (active ? 'text-[#009b73]' : 'text-slate-400')} />
+                        {folderSidebarOpen && <span className="min-w-0 flex-1 truncate text-[11px] font-bold">{label}</span>}
+                        {folderSidebarOpen && count > 0 && <span className="rounded-full bg-[#00a982] px-1.5 py-0.5 text-[9px] font-black text-white">{count}</span>}
+                        {!folderSidebarOpen && count > 0 && <span className="absolute ml-6 -mt-6 h-2 w-2 rounded-full bg-[#00a982]" />}
+                      </button>;
+                    })}
+                  </nav>
+                  <div className="flex min-h-0 min-w-0 flex-1 flex-col">
                   <div className="border-b border-slate-200 px-4 py-3">
                     <div className="flex items-center justify-between gap-2">
                       <div>
@@ -828,9 +856,6 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
                         <div className="mt-0.5 text-xs text-slate-400">{contactMessages.length} éléments · {contactMessages.filter(m => m.status === 'new').length} non lus</div>
                       </div>
                       <div className="flex shrink-0 items-center gap-1"><button type="button" onClick={() => { setComposeId(''); setComposeTo(''); setComposeSubject(''); setComposeBody(''); setComposeOpen(true); }} className="inline-flex items-center gap-1 rounded-lg bg-[#0b1f35] px-2.5 py-2 text-[11px] font-bold text-white"><Plus className="h-3.5 w-3.5" />Écrire</button><button onClick={() => { setSupportSearch(''); load(); }} disabled={loading} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100" title="Actualiser"><RefreshCw className={'h-3.5 w-3.5 '+(loading?'animate-spin':'')} /></button></div>
-                    </div>
-                    <div className="mt-3 grid grid-cols-2 gap-1 sm:grid-cols-3">
-                      {([['inbox','Réception'],['sent','Envoyés'],['drafts','Brouillons'],['unread','Non lus'],['in_progress','En cours'],['archive','Archivés'],['trash','Corbeille']] as const).map(([folder,label]) => <button key={folder} type="button" onClick={() => { setMailboxFolder(folder); setSelectedMessage(null); }} className={'rounded-lg px-2 py-2 text-[10px] font-bold transition ' + (mailboxFolder===folder ? 'bg-[#0b1f35] text-white' : 'bg-slate-50 text-slate-500 hover:bg-slate-100')}>{label}{folder==='unread' && contactMessages.filter(m=>m.status==='new').length>0 ? ' · '+contactMessages.filter(m=>m.status==='new').length : ''}</button>)}
                     </div>
                     <div className="mt-3 flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
                       <Search className="h-3.5 w-3.5 shrink-0 text-slate-400" />
@@ -881,6 +906,7 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
                       const q = supportSearch.trim().toLowerCase();
                       return !q || [m.name, m.email, decodeMimeSubject(m.subject), m.message].some(v => String(v || '').toLowerCase().includes(q));
                     }).length === 0 && <div className="p-10 text-center text-sm text-slate-400">Aucune conversation.</div>}
+                  </div>
                   </div>
                 </aside>
 
