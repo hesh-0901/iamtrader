@@ -491,7 +491,7 @@ export async function requestUserPlanChange(uid: string, plan: 'pro' | 'communit
 }
 
 
-export type ContactMessageStatus = 'new' | 'in_progress' | 'resolved';
+export type ContactMessageStatus = 'new' | 'in_progress' | 'resolved' | 'draft';
 
 export interface ContactConversationMessage {
   id?: string;
@@ -520,6 +520,9 @@ export interface ContactMessage {
   lastReply?: string;
   repliedAt?: string;
   repliedBy?: string;
+  folder?: 'inbox' | 'sent' | 'drafts' | 'archive' | 'trash';
+  source?: string;
+  resendId?: string;
   conversation?: ContactConversationMessage[];
 }
 
