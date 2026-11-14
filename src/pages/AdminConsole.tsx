@@ -114,6 +114,7 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
   const [composeBusy, setComposeBusy] = useState(false);
   const [contactNote, setContactNote] = useState('');
   const [replyText, setReplyText] = useState('');
+  const [showReplyComposer, setShowReplyComposer] = useState(false);
   const [contactBusy, setContactBusy] = useState(false);
   const [replyBusy, setReplyBusy] = useState(false);
   const [adminTab, setAdminTab] = useState<'overview' | 'users' | 'subscriptions' | 'payments' | 'promotions' | 'support' | 'analytics' | 'audit' | 'ai-monitoring'>('overview');
@@ -881,6 +882,24 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
                         const q = supportSearch.trim().toLowerCase();
                         return !q || [m.name, m.email, decodeMimeSubject(m.subject), m.message].some(v => String(v || '').toLowerCase().includes(q));
                       })
+                      .reduce((rows, m) => {
+                        if (mailboxFolder !== 'sent') return [...rows, m];
+                        const parentId = String((m as any).parentConversationId || '').trim();
+                        const groupKey = parentId || [String(m.email || '').toLowerCase(), decodeMimeSubject(m.subject).trim().toLowerCase()].join('|');
+                        const existingIndex = rows.findIndex(row => {
+                          const rowParent = String((row as any).parentConversationId || '').trim();
+                          const rowKey = rowParent || [String(row.email || '').toLowerCase(), decodeMimeSubject(row.subject).trim().toLowerCase()].join('|');
+                          return rowKey === groupKey;
+                        });
+                        if (existingIndex < 0) return [...rows, m];
+                        const next = [...rows];
+                        const previous = next[existingIndex];
+                        const mergedConversation = [...(Array.isArray(previous.conversation) ? previous.conversation : []), ...(Array.isArray(m.conversation) ? m.conversation : [])]
+                          .filter((item, index, all) => all.findIndex(candidate => candidate.id === item.id || (candidate.at === item.at && candidate.body === item.body)) === index)
+                          .sort((a, b) => new Date(a.at || 0).getTime() - new Date(b.at || 0).getTime());
+                        next[existingIndex] = { ...previous, ...m, conversation: mergedConversation };
+                        return next;
+                      }, [] as typeof contactMessages)
                       .map(m => {
                         const dateValue = m.updatedAt || m.createdAt;
                         const date = dateValue ? new Date(dateValue) : null;
@@ -891,7 +910,7 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
                         const unread = m.status === 'new';
                         const email = emailParts(m.email);
                         return (
-                          <button key={m.id} onClick={() => { if (m.status === 'draft' || m.folder === 'drafts') { setComposeId(m.id); setComposeTo(m.email || ''); setComposeSubject(m.subject || ''); setComposeBody(m.message || ''); setComposeOpen(true); return; } if (m.status === 'new') { const now = new Date().toISOString(); setSelectedMessage({ ...m, status: 'in_progress', handledBy: auth.currentUser?.uid || '', handledAt: now }); void adminUpdateContact(m.id, { status: 'in_progress', handledBy: auth.currentUser?.uid || '', handledAt: now }).catch(() => showToast('Impossible de marquer le message comme lu.', 'error')); } else setSelectedMessage(m); setContactNote(m.adminNote || ''); setReplyText(''); }} className={'flex w-full gap-3 border-b border-slate-100/80 px-4 py-4 text-left transition-all ' + (selectedItem ? 'bg-gradient-to-r from-[#e5f7ef] to-[#f4fbf8] shadow-[inset_3px_0_0_#00a982]' : unread ? 'bg-[#f8fcfa] hover:bg-[#eff9f4]' : 'bg-white hover:bg-[#f7fbf9]')}>
+                          <button key={m.id} onClick={() => { if (m.status === 'draft' || m.folder === 'drafts') { setComposeId(m.id); setComposeTo(m.email || ''); setComposeSubject(m.subject || ''); setComposeBody(m.message || ''); setComposeOpen(true); return; } if (m.status === 'new') { const now = new Date().toISOString(); setSelectedMessage({ ...m, status: 'in_progress', handledBy: auth.currentUser?.uid || '', handledAt: now }); void adminUpdateContact(m.id, { status: 'in_progress', handledBy: auth.currentUser?.uid || '', handledAt: now }).catch(() => showToast('Impossible de marquer le message comme lu.', 'error')); } else setSelectedMessage(m); setContactNote(m.adminNote || ''); setReplyText(''); setShowReplyComposer(false); }} className={'flex w-full gap-3 border-b border-slate-100/80 px-4 py-4 text-left transition-all ' + (selectedItem ? 'bg-gradient-to-r from-[#e5f7ef] to-[#f4fbf8] shadow-[inset_3px_0_0_#00a982]' : unread ? 'bg-[#f8fcfa] hover:bg-[#eff9f4]' : 'bg-white hover:bg-[#f7fbf9]')}>
                             <div className={'mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-black ' + (unread ? 'bg-gradient-to-br from-[#00a982] to-[#087d65] text-white shadow-sm' : 'bg-[#edf4f1] text-[#6d8b80]')}>
                               {(m.name || m.email || '?').trim().charAt(0).toUpperCase()}
                             </div>
@@ -923,47 +942,42 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
                 <div className={'h-full min-h-0 min-w-0 flex-1 bg-white ' + (selectedMessage ? 'flex' : 'hidden lg:flex')}>
                   {selectedMessage ? (
                     <div className="flex h-full min-h-0 w-full min-w-0 flex-col">
-                      <header className="shrink-0 border-b border-slate-200 bg-white px-5 py-3.5 sm:px-7">
-                        <div className="flex min-w-0 items-center gap-3">
+                      <header className="shrink-0 border-b border-slate-200 bg-white px-5 py-4 sm:px-7">
+                        <div className="flex items-start gap-3">
                           <button type="button" onClick={() => setSelectedMessage(null)} className="shrink-0 rounded-lg p-2 text-slate-500 hover:bg-slate-100 lg:hidden" aria-label="Retour à la boîte"><ChevronLeft className="h-4 w-4" /></button>
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#0b1f35] text-sm font-black text-white">
-                            {(selectedMessage.name || selectedMessage.email || '?').trim().charAt(0).toUpperCase()}
-                          </div>
                           <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <h2 className="truncate text-[14px] font-black text-[#0b1f35]">{selectedMessage.name || selectedMessage.email}</h2>
-                              {selectedMessage.status === 'new' && <span className="h-2 w-2 rounded-full bg-blue-600" />}
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="rounded-md bg-[#e8f8f2] px-2 py-1 text-[9px] font-black uppercase tracking-wider text-[#087f63]">E-mail</span>
+                              {selectedMessage.status === 'new' && <span className="rounded-md bg-blue-50 px-2 py-1 text-[9px] font-bold text-blue-700">Non lu</span>}
                             </div>
-                            <div className="flex min-w-0 items-center gap-1.5 text-xs">
-                              <a href={'mailto:' + String(selectedMessage.email || '').toLowerCase()} className="min-w-0 truncate font-mono text-xs font-normal text-slate-500 hover:text-blue-600" title={String(selectedMessage.email || '').toLowerCase()}>
-                                <span>{emailParts(selectedMessage.email).local}</span><span className="text-slate-300">{emailParts(selectedMessage.email).domain}</span>
-                              </a>
-                              <button type="button" onClick={() => { navigator.clipboard?.writeText(String(selectedMessage.email || '').toLowerCase()); showToast('Adresse e-mail copiée.', 'success'); }} className="shrink-0 rounded p-0.5 text-slate-300 hover:bg-slate-100 hover:text-slate-600" title="Copier l'adresse e-mail"><Copy className="h-3 w-3" /></button>
+                            <h2 className="mt-2 break-words text-lg font-bold leading-snug text-[#10243b]">{decodeMimeSubject(selectedMessage.subject) || '(Sans objet)'}</h2>
+                            <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
+                              <span className="font-semibold text-slate-700">{selectedMessage.name || selectedMessage.email}</span>
+                              <span className="text-slate-300">&lt;{selectedMessage.email}&gt;</span>
                             </div>
+                            <div className="mt-1 text-xs text-slate-500">À <span className="font-medium text-slate-700">hello@iamtrader.trade</span></div>
+                            {Boolean((selectedMessage as any).cc) && <div className="mt-1 text-xs text-slate-500">Cc <span className="text-slate-700">{Array.isArray((selectedMessage as any).cc) ? (selectedMessage as any).cc.join(', ') : (selectedMessage as any).cc}</span></div>}
+                            <div className="mt-1 text-[11px] text-slate-400">{selectedMessage.createdAt ? new Date(selectedMessage.createdAt).toLocaleString('fr-FR', {dateStyle:'long',timeStyle:'short'}) : ''}</div>
                           </div>
-                          <div className="hidden min-w-0 max-w-[42%] text-right sm:block">
-                            <div className="truncate text-sm font-semibold text-slate-600">{decodeMimeSubject(selectedMessage.subject) || '(Sans objet)'}</div>
+                          <div className="flex shrink-0 items-center gap-1">
+                            <button type="button" onClick={() => setShowReplyComposer(true)} className="inline-flex items-center gap-1.5 rounded-lg border border-[#bdebd9] bg-[#effaf5] px-3 py-2 text-xs font-bold text-[#087f63] hover:bg-[#e2f7ed]" title="Répondre"><Send className="h-3.5 w-3.5" />Répondre</button>
+                            <button onClick={async () => {
+                              try {
+                                const now = new Date().toISOString();
+                                await adminUpdateContact(selectedMessage.id, { status:'in_progress', handledBy:auth.currentUser?.uid || '', handledAt:now });
+                                setSelectedMessage(prev => prev ? {...prev,status:'in_progress',handledBy:auth.currentUser?.uid || '',handledAt:now}:prev);
+                              } catch { showToast('Mise à jour impossible.'); }
+                            }} className="hidden rounded-lg bg-emerald-50 px-2.5 py-2 text-xs font-bold text-emerald-700 sm:inline-flex">En cours</button>
+                            <button type="button" onClick={() => adminUpdateContact(selectedMessage.id, { folder: mailboxFolder === 'trash' || mailboxFolder === 'archive' ? 'inbox' : 'archive' }).then(() => { setSelectedMessage(null); showToast(mailboxFolder === 'trash' || mailboxFolder === 'archive' ? 'Message restauré.' : 'Message archivé.', 'success'); }).catch(() => showToast('Action impossible.', 'error'))} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100" title={mailboxFolder === 'trash' || mailboxFolder === 'archive' ? 'Restaurer' : 'Archiver'}><Layers className="h-4 w-4" /></button>
+                            <button onClick={() => (mailboxFolder === 'trash' ? adminDeleteContact(selectedMessage.id) : adminUpdateContact(selectedMessage.id, { folder: 'trash' })).then(() => { setSelectedMessage(null); showToast(mailboxFolder === 'trash' ? 'Message supprimé définitivement.' : 'Message déplacé dans la corbeille.', 'success'); }).catch(() => showToast('Suppression impossible.', 'error'))} className="rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600" title={mailboxFolder === 'trash' ? 'Supprimer définitivement' : 'Corbeille'}><Trash2 className="h-4 w-4" /></button>
                           </div>
-                          <button onClick={async () => {
-                            try {
-                              const now = new Date().toISOString();
-                              await adminUpdateContact(selectedMessage.id, { status:'in_progress', handledBy:auth.currentUser?.uid || '', handledAt:now });
-                              setSelectedMessage(prev => prev ? {...prev,status:'in_progress',handledBy:auth.currentUser?.uid || '',handledAt:now}:prev);
-                            } catch { showToast('Mise à jour impossible.'); }
-                          }} className="hidden items-center gap-1.5 rounded-lg bg-emerald-50 px-2.5 py-2 text-xs font-bold text-emerald-700 sm:flex">En cours <ChevronRight className="h-3 w-3 rotate-90" /></button>
-                          <button type="button" onClick={() => adminUpdateContact(selectedMessage.id, { folder: mailboxFolder === 'trash' || mailboxFolder === 'archive' ? 'inbox' : 'archive' }).then(() => { setSelectedMessage(null); showToast(mailboxFolder === 'trash' || mailboxFolder === 'archive' ? 'Message restauré.' : 'Message archivé.', 'success'); }).catch(() => showToast('Action impossible.', 'error'))} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100" title={mailboxFolder === 'trash' || mailboxFolder === 'archive' ? 'Restaurer' : 'Archiver'}><Layers className="h-4 w-4" /></button>
-                          <button onClick={() => (mailboxFolder === 'trash' ? adminDeleteContact(selectedMessage.id) : adminUpdateContact(selectedMessage.id, { folder: 'trash' })).then(() => { setSelectedMessage(null); showToast(mailboxFolder === 'trash' ? 'Message supprimé définitivement.' : 'Message déplacé dans la corbeille.', 'success'); }).catch(() => showToast('Suppression impossible.', 'error'))} className="rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600" title={mailboxFolder === 'trash' ? 'Supprimer définitivement' : 'Corbeille'}><Trash2 className="h-4 w-4" /></button>
-                          <button className="hidden rounded-lg p-2 text-slate-400 hover:bg-slate-100 sm:block" title="Plus d'actions"><MoreVertical className="h-4 w-4" /></button>
                         </div>
                       </header>
 
-                      <div className="min-h-0 w-full flex-1 overflow-y-auto bg-white px-5 py-6 sm:px-8 lg:px-10">
-                        <div className="mx-auto w-full max-w-5xl">
+                      <div className="min-h-0 w-full flex-1 overflow-y-auto bg-[#f7faf8] px-4 py-5 sm:px-7">
+                        <div className="mx-auto w-full max-w-4xl space-y-4">
                           {(() => {
-                            const legacyConversation = [
-                              { id:'legacy-inbound', direction:'inbound' as const, body:selectedMessage.message, at:selectedMessage.createdAt || new Date().toISOString(), from:selectedMessage.email, to:'hello@iamtrader.trade' },
-
-                            ];
+                            const legacyConversation = [{ id:'legacy-inbound', direction:'inbound' as const, body:selectedMessage.message, at:selectedMessage.createdAt || new Date().toISOString(), from:selectedMessage.email, to:'hello@iamtrader.trade' }];
                             const customerEmail = String(selectedMessage.email || '').trim().toLowerCase();
                             const rawConversation = Array.isArray(selectedMessage.conversation) && selectedMessage.conversation.length ? selectedMessage.conversation : legacyConversation;
                             const conversation = rawConversation.map(item => {
@@ -972,50 +986,51 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
                               let direction = item.direction;
                               if (senderEmail === customerEmail) direction = 'inbound';
                               else if (senderEmail === 'hello@iamtrader.trade' || recipientEmail === customerEmail) direction = 'outbound';
-                              else if (!senderEmail && !recipientEmail && String(item.body || '') === String(selectedMessage.message || '')) direction = 'inbound';
                               return { ...item, direction };
-                            }).sort((a, b) => new Date(a.at || 0).getTime() - new Date(b.at || 0).getTime());
-                            return conversation.map((item, index) => {
-                              const outbound = item.direction === 'outbound';
-                              const bodyParts = splitEmailSignature(item.body);
-                              const at = item.at ? new Date(item.at) : null;
-                              const previous = conversation[index - 1];
-                              const sameDay = previous && new Date(previous.at).toDateString() === new Date(item.at).toDateString();
-                              const dayLabel = at && !Number.isNaN(at.getTime()) ? at.toLocaleDateString('fr-FR', { day:'numeric', month:'long', year:'numeric' }) : '';
-                              return (
-                                <React.Fragment key={item.id || index}>
-                                  {!sameDay && <div className="my-5 flex items-center gap-4"><span className="h-px flex-1 bg-slate-100" /><span className="whitespace-nowrap text-xs font-black uppercase tracking-wider text-slate-400">{dayLabel === new Date().toLocaleDateString('fr-FR', {day:'numeric',month:'long',year:'numeric'}) ? 'Aujourd’hui' : dayLabel}</span><span className="h-px flex-1 bg-slate-100" /></div>}
-                                  <div className={'mb-5 flex ' + (outbound ? 'justify-end' : 'justify-start')}>
-                                    <div className={'max-w-[78%] sm:max-w-[62%] ' + (outbound ? 'text-right' : 'text-left')}>
-                                      <div className={'mb-1.5 flex items-center gap-2 text-xs text-slate-400 ' + (outbound ? 'justify-end' : '')}>
-                                        <span className="font-bold text-slate-600">{outbound ? 'IAMTRADER Support' : (selectedMessage.name || selectedMessage.email)}</span>
-                                        <span>{at && !Number.isNaN(at.getTime()) ? at.toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'}) : '—'}</span>
-                                      </div>
-                                      <div className={'inline-block max-w-full rounded-2xl px-4 py-3.5 text-left ' + (outbound ? 'bg-[#e8f8f2] text-[#123b30] ring-1 ring-[#c8eee0]' : 'border border-slate-200 bg-[#f8fafc] text-slate-800 shadow-[0_1px_2px_rgba(15,23,42,.04)]')}>
-                                        <div className="whitespace-pre-wrap break-words text-[13px] leading-[1.75]">{bodyParts.message || '(Message vide)'}</div>
-                                        {bodyParts.signature && <div className="mt-3 border-t border-slate-200/80 pt-2.5 text-[11px] leading-[1.65] text-slate-500"><div className="mb-1 text-[9px] font-bold uppercase tracking-[.12em] text-slate-400">Signature</div><div className="whitespace-pre-wrap break-words">{bodyParts.signature}</div></div>}
-                                      </div>
+                            }).sort((a,b)=>new Date(a.at || 0).getTime()-new Date(b.at || 0).getTime());
+                            return conversation.map((item,index) => {
+                              const outbound=item.direction==='outbound';
+                              const at=item.at?new Date(item.at):null;
+                              const bodyParts=splitEmailSignature(item.body);
+                              const cc=(item as any).cc;
+                              return <article key={item.id || index} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_2px_8px_rgba(15,35,55,.035)]">
+                                <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-4 py-3.5 sm:px-5">
+                                  <div className="flex min-w-0 items-start gap-3">
+                                    <div className={'flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-black '+(outbound?'bg-[#e7f7f0] text-[#087f63]':'bg-[#eaf0f7] text-[#29445f]')}>{(outbound?'I':(selectedMessage.name || selectedMessage.email || '?').charAt(0)).toUpperCase()}</div>
+                                    <div className="min-w-0">
+                                      <div className="text-sm font-bold text-[#172f45]">{outbound?'Iamtrader team':(selectedMessage.name || selectedMessage.email)}</div>
+                                      <div className="mt-0.5 break-all text-xs text-slate-500">{outbound?'hello@iamtrader.trade':selectedMessage.email}</div>
+                                      <div className="mt-1 text-xs text-slate-500">À {outbound?selectedMessage.email:'hello@iamtrader.trade'}</div>
+                                      {cc && <div className="mt-1 text-xs text-slate-500">Cc {Array.isArray(cc)?cc.join(', '):cc}</div>}
                                     </div>
                                   </div>
-                                </React.Fragment>
-                              );
+                                  <div className="flex items-center gap-2 text-[11px] text-slate-400">
+                                    <span>{at&&!Number.isNaN(at.getTime())?at.toLocaleString('fr-FR',{dateStyle:'medium',timeStyle:'short'}):'—'}</span>
+                                    <button type="button" onClick={()=>setShowReplyComposer(true)} className="rounded-lg p-1.5 text-slate-400 hover:bg-[#effaf5] hover:text-[#087f63]" title="Répondre à cet e-mail"><Send className="h-3.5 w-3.5"/></button>
+                                    <button type="button" className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-100" title="Plus d’actions"><MoreVertical className="h-3.5 w-3.5"/></button>
+                                  </div>
+                                </div>
+                                <div className="px-4 py-4 sm:px-5">
+                                  {!outbound && <div className="mb-3 text-sm font-bold text-[#173b31]">{decodeMimeSubject(selectedMessage.subject)||'(Sans objet)'}</div>}
+                                  <div className="whitespace-pre-wrap break-words text-[13px] leading-7 text-slate-700">{bodyParts.message||'(Message vide)'}</div>
+                                  {bodyParts.signature&&<div className="mt-4 border-t border-slate-100 pt-3 text-xs leading-6 text-slate-500"><div className="mb-1 text-[9px] font-bold uppercase tracking-wider text-slate-400">Signature</div><div className="whitespace-pre-wrap break-words">{bodyParts.signature}</div></div>}
+                                </div>
+                              </article>;
                             });
                           })()}
                         </div>
                       </div>
 
-                      <div className="w-full shrink-0 border-t border-slate-200 bg-white px-4 py-3 sm:px-8 lg:px-10">
+                      {showReplyComposer && <div className="w-full shrink-0 border-t border-slate-200 bg-white px-4 py-3 sm:px-8 lg:px-10">
                         <div className="mx-auto w-full max-w-5xl">
+                          <div className="mb-2 flex items-center justify-between"><div className="text-xs font-bold text-slate-700">Répondre à {selectedMessage.email}</div><button type="button" onClick={()=>setShowReplyComposer(false)} className="rounded-md px-2 py-1 text-xs text-slate-400 hover:bg-slate-100">Fermer</button></div>
                           <div className="flex items-end gap-2 rounded-xl border border-slate-300 bg-white p-1.5 shadow-sm focus-within:border-[#0b1f35] focus-within:ring-2 focus-within:ring-blue-50">
-                            <button type="button" className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 sm:flex" title="Joindre un fichier"><Paperclip className="h-4 w-4" /></button>
-                            <textarea value={replyText} onChange={e => setReplyText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void sendSupportReply(); } }} rows={2} maxLength={10000} placeholder="Écrire un message…" className="min-h-[44px] max-h-32 flex-1 resize-none bg-transparent px-2.5 py-1.5 text-[12px] leading-5 outline-none placeholder:text-slate-400" />
-                            <button type="button" className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 sm:flex" title="Emoji"><Smile className="h-4 w-4" /></button>
-                            <button type="button" disabled={replyBusy || !replyText.trim()} onClick={() => void sendSupportReply()} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-[#0b1f35] text-white transition hover:bg-[#142d47] disabled:opacity-30" title="Envoyer"><Send className="h-3.5 w-3.5" /></button>
+                            <textarea value={replyText} onChange={e=>setReplyText(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();void sendSupportReply();}}} rows={3} maxLength={10000} placeholder="Rédiger votre réponse…" className="min-h-[72px] max-h-40 flex-1 resize-y bg-transparent px-2.5 py-1.5 text-[13px] leading-6 outline-none placeholder:text-slate-400"/>
+                            <button type="button" disabled={replyBusy||!replyText.trim()} onClick={()=>void sendSupportReply()} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#0b1f35] text-white transition hover:bg-[#142d47] disabled:opacity-30" title="Envoyer"><Send className="h-4 w-4"/></button>
                           </div>
                           <div className="mt-1 flex justify-between px-1 text-xs text-slate-400"><span>Entrée pour envoyer · Maj + Entrée pour une nouvelle ligne</span><span>{replyText.length}/10 000</span></div>
                         </div>
-                      </div>
-
+                      </div>}
                       <details className="shrink-0 border-t border-slate-100 bg-slate-50/40 px-4 py-2 sm:px-7">
                         <summary className="mx-auto flex max-w-4xl cursor-pointer list-none items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-400"><Info className="h-3 w-3" />Détails internes</summary>
                         <div className="mx-auto mt-2 max-w-4xl pb-2">
