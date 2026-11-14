@@ -29,7 +29,7 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
   }
   if (!profile || profile.role !== 'admin' || profile.status === 'suspended') return json({ error: 'Accès administrateur requis.' }, 403);
 
-  let body: { action?: string; id?: string; to?: string; subject?: string; message?: string };
+  let body: { action?: string; id?: string; to?: string; subject?: string; message?: string; messageHtml?: string; attachments?: Array<{ filename?: string; content?: string }> };
   try { body = await context.request.json(); } catch { return json({ error: 'Requête invalide.' }, 400); }
 
   const action = body.action === 'draft' ? 'draft' : body.action === 'send' ? 'send' : '';
@@ -37,6 +37,8 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
   const to = String(body.to || '').trim().toLowerCase();
   const subject = String(body.subject || '').trim().slice(0, 200);
   const message = String(body.message || '').trim();
+  const messageHtml = String(body.messageHtml || '');
+  const attachments = Array.isArray(body.attachments) ? body.attachments : [];
 
   if (!action || !id) return json({ error: 'Action ou identifiant invalide.' }, 400);
   const existing = await firestoreGet(context.env as any, `contactMessages/${encodeURIComponent(id)}`);
@@ -58,6 +60,8 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
 
   if (!validEmail(to) || !subject || !message) return json({ error: 'Destinataire, sujet et message sont obligatoires.' }, 400);
   if (message.length > 10000) return json({ error: 'Le message dépasse 10 000 caractères.' }, 400);
+  const attachmentBytes = attachments.reduce((sum, file) => sum + Math.floor(String(file.content || '').length * 0.75), 0);
+  if (attachments.length > 10 || attachmentBytes > 8 * 1024 * 1024 || attachments.some(file => !file.filename || !/^[a-zA-Z0-9._ -]{1,120}$/.test(file.filename) || !file.content || !/^[A-Za-z0-9+/]+={0,2}$/.test(file.content))) return json({ error: 'Pièces jointes invalides ou trop volumineuses (10 fichiers, 8 Mo au total maximum).' }, 400);
 
   const apiKey = String(context.env.RESEND_API_KEY || '').trim();
   const configuredFrom = String(context.env.RESEND_FROM_EMAIL || '').trim();
@@ -66,7 +70,7 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
   const replyTo = String(context.env.RESEND_REPLY_TO || senderAddress).trim();
   if (!apiKey || !senderAddress) return json({ error: 'Configuration e-mail du serveur incomplète.' }, 500);
 
-  const html = buildIamtraderEmail(message, 'new-message');
+  const html = buildIamtraderEmail(message, 'new-message', messageHtml);
   const text = `${message}\n\n—\nIamtrader team\nle trader que vous devez être !\nhello@iamtrader.trade\niamtrader.trade`;
   let sent: Response;
   let payload: { id?: string } = {};
@@ -74,7 +78,7 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
     sent = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from, to: [to], subject, html, text, ...(replyTo ? { reply_to: replyTo } : {}) })
+      body: JSON.stringify({ from, to: [to], subject, html, text, ...(attachments.length ? { attachments } : {}), ...(replyTo ? { reply_to: replyTo } : {}) })
     });
     payload = await sent.json().catch(() => ({}));
   } catch {
