@@ -553,7 +553,7 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
           ]);
       const conversation = [...existingConversation, outbound];
 
-      setSelectedMessage(prev => prev ? { ...prev, status:'resolved', handledBy:currentUser.uid, handledAt:now, lastReply:replyText.trim(), repliedAt:now, repliedBy:currentUser.uid, conversation } : prev);
+      setSelectedMessage(prev => prev ? { ...prev, status:'resolved', handledBy:currentUser.uid, handledAt:now, lastReply:currentReplyText, repliedAt:now, repliedBy:currentUser.uid, conversation } : prev);
       setReplyText('');
       setReplyHtml('');
       setReplyFormattingOpen(false);
