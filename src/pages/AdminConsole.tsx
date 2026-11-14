@@ -829,14 +829,8 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
                     </div>
                     <div className="mt-3 flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
                       <Search className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-                      <input value={supportSearch} onChange={e => setSupportSearch(e.target.value)} placeholder="Rechercher un e-mail…" className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-slate-400" />
-                      <Filter className="h-3 w-3 text-slate-300" />
-                    </div>
-                    <div className="mt-3 flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
-                      <Search className="h-3.5 w-3.5 shrink-0 text-slate-400" />
                       <input value={supportSearch} onChange={e => setSupportSearch(e.target.value)} placeholder="Rechercher une conversation…" className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-slate-400" />
                       <Filter className="h-3 w-3 text-slate-300" />
-                    </div>
                     </div>
                   </div>
 
