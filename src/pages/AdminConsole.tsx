@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Tag, Zap, Activity, Sparkles, CalendarClock, AlertTriangle, BellRing, Check, CheckCircle2, ChevronLeft, Eye, ChevronRight, Clock3, CreditCard, Edit3, History, Mail, ReceiptText, RefreshCw, Search, Send, ShieldCheck, Trash2, UserCheck, UserX, Users, X, XCircle, Copy, Paperclip, Smile, MoreVertical, Info, Plus, Filter, PenLine, TrendingUp, ArrowUpRight, ArrowDownRight, Wallet, Crown, ChartNoAxesCombined, UserRoundPlus, CircleDollarSign, CalendarDays, Phone, MapPin, UserRound, VenusAndMars, Target, Layers, UserPlus, Menu } from 'lucide-react';
 import { AdminLog, PaymentRecord, SubscriptionPlan, UserProfile, UserStatus, TradingAccount, Trade } from '../types';
 import { getAdminLogs, getAllAccounts, getAllTrades, getAllUsers, subscribeAllUsers, subscribeAllPayments, subscribeContactMessages } from '../services/firestore';
@@ -113,6 +113,13 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
   const [composeTo, setComposeTo] = useState('');
   const [composeSubject, setComposeSubject] = useState('');
   const [composeBody, setComposeBody] = useState('');
+  const [composeHtml, setComposeHtml] = useState('');
+  const [composeFiles, setComposeFiles] = useState<File[]>([]);
+  const [composeFormattingOpen, setComposeFormattingOpen] = useState(false);
+  const [composeEmojiOpen, setComposeEmojiOpen] = useState(false);
+  const [composeFont, setComposeFont] = useState('Arial');
+  const composeEditorRef = useRef<HTMLDivElement | null>(null);
+  const composeFileInputRef = useRef<HTMLInputElement | null>(null);
   const [composeBusy, setComposeBusy] = useState(false);
   const [contactNote, setContactNote] = useState('');
   const [replyText, setReplyText] = useState('');
@@ -403,8 +410,8 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
     if (composeBusy) return;
     setComposeBusy(true);
     try {
-      const result = await adminComposeEmail({ id: composeId || undefined, to: composeTo.trim(), subject: composeSubject.trim(), message: composeBody.trim() });
-      setComposeOpen(false); setComposeId(''); setComposeTo(''); setComposeSubject(''); setComposeBody('');
+      const result = await adminComposeEmail({ id: composeId || undefined, to: composeTo.trim(), subject: composeSubject.trim(), message: composeBody.trim(), messageHtml: composeHtml, attachments: await Promise.all(composeFiles.map(async file => ({ filename: file.name, content: await new Promise<string>((resolve,reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result || '').split(',')[1] || ''); reader.onerror = () => reject(new Error('Lecture de pièce jointe impossible.')); reader.readAsDataURL(file); }) }))) });
+      setComposeOpen(false); setComposeId(''); setComposeTo(''); setComposeSubject(''); setComposeBody(''); setComposeHtml(''); setComposeFiles([]); setComposeFormattingOpen(false); setComposeEmojiOpen(false);
       setMailboxFolder('sent');
       if (result.historySaved === false) showToast(result.warning || 'E-mail envoyé, mais historique non enregistré.', 'error');
       else showToast('E-mail envoyé et enregistré dans Envoyés.', 'success');
@@ -823,14 +830,42 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
           </div>}
 
           {composeOpen && adminTab === 'support' && (
-            <div className="fixed inset-0 z-[120] flex items-center justify-center bg-[#071a2d]/55 p-3 backdrop-blur-sm sm:p-6" role="dialog" aria-modal="true" aria-label="Nouveau message">
-              <form onSubmit={event => { event.preventDefault(); void sendComposedEmail(); }} className="flex max-h-[min(760px,94dvh)] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
-                <header className="flex shrink-0 items-center justify-between border-b border-slate-200 px-5 py-4"><div><h2 className="text-base font-black text-[#0b1f35]">Nouveau message</h2><p className="mt-1 text-xs text-slate-400">Envoyé depuis hello@iamtrader.trade</p></div><button type="button" onClick={() => setComposeOpen(false)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100" aria-label="Fermer"><X className="h-4 w-4" /></button></header>
-                <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-5"><label className="block text-xs font-bold text-slate-500">Destinataire<input type="email" required value={composeTo} onChange={event => setComposeTo(event.target.value)} placeholder="adresse@exemple.com" className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm font-medium text-[#0b1f35] outline-none focus:border-emerald-500" /></label><label className="block text-xs font-bold text-slate-500">Objet<input required maxLength={200} value={composeSubject} onChange={event => setComposeSubject(event.target.value)} placeholder="Objet du message" className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm font-medium text-[#0b1f35] outline-none focus:border-emerald-500" /></label><label className="block text-xs font-bold text-slate-500">Message<textarea required maxLength={10000} rows={10} value={composeBody} onChange={event => setComposeBody(event.target.value)} placeholder="Rédigez votre message…" className="mt-1.5 min-h-[220px] w-full resize-y rounded-xl border border-slate-200 px-3 py-3 text-sm leading-6 text-[#0b1f35] outline-none focus:border-emerald-500" /></label></div>
-                <footer className="flex shrink-0 flex-col-reverse gap-2 border-t border-slate-200 bg-slate-50 px-5 py-4 sm:flex-row sm:justify-between"><button type="button" disabled={composeBusy} onClick={() => void saveComposeDraft()} className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-600 disabled:opacity-50">Enregistrer le brouillon</button><div className="flex gap-2"><button type="button" disabled={composeBusy} onClick={() => setComposeOpen(false)} className="rounded-xl px-4 py-2.5 text-xs font-bold text-slate-500">Annuler</button><button type="submit" disabled={composeBusy || !composeTo.trim() || !composeSubject.trim() || !composeBody.trim()} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#0b1f35] px-5 py-2.5 text-xs font-black text-white disabled:opacity-40"><Send className="h-3.5 w-3.5" />{composeBusy ? 'Envoi…' : 'Envoyer'}</button></div></footer>
+            <div className="fixed inset-0 z-[120] flex items-end justify-end bg-slate-950/20 p-0 sm:p-4" role="dialog" aria-modal="true" aria-label="Nouveau message">
+              <form onSubmit={event => { event.preventDefault(); if (composeEditorRef.current) { setComposeHtml(composeEditorRef.current.innerHTML); setComposeBody(composeEditorRef.current.innerText.trim()); } void sendComposedEmail(); }} className="flex h-[min(760px,94dvh)] w-full max-w-[560px] flex-col overflow-hidden rounded-t-xl border border-slate-200 bg-white shadow-[0_18px_60px_rgba(15,35,55,.22)] sm:rounded-xl">
+                <header className="flex h-11 shrink-0 items-center justify-between border-b border-slate-200 bg-[#f6f8fc] px-4">
+                  <h2 className="text-[13px] font-semibold text-slate-800">Nouveau message</h2>
+                  <div className="flex items-center gap-1"><button type="button" onClick={() => setComposeOpen(false)} className="rounded p-1.5 text-slate-500 hover:bg-slate-200" aria-label="Réduire"><span className="text-lg leading-none">−</span></button><button type="button" onClick={() => setComposeOpen(false)} className="rounded p-1.5 text-slate-500 hover:bg-slate-200" aria-label="Fermer"><X className="h-4 w-4"/></button></div>
+                </header>
+                <div className="shrink-0 px-4">
+                  <input type="email" required value={composeTo} onChange={event=>setComposeTo(event.target.value)} placeholder="Destinataires" className="h-10 w-full border-b border-slate-200 bg-white text-[13px] text-slate-800 outline-none placeholder:text-slate-500 focus:border-[#0b57d0]"/>
+                  <input required maxLength={200} value={composeSubject} onChange={event=>setComposeSubject(event.target.value)} placeholder="Objet" className="h-10 w-full border-b border-slate-200 bg-white text-[13px] text-slate-800 outline-none placeholder:text-slate-500 focus:border-[#0b57d0]"/>
+                </div>
+                <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
+                  <div ref={composeEditorRef} contentEditable suppressContentEditableWarning onInput={event=>{setComposeBody(event.currentTarget.innerText);setComposeHtml(event.currentTarget.innerHTML);}} onBlur={event=>{setComposeBody(event.currentTarget.innerText);setComposeHtml(event.currentTarget.innerHTML);}} className="min-h-full w-full whitespace-pre-wrap text-[13px] leading-6 text-slate-800 outline-none" style={{fontFamily:composeFont}}/>
+                  {!!composeFiles.length && <div className="mt-4 flex flex-wrap gap-2">{composeFiles.map((file,index)=><div key={file.name+index} className="flex max-w-full items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 text-xs text-slate-600"><Paperclip className="h-3.5 w-3.5 shrink-0"/><span className="max-w-[180px] truncate">{file.name}</span><span className="text-slate-400">{(file.size/1024).toFixed(0)} Ko</span><button type="button" onClick={()=>setComposeFiles(files=>files.filter((_,i)=>i!==index))} className="text-slate-400 hover:text-rose-600" aria-label="Retirer la pièce jointe"><X className="h-3.5 w-3.5"/></button></div>)}</div>}
+                </div>
+                {composeFormattingOpen && <div className="mx-4 mb-2 flex flex-wrap items-center gap-1 rounded-xl bg-[#f1f4f9] p-2">
+                  <select value={composeFont} onChange={e=>setComposeFont(e.target.value)} className="h-8 rounded-md border-0 bg-transparent px-2 text-xs text-slate-700"><option>Arial</option><option>Georgia</option><option>Verdana</option><option>Tahoma</option><option>Courier New</option></select>
+                  <select onChange={e=>{document.execCommand('fontSize',false,e.target.value);composeEditorRef.current?.focus();}} defaultValue="3" className="h-8 rounded-md border-0 bg-transparent px-2 text-xs text-slate-700"><option value="2">Petit</option><option value="3">Normal</option><option value="4">Grand</option><option value="5">Très grand</option></select>
+                  <button type="button" onClick={()=>document.execCommand('bold')} className="h-8 w-8 rounded hover:bg-white" title="Gras"><b>B</b></button><button type="button" onClick={()=>document.execCommand('italic')} className="h-8 w-8 rounded hover:bg-white" title="Italique"><i>I</i></button><button type="button" onClick={()=>document.execCommand('underline')} className="h-8 w-8 rounded hover:bg-white" title="Souligné"><u>U</u></button>
+                  <input type="color" defaultValue="#183b32" onChange={e=>document.execCommand('foreColor',false,e.target.value)} title="Couleur du texte" className="h-7 w-8 cursor-pointer border-0 bg-transparent"/>
+                  <button type="button" onClick={()=>document.execCommand('insertUnorderedList')} className="h-8 rounded px-2 text-xs hover:bg-white" title="Liste à puces">• Liste</button><button type="button" onClick={()=>document.execCommand('insertOrderedList')} className="h-8 rounded px-2 text-xs hover:bg-white" title="Liste numérotée">1. Liste</button>
+                </div>}
+                {composeEmojiOpen && <div className="mx-4 mb-2 flex flex-wrap gap-1 rounded-xl border border-slate-200 bg-white p-2">{['😀','😊','😂','😉','😍','🙏','👍','🎉','❤️','📌','📈','✅','⚠️','💡'].map(emoji=><button key={emoji} type="button" onClick={()=>{document.execCommand('insertText',false,emoji);if(composeEditorRef.current){setComposeBody(composeEditorRef.current.innerText);setComposeHtml(composeEditorRef.current.innerHTML);}setComposeEmojiOpen(false);}} className="rounded-md p-1.5 text-lg hover:bg-slate-100">{emoji}</button>)}</div>}
+                <input ref={composeFileInputRef} type="file" multiple className="hidden" onChange={event=>{const incoming=Array.from(event.target.files||[]);const total=[...composeFiles,...incoming].reduce((sum,file)=>sum+file.size,0);if(total>8*1024*1024){showToast('Les pièces jointes ne peuvent pas dépasser 8 Mo au total.','error');event.target.value='';return;}setComposeFiles(files=>[...files,...incoming]);event.target.value='';}}/>
+                <footer className="flex shrink-0 items-center justify-between gap-2 px-4 pb-3 pt-2">
+                  <div className="flex min-w-0 items-center gap-1.5">
+                    <button type="submit" disabled={composeBusy||!composeTo.trim()||!composeSubject.trim()||!composeBody.trim()} className="inline-flex h-9 items-center gap-3 rounded-full bg-[#0b57d0] pl-4 pr-2 text-xs font-semibold text-white hover:bg-[#0849b4] disabled:opacity-40">{composeBusy?'Envoi…':'Envoyer'} <span className="border-l border-white/30 pl-2">▾</span></button>
+                    <button type="button" onClick={()=>setComposeFormattingOpen(v=>!v)} className={'h-9 w-9 rounded-lg text-base font-bold '+(composeFormattingOpen?'bg-blue-50 text-blue-700':'text-slate-500 hover:bg-slate-100')} title="Options de mise en forme">Aᴀ</button>
+                    <button type="button" onClick={()=>composeFileInputRef.current?.click()} className="h-9 w-9 rounded-lg text-slate-500 hover:bg-slate-100" title="Joindre des fichiers"><Paperclip className="mx-auto h-4 w-4"/></button>
+                    <button type="button" onClick={()=>setComposeEmojiOpen(v=>!v)} className="h-9 w-9 rounded-lg text-slate-500 hover:bg-slate-100" title="Insérer un emoji"><Smile className="mx-auto h-4 w-4"/></button>
+                  </div>
+                  <button type="button" disabled={composeBusy} onClick={()=>void saveComposeDraft()} className="h-9 w-9 rounded-lg text-slate-400 hover:bg-slate-100" title="Enregistrer le brouillon"><FileText className="mx-auto h-4 w-4"/></button>
+                </footer>
               </form>
             </div>
           )}
+
 
           {adminTab === 'support' && (
             <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_8px_30px_rgba(11,31,53,.05)]">
