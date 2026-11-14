@@ -12,16 +12,18 @@ function escapeHtml(value: string): string {
 function sanitizeRichHtml(input: string): string {
   const allowedTags = new Set(['p','br','div','span','strong','b','em','i','u','ul','ol','li','blockquote','a','h1','h2','h3']);
   return input
-    .replace(/<(script|style|iframe|object|svg|math)[^>]*>[\s\S]*?<\/\\1>/gi, '')
+    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
+    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, '')
+    .replace(/<(iframe|object|svg|math)[^>]*>[\s\S]*?<\/\1>/gi, '')
     .replace(/<\/?([a-z0-9]+)([^>]*)>/gi, (full, rawTag, rawAttrs) => {
       const tag = String(rawTag).toLowerCase();
       if (!allowedTags.has(tag)) return '';
-      if (full.startsWith('</')) return ['br'].includes(tag) ? '' : `</${tag}>`;
+      if (full.startsWith('</')) return tag === 'br' ? '' : \`</\${tag}>\`;
       const attrs = String(rawAttrs || '');
       const style = attrs.match(/style=["']([^"']*)["']/i)?.[1] || '';
       const safeStyle = style.split(';').map(rule => rule.trim()).filter(rule => /^(font-family|font-size|color|text-align|font-weight|font-style|text-decoration):\s*[#(),.% a-zA-Z0-9_-]+$/.test(rule)).join(';');
       const href = tag === 'a' ? attrs.match(/href=["'](https?:\/\/[^"']+|mailto:[^"']+)["']/i)?.[1] : '';
-      return `<${tag}${safeStyle ? ` style="${safeStyle}"` : ''}${href ? ` href="${href}" target="_blank" rel="noopener noreferrer"` : ''}>`;
+      return \`<\${tag}\${safeStyle ? \` style="\${safeStyle}"\` : ''}\${href ? \` href="\${href}" target="_blank" rel="noopener noreferrer"\` : ''}>\`;
     });
 }
 
