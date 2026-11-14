@@ -1,5 +1,5 @@
 import { verifyFirebaseIdToken, firestoreGet, firestoreSet } from '../../worker/firebaseAdmin';
-import { buildIamtraderEmail } from '../_shared/iamtraderEmail';
+import { buildIamtraderEmail, sanitizeRichHtml } from '../_shared/iamtraderEmail';
 
 interface Env {
   FIREBASE_SERVICE_ACCOUNT_JSON?: string;
@@ -52,7 +52,7 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
     if (message.length > 30000) return json({ error: 'Le brouillon est trop long.' }, 400);
     const now = new Date().toISOString();
     const record = {
-      id, name: to, email: to, subject, message, status: 'draft', folder: 'drafts',
+      id, name: to, email: to, to, cc: String(body.cc || '').trim(), subject, message, messageHtml: sanitizeRichHtml(messageHtml), status: 'draft', folder: 'drafts',
       source: 'admin-compose', updatedAt: now, createdAt: String(existing?.createdAt || now),
       conversation: Array.isArray(existing?.conversation) ? existing.conversation : []
     };
@@ -72,7 +72,8 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
   const replyTo = String(context.env.RESEND_REPLY_TO || senderAddress).trim();
   if (!apiKey || !senderAddress) return json({ error: 'Configuration e-mail du serveur incomplète.' }, 500);
 
-  const html = buildIamtraderEmail(message, 'new-message', messageHtml);
+  const safeMessageHtml = sanitizeRichHtml(messageHtml);
+  const html = buildIamtraderEmail(message, 'new-message', safeMessageHtml);
   const text = `${message}\n\n—\nIamtrader team\nle trader que vous devez être !\nhello@iamtrader.trade\niamtrader.trade`;
   let sent: Response;
   let payload: { id?: string } = {};
@@ -90,10 +91,10 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
 
   const now = new Date().toISOString();
   const sentId = String(payload.id || id);
-  const entry = { id: 'outbound-' + crypto.randomUUID(), direction: 'outbound', body: message, bodyHtml: messageHtml ? html.replace(/^.*?<div style=\"font-size:15px;line-height:1.85;color:#263f38;overflow-wrap:anywhere\">([\\s\\S]*?)<\\/div>.*$/s, '$1') : '', at: now, from: senderAddress, to: toList.join(', '), cc: ccList.join(', '), resendId: sentId };
+  const entry = { id: 'outbound-' + crypto.randomUUID(), direction: 'outbound', body: message, bodyHtml: safeMessageHtml, at: now, from: senderAddress, to: toList.join(', '), cc: ccList.join(', '), resendId: sentId };
   try {
     await firestoreSet(context.env as any, `contactMessages/${encodeURIComponent(id)}`, {
-      id, name: toList.join(', '), email: toList.join(', '), to: toList.join(', '), cc: ccList.join(', '), subject, message, messageHtml, status: 'resolved', folder: 'sent',
+      id, name: toList.join(', '), email: toList.join(', '), to: toList.join(', '), cc: ccList.join(', '), subject, message, messageHtml: safeMessageHtml, status: 'resolved', folder: 'sent',
       source: 'admin-compose', createdAt: now, updatedAt: now, repliedAt: now, repliedBy: identity.uid,
       conversation: [entry], resendId: sentId
     });
