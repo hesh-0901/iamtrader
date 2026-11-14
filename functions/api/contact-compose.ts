@@ -1,4 +1,5 @@
 import { verifyFirebaseIdToken, firestoreGet, firestoreSet } from '../../worker/firebaseAdmin';
+import { buildIamtraderEmail } from '../_shared/iamtraderEmail';
 
 interface Env {
   FIREBASE_SERVICE_ACCOUNT_JSON?: string;
@@ -9,9 +10,6 @@ interface Env {
 
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' } });
-}
-function escapeHtml(value: string) {
-  return value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
 }
 function validEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
@@ -68,43 +66,15 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
   const replyTo = String(context.env.RESEND_REPLY_TO || senderAddress).trim();
   if (!apiKey || !senderAddress) return json({ error: 'Configuration e-mail du serveur incomplète.' }, 500);
 
-  const html= `<div style="margin:0;padding:28px 14px;background:#f1f7f5;font-family:Arial,Helvetica,sans-serif;color:#18352f">
-  <div style="max-width:640px;margin:0 auto;overflow:hidden;background:#ffffff;border:1px solid #dcebe5;border-radius:14px">
-    <div style="height:5px;background:#00b889;font-size:0;line-height:0">&nbsp;</div>
-    <div style="padding:26px 34px 24px;background:#ffffff;border-bottom:1px solid #e4f0eb">
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse">
-        <tr>
-          <td style="vertical-align:middle;width:1%;padding-right:15px">
-            <img src="https://iamtrader.trade/brand/logo-iamtrader-full.png" alt="IAMTRADER" width="112" style="display:block;width:112px;max-width:112px;height:auto;border:0;outline:none;text-decoration:none">
-          </td>
-          <td style="vertical-align:middle">
-            <div style="text-align:left;font-size:14px;font-weight:700;letter-spacing:.35px;line-height:1.3;color:#123f32">iamtrader</div>
-            <div style="margin-top:4px;text-align:left;font-size:10px;font-weight:600;letter-spacing:.2px;line-height:1.5;color:#07966f">le trader que vous devez être !</div>
-          </td>
-        </tr>
-      </table>
-    </div>
-    <div style="padding:30px 34px 30px;background:#ffffff">
-      <div style="font-size:15px;line-height:1.85;color:#263f38;white-space:pre-wrap;overflow-wrap:anywhere">${escapeHtml(message)}</div>
-      <div style="margin-top:30px;padding-top:21px;border-top:1px solid #e3eee9">
-        <div style="font-size:14px;font-weight:700;color:#087f63">Iamtrader team</div>
-        <div style="margin-top:13px;font-size:12px;line-height:1.9;color:#647d73">
-          <a href="mailto:hello@iamtrader.trade" style="color:#009d78;text-decoration:none">hello@iamtrader.trade</a>
-          <span style="color:#a0b7ae">&nbsp; · &nbsp;</span>
-          <a href="https://iamtrader.trade" style="color:#009d78;text-decoration:none">iamtrader.trade</a>
-        </div>
-      </div>
-    </div>
-    <div style="padding:15px 22px;background:#f4fbf8;border-top:1px solid #e3eee9;text-align:center;color:#789187;font-size:10px;line-height:1.7">iamtrader</div>
-  </div>
-</div>`;
+  const html = buildIamtraderEmail(message, 'new-message');
+  const text = `${message}\n\n—\nIamtrader team\nle trader que vous devez être !\nhello@iamtrader.trade\niamtrader.trade`;
   let sent: Response;
   let payload: { id?: string } = {};
   try {
     sent = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from, to: [to], subject, html, text: message, ...(replyTo ? { reply_to: replyTo } : {}) })
+      body: JSON.stringify({ from, to: [to], subject, html, text, ...(replyTo ? { reply_to: replyTo } : {}) })
     });
     payload = await sent.json().catch(() => ({}));
   } catch {
