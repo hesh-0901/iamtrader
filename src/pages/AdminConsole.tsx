@@ -126,6 +126,13 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
   const [composeBusy, setComposeBusy] = useState(false);
   const [contactNote, setContactNote] = useState('');
   const [replyText, setReplyText] = useState('');
+  const [replyHtml, setReplyHtml] = useState('');
+  const [replyFormattingOpen, setReplyFormattingOpen] = useState(false);
+  const [replyEmojiOpen, setReplyEmojiOpen] = useState(false);
+  const [replyFont, setReplyFont] = useState('Arial');
+  const [replyFormatState, setReplyFormatState] = useState({ bold:false, italic:false, underline:false, strikeThrough:false, insertUnorderedList:false, insertOrderedList:false });
+  const replyEditorRef = useRef<HTMLDivElement | null>(null);
+  const replySelectionRef = useRef<Range | null>(null);
   const [showReplyComposer, setShowReplyComposer] = useState(false);
   const [contactBusy, setContactBusy] = useState(false);
   const [replyBusy, setReplyBusy] = useState(false);
@@ -396,6 +403,36 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
     }).length
   };
 
+  function rememberReplySelection() {
+    const selection = window.getSelection();
+    if (selection && selection.rangeCount && replyEditorRef.current?.contains(selection.anchorNode)) {
+      replySelectionRef.current = selection.getRangeAt(0).cloneRange();
+    }
+    setReplyFormatState({
+      bold: document.queryCommandState('bold'),
+      italic: document.queryCommandState('italic'),
+      underline: document.queryCommandState('underline'),
+      strikeThrough: document.queryCommandState('strikeThrough'),
+      insertUnorderedList: document.queryCommandState('insertUnorderedList'),
+      insertOrderedList: document.queryCommandState('insertOrderedList')
+    });
+  }
+
+  function applyReplyCommand(command: string, value?: string) {
+    replyEditorRef.current?.focus();
+    const selection = window.getSelection();
+    if (selection && replySelectionRef.current) {
+      selection.removeAllRanges();
+      selection.addRange(replySelectionRef.current);
+    }
+    document.execCommand(command, false, value);
+    rememberReplySelection();
+    if (replyEditorRef.current) {
+      setReplyText(replyEditorRef.current.innerText);
+      setReplyHtml(replyEditorRef.current.innerHTML);
+    }
+  }
+
   function rememberComposeSelection() {
     const selection = window.getSelection();
     if (selection && selection.rangeCount && composeEditorRef.current?.contains(selection.anchorNode)) {
@@ -447,7 +484,9 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
   }
 
   async function sendSupportReply() {
-    if (!selectedMessage || !replyText.trim() || replyBusy) return;
+    const currentReplyHtml = replyEditorRef.current?.innerHTML || replyHtml;
+    const currentReplyText = replyEditorRef.current?.innerText.trim() || replyText.trim();
+    if (!selectedMessage || !currentReplyText || replyBusy) return;
     const currentUser = auth.currentUser;
     if (!currentUser) return;
 
@@ -466,7 +505,8 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
         body: JSON.stringify({
           to: selectedMessage.email,
           subject: decodeMimeSubject(selectedMessage.subject),
-          reply: replyText.trim(),
+          reply: currentReplyText,
+          replyHtml: currentReplyHtml,
           name: selectedMessage.name,
           inReplyTo: lastInbound?.messageId || '',
           references: thread.map(item => item.messageId).filter(Boolean).slice(-20).join(' '),
@@ -480,7 +520,8 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
       const outbound = {
         id: 'outbound-' + Date.now(),
         direction: 'outbound' as const,
-        body: replyText.trim(),
+        body: currentReplyText,
+        bodyHtml: currentReplyHtml,
         at: now,
         from: 'hello@iamtrader.trade',
         to: selectedMessage.email,
@@ -505,6 +546,9 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
 
       setSelectedMessage(prev => prev ? { ...prev, status:'resolved', handledBy:currentUser.uid, handledAt:now, lastReply:replyText.trim(), repliedAt:now, repliedBy:currentUser.uid, conversation } : prev);
       setReplyText('');
+      setReplyHtml('');
+      setReplyFormattingOpen(false);
+      setReplyEmojiOpen(false);
       setShowReplyComposer(false);
       if (payload.historySaved === false) showToast(payload.warning || 'E-mail envoyé, mais historique non enregistré.', 'error');
       else showToast('Message envoyé et enregistré.', 'success');
@@ -1085,8 +1129,8 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
                               const bodyParts=splitEmailSignature(item.body);
                               const cc=(item as any).cc;
                               const emailCardId = String(item.id || item.messageId || index);
-                              const emailExpanded = expandedEmailIds.includes(emailCardId);
-                              return <article key={emailCardId} className={'overflow-hidden rounded-xl border transition-colors '+(emailExpanded?'border-[#c9e7dc] bg-white shadow-[0_3px_12px_rgba(15,35,55,.045)]':'border-slate-200/90 bg-white shadow-[0_1px_3px_rgba(15,35,55,.025)]')}>
+                              const emailExpanded = expandedEmailIds[0] === emailCardId;
+                              return <article key={emailCardId} className={'overflow-hidden rounded-xl border transition-colors '+(emailExpanded?'border-[#c9e7dc] bg-white shadow-[0_3px_12px_rgba(15,35,55,.045)]':'border-slate-100 bg-[#fcfdfd] shadow-none opacity-[.94]')}>
                                 <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-4 py-3.5 sm:px-5">
                                   <div className="flex min-w-0 items-start gap-3">
                                     <div className={'flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-black '+(outbound?'bg-[#e7f7f0] text-[#087f63]':'bg-[#eaf0f7] text-[#29445f]')}>{(outbound?'I':(selectedMessage.name || selectedMessage.email || '?').charAt(0)).toUpperCase()}</div>
@@ -1099,11 +1143,11 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
                                   </div>
                                   <div className="flex items-center gap-2 text-[11px] text-slate-400">
                                     <span>{at&&!Number.isNaN(at.getTime())?at.toLocaleString('fr-FR',{dateStyle:'medium',timeStyle:'short'}):'—'}</span>
-                                    <button type="button" onClick={()=>setShowReplyComposer(true)} className="rounded-lg p-1.5 text-slate-400 hover:bg-[#effaf5] hover:text-[#087f63]" title="Répondre à cet e-mail"><Send className="h-3.5 w-3.5"/></button>
+                                    <button type="button" onClick={()=>{setShowReplyComposer(true);setReplyText('');setReplyHtml('');setReplyFormattingOpen(false);setReplyEmojiOpen(false);}} className="rounded-lg p-1.5 text-slate-400 hover:bg-[#effaf5] hover:text-[#087f63]" title="Répondre à cet e-mail"><Send className="h-3.5 w-3.5"/></button>
                                     
                                   </div>
                                 </div>
-                                <button type="button" onClick={()=>setExpandedEmailIds(current=>current.includes(emailCardId)?current.filter(id=>id!==emailCardId):[...current,emailCardId])} aria-expanded={emailExpanded} className="flex w-full items-center justify-between gap-3 border-t border-slate-100 bg-[#fbfdfc] px-4 py-2.5 text-left text-[11px] font-semibold text-slate-500 transition hover:bg-[#f3faf6] sm:px-5">
+                                <button type="button" onClick={()=>setExpandedEmailIds(current=>current[0]===emailCardId?[]:[emailCardId])} aria-expanded={emailExpanded} className="flex w-full items-center justify-between gap-3 border-t border-slate-100/70 bg-[#fdfefd] px-4 py-2 text-left text-[10px] font-medium text-slate-400 transition hover:bg-[#f6faf8] hover:text-slate-500 sm:px-5">
                                   <span>{emailExpanded?'Masquer le contenu':'Afficher le contenu du message'}</span>
                                   <ChevronRight className={'h-3.5 w-3.5 transition-transform '+(emailExpanded?'rotate-90':'')} />
                                 </button>
@@ -1118,14 +1162,35 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
                         </div>
                       </div>
 
-                      {showReplyComposer && <div className="w-full shrink-0 border-t border-slate-200 bg-white px-4 py-3 sm:px-8 lg:px-10">
-                        <div className="mx-auto w-full max-w-5xl">
-                          <div className="mb-2 flex items-center justify-between"><div className="text-xs font-bold text-slate-700">Répondre à {selectedMessage.email}</div><button type="button" onClick={()=>setShowReplyComposer(false)} className="rounded-md px-2 py-1 text-xs text-slate-400 hover:bg-slate-100">Fermer</button></div>
-                          <div className="flex items-end gap-2 rounded-xl border border-slate-300 bg-white p-1.5 shadow-sm focus-within:border-[#0b1f35] focus-within:ring-2 focus-within:ring-blue-50">
-                            <textarea value={replyText} onChange={e=>setReplyText(e.target.value)} onKeyDown={e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();void sendSupportReply();}}} rows={3} maxLength={10000} placeholder="Rédiger votre réponse…" className="min-h-[72px] max-h-40 flex-1 resize-y bg-transparent px-2.5 py-1.5 text-[13px] leading-6 outline-none placeholder:text-slate-400"/>
-                            <button type="button" disabled={replyBusy||!replyText.trim()} onClick={()=>void sendSupportReply()} className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#0b1f35] text-white transition hover:bg-[#142d47] disabled:opacity-30" title="Envoyer"><Send className="h-4 w-4"/></button>
+                      {showReplyComposer && <div className="w-full shrink-0 border-t border-emerald-100 bg-gradient-to-b from-[#fbfdfc] to-white px-4 py-4 sm:px-8 lg:px-10">
+                        <div className="mx-auto w-full max-w-5xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_5px_22px_rgba(15,35,55,.06)]">
+                          <div className="flex items-center justify-between border-b border-slate-100 bg-[#f8fbf9] px-4 py-3">
+                            <div className="min-w-0"><div className="text-xs font-bold text-[#234c3f]">Répondre</div><div className="mt-0.5 truncate text-[11px] text-slate-400">À {selectedMessage.email}</div></div>
+                            <div className="flex items-center gap-1"><button type="button" onClick={()=>setReplyFormattingOpen(v=>!v)} className={'flex h-8 w-8 items-center justify-center rounded-lg text-xs font-black transition '+(replyFormattingOpen?'bg-[#e1f5eb] text-[#087f63]':'text-slate-500 hover:bg-slate-100')} title="Mise en forme">Aᴀ</button><button type="button" onClick={()=>setShowReplyComposer(false)} className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100" title="Fermer"><X className="h-4 w-4"/></button></div>
                           </div>
-                          <div className="mt-1 flex justify-between px-1 text-xs text-slate-400"><span>Entrée pour envoyer · Maj + Entrée pour une nouvelle ligne</span><span>{replyText.length}/10 000</span></div>
+                          <div className="min-h-[116px] max-h-64 overflow-y-auto px-4 py-3">
+                            <div ref={replyEditorRef} contentEditable suppressContentEditableWarning onInput={event=>{setReplyText(event.currentTarget.innerText);setReplyHtml(event.currentTarget.innerHTML);}} onKeyUp={event=>{setReplyText(event.currentTarget.innerText);setReplyHtml(event.currentTarget.innerHTML);rememberReplySelection();}} onMouseUp={rememberReplySelection} onPaste={event=>{event.preventDefault();const html=event.clipboardData.getData("text/html");const plain=event.clipboardData.getData("text/plain");if(html)document.execCommand("insertHTML",false,html);else document.execCommand("insertText",false,plain);setTimeout(()=>{if(replyEditorRef.current){setReplyText(replyEditorRef.current.innerText);setReplyHtml(replyEditorRef.current.innerHTML);}},0);}} data-placeholder="Écrivez votre réponse…" className="email-compose-editor min-h-[90px] w-full text-[13px] leading-7 text-slate-700 outline-none before:text-slate-400 [&:empty:before]:content-[attr(data-placeholder)] [&_a]:text-[#087f63] [&_a]:underline [&_blockquote]:my-3 [&_blockquote]:border-l-2 [&_blockquote]:border-emerald-300 [&_blockquote]:pl-4 [&_h1]:my-3 [&_h1]:text-2xl [&_h1]:font-bold [&_h2]:my-2 [&_h2]:text-xl [&_h2]:font-bold [&_li]:my-1 [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-7 [&_p]:my-2 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-7" style={{fontFamily:replyFont}}/>
+                          </div>
+                          {replyFormattingOpen && <div className="border-t border-slate-100 bg-[#f8faf9] px-3 py-3">
+                            <div className="mb-2 px-1 text-[9px] font-bold uppercase tracking-[.12em] text-slate-400">Mise en forme</div>
+                            <div className="flex flex-wrap items-center gap-1" onMouseDown={event=>{if((event.target as HTMLElement).tagName!=='SELECT'&&(event.target as HTMLElement).tagName!=='INPUT')event.preventDefault();}}>
+                              <select value={replyFont} onChange={e=>{applyReplyCommand('fontName',e.target.value);setReplyFont(e.target.value);}} className="h-8 max-w-[120px] rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-700"><option>Arial</option><option>Georgia</option><option>Verdana</option><option>Tahoma</option><option>Courier New</option></select>
+                              <select onChange={e=>applyReplyCommand('fontSize',e.target.value)} defaultValue="3" className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-700"><option value="2">Petit</option><option value="3">Normal</option><option value="4">Grand</option><option value="5">Très grand</option><option value="6">Titre</option></select>
+                              <span className="mx-1 h-5 w-px bg-slate-200"/>
+                              {(['bold','italic','underline','strikeThrough'] as const).map((command)=><button key={command} type="button" onClick={()=>applyReplyCommand(command)} className={'flex h-8 w-8 items-center justify-center rounded-lg transition '+(replyFormatState[command]?'bg-[#dff4e9] text-[#087f63] ring-1 ring-[#b9e5d0]':'text-slate-600 hover:bg-white')} title={command==='bold'?'Gras':command==='italic'?'Italique':command==='underline'?'Souligné':'Barré'}>{command==='bold'?<b>B</b>:command==='italic'?<i>I</i>:command==='underline'?<u>U</u>:'S̶'}</button>)}
+                              <label className="flex h-8 cursor-pointer items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 text-[10px] font-semibold text-slate-600" title="Couleur du texte"><input type="color" defaultValue="#475569" onChange={e=>applyReplyCommand('foreColor',e.target.value)} className="h-5 w-5 cursor-pointer border-0 bg-transparent p-0"/>Couleur</label>
+                              <button type="button" onClick={()=>applyReplyCommand('foreColor','#475569')} className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-[10px] font-semibold text-slate-600 hover:bg-slate-50" title="Rétablir la couleur par défaut">Couleur par défaut</button>
+                              <span className="mx-1 h-5 w-px bg-slate-200"/>
+                              <button type="button" onClick={()=>applyReplyCommand('insertUnorderedList')} className={'h-8 rounded-lg px-2.5 text-xs transition '+(replyFormatState.insertUnorderedList?'bg-[#dff4e9] text-[#087f63]':'text-slate-600 hover:bg-white')} title="Liste à puces">• Liste</button>
+                              <button type="button" onClick={()=>applyReplyCommand('insertOrderedList')} className={'h-8 rounded-lg px-2.5 text-xs transition '+(replyFormatState.insertOrderedList?'bg-[#dff4e9] text-[#087f63]':'text-slate-600 hover:bg-white')} title="Liste numérotée">1. Liste</button>
+                              <button type="button" onClick={()=>{applyReplyCommand('removeFormat');applyReplyCommand('foreColor','#475569');setReplyFont('Arial');}} className="h-8 rounded-lg px-2 text-[10px] font-semibold text-slate-500 hover:bg-white" title="Effacer la mise en forme">Effacer le style</button>
+                            </div>
+                          </div>}
+                          {replyEmojiOpen && <div className="flex flex-wrap gap-1 border-t border-slate-100 px-3 py-2">{['😀','😊','😂','😉','😍','🙏','👍','🎉','❤️','📌','📈','✅','⚠️','💡'].map(emoji=><button key={emoji} type="button" onClick={()=>applyReplyCommand('insertText',emoji)} className="rounded-lg p-1.5 text-lg hover:bg-emerald-50">{emoji}</button>)}</div>}
+                          <div className="flex items-center justify-between gap-3 border-t border-slate-100 bg-[#fbfdfc] px-3 py-3">
+                            <div className="flex items-center gap-1.5"><button type="button" onClick={()=>setReplyFormattingOpen(v=>!v)} className={'flex h-9 w-9 items-center justify-center rounded-lg text-xs font-black '+(replyFormattingOpen?'bg-[#e1f5eb] text-[#087f63]':'text-slate-500 hover:bg-slate-100')} title="Mise en forme">Aᴀ</button><button type="button" onClick={()=>setReplyEmojiOpen(v=>!v)} className={'flex h-9 w-9 items-center justify-center rounded-lg '+(replyEmojiOpen?'bg-[#e1f5eb] text-[#087f63]':'text-slate-500 hover:bg-slate-100')} title="Insérer un emoji"><Smile className="h-4 w-4"/></button></div>
+                            <div className="flex items-center gap-2"><span className="text-[10px] text-slate-400">{replyText.length}/10 000</span><button type="button" disabled={replyBusy||!replyText.trim()} onClick={()=>void sendSupportReply()} className="flex h-9 items-center gap-2 rounded-xl bg-gradient-to-r from-[#087f63] to-[#0b9872] px-4 text-xs font-bold text-white shadow-sm transition hover:shadow-md disabled:opacity-40">{replyBusy?'Envoi…':'Envoyer'}<Send className="h-3.5 w-3.5"/></button></div>
+                          </div>
                         </div>
                       </div>}
                       <details className="shrink-0 border-t border-slate-100 bg-slate-50/40 px-4 py-2 sm:px-7">
