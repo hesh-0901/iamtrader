@@ -886,7 +886,7 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
 
                 <div className={'h-full min-h-0 min-w-0 flex-1 bg-white ' + (selectedMessage ? 'flex' : 'hidden lg:flex')}>
                   {selectedMessage ? (
-                    <div className="flex h-full min-h-0 flex-col">
+                    <div className="flex h-full min-h-0 w-full min-w-0 flex-col">
                       <header className="shrink-0 border-b border-slate-200 bg-white px-5 py-3.5 sm:px-7">
                         <div className="flex min-w-0 items-center gap-3">
                           <button type="button" onClick={() => setSelectedMessage(null)} className="shrink-0 rounded-lg p-2 text-slate-500 hover:bg-slate-100 lg:hidden" aria-label="Retour à la boîte"><ChevronLeft className="h-4 w-4" /></button>
@@ -921,8 +921,8 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
                         </div>
                       </header>
 
-                      <div className="min-h-0 flex-1 overflow-y-auto bg-white px-5 py-6 sm:px-10">
-                        <div className="mx-auto w-full max-w-4xl">
+                      <div className="min-h-0 w-full flex-1 overflow-y-auto bg-white px-5 py-6 sm:px-8 lg:px-10">
+                        <div className="mx-auto w-full max-w-5xl">
                           {(() => {
                             const legacyConversation = [
                               { id:'legacy-inbound', direction:'inbound' as const, body:selectedMessage.message, at:selectedMessage.createdAt || new Date().toISOString(), from:selectedMessage.email, to:'hello@iamtrader.trade' },
@@ -966,8 +966,8 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
                         </div>
                       </div>
 
-                      <div className="shrink-0 border-t border-slate-200 bg-white px-4 py-3 sm:px-7">
-                        <div className="mx-auto max-w-4xl">
+                      <div className="w-full shrink-0 border-t border-slate-200 bg-white px-4 py-3 sm:px-8 lg:px-10">
+                        <div className="mx-auto w-full max-w-5xl">
                           <div className="flex items-end gap-2 rounded-xl border border-slate-300 bg-white p-1.5 shadow-sm focus-within:border-[#0b1f35] focus-within:ring-2 focus-within:ring-blue-50">
                             <button type="button" className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-700 sm:flex" title="Joindre un fichier"><Paperclip className="h-4 w-4" /></button>
                             <textarea value={replyText} onChange={e => setReplyText(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); void sendSupportReply(); } }} rows={2} maxLength={10000} placeholder="Écrire un message…" className="min-h-[44px] max-h-32 flex-1 resize-none bg-transparent px-2.5 py-1.5 text-[12px] leading-5 outline-none placeholder:text-slate-400" />
