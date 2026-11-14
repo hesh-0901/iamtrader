@@ -9,7 +9,7 @@ function escapeHtml(value: string): string {
     .replaceAll("'", '&#039;');
 }
 
-function sanitizeRichHtml(input: string): string {
+export function sanitizeRichHtml(input: string): string {
   const allowedTags = new Set(['p','br','div','span','strong','b','em','i','u','ul','ol','li','blockquote','a','h1','h2','h3','font']);
   return input
     .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, '')
