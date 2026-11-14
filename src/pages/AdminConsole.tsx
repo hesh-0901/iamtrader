@@ -111,6 +111,8 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
   const [composeOpen, setComposeOpen] = useState(false);
   const [composeId, setComposeId] = useState('');
   const [composeTo, setComposeTo] = useState('');
+  const [composeCc, setComposeCc] = useState('');
+  const [composeCcOpen, setComposeCcOpen] = useState(false);
   const [composeSubject, setComposeSubject] = useState('');
   const [composeBody, setComposeBody] = useState('');
   const [composeHtml, setComposeHtml] = useState('');
@@ -120,6 +122,7 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
   const [composeFont, setComposeFont] = useState('Arial');
   const composeEditorRef = useRef<HTMLDivElement | null>(null);
   const composeFileInputRef = useRef<HTMLInputElement | null>(null);
+  const composeSelectionRef = useRef<Range | null>(null);
   const [composeBusy, setComposeBusy] = useState(false);
   const [contactNote, setContactNote] = useState('');
   const [replyText, setReplyText] = useState('');
@@ -397,7 +400,7 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
     if (composeBusy) return;
     setComposeBusy(true);
     try {
-      const saved = await adminSaveEmailDraft({ id: composeId || undefined, to: composeTo.trim(), subject: composeSubject.trim(), message: composeBody });
+      const saved = await adminSaveEmailDraft({ id: composeId || undefined, to: composeTo.trim(), cc: composeCc.trim(), subject: composeSubject.trim(), message: composeEditorRef.current?.innerText || composeBody, messageHtml: composeEditorRef.current?.innerHTML || composeHtml });
       setComposeId(saved.id || composeId);
       showToast('Brouillon enregistré.', 'success');
       setComposeOpen(false);
@@ -410,8 +413,9 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
     if (composeBusy) return;
     setComposeBusy(true);
     try {
-      const result = await adminComposeEmail({ id: composeId || undefined, to: composeTo.trim(), subject: composeSubject.trim(), message: composeBody.trim(), messageHtml: composeHtml, attachments: await Promise.all(composeFiles.map(async file => ({ filename: file.name, content: await new Promise<string>((resolve,reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result || '').split(',')[1] || ''); reader.onerror = () => reject(new Error('Lecture de pièce jointe impossible.')); reader.readAsDataURL(file); }) }))) });
-      setComposeOpen(false); setComposeId(''); setComposeTo(''); setComposeSubject(''); setComposeBody(''); setComposeHtml(''); setComposeFiles([]); setComposeFormattingOpen(false); setComposeEmojiOpen(false);
+      if (composeEditorRef.current) { setComposeHtml(composeEditorRef.current.innerHTML); setComposeBody(composeEditorRef.current.innerText.trim()); }
+      const result = await adminComposeEmail({ id: composeId || undefined, to: composeTo.trim(), cc: composeCc.trim(), subject: composeSubject.trim(), message: composeBody.trim(), messageHtml: composeEditorRef.current?.innerHTML || composeHtml, attachments: await Promise.all(composeFiles.map(async file => ({ filename: file.name, content: await new Promise<string>((resolve,reject) => { const reader = new FileReader(); reader.onload = () => resolve(String(reader.result || '').split(',')[1] || ''); reader.onerror = () => reject(new Error('Lecture de pièce jointe impossible.')); reader.readAsDataURL(file); }) }))) });
+      setComposeOpen(false); setComposeId(''); setComposeTo(''); setComposeCc(''); setComposeCcOpen(false); setComposeSubject(''); setComposeBody(''); setComposeHtml(''); setComposeFiles([]); setComposeFormattingOpen(false); setComposeEmojiOpen(false);
       setMailboxFolder('sent');
       if (result.historySaved === false) showToast(result.warning || 'E-mail envoyé, mais historique non enregistré.', 'error');
       else showToast('E-mail envoyé et enregistré dans Envoyés.', 'success');
@@ -837,18 +841,20 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
                   <div className="flex items-center gap-1"><button type="button" onClick={() => setComposeOpen(false)} className="rounded p-1.5 text-slate-500 hover:bg-slate-200" aria-label="Réduire"><span className="text-lg leading-none">−</span></button><button type="button" onClick={() => setComposeOpen(false)} className="rounded p-1.5 text-slate-500 hover:bg-slate-200" aria-label="Fermer"><X className="h-4 w-4"/></button></div>
                 </header>
                 <div className="shrink-0 px-4">
-                  <input type="email" required value={composeTo} onChange={event=>setComposeTo(event.target.value)} placeholder="Destinataires" className="h-10 w-full border-b border-slate-200 bg-white text-[13px] text-slate-800 outline-none placeholder:text-slate-500 focus:border-[#0b57d0]"/>
+                  <div className="flex items-center gap-2 border-b border-slate-200"><input type="text" required value={composeTo} onChange={event=>setComposeTo(event.target.value)} placeholder="Destinataires" className="h-10 min-w-0 flex-1 bg-white text-[13px] text-slate-800 outline-none placeholder:text-slate-500 focus:border-[#0b57d0]"/><button type="button" onClick={()=>setComposeCcOpen(v=>!v)} className="shrink-0 px-1 text-xs font-medium text-slate-500 hover:text-slate-800">Cc</button></div>
+                  {composeCcOpen && <input type="text" value={composeCc} onChange={event=>setComposeCc(event.target.value)} placeholder="Copie (Cc) — adresses séparées par des virgules" className="h-9 w-full border-b border-slate-200 bg-white text-[12px] text-slate-700 outline-none placeholder:text-slate-400 focus:border-[#0b57d0]"/>}
                   <input required maxLength={200} value={composeSubject} onChange={event=>setComposeSubject(event.target.value)} placeholder="Objet" className="h-10 w-full border-b border-slate-200 bg-white text-[13px] text-slate-800 outline-none placeholder:text-slate-500 focus:border-[#0b57d0]"/>
                 </div>
                 <div className="min-h-0 flex-1 overflow-y-auto px-4 py-3">
-                  <div ref={composeEditorRef} contentEditable suppressContentEditableWarning onInput={event=>{setComposeBody(event.currentTarget.innerText);setComposeHtml(event.currentTarget.innerHTML);}} onBlur={event=>{setComposeBody(event.currentTarget.innerText);setComposeHtml(event.currentTarget.innerHTML);}} className="min-h-full w-full whitespace-pre-wrap text-[13px] leading-6 text-slate-800 outline-none" style={{fontFamily:composeFont}}/>
+                  <div ref={composeEditorRef} contentEditable suppressContentEditableWarning onInput={event=>{setComposeBody(event.currentTarget.innerText);setComposeHtml(event.currentTarget.innerHTML);}} onKeyUp={event=>{setComposeBody(event.currentTarget.innerText);setComposeHtml(event.currentTarget.innerHTML);}} onPaste={event=>{event.preventDefault();const html=event.clipboardData.getData("text/html");const plain=event.clipboardData.getData("text/plain");if(html){document.execCommand("insertHTML",false,html);}else{document.execCommand("insertText",false,plain);}setTimeout(()=>{if(composeEditorRef.current){setComposeBody(composeEditorRef.current.innerText);setComposeHtml(composeEditorRef.current.innerHTML);}},0);}} onBlur={event=>{setComposeBody(event.currentTarget.innerText);setComposeHtml(event.currentTarget.innerHTML);}} className="min-h-full w-full whitespace-pre-wrap text-[13px] leading-6 text-slate-800 outline-none" style={{fontFamily:composeFont}}/>
                   {!!composeFiles.length && <div className="mt-4 flex flex-wrap gap-2">{composeFiles.map((file,index)=><div key={file.name+index} className="flex max-w-full items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-2 text-xs text-slate-600"><Paperclip className="h-3.5 w-3.5 shrink-0"/><span className="max-w-[180px] truncate">{file.name}</span><span className="text-slate-400">{(file.size/1024).toFixed(0)} Ko</span><button type="button" onClick={()=>setComposeFiles(files=>files.filter((_,i)=>i!==index))} className="text-slate-400 hover:text-rose-600" aria-label="Retirer la pièce jointe"><X className="h-3.5 w-3.5"/></button></div>)}</div>}
                 </div>
-                {composeFormattingOpen && <div className="mx-4 mb-2 flex flex-wrap items-center gap-1 rounded-xl bg-[#f1f4f9] p-2">
-                  <select value={composeFont} onChange={e=>setComposeFont(e.target.value)} className="h-8 rounded-md border-0 bg-transparent px-2 text-xs text-slate-700"><option>Arial</option><option>Georgia</option><option>Verdana</option><option>Tahoma</option><option>Courier New</option></select>
-                  <select onChange={e=>{document.execCommand('fontSize',false,e.target.value);composeEditorRef.current?.focus();}} defaultValue="3" className="h-8 rounded-md border-0 bg-transparent px-2 text-xs text-slate-700"><option value="2">Petit</option><option value="3">Normal</option><option value="4">Grand</option><option value="5">Très grand</option></select>
-                  <button type="button" onClick={()=>document.execCommand('bold')} className="h-8 w-8 rounded hover:bg-white" title="Gras"><b>B</b></button><button type="button" onClick={()=>document.execCommand('italic')} className="h-8 w-8 rounded hover:bg-white" title="Italique"><i>I</i></button><button type="button" onClick={()=>document.execCommand('underline')} className="h-8 w-8 rounded hover:bg-white" title="Souligné"><u>U</u></button>
-                  <input type="color" defaultValue="#183b32" onChange={e=>document.execCommand('foreColor',false,e.target.value)} title="Couleur du texte" className="h-7 w-8 cursor-pointer border-0 bg-transparent"/>
+                {composeFormattingOpen && <div className="mx-4 mb-2 flex flex-wrap items-center gap-1 rounded-xl bg-[#f1f4f9] p-2" onMouseDown={event=>{if((event.target as HTMLElement).tagName!=='SELECT'&&(event.target as HTMLElement).tagName!=='INPUT')event.preventDefault();}}>
+                  <select value={composeFont} onChange={e=>{document.execCommand('fontName',false,e.target.value);setComposeFont(e.target.value);composeEditorRef.current?.focus();}} className="h-8 max-w-[125px] rounded-md border-0 bg-transparent px-2 text-xs text-slate-700"><option>Arial</option><option>Georgia</option><option>Verdana</option><option>Tahoma</option><option>Courier New</option></select>
+                  <select onChange={e=>{document.execCommand('fontSize',false,e.target.value);composeEditorRef.current?.focus();}} defaultValue="3" className="h-8 rounded-md border-0 bg-transparent px-2 text-xs text-slate-700"><option value="2">Petit</option><option value="3">Normal</option><option value="4">Grand</option><option value="5">Très grand</option><option value="6">Titre</option></select>
+                  <button type="button" onClick={()=>document.execCommand('bold')} className="h-8 w-8 rounded hover:bg-white" title="Gras"><b>B</b></button><button type="button" onClick={()=>document.execCommand('italic')} className="h-8 w-8 rounded hover:bg-white" title="Italique"><i>I</i></button><button type="button" onClick={()=>document.execCommand('underline')} className="h-8 w-8 rounded hover:bg-white" title="Souligné"><u>U</u></button><button type="button" onClick={()=>document.execCommand('strikeThrough')} className="h-8 w-8 rounded text-xs hover:bg-white" title="Barré">S̶</button>
+                  <input type="color" defaultValue="#183b32" onChange={e=>{document.execCommand('foreColor',false,e.target.value);composeEditorRef.current?.focus();}} title="Couleur du texte" className="h-7 w-8 cursor-pointer border-0 bg-transparent"/>
+                  <button type="button" onClick={()=>document.execCommand('justifyLeft')} className="h-8 w-8 rounded text-xs hover:bg-white" title="Aligner à gauche">≡</button><button type="button" onClick={()=>document.execCommand('justifyCenter')} className="h-8 w-8 rounded text-xs hover:bg-white" title="Centrer">≡</button>
                   <button type="button" onClick={()=>document.execCommand('insertUnorderedList')} className="h-8 rounded px-2 text-xs hover:bg-white" title="Liste à puces">• Liste</button><button type="button" onClick={()=>document.execCommand('insertOrderedList')} className="h-8 rounded px-2 text-xs hover:bg-white" title="Liste numérotée">1. Liste</button>
                 </div>}
                 {composeEmojiOpen && <div className="mx-4 mb-2 flex flex-wrap gap-1 rounded-xl border border-slate-200 bg-white p-2">{['😀','😊','😂','😉','😍','🙏','👍','🎉','❤️','📌','📈','✅','⚠️','💡'].map(emoji=><button key={emoji} type="button" onClick={()=>{document.execCommand('insertText',false,emoji);if(composeEditorRef.current){setComposeBody(composeEditorRef.current.innerText);setComposeHtml(composeEditorRef.current.innerHTML);}setComposeEmojiOpen(false);}} className="rounded-md p-1.5 text-lg hover:bg-slate-100">{emoji}</button>)}</div>}
@@ -1041,7 +1047,7 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
                                       <div className="text-sm font-bold text-[#172f45]">{outbound?'Iamtrader team':(selectedMessage.name || selectedMessage.email)}</div>
                                       <div className="mt-0.5 break-all text-xs text-slate-500">{outbound?'hello@iamtrader.trade':selectedMessage.email}</div>
                                       <div className="mt-1 text-xs text-slate-500">À {outbound?selectedMessage.email:'hello@iamtrader.trade'}</div>
-                                      {cc && <div className="mt-1 text-xs text-slate-500">Cc {Array.isArray(cc)?cc.join(', '):cc}</div>}
+                                      {(cc || (outbound && (selectedMessage as any).cc)) && <div className="mt-1 text-xs text-slate-500">Cc {Array.isArray(cc || (selectedMessage as any).cc)?(cc || (selectedMessage as any).cc).join(', '):(cc || (selectedMessage as any).cc)}</div>}
                                     </div>
                                   </div>
                                   <div className="flex items-center gap-2 text-[11px] text-slate-400">
@@ -1056,7 +1062,7 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
                                 </button>
                                 {emailExpanded && <div className="px-4 py-4 sm:px-5">
                                   {!outbound && <div className="mb-3 text-sm font-bold text-[#173b31]">{decodeMimeSubject(selectedMessage.subject)||'(Sans objet)'}</div>}
-                                  <div className="whitespace-pre-wrap break-words text-[13px] leading-7 text-slate-700">{bodyParts.message||'(Message vide)'}</div>
+                                  <div className="email-rich-content break-words text-[13px] leading-7 text-slate-700" dangerouslySetInnerHTML={{__html: (item as any).bodyHtml || bodyParts.message || "(Message vide)"}} />
                                   {bodyParts.signature&&<div className="mt-4 border-t border-slate-100 pt-3 text-xs leading-6 text-slate-500"><div className="mb-1 text-[9px] font-bold uppercase tracking-wider text-slate-400">Signature</div><div className="whitespace-pre-wrap break-words">{bodyParts.signature}</div></div>}
                                 </div>}
                               </article>;
