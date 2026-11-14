@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Zap, Activity, Sparkles, CalendarClock, AlertTriangle, BellRing, Check, CheckCircle2, ChevronLeft, Eye, ChevronRight, Clock3, CreditCard, Edit3, History, Mail, ReceiptText, RefreshCw, Search, Send, ShieldCheck, Trash2, UserCheck, UserX, Users, X, XCircle, Copy, Paperclip, Smile, MoreVertical, Info, Plus, Filter, PenLine, TrendingUp, ArrowUpRight, ArrowDownRight, Wallet, Crown, ChartNoAxesCombined, UserRoundPlus, CircleDollarSign, CalendarDays, Phone, MapPin, UserRound, VenusAndMars, Target, Layers, UserPlus, Menu } from 'lucide-react';
 import { AdminLog, PaymentRecord, SubscriptionPlan, UserProfile, UserStatus, TradingAccount, Trade } from '../types';
 import { getAdminLogs, getAllAccounts, getAllTrades, getAllUsers, subscribeAllUsers, subscribeAllPayments, subscribeContactMessages } from '../services/firestore';
-import { adminAddLog, adminComposeEmail, adminDeleteContact, adminGetPayments, adminMigrateSubscriptionExpiry, adminSaveEmailDraft, adminUpdateContact, adminUpdatePayment, adminUpdateUser } from '../services/adminConsole';
+import { adminAddLog, adminComposeEmail, adminGetPayments, adminMigrateSubscriptionExpiry, adminSaveEmailDraft, adminUpdateContact, adminUpdatePayment, adminUpdateUser } from '../services/adminConsole';
 import { useToast } from '../components/common/Toast';
 import { auth } from '../firebase/config';
 import { Tag } from 'lucide-react';
@@ -93,7 +93,6 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
   const [paymentFilter, setPaymentFilter] = useState<'all' | 'paid' | 'processing' | 'failed'>('all');
   const [contactMessages, setContactMessages] = useState<import('../services/firestore').ContactMessage[]>([]);
   const [selectedMessage, setSelectedMessage] = useState<import('../services/firestore').ContactMessage | null>(null);
-  const [contactFilter, setContactFilter] = useState<'all' | 'new' | 'in_progress' | 'resolved'>('all');
   const [supportSearch, setSupportSearch] = useState('');
   const [mailboxFolder, setMailboxFolder] = useState<'inbox' | 'sent' | 'drafts' | 'unread' | 'in_progress' | 'archive' | 'trash'>('inbox');
   const [composeOpen, setComposeOpen] = useState(false);
@@ -815,7 +814,7 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
 
           {adminTab === 'support' && (
             <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_8px_30px_rgba(11,31,53,.05)]">
-              <div className="flex h-[calc(100dvh-250px)] min-h-[440px] flex-col lg:flex-row">
+              <div className="flex h-[calc(100dvh-250px)] min-h-0 flex-col lg:flex-row">
                 <aside className={'w-full shrink-0 flex-col border-b border-slate-200 bg-white lg:flex lg:w-[360px] lg:border-b-0 lg:border-r ' + (selectedMessage ? 'hidden' : 'flex')}>
                   <div className="border-b border-slate-200 px-4 py-3">
                     <div className="flex items-center justify-between gap-2">
@@ -843,7 +842,7 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
 
                   <div className="min-h-0 flex-1 overflow-y-auto">
                     {contactMessages
-                      .filter(m => mailboxFolder === 'inbox' ? (!m.folder || m.folder === 'inbox') : mailboxFolder === 'sent' ? m.folder === 'sent' : mailboxFolder === 'drafts' ? m.folder === 'drafts' : mailboxFolder === 'unread' ? m.status === 'new' && m.folder !== 'archive' && m.folder !== 'trash' : mailboxFolder === 'in_progress' ? m.status === 'in_progress' && m.folder !== 'archive' && m.folder !== 'trash' : m.folder === mailboxFolder)
+                      .filter(m => mailboxFolder === 'inbox' ? (!m.folder || m.folder === 'inbox') : mailboxFolder === 'sent' ? (m.folder === 'sent' || (Array.isArray(m.conversation) && m.conversation.some(item => item.direction === 'outbound'))) : mailboxFolder === 'drafts' ? m.folder === 'drafts' : mailboxFolder === 'unread' ? m.status === 'new' && m.folder !== 'archive' && m.folder !== 'trash' : mailboxFolder === 'in_progress' ? m.status === 'in_progress' && m.folder !== 'archive' && m.folder !== 'trash' : m.folder === mailboxFolder)
                       .filter(m => {
                         const q = supportSearch.trim().toLowerCase();
                         return !q || [m.name, m.email, decodeMimeSubject(m.subject), m.message].some(v => String(v || '').toLowerCase().includes(q));
