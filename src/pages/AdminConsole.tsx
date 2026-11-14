@@ -820,7 +820,7 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
           {adminTab === 'support' && (
             <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_8px_30px_rgba(11,31,53,.05)]">
               <div className="flex h-[calc(100svh-250px)] min-h-0 flex-col lg:flex-row">
-                <aside className={'w-full shrink-0 flex-col border-b border-slate-200 bg-white lg:flex lg:w-[360px] lg:border-b-0 lg:border-r ' + (selectedMessage ? 'hidden' : 'flex')}>
+                <aside className={'h-full min-h-0 w-full min-w-0 flex-1 flex-col border-b border-slate-200 bg-white lg:flex lg:w-[360px] lg:flex-none lg:border-b-0 lg:border-r ' + (selectedMessage ? 'hidden' : 'flex')}>
                   <div className="border-b border-slate-200 px-4 py-3">
                     <div className="flex items-center justify-between gap-2">
                       <div>
@@ -884,7 +884,7 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
                   </div>
                 </aside>
 
-                <div className={'min-w-0 flex-1 bg-white ' + (selectedMessage ? 'flex' : 'hidden lg:flex')}>
+                <div className={'h-full min-h-0 min-w-0 flex-1 bg-white ' + (selectedMessage ? 'flex' : 'hidden lg:flex')}>
                   {selectedMessage ? (
                     <div className="flex h-full min-h-0 flex-col">
                       <header className="shrink-0 border-b border-slate-200 bg-white px-5 py-3.5 sm:px-7">
