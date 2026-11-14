@@ -106,6 +106,8 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
   const [supportSearch, setSupportSearch] = useState('');
   const [mailboxFolder, setMailboxFolder] = useState<'inbox' | 'sent' | 'drafts' | 'unread' | 'in_progress' | 'archive' | 'trash'>('inbox');
   const [folderSidebarOpen, setFolderSidebarOpen] = useState(true);
+  const [messageListOpen, setMessageListOpen] = useState(true);
+  const [expandedEmailIds, setExpandedEmailIds] = useState<string[]>([]);
   const [composeOpen, setComposeOpen] = useState(false);
   const [composeId, setComposeId] = useState('');
   const [composeTo, setComposeTo] = useState('');
@@ -852,7 +854,7 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
                     ] as const).map(([folder,label,FolderIcon]) => {
                       const active = mailboxFolder === folder;
                       const count = folder === 'unread' ? contactMessages.filter(m => m.status === 'new' && m.folder !== 'archive' && m.folder !== 'trash').length : folder === 'inbox' ? contactMessages.filter(m => (!m.folder || m.folder === 'inbox') && m.status === 'new').length : 0;
-                      return <button key={folder} type="button" onClick={() => { setMailboxFolder(folder); setSelectedMessage(null); }} title={folderSidebarOpen ? undefined : label} aria-label={label} className={'mb-2 flex min-h-12 items-center rounded-xl text-left transition-all ' + (folderSidebarOpen ? 'w-full gap-3.5 px-3.5' : 'w-11 justify-center') + (active ? ' bg-white text-[#008f6b] shadow-[0_4px_12px_rgba(0,143,107,.10)] ring-1 ring-[#bce9d8]' : ' text-[#668579] hover:bg-white/80 hover:text-[#008f6b]')}>
+                      return <button key={folder} type="button" onClick={() => { setMailboxFolder(folder); setSelectedMessage(null); setMessageListOpen(true); setExpandedEmailIds([]); }} title={folderSidebarOpen ? undefined : label} aria-label={label} className={'mb-2 flex min-h-12 items-center rounded-xl text-left transition-all ' + (folderSidebarOpen ? 'w-full gap-3.5 px-3.5' : 'w-11 justify-center') + (active ? ' bg-white text-[#008f6b] shadow-[0_4px_12px_rgba(0,143,107,.10)] ring-1 ring-[#bce9d8]' : ' text-[#668579] hover:bg-white/80 hover:text-[#008f6b]')}>
                         <FolderIcon className={'h-[17px] w-[17px] shrink-0 ' + (active ? 'text-[#009b73]' : 'text-slate-400')} />
                         {folderSidebarOpen && <span className="min-w-0 flex-1 truncate text-xs font-bold">{label}</span>}
                         {folderSidebarOpen && count > 0 && <span className="rounded-full bg-[#00a982] px-1.5 py-0.5 text-[9px] font-black text-white">{count}</span>}
@@ -867,7 +869,7 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
                         <div className="text-[13px] font-black text-[#0b1f35]">Boîte de réception</div>
                         <div className="mt-0.5 text-xs text-slate-400">{contactMessages.length} éléments · {contactMessages.filter(m => m.status === 'new').length} non lus</div>
                       </div>
-                      <div className="flex shrink-0 items-center gap-1"><button type="button" onClick={() => { setComposeId(''); setComposeTo(''); setComposeSubject(''); setComposeBody(''); setComposeOpen(true); }} className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#009b73] to-[#13b88a] px-3 py-2.5 text-[11px] font-extrabold text-white shadow-[0_5px_14px_rgba(0,155,115,.20)] transition hover:brightness-105"><Plus className="h-3.5 w-3.5" />Écrire</button><button onClick={() => { setSupportSearch(''); load(); }} disabled={loading} className="rounded-xl bg-[#f0f8f5] p-2.5 text-[#729488] transition hover:bg-[#e1f4eb] hover:text-[#008f6b]" title="Actualiser"><RefreshCw className={'h-3.5 w-3.5 '+(loading?'animate-spin':'')} /></button></div>
+                      <div className="flex shrink-0 items-center gap-1"><button type="button" onClick={() => { setComposeId(''); setComposeTo(''); setComposeSubject(''); setComposeBody(''); setComposeOpen(true); }} className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-[#009b73] to-[#13b88a] px-3 py-2.5 text-[11px] font-extrabold text-white shadow-[0_5px_14px_rgba(0,155,115,.20)] transition hover:brightness-105"><Plus className="h-3.5 w-3.5" />Écrire</button><button type="button" onClick={() => setMessageListOpen(false)} className="hidden rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-700 lg:inline-flex" title="Masquer la liste des e-mails" aria-label="Masquer la liste des e-mails"><PanelLeftClose className="h-4 w-4" /></button><button onClick={() => { setSupportSearch(''); load(); }} disabled={loading} className="rounded-xl bg-[#f0f8f5] p-2.5 text-[#729488] transition hover:bg-[#e1f4eb] hover:text-[#008f6b]" title="Actualiser"><RefreshCw className={'h-3.5 w-3.5 '+(loading?'animate-spin':'')} /></button></div>
                     </div>
                     <div className="mt-3 flex items-center gap-2 rounded-xl border border-[#e0eee8] bg-[#f7fbf9] px-3.5 py-2.5 shadow-inner shadow-white">
                       <Search className="h-3.5 w-3.5 shrink-0 text-slate-400" />
@@ -876,7 +878,7 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
                     </div>
                   </div>
 
-                  <div className="min-h-0 flex-1 overflow-y-auto">
+                  <div className={'min-h-0 flex-1 overflow-y-auto ' + (!messageListOpen ? 'hidden' : '')}>
                     {contactMessages
                       .filter(m => mailboxFolder === 'inbox' ? (!m.folder || m.folder === 'inbox') : mailboxFolder === 'sent' ? m.folder === 'sent' : mailboxFolder === 'drafts' ? m.folder === 'drafts' : mailboxFolder === 'unread' ? m.status === 'new' && m.folder !== 'archive' && m.folder !== 'trash' : mailboxFolder === 'in_progress' ? m.status === 'in_progress' && m.folder !== 'archive' && m.folder !== 'trash' : m.folder === mailboxFolder)
                       .filter(m => {
@@ -945,7 +947,7 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
                     <div className="flex h-full min-h-0 w-full min-w-0 flex-col">
                       <header className="shrink-0 border-b border-slate-200 bg-white px-5 py-4 sm:px-7">
                         <div className="flex items-start gap-3">
-                          <button type="button" onClick={() => setSelectedMessage(null)} className="shrink-0 rounded-lg p-2 text-slate-500 hover:bg-slate-100 lg:hidden" aria-label="Retour à la boîte"><ChevronLeft className="h-4 w-4" /></button>
+                          <button type="button" onClick={() => setSelectedMessage(null)} className="shrink-0 rounded-lg p-2 text-slate-500 hover:bg-slate-100 lg:hidden" aria-label="Retour à la boîte"><ChevronLeft className="h-4 w-4" /></button>{!messageListOpen && <button type="button" onClick={() => setMessageListOpen(true)} className="hidden rounded-lg p-2 text-slate-500 hover:bg-slate-100 lg:inline-flex" title="Afficher la liste des e-mails" aria-label="Afficher la liste des e-mails"><PanelLeftOpen className="h-4 w-4" /></button>}
                           <div className="min-w-0 flex-1">
                             <div className="flex flex-wrap items-center gap-2">
                               <span className="rounded-md bg-[#e8f8f2] px-2 py-1 text-[9px] font-black uppercase tracking-wider text-[#087f63]">E-mail</span>
@@ -994,7 +996,9 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
                               const at=item.at?new Date(item.at):null;
                               const bodyParts=splitEmailSignature(item.body);
                               const cc=(item as any).cc;
-                              return <article key={item.id || index} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_2px_8px_rgba(15,35,55,.035)]">
+                              const emailCardId = String(item.id || item.messageId || index);
+                              const emailExpanded = expandedEmailIds.includes(emailCardId);
+                              return <article key={emailCardId} className={'overflow-hidden rounded-xl border transition-colors '+(emailExpanded?'border-[#c9e7dc] bg-white shadow-[0_3px_12px_rgba(15,35,55,.045)]':'border-slate-200/90 bg-white shadow-[0_1px_3px_rgba(15,35,55,.025)]')}>
                                 <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-4 py-3.5 sm:px-5">
                                   <div className="flex min-w-0 items-start gap-3">
                                     <div className={'flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-black '+(outbound?'bg-[#e7f7f0] text-[#087f63]':'bg-[#eaf0f7] text-[#29445f]')}>{(outbound?'I':(selectedMessage.name || selectedMessage.email || '?').charAt(0)).toUpperCase()}</div>
@@ -1011,11 +1015,15 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
                                     
                                   </div>
                                 </div>
-                                <div className="px-4 py-4 sm:px-5">
+                                <button type="button" onClick={()=>setExpandedEmailIds(current=>current.includes(emailCardId)?current.filter(id=>id!==emailCardId):[...current,emailCardId])} aria-expanded={emailExpanded} className="flex w-full items-center justify-between gap-3 border-t border-slate-100 bg-[#fbfdfc] px-4 py-2.5 text-left text-[11px] font-semibold text-slate-500 transition hover:bg-[#f3faf6] sm:px-5">
+                                  <span>{emailExpanded?'Masquer le contenu':'Afficher le contenu du message'}</span>
+                                  <ChevronRight className={'h-3.5 w-3.5 transition-transform '+(emailExpanded?'rotate-90':'')} />
+                                </button>
+                                {emailExpanded && <div className="px-4 py-4 sm:px-5">
                                   {!outbound && <div className="mb-3 text-sm font-bold text-[#173b31]">{decodeMimeSubject(selectedMessage.subject)||'(Sans objet)'}</div>}
                                   <div className="whitespace-pre-wrap break-words text-[13px] leading-7 text-slate-700">{bodyParts.message||'(Message vide)'}</div>
                                   {bodyParts.signature&&<div className="mt-4 border-t border-slate-100 pt-3 text-xs leading-6 text-slate-500"><div className="mb-1 text-[9px] font-bold uppercase tracking-wider text-slate-400">Signature</div><div className="whitespace-pre-wrap break-words">{bodyParts.signature}</div></div>}
-                                </div>
+                                </div>}
                               </article>;
                             });
                           })()}
