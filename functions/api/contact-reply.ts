@@ -1,4 +1,4 @@
-import { verifyFirebaseIdToken, firestoreGet, firestorePatch } from '../../worker/firebaseAdmin';
+import { verifyFirebaseIdToken, firestoreGet, firestorePatch, firestoreSet } from '../../worker/firebaseAdmin';
 interface Env {
   RESEND_API_KEY?: string;
   RESEND_FROM_EMAIL?: string;
@@ -154,6 +154,23 @@ Trade. Measure. Improve.`;
       conversation: [...previousConversation, outbound]
     }, ['status','handledBy','handledAt','lastReply','repliedAt','repliedBy','updatedAt','conversation']);
     historySaved = true;
+    const sentRecordId = (conversationId + '_sent_' + (resendEmailId || crypto.randomUUID())).replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 140);
+    await firestoreSet(context.env as any, `contactMessages/${encodeURIComponent(sentRecordId)}`, {
+      id: sentRecordId,
+      name: to,
+      email: to,
+      subject: /^re:/i.test(subject) ? subject : 'Re: ' + subject,
+      message: reply,
+      status: 'sent',
+      folder: 'sent',
+      source: 'admin-reply',
+      createdAt: sentAt,
+      updatedAt: sentAt,
+      repliedAt: sentAt,
+      repliedBy: identity.uid,
+      conversation: [outbound],
+      parentConversationId: conversationId
+    });
   } catch (error) {
     console.error('IAMTRADER support reply history persistence failed:', error);
   }
