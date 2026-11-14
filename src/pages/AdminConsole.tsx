@@ -120,6 +120,7 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
   const [composeFormattingOpen, setComposeFormattingOpen] = useState(false);
   const [composeEmojiOpen, setComposeEmojiOpen] = useState(false);
   const [composeFont, setComposeFont] = useState('Arial');
+  const [composeFormatState, setComposeFormatState] = useState({ bold:false, italic:false, underline:false, strikeThrough:false, insertUnorderedList:false, insertOrderedList:false });
   const composeEditorRef = useRef<HTMLDivElement | null>(null);
   const composeFileInputRef = useRef<HTMLInputElement | null>(null);
   const composeSelectionRef = useRef<Range | null>(null);
@@ -438,6 +439,14 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
     if (selection && selection.rangeCount && composeEditorRef.current?.contains(selection.anchorNode)) {
       composeSelectionRef.current = selection.getRangeAt(0).cloneRange();
     }
+    setComposeFormatState({
+      bold: document.queryCommandState('bold'),
+      italic: document.queryCommandState('italic'),
+      underline: document.queryCommandState('underline'),
+      strikeThrough: document.queryCommandState('strikeThrough'),
+      insertUnorderedList: document.queryCommandState('insertUnorderedList'),
+      insertOrderedList: document.queryCommandState('insertOrderedList')
+    });
   }
 
   function applyComposeCommand(command: string, value?: string) {
@@ -940,11 +949,12 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
                     <select value={composeFont} onChange={e=>{applyComposeCommand('fontName',e.target.value);setComposeFont(e.target.value);}} className="h-8 max-w-[125px] rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-700"><option>Arial</option><option>Georgia</option><option>Verdana</option><option>Tahoma</option><option>Courier New</option></select>
                     <select onChange={e=>{applyComposeCommand('fontSize',e.target.value);}} defaultValue="3" className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-700"><option value="2">Petit</option><option value="3">Normal</option><option value="4">Grand</option><option value="5">Très grand</option><option value="6">Titre</option></select>
                     <span className="mx-1 h-5 w-px bg-slate-200"/>
-                    <button type="button" onClick={()=>applyComposeCommand('bold')} className="h-8 w-8 rounded-lg text-slate-600 transition hover:bg-white hover:text-[#087f63]" title="Gras"><b>B</b></button><button type="button" onClick={()=>applyComposeCommand('italic')} className="h-8 w-8 rounded-lg text-slate-600 transition hover:bg-white hover:text-[#087f63]" title="Italique"><i>I</i></button><button type="button" onClick={()=>applyComposeCommand('underline')} className="h-8 w-8 rounded-lg text-slate-600 transition hover:bg-white hover:text-[#087f63]" title="Souligné"><u>U</u></button><button type="button" onClick={()=>applyComposeCommand('strikeThrough')} className="h-8 w-8 rounded-lg text-slate-600 transition hover:bg-white hover:text-[#087f63]" title="Barré">S̶</button>
-                    <input type="color" defaultValue="#183b32" onChange={e=>{applyComposeCommand('foreColor',e.target.value);}} title="Couleur du texte" className="h-7 w-8 cursor-pointer rounded border-0 bg-transparent"/>
+                    {(['bold','italic','underline','strikeThrough'] as const).map(command=><button key={command} type="button" onClick={()=>applyComposeCommand(command)} className={'flex h-8 w-8 items-center justify-center rounded-lg transition '+(composeFormatState[command]?'bg-[#dff4e9] text-[#087f63] ring-1 ring-[#b9e5d0]':'text-slate-600 hover:bg-white')} title={command==='bold'?'Gras':command==='italic'?'Italique':command==='underline'?'Souligné':'Barré'}>{command==='bold'?<b>B</b>:command==='italic'?<i>I</i>:command==='underline'?<u>U</u>:'S̶'}</button>)}
+                    <label className="flex h-8 cursor-pointer items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 text-[10px] font-semibold text-slate-600" title="Couleur du texte"><input type="color" defaultValue="#183b32" onChange={e=>applyComposeCommand('foreColor',e.target.value)} className="h-5 w-5 cursor-pointer border-0 bg-transparent p-0"/>Couleur</label>
+                    <button type="button" onClick={()=>applyComposeCommand('foreColor','#334155')} className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-[10px] font-semibold text-slate-600 hover:bg-slate-50" title="Rétablir la couleur par défaut">Couleur par défaut</button>
                     <span className="mx-1 h-5 w-px bg-slate-200"/>
                     <button type="button" onClick={()=>applyComposeCommand('justifyLeft')} className="h-8 w-8 rounded-lg text-xs text-slate-600 hover:bg-white" title="Aligner à gauche">≡</button><button type="button" onClick={()=>applyComposeCommand('justifyCenter')} className="h-8 w-8 rounded-lg text-xs text-slate-600 hover:bg-white" title="Centrer">≋</button>
-                    <button type="button" onClick={()=>applyComposeCommand('insertUnorderedList')} className="h-8 rounded-lg px-2.5 text-xs font-medium text-slate-600 hover:bg-white hover:text-[#087f63]" title="Liste à puces">• Liste</button><button type="button" onClick={()=>applyComposeCommand('insertOrderedList')} className="h-8 rounded-lg px-2.5 text-xs font-medium text-slate-600 hover:bg-white hover:text-[#087f63]" title="Liste numérotée">1. Liste</button>
+                    <button type="button" onClick={()=>applyComposeCommand('insertUnorderedList')} className={'h-8 rounded-lg px-2.5 text-xs font-medium transition '+(composeFormatState.insertUnorderedList?'bg-[#dff4e9] text-[#087f63]':'text-slate-600 hover:bg-white')} title="Liste à puces">• Liste</button><button type="button" onClick={()=>applyComposeCommand('insertOrderedList')} className={'h-8 rounded-lg px-2.5 text-xs font-medium transition '+(composeFormatState.insertOrderedList?'bg-[#dff4e9] text-[#087f63]':'text-slate-600 hover:bg-white')} title="Liste numérotée">1. Liste</button><button type="button" onClick={()=>{applyComposeCommand('removeFormat');applyComposeCommand('foreColor','#334155');setComposeFont('Arial');}} className="h-8 rounded-lg px-2 text-[10px] font-semibold text-slate-500 hover:bg-white" title="Effacer la mise en forme">Effacer le style</button>
                   </div>
                 </div>}
                 {composeEmojiOpen && <div className="mx-5 mb-3 flex flex-wrap gap-1 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:mx-7">{['😀','😊','😂','😉','😍','🙏','👍','🎉','❤️','📌','📈','✅','⚠️','💡'].map(emoji=><button key={emoji} type="button" onClick={()=>{applyComposeCommand('insertText',emoji);if(composeEditorRef.current){setComposeBody(composeEditorRef.current.innerText);setComposeHtml(composeEditorRef.current.innerHTML);}setComposeEmojiOpen(false);}} className="rounded-lg p-2 text-lg transition hover:bg-emerald-50">{emoji}</button>)}</div>}
