@@ -52,6 +52,16 @@ function emailParts(value?: string) {
   return at > 0 ? { local: email.slice(0, at), domain: email.slice(at) } : { local: email, domain: '' };
 }
 
+function splitEmailSignature(value?: string) {
+  const body = String(value || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
+  const match = body.match(/\n[ \t]*--[ \t]*\n/);
+  if (!match || match.index === undefined) return { message: body, signature: '' };
+  return {
+    message: body.slice(0, match.index).trim(),
+    signature: body.slice(match.index + match[0].length).trim()
+  };
+}
+
 function inputDate(v?: string) {
   if (!v) return '';
   const d = new Date(v);
@@ -967,6 +977,7 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
                             }).sort((a, b) => new Date(a.at || 0).getTime() - new Date(b.at || 0).getTime());
                             return conversation.map((item, index) => {
                               const outbound = item.direction === 'outbound';
+                              const bodyParts = splitEmailSignature(item.body);
                               const at = item.at ? new Date(item.at) : null;
                               const previous = conversation[index - 1];
                               const sameDay = previous && new Date(previous.at).toDateString() === new Date(item.at).toDateString();
@@ -980,8 +991,9 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
                                         <span className="font-bold text-slate-600">{outbound ? 'IAMTRADER Support' : (selectedMessage.name || selectedMessage.email)}</span>
                                         <span>{at && !Number.isNaN(at.getTime()) ? at.toLocaleTimeString('fr-FR', {hour:'2-digit',minute:'2-digit'}) : '—'}</span>
                                       </div>
-                                      <div className={'inline-block rounded-xl px-4 py-3 ' + (outbound ? 'bg-[#eaf4ff] text-[#0b1f35] ring-1 ring-blue-100' : 'border border-slate-200 bg-slate-50 text-slate-800')}>
-                                        <div className="whitespace-pre-wrap break-words text-[12px] leading-6">{item.body || '(Message vide)'}</div>
+                                      <div className={'inline-block max-w-full rounded-2xl px-4 py-3.5 text-left ' + (outbound ? 'bg-[#e8f8f2] text-[#123b30] ring-1 ring-[#c8eee0]' : 'border border-slate-200 bg-[#f8fafc] text-slate-800 shadow-[0_1px_2px_rgba(15,23,42,.04)]')}>
+                                        <div className="whitespace-pre-wrap break-words text-[13px] leading-[1.75]">{bodyParts.message || '(Message vide)'}</div>
+                                        {bodyParts.signature && <div className="mt-3 border-t border-slate-200/80 pt-2.5 text-[11px] leading-[1.65] text-slate-500"><div className="mb-1 text-[9px] font-bold uppercase tracking-[.12em] text-slate-400">Signature</div><div className="whitespace-pre-wrap break-words">{bodyParts.signature}</div></div>}
                                       </div>
                                     </div>
                                   </div>
