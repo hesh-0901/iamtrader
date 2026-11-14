@@ -146,6 +146,8 @@ export async function handleInboundEmail(
   env: InboundEmailEnv,
 ): Promise<void> {
   const subject = message.headers.get('subject') || '(Sans objet)';
+  const ccHeader = message.headers.get('cc') || '';
+  const toHeader = message.headers.get('to') || message.to;
   const messageId = message.headers.get('message-id') || '';
   const inReplyTo = message.headers.get('in-reply-to') || '';
   const references = message.headers.get('references') || '';
@@ -183,7 +185,8 @@ export async function handleInboundEmail(
       body: messageText || '(Message sans contenu textuel)',
       at: receivedAt,
       from: senderEmail,
-      to: message.to,
+      to: toHeader,
+      cc: ccHeader,
       messageId,
       inReplyTo,
       references,
@@ -198,7 +201,8 @@ export async function handleInboundEmail(
             body: String(matching.message || ''),
             at: String(matching.createdAt || receivedAt),
             from: String(matching.email || senderEmail),
-            to: message.to,
+            to: toHeader,
+            cc: ccHeader,
           }];
 
       const alreadyStored = messageId && existingConversation.some((entry: any) => String(entry?.messageId || '').trim() === messageId);
@@ -221,6 +225,8 @@ export async function handleInboundEmail(
         name: decodeMimeHeader(message.from.replace(/\s*<[^>]+>/, '').trim()) || senderEmail,
         email: senderEmail,
         subject,
+        to: toHeader,
+        cc: ccHeader,
         message: messageText || '(Message sans contenu textuel)',
         status: 'new',
         createdAt: receivedAt,
