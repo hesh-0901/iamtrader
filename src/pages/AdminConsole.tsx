@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Zap, Activity, Sparkles, CalendarClock, AlertTriangle, BellRing, Check, CheckCircle2, ChevronLeft, Eye, ChevronRight, Clock3, CreditCard, Edit3, History, Mail, ReceiptText, RefreshCw, Search, Send, ShieldCheck, Trash2, UserCheck, UserX, Users, X, XCircle, Copy, Paperclip, Smile, MoreVertical, Info, Plus, Filter, PenLine, TrendingUp, ArrowUpRight, ArrowDownRight, Wallet, Crown, ChartNoAxesCombined, UserRoundPlus, CircleDollarSign, CalendarDays, Phone, MapPin, UserRound, VenusAndMars, Target, Layers, UserPlus, Menu } from 'lucide-react';
 import { AdminLog, PaymentRecord, SubscriptionPlan, UserProfile, UserStatus, TradingAccount, Trade } from '../types';
 import { getAdminLogs, getAllAccounts, getAllTrades, getAllUsers, subscribeAllUsers, subscribeAllPayments, subscribeContactMessages } from '../services/firestore';
-import { adminAddLog, adminDeleteContact, adminGetPayments, adminMigrateSubscriptionExpiry, adminUpdateContact, adminUpdatePayment, adminUpdateUser } from '../services/adminConsole';
+import { adminAddLog, adminComposeEmail, adminDeleteContact, adminGetPayments, adminMigrateSubscriptionExpiry, adminSaveEmailDraft, adminUpdateContact, adminUpdatePayment, adminUpdateUser } from '../services/adminConsole';
 import { useToast } from '../components/common/Toast';
 import { auth } from '../firebase/config';
 import { Tag } from 'lucide-react';
@@ -95,6 +95,13 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
   const [selectedMessage, setSelectedMessage] = useState<import('../services/firestore').ContactMessage | null>(null);
   const [contactFilter, setContactFilter] = useState<'all' | 'new' | 'in_progress' | 'resolved'>('all');
   const [supportSearch, setSupportSearch] = useState('');
+  const [mailboxFolder, setMailboxFolder] = useState<'inbox' | 'sent' | 'drafts' | 'unread' | 'in_progress' | 'archive' | 'trash'>('inbox');
+  const [composeOpen, setComposeOpen] = useState(false);
+  const [composeId, setComposeId] = useState('');
+  const [composeTo, setComposeTo] = useState('');
+  const [composeSubject, setComposeSubject] = useState('');
+  const [composeBody, setComposeBody] = useState('');
+  const [composeBusy, setComposeBusy] = useState(false);
   const [contactNote, setContactNote] = useState('');
   const [replyText, setReplyText] = useState('');
   const [contactBusy, setContactBusy] = useState(false);
@@ -226,6 +233,13 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
     }
   }
   useEffect(() => {
+    if (adminTab !== 'support') return;
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { document.body.style.overflow = previousOverflow; };
+  }, [adminTab]);
+
+  useEffect(() => {
     if (!selectedMessage) return;
     const liveMessage = contactMessages.find(message => message.id === selectedMessage.id);
     if (liveMessage) setSelectedMessage(liveMessage);
@@ -353,6 +367,32 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
       return d !== null && d < 0;
     }).length
   };
+
+  async function saveComposeDraft() {
+    if (composeBusy) return;
+    setComposeBusy(true);
+    try {
+      const saved = await adminSaveEmailDraft({ id: composeId || undefined, to: composeTo.trim(), subject: composeSubject.trim(), message: composeBody });
+      setComposeId(saved.id || composeId);
+      showToast('Brouillon enregistré.', 'success');
+      setComposeOpen(false);
+      setMailboxFolder('drafts');
+    } catch (error: any) { showToast(error?.message || 'Enregistrement du brouillon impossible.', 'error'); }
+    finally { setComposeBusy(false); }
+  }
+
+  async function sendComposedEmail() {
+    if (composeBusy) return;
+    setComposeBusy(true);
+    try {
+      const result = await adminComposeEmail({ id: composeId || undefined, to: composeTo.trim(), subject: composeSubject.trim(), message: composeBody.trim() });
+      setComposeOpen(false); setComposeId(''); setComposeTo(''); setComposeSubject(''); setComposeBody('');
+      setMailboxFolder('sent');
+      if (result.historySaved === false) showToast(result.warning || 'E-mail envoyé, mais historique non enregistré.', 'error');
+      else showToast('E-mail envoyé et enregistré dans Envoyés.', 'success');
+    } catch (error: any) { showToast(error?.message || 'Envoi impossible.', 'error'); }
+    finally { setComposeBusy(false); }
+  }
 
   async function sendSupportReply() {
     if (!selectedMessage || !replyText.trim() || replyBusy) return;
@@ -771,36 +811,47 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
             </section>
           </div>}
 
+          {composeOpen && adminTab === 'support' && (
+            <div className="fixed inset-0 z-[120] flex items-center justify-center bg-[#071a2d]/55 p-3 backdrop-blur-sm sm:p-6" role="dialog" aria-modal="true" aria-label="Nouveau message">
+              <form onSubmit={event => { event.preventDefault(); void sendComposedEmail(); }} className="flex max-h-[min(760px,94dvh)] w-full max-w-2xl flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl">
+                <header className="flex shrink-0 items-center justify-between border-b border-slate-200 px-5 py-4"><div><h2 className="text-base font-black text-[#0b1f35]">Nouveau message</h2><p className="mt-1 text-xs text-slate-400">Envoyé depuis hello@iamtrader.trade</p></div><button type="button" onClick={() => setComposeOpen(false)} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100" aria-label="Fermer"><X className="h-4 w-4" /></button></header>
+                <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-5"><label className="block text-xs font-bold text-slate-500">Destinataire<input type="email" required value={composeTo} onChange={event => setComposeTo(event.target.value)} placeholder="adresse@exemple.com" className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm font-medium text-[#0b1f35] outline-none focus:border-emerald-500" /></label><label className="block text-xs font-bold text-slate-500">Objet<input required maxLength={200} value={composeSubject} onChange={event => setComposeSubject(event.target.value)} placeholder="Objet du message" className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-3 text-sm font-medium text-[#0b1f35] outline-none focus:border-emerald-500" /></label><label className="block text-xs font-bold text-slate-500">Message<textarea required maxLength={10000} rows={10} value={composeBody} onChange={event => setComposeBody(event.target.value)} placeholder="Rédigez votre message…" className="mt-1.5 min-h-[220px] w-full resize-y rounded-xl border border-slate-200 px-3 py-3 text-sm leading-6 text-[#0b1f35] outline-none focus:border-emerald-500" /></label></div>
+                <footer className="flex shrink-0 flex-col-reverse gap-2 border-t border-slate-200 bg-slate-50 px-5 py-4 sm:flex-row sm:justify-between"><button type="button" disabled={composeBusy} onClick={() => void saveComposeDraft()} className="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-xs font-bold text-slate-600 disabled:opacity-50">Enregistrer le brouillon</button><div className="flex gap-2"><button type="button" disabled={composeBusy} onClick={() => setComposeOpen(false)} className="rounded-xl px-4 py-2.5 text-xs font-bold text-slate-500">Annuler</button><button type="submit" disabled={composeBusy || !composeTo.trim() || !composeSubject.trim() || !composeBody.trim()} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#0b1f35] px-5 py-2.5 text-xs font-black text-white disabled:opacity-40"><Send className="h-3.5 w-3.5" />{composeBusy ? 'Envoi…' : 'Envoyer'}</button></div></footer>
+              </form>
+            </div>
+          )}
+
           {adminTab === 'support' && (
             <section className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-[0_8px_30px_rgba(11,31,53,.05)]">
-              <div className="flex h-[760px] min-h-[620px] flex-col lg:flex-row">
-                <aside className="flex w-full shrink-0 flex-col border-b border-slate-200 bg-white lg:w-[360px] lg:border-b-0 lg:border-r">
+              <div className="flex h-[calc(100dvh-250px)] min-h-[440px] flex-col lg:flex-row">
+                <aside className={'w-full shrink-0 flex-col border-b border-slate-200 bg-white lg:flex lg:w-[360px] lg:border-b-0 lg:border-r ' + (selectedMessage ? 'hidden' : 'flex')}>
                   <div className="border-b border-slate-200 px-4 py-3">
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-center justify-between gap-2">
                       <div>
-                        <div className="text-[13px] font-black text-[#0b1f35]">Conversations</div>
-                        <div className="mt-0.5 text-xs text-slate-400">{contactMessages.length} conversation(s) · {contactMessages.filter(m => m.status === 'new').length} non lue(s)</div>
+                        <div className="text-[13px] font-black text-[#0b1f35]">Boîte de réception</div>
+                        <div className="mt-0.5 text-xs text-slate-400">{contactMessages.length} éléments · {contactMessages.filter(m => m.status === 'new').length} non lus</div>
                       </div>
-                      <button onClick={() => { setSupportSearch(''); load(); }} disabled={loading} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100" title="Actualiser"><RefreshCw className={'h-3.5 w-3.5 '+(loading?'animate-spin':'')} /></button>
+                      <div className="flex shrink-0 items-center gap-1"><button type="button" onClick={() => { setComposeId(''); setComposeTo(''); setComposeSubject(''); setComposeBody(''); setComposeOpen(true); }} className="inline-flex items-center gap-1 rounded-lg bg-[#0b1f35] px-2.5 py-2 text-[11px] font-bold text-white"><Plus className="h-3.5 w-3.5" />Écrire</button><button onClick={() => { setSupportSearch(''); load(); }} disabled={loading} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100" title="Actualiser"><RefreshCw className={'h-3.5 w-3.5 '+(loading?'animate-spin':'')} /></button></div>
+                    </div>
+                    <div className="mt-3 grid grid-cols-2 gap-1 sm:grid-cols-3">
+                      {([['inbox','Réception'],['sent','Envoyés'],['drafts','Brouillons'],['unread','Non lus'],['in_progress','En cours'],['archive','Archivés'],['trash','Corbeille']] as const).map(([folder,label]) => <button key={folder} type="button" onClick={() => { setMailboxFolder(folder); setSelectedMessage(null); }} className={'rounded-lg px-2 py-2 text-[10px] font-bold transition ' + (mailboxFolder===folder ? 'bg-[#0b1f35] text-white' : 'bg-slate-50 text-slate-500 hover:bg-slate-100')}>{label}{folder==='unread' && contactMessages.filter(m=>m.status==='new').length>0 ? ' · '+contactMessages.filter(m=>m.status==='new').length : ''}</button>)}
+                    </div>
+                    <div className="mt-3 flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
+                      <Search className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                      <input value={supportSearch} onChange={e => setSupportSearch(e.target.value)} placeholder="Rechercher un e-mail…" className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-slate-400" />
+                      <Filter className="h-3 w-3 text-slate-300" />
                     </div>
                     <div className="mt-3 flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2">
                       <Search className="h-3.5 w-3.5 shrink-0 text-slate-400" />
                       <input value={supportSearch} onChange={e => setSupportSearch(e.target.value)} placeholder="Rechercher une conversation…" className="min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-slate-400" />
                       <Filter className="h-3 w-3 text-slate-300" />
                     </div>
-                    <div className="mt-3 flex items-center gap-4 border-b border-slate-100">
-                      {(['all','new','in_progress','resolved'] as const).map(s => (
-                        <button key={s} onClick={() => setContactFilter(s)} className={'relative border-b-2 pb-2 text-xs font-bold ' + (contactFilter === s ? 'border-[#0b1f35] text-[#0b1f35]' : 'border-transparent text-slate-400')}>
-                          {s === 'all' ? 'Tous' : s === 'new' ? 'Non lus' : s === 'in_progress' ? 'En cours' : 'Traités'}
-                          {s === 'new' && contactMessages.filter(m => m.status === 'new').length > 0 && <span className="ml-1.5 rounded-full bg-blue-600 px-1.5 py-0.5 text-[7px] font-black text-white">{contactMessages.filter(m => m.status === 'new').length}</span>}
-                        </button>
-                      ))}
                     </div>
                   </div>
 
                   <div className="min-h-0 flex-1 overflow-y-auto">
                     {contactMessages
-                      .filter(m => contactFilter === 'all' || m.status === contactFilter)
+                      .filter(m => mailboxFolder === 'inbox' ? (!m.folder || m.folder === 'inbox') : mailboxFolder === 'sent' ? m.folder === 'sent' : mailboxFolder === 'drafts' ? m.folder === 'drafts' : mailboxFolder === 'unread' ? m.status === 'new' && m.folder !== 'archive' && m.folder !== 'trash' : mailboxFolder === 'in_progress' ? m.status === 'in_progress' && m.folder !== 'archive' && m.folder !== 'trash' : m.folder === mailboxFolder)
                       .filter(m => {
                         const q = supportSearch.trim().toLowerCase();
                         return !q || [m.name, m.email, decodeMimeSubject(m.subject), m.message].some(v => String(v || '').toLowerCase().includes(q));
@@ -815,7 +866,7 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
                         const unread = m.status === 'new';
                         const email = emailParts(m.email);
                         return (
-                          <button key={m.id} onClick={() => { setSelectedMessage(m); setContactNote(m.adminNote || ''); setReplyText(''); }} className={'flex w-full gap-3 border-b border-slate-100 px-4 py-3.5 text-left transition ' + (selectedItem ? 'bg-blue-50/50 shadow-[inset_3px_0_0_#2563eb]' : 'hover:bg-slate-50')}>
+                          <button key={m.id} onClick={() => { if (m.status === 'draft' || m.folder === 'drafts') { setComposeId(m.id); setComposeTo(m.email || ''); setComposeSubject(m.subject || ''); setComposeBody(m.message || ''); setComposeOpen(true); return; } setSelectedMessage(m); setContactNote(m.adminNote || ''); setReplyText(''); }} className={'flex w-full gap-3 border-b border-slate-100 px-4 py-3.5 text-left transition ' + (selectedItem ? 'bg-blue-50/50 shadow-[inset_3px_0_0_#2563eb]' : 'hover:bg-slate-50')}>
                             <div className={'mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-black ' + (unread ? 'bg-[#0b1f35] text-white' : 'bg-slate-100 text-slate-500')}>
                               {(m.name || m.email || '?').trim().charAt(0).toUpperCase()}
                             </div>
@@ -836,18 +887,19 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
                           </button>
                         );
                       })}
-                    {contactMessages.filter(m => contactFilter === 'all' || m.status === contactFilter).filter(m => {
+                    {contactMessages.filter(m => mailboxFolder === 'inbox' ? (!m.folder || m.folder === 'inbox') : mailboxFolder === 'sent' ? m.folder === 'sent' : mailboxFolder === 'drafts' ? m.folder === 'drafts' : mailboxFolder === 'unread' ? m.status === 'new' && m.folder !== 'archive' && m.folder !== 'trash' : mailboxFolder === 'in_progress' ? m.status === 'in_progress' && m.folder !== 'archive' && m.folder !== 'trash' : m.folder === mailboxFolder).filter(m => {
                       const q = supportSearch.trim().toLowerCase();
                       return !q || [m.name, m.email, decodeMimeSubject(m.subject), m.message].some(v => String(v || '').toLowerCase().includes(q));
                     }).length === 0 && <div className="p-10 text-center text-sm text-slate-400">Aucune conversation.</div>}
                   </div>
                 </aside>
 
-                <div className="min-w-0 flex-1 bg-white">
+                <div className={'min-w-0 flex-1 bg-white ' + (selectedMessage ? 'flex' : 'hidden lg:flex')}>
                   {selectedMessage ? (
                     <div className="flex h-full min-h-0 flex-col">
                       <header className="shrink-0 border-b border-slate-200 bg-white px-5 py-3.5 sm:px-7">
-                        <div className="flex items-center gap-3">
+                        <div className="flex min-w-0 items-center gap-3">
+                          <button type="button" onClick={() => setSelectedMessage(null)} className="shrink-0 rounded-lg p-2 text-slate-500 hover:bg-slate-100 lg:hidden" aria-label="Retour à la boîte"><ChevronLeft className="h-4 w-4" /></button>
                           <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#0b1f35] text-sm font-black text-white">
                             {(selectedMessage.name || selectedMessage.email || '?').trim().charAt(0).toUpperCase()}
                           </div>
@@ -873,7 +925,8 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
                               setSelectedMessage(prev => prev ? {...prev,status:'in_progress',handledBy:auth.currentUser?.uid || '',handledAt:now}:prev);
                             } catch { showToast('Mise à jour impossible.'); }
                           }} className="hidden items-center gap-1.5 rounded-lg bg-emerald-50 px-2.5 py-2 text-xs font-bold text-emerald-700 sm:flex">En cours <ChevronRight className="h-3 w-3 rotate-90" /></button>
-                          <button onClick={() => adminDeleteContact(selectedMessage.id).then(() => { setSelectedMessage(null); showToast('Conversation supprimée.'); }).catch(() => showToast('Suppression impossible.'))} className="rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600" title="Supprimer"><Trash2 className="h-4 w-4" /></button>
+                          <button type="button" onClick={() => adminUpdateContact(selectedMessage.id, { folder: mailboxFolder === 'trash' ? 'inbox' : 'archive' }).then(() => { setSelectedMessage(null); showToast(mailboxFolder === 'trash' ? 'Message restauré.' : 'Message archivé.', 'success'); }).catch(() => showToast('Action impossible.', 'error'))} className="rounded-lg p-2 text-slate-400 hover:bg-slate-100" title={mailboxFolder === 'trash' ? 'Restaurer' : 'Archiver'}><Layers className="h-4 w-4" /></button>
+                          <button onClick={() => adminUpdateContact(selectedMessage.id, { folder: 'trash' }).then(() => { setSelectedMessage(null); showToast('Message déplacé dans la corbeille.', 'success'); }).catch(() => showToast('Déplacement impossible.', 'error'))} className="rounded-lg p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-600" title="Corbeille"><Trash2 className="h-4 w-4" /></button>
                           <button className="hidden rounded-lg p-2 text-slate-400 hover:bg-slate-100 sm:block" title="Plus d'actions"><MoreVertical className="h-4 w-4" /></button>
                         </div>
                       </header>
