@@ -42,7 +42,7 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
 
   if (!action || !id) return json({ error: 'Action ou identifiant invalide.' }, 400);
   const existing = await firestoreGet(context.env as any, `contactMessages/${encodeURIComponent(id)}`);
-  if (existing && (existing.source !== 'admin-compose' || (existing.status !== 'draft' && action === 'send'))) {
+  if (existing && (existing.source !== 'admin-compose' || existing.status !== 'draft')) {
     return json({ error: 'Ce message ne peut pas être modifié depuis la composition.' }, 403);
   }
   if (action === 'draft') {
