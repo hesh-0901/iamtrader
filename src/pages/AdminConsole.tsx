@@ -851,7 +851,7 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
                         const unread = m.status === 'new';
                         const email = emailParts(m.email);
                         return (
-                          <button key={m.id} onClick={() => { if (m.status === 'draft' || m.folder === 'drafts') { setComposeId(m.id); setComposeTo(m.email || ''); setComposeSubject(m.subject || ''); setComposeBody(m.message || ''); setComposeOpen(true); return; } setSelectedMessage(m); setContactNote(m.adminNote || ''); setReplyText(''); }} className={'flex w-full gap-3 border-b border-slate-100 px-4 py-3.5 text-left transition ' + (selectedItem ? 'bg-blue-50/50 shadow-[inset_3px_0_0_#2563eb]' : 'hover:bg-slate-50')}>
+                          <button key={m.id} onClick={() => { if (m.status === 'draft' || m.folder === 'drafts') { setComposeId(m.id); setComposeTo(m.email || ''); setComposeSubject(m.subject || ''); setComposeBody(m.message || ''); setComposeOpen(true); return; } if (m.status === 'new') { const now = new Date().toISOString(); setSelectedMessage({ ...m, status: 'in_progress', handledBy: auth.currentUser?.uid || '', handledAt: now }); void adminUpdateContact(m.id, { status: 'in_progress', handledBy: auth.currentUser?.uid || '', handledAt: now }).catch(() => showToast('Impossible de marquer le message comme lu.', 'error')); } else setSelectedMessage(m); setContactNote(m.adminNote || ''); setReplyText(''); }} className={'flex w-full gap-3 border-b border-slate-100 px-4 py-3.5 text-left transition ' + (selectedItem ? 'bg-blue-50/50 shadow-[inset_3px_0_0_#2563eb]' : 'hover:bg-slate-50')}>
                             <div className={'mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-xs font-black ' + (unread ? 'bg-[#0b1f35] text-white' : 'bg-slate-100 text-slate-500')}>
                               {(m.name || m.email || '?').trim().charAt(0).toUpperCase()}
                             </div>
@@ -872,7 +872,7 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
                           </button>
                         );
                       })}
-                    {contactMessages.filter(m => mailboxFolder === 'inbox' ? (!m.folder || m.folder === 'inbox') : mailboxFolder === 'sent' ? m.folder === 'sent' : mailboxFolder === 'drafts' ? m.folder === 'drafts' : mailboxFolder === 'unread' ? m.status === 'new' && m.folder !== 'archive' && m.folder !== 'trash' : mailboxFolder === 'in_progress' ? m.status === 'in_progress' && m.folder !== 'archive' && m.folder !== 'trash' : m.folder === mailboxFolder).filter(m => {
+                    {contactMessages.filter(m => mailboxFolder === 'inbox' ? (!m.folder || m.folder === 'inbox') : mailboxFolder === 'sent' ? (m.folder === 'sent' || (Array.isArray(m.conversation) && m.conversation.some(item => item.direction === 'outbound'))) : mailboxFolder === 'drafts' ? m.folder === 'drafts' : mailboxFolder === 'unread' ? m.status === 'new' && m.folder !== 'archive' && m.folder !== 'trash' : mailboxFolder === 'in_progress' ? m.status === 'in_progress' && m.folder !== 'archive' && m.folder !== 'trash' : m.folder === mailboxFolder).filter(m => {
                       const q = supportSearch.trim().toLowerCase();
                       return !q || [m.name, m.email, decodeMimeSubject(m.subject), m.message].some(v => String(v || '').toLowerCase().includes(q));
                     }).length === 0 && <div className="p-10 text-center text-sm text-slate-400">Aucune conversation.</div>}
