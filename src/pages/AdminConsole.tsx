@@ -128,6 +128,9 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
   const [contactNote, setContactNote] = useState('');
   const [replyText, setReplyText] = useState('');
   const [replyHtml, setReplyHtml] = useState('');
+  const [replyTo, setReplyTo] = useState('');
+  const [replyCc, setReplyCc] = useState('');
+  const [replyCcOpen, setReplyCcOpen] = useState(false);
   const [replyFormattingOpen, setReplyFormattingOpen] = useState(false);
   const [replyEmojiOpen, setReplyEmojiOpen] = useState(false);
   const [replyFont, setReplyFont] = useState('Arial');
@@ -563,7 +566,8 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
   async function sendSupportReply() {
     const currentReplyHtml = replyEditorRef.current?.innerHTML || replyHtml;
     const currentReplyText = replyEditorRef.current?.innerText.trim() || replyText.trim();
-    if (!selectedMessage || !currentReplyText || replyBusy) return;
+    const currentReplyTo = replyTo.trim();
+    if (!selectedMessage || !currentReplyText || !currentReplyTo || replyBusy) return;
     const currentUser = auth.currentUser;
     if (!currentUser) return;
 
@@ -580,7 +584,8 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + idToken },
         body: JSON.stringify({
-          to: selectedMessage.email,
+          to: currentReplyTo,
+          cc: replyCc.trim(),
           subject: decodeMimeSubject(selectedMessage.subject),
           reply: currentReplyText,
           replyHtml: currentReplyHtml,
@@ -601,7 +606,8 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
         bodyHtml: currentReplyHtml,
         at: now,
         from: 'hello@iamtrader.trade',
-        to: selectedMessage.email,
+        to: currentReplyTo,
+        cc: replyCc.trim(),
         messageId: payload?.messageId || payload?.id || undefined
       };
       const normalizeConversation = (items: import('../services/firestore').ContactConversationMessage[]) => items.map(item => {
@@ -624,6 +630,9 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
       setSelectedMessage(prev => prev ? { ...prev, status:'resolved', handledBy:currentUser.uid, handledAt:now, lastReply:currentReplyText, repliedAt:now, repliedBy:currentUser.uid, conversation } : prev);
       setReplyText('');
       setReplyHtml('');
+      setReplyTo(selectedMessage.email || '');
+      setReplyCc('');
+      setReplyCcOpen(false);
       setReplyFormattingOpen(false);
       setReplyEmojiOpen(false);
       setShowReplyComposer(false);
@@ -1226,7 +1235,7 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
                                   </div>
                                   <div className="flex items-center gap-2 text-[11px] text-slate-400">
                                     <span>{at&&!Number.isNaN(at.getTime())?at.toLocaleString('fr-FR',{dateStyle:'medium',timeStyle:'short'}):'—'}</span>
-                                    <button type="button" onClick={()=>{setShowReplyComposer(true);setReplyText('');setReplyHtml('');setReplyFormattingOpen(false);setReplyEmojiOpen(false);}} className="rounded-lg p-1.5 text-slate-400 hover:bg-[#effaf5] hover:text-[#087f63]" title="Répondre à cet e-mail"><Send className="h-3.5 w-3.5"/></button>
+                                    <button type="button" onClick={()=>{setShowReplyComposer(true);setReplyTo(selectedMessage.email || '');setReplyCc('');setReplyCcOpen(false);setReplyText('');setReplyHtml('');setReplyFormattingOpen(false);setReplyEmojiOpen(false);}} className="rounded-lg p-1.5 text-slate-400 hover:bg-[#effaf5] hover:text-[#087f63]" title="Répondre à cet e-mail"><Send className="h-3.5 w-3.5"/></button>
                                     
                                   </div>
                                 </div>
@@ -1247,9 +1256,18 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
 
                       {showReplyComposer && <div className="w-full shrink-0 border-t border-emerald-100 bg-gradient-to-b from-[#fbfdfc] to-white px-4 py-4 sm:px-8 lg:px-10">
                         <div className="mx-auto w-full max-w-5xl overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_5px_22px_rgba(15,35,55,.06)]">
-                          <div className="flex items-center justify-between border-b border-slate-100 bg-[#f8fbf9] px-4 py-3">
-                            <div className="min-w-0"><div className="text-xs font-bold text-[#234c3f]">Répondre</div><div className="mt-0.5 truncate text-[11px] text-slate-400">À {selectedMessage.email}</div></div>
-                            <div className="flex items-center gap-1"><button type="button" onClick={()=>setReplyFormattingOpen(v=>!v)} className={'flex h-8 w-8 items-center justify-center rounded-lg text-xs font-black transition '+(replyFormattingOpen?'bg-[#e1f5eb] text-[#087f63]':'text-slate-500 hover:bg-slate-100')} title="Mise en forme">Aᴀ</button><button type="button" onClick={()=>setShowReplyComposer(false)} className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100" title="Fermer"><X className="h-4 w-4"/></button></div>
+                          <div className="border-b border-slate-100 bg-[#f8fbf9] px-4 py-3">
+                            <div className="mb-2 flex items-center justify-between gap-3">
+                              <div className="text-xs font-bold text-[#234c3f]">Répondre</div>
+                              <div className="flex items-center gap-1">
+                                <button type="button" onClick={()=>setReplyCcOpen(v=>!v)} className={'rounded-lg px-2.5 py-1.5 text-[10px] font-bold transition '+(replyCcOpen?'bg-[#e1f5eb] text-[#087f63]':'bg-slate-100 text-slate-500 hover:bg-slate-200')}>Cc</button>
+                                <button type="button" onClick={()=>setReplyFormattingOpen(v=>!v)} className={'flex h-8 w-8 items-center justify-center rounded-lg text-xs font-black transition '+(replyFormattingOpen?'bg-[#e1f5eb] text-[#087f63]':'text-slate-500 hover:bg-slate-100')} title="Mise en forme">Aᴀ</button>
+                                <button type="button" onClick={()=>setShowReplyComposer(false)} className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100" title="Fermer"><X className="h-4 w-4"/></button>
+                              </div>
+                            </div>
+                            <label className="flex min-h-9 items-center gap-3 border-b border-slate-200 text-[11px]"><span className="w-8 shrink-0 font-semibold text-slate-400">À</span><input type="text" value={replyTo} onChange={event=>setReplyTo(event.target.value)} placeholder="destinataire@exemple.com, autre@exemple.com" className="min-w-0 flex-1 bg-transparent py-2 text-xs text-slate-700 outline-none placeholder:text-slate-400"/></label>
+                            {replyCcOpen && <label className="flex min-h-9 items-center gap-3 border-b border-slate-200 text-[11px]"><span className="w-8 shrink-0 font-semibold text-slate-400">Cc</span><input type="text" value={replyCc} onChange={event=>setReplyCc(event.target.value)} placeholder="copie@exemple.com" className="min-w-0 flex-1 bg-transparent py-2 text-xs text-slate-700 outline-none placeholder:text-slate-400"/></label>}
+                            <div className="pt-2 text-[10px] text-slate-400">Objet : Re: {decodeMimeSubject(selectedMessage.subject)}</div>
                           </div>
                           <div className="min-h-[116px] max-h-64 overflow-y-auto px-4 py-3">
                             <div ref={replyEditorRef} contentEditable suppressContentEditableWarning onInput={event=>{setReplyText(event.currentTarget.innerText);setReplyHtml(event.currentTarget.innerHTML);}} onKeyUp={event=>{setReplyText(event.currentTarget.innerText);setReplyHtml(event.currentTarget.innerHTML);rememberReplySelection();}} onMouseUp={rememberReplySelection} onPaste={event=>{event.preventDefault();const html=event.clipboardData.getData("text/html");const plain=event.clipboardData.getData("text/plain");if(html)document.execCommand("insertHTML",false,html);else document.execCommand("insertText",false,plain);setTimeout(()=>{if(replyEditorRef.current){setReplyText(replyEditorRef.current.innerText);setReplyHtml(replyEditorRef.current.innerHTML);}},0);}} data-placeholder="Écrivez votre réponse…" className="email-compose-editor min-h-[90px] w-full text-[13px] leading-7 text-slate-700 outline-none before:text-slate-400 [&:empty:before]:content-[attr(data-placeholder)] [&_a]:text-[#087f63] [&_a]:underline [&_blockquote]:my-3 [&_blockquote]:border-l-2 [&_blockquote]:border-emerald-300 [&_blockquote]:pl-4 [&_h1]:my-3 [&_h1]:text-2xl [&_h1]:font-bold [&_h2]:my-2 [&_h2]:text-xl [&_h2]:font-bold [&_li]:my-1 [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-7 [&_p]:my-2 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-7" style={{fontFamily:replyFont}}/>
