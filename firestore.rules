@@ -942,6 +942,7 @@ service cloud.firestore {
     match /testimonials/{testimonialId} {
       allow get, list: if resource.data.status == 'published' || userManager();
       allow create: if signedIn()
+        && testimonialId == request.auth.uid
         && request.resource.data.keys().hasOnly(['uid','fullName','photoURL','rating','message','status','createdAt'])
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.fullName is string
