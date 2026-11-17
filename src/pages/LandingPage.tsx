@@ -392,9 +392,11 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
     <div className="min-h-screen bg-[#f4f8f7] text-[#081827] flex flex-col selection:bg-[#00c796]/20">
       <style>{`@keyframes landing-fade-up { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes landing-glow { 0%,100% { box-shadow: 0 0 18px rgba(0,199,150,.10); } 50% { box-shadow: 0 0 34px rgba(0,199,150,.24); } }
+@keyframes iamtrader-hero-drift { 0% { transform: scale(1.02) translate3d(-.4%,0,0); } 50% { transform: scale(1.055) translate3d(.5%,-.35%,0); } 100% { transform: scale(1.08) translate3d(-.25%,.25%,0); } }
 .landing-reveal { opacity: 0; transform: translateY(28px); transition: opacity .75s ease, transform .75s cubic-bezier(.2,.7,.2,1); }
 .landing-reveal.landing-revealed { opacity: 1; transform: translateY(0); }
 #iamtrader-hero { isolation: isolate; background-color: #061b1b; }
+#iamtrader-hero .hero-image-motion { animation: iamtrader-hero-drift 32s ease-in-out infinite alternate; will-change: transform; transform-origin: center; }
 #iamtrader-hero .hero-copy { animation: landing-fade-up .8s ease both; }
 #iamtrader-hero .hero-panel { animation: landing-glow 5s ease-in-out infinite; }
 #iamtrader-hero .hero-overlay { background: linear-gradient(90deg, rgba(3,15,22,.94) 0%, rgba(3,19,24,.82) 46%, rgba(3,18,22,.35) 100%), linear-gradient(0deg, rgba(3,15,22,.72), transparent 42%); }
@@ -405,7 +407,7 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
 #iamtrader-hero .hero-platform { border-color: rgba(129,255,218,.24); box-shadow: 0 30px 90px rgba(0,0,0,.42); }
 #platform .hero-metric { transition: transform .25s ease, border-color .25s ease, background .25s ease; }
 #platform .hero-metric:hover { transform: translateY(-4px); border-color: rgba(0,199,150,.48); background: rgba(0,199,150,.10); }
-@media (prefers-reduced-motion: reduce) { .landing-reveal,.landing-reveal.landing-revealed { opacity:1; transform:none; transition:none; } #iamtrader-hero .hero-copy,#iamtrader-hero .hero-panel { animation:none; } #platform .hero-metric { transition:none; } }`}</style>
+@media (prefers-reduced-motion: reduce) { .landing-reveal,.landing-reveal.landing-revealed { opacity:1; transform:none; transition:none; } #iamtrader-hero .hero-copy,#iamtrader-hero .hero-panel,#iamtrader-hero .hero-image-motion { animation:none; transform:none; } #platform .hero-metric { transition:none; } }`}</style>
       <header className="h-[72px] border-b border-white/70 px-5 sm:px-10 flex items-center justify-between sticky top-0 z-50 bg-white/80 backdrop-blur-xl shadow-[0_8px_30px_rgba(8,24,39,0.04)]">
         <div className="flex items-center gap-2.5">
            <img src="/brand/logo-iamtrader-full.png" alt="IAMTRADER" className="w-[138px] sm:w-[152px] h-auto object-contain" />
@@ -431,7 +433,8 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
 
       <main>
         <PromotionBanners placement="hero" onCopy={() => {}} />
-        <section id="iamtrader-hero" className="relative isolate overflow-hidden px-6 sm:px-10 pt-16 sm:pt-20 pb-24 w-full text-center bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('/images/iamtrader-hero-bg.png')" }}>
+        <section id="iamtrader-hero" className="relative isolate overflow-hidden px-6 sm:px-10 pt-16 sm:pt-20 pb-24 w-full text-center">
+          <div className="hero-image-motion absolute inset-0 -z-20 pointer-events-none bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('/images/iamtrader-hero-bg.png')" }} />
           <div className="hero-overlay absolute inset-0 -z-10 pointer-events-none" />
           <div className="absolute inset-0 -z-10 pointer-events-none bg-[radial-gradient(circle_at_18%_20%,rgba(0,199,150,0.20),transparent_38%),radial-gradient(circle_at_82%_30%,rgba(0,199,150,0.12),transparent_36%)]" />
           <div className="relative z-10 max-w-7xl mx-auto">
