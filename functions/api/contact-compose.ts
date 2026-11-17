@@ -34,8 +34,8 @@ export async function onRequestPost(context: { request: Request; env: Env }) {
 
   const action = body.action === 'draft' ? 'draft' : body.action === 'send' ? 'send' : '';
   const id = String(body.id || crypto.randomUUID()).replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 100);
-  const toList = String(body.to || '').split(/[;,\\s]+/).map(value => value.trim().toLowerCase()).filter(Boolean);
-  const ccList = String(body.cc || '').split(/[;,\\s]+/).map(value => value.trim().toLowerCase()).filter(Boolean);
+  const toList = String(body.to || '').split(/[;,\s]+/).map(value => value.trim().toLowerCase()).filter(Boolean);
+  const ccList = String(body.cc || '').split(/[;,\s]+/).map(value => value.trim().toLowerCase()).filter(Boolean);
   const to = toList[0] || '';
   const subject = String(body.subject || '').trim().slice(0, 200);
   const message = String(body.message || '').trim();
