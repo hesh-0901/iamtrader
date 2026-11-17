@@ -367,8 +367,30 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
     return () => window.clearInterval(timer);
   }, []);
 
+  useEffect(() => {
+    const sections = Array.from(document.querySelectorAll('main > section'));
+    if (!('IntersectionObserver' in window)) {
+      sections.forEach((section) => section.classList.add('landing-revealed'));
+      return;
+    }
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('landing-revealed');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
+    sections.forEach((section) => {
+      section.classList.add('landing-reveal');
+      observer.observe(section);
+    });
+    return () => observer.disconnect();
+  }, []);
+
   return (
     <div className="min-h-screen bg-[#f4f8f7] text-[#081827] flex flex-col selection:bg-[#00c796]/20">
+      <style>{"@keyframes landing-fade-up { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }\\n@keyframes landing-glow { 0%,100% { box-shadow: 0 0 18px rgba(0,199,150,.10); } 50% { box-shadow: 0 0 34px rgba(0,199,150,.24); } }\\n.landing-reveal { opacity: 0; transform: translateY(28px); transition: opacity .75s ease, transform .75s cubic-bezier(.2,.7,.2,1); }\\n.landing-reveal.landing-revealed { opacity: 1; transform: translateY(0); }\\n#iamtrader-hero { isolation: isolate; background-color: #061b1b; }\\n#iamtrader-hero .hero-copy { animation: landing-fade-up .8s ease both; }\\n#iamtrader-hero .hero-panel { animation: landing-glow 5s ease-in-out infinite; }\\n#iamtrader-hero .hero-overlay { background: linear-gradient(90deg, rgba(3,15,22,.94) 0%, rgba(3,19,24,.82) 46%, rgba(3,18,22,.35) 100%), linear-gradient(0deg, rgba(3,15,22,.72), transparent 42%); }\\n#iamtrader-hero .hero-title { color: #fff; text-shadow: 0 3px 30px rgba(0,0,0,.28); }\\n#iamtrader-hero .hero-description { color: rgba(240,250,248,.82); }\\n#iamtrader-hero .hero-tagline { color: #62e8b7; }\\n#iamtrader-hero .hero-proof { color: rgba(235,248,245,.78); }\\n#iamtrader-hero .hero-platform { border-color: rgba(129,255,218,.24); box-shadow: 0 30px 90px rgba(0,0,0,.42); }\\n#platform .hero-metric { transition: transform .25s ease, border-color .25s ease, background .25s ease; }\\n#platform .hero-metric:hover { transform: translateY(-4px); border-color: rgba(0,199,150,.48); background: rgba(0,199,150,.10); }\\n@media (prefers-reduced-motion: reduce) { .landing-reveal,.landing-reveal.landing-revealed { opacity:1; transform:none; transition:none; } #iamtrader-hero .hero-copy,#iamtrader-hero .hero-panel { animation:none; } #platform .hero-metric { transition:none; } }"}</style>
       <header className="h-[72px] border-b border-white/70 px-5 sm:px-10 flex items-center justify-between sticky top-0 z-50 bg-white/80 backdrop-blur-xl shadow-[0_8px_30px_rgba(8,24,39,0.04)]">
         <div className="flex items-center gap-2.5">
            <img src="/brand/logo-iamtrader-full.png" alt="IAMTRADER" className="w-[138px] sm:w-[152px] h-auto object-contain" />
@@ -394,31 +416,32 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
 
       <main>
         <PromotionBanners placement="hero" onCopy={() => {}} />
-        <section className="relative overflow-hidden px-6 sm:px-12 pt-16 sm:pt-20 pb-24 max-w-7xl mx-auto w-full text-center">
-          <div className="absolute inset-x-0 -top-20 h-[520px] bg-[radial-gradient(circle_at_50%_20%,rgba(0,199,150,0.18),transparent_48%),radial-gradient(circle_at_85%_35%,rgba(47,107,255,0.08),transparent_32%)] pointer-events-none" />
-          <div className="relative">
+        <section id="iamtrader-hero" className="relative isolate overflow-hidden px-6 sm:px-10 pt-16 sm:pt-20 pb-24 w-full text-center bg-cover bg-center bg-no-repeat" style={{ backgroundImage: "url('/images/iamtrader-hero-bg.png')" }}>
+          <div className="hero-overlay absolute inset-0 -z-10 pointer-events-none" />
+          <div className="absolute inset-0 -z-10 pointer-events-none bg-[radial-gradient(circle_at_18%_20%,rgba(0,199,150,0.20),transparent_38%),radial-gradient(circle_at_82%_30%,rgba(0,199,150,0.12),transparent_36%)]" />
+          <div className="relative z-10 max-w-7xl mx-auto">
             <div className="inline-flex items-center gap-2 rounded-full border border-[#cfe9e2] bg-white/85 px-4 py-2 text-[11px] font-bold text-[#168c73] shadow-[0_10px_30px_rgba(0,169,130,0.08)] backdrop-blur mb-7">
               <span className="w-1.5 h-1.5 rounded-full bg-[#00c796] animate-pulse" />
               La plateforme de performance du trader
             </div>
 
             <div className="h-10 sm:h-12 flex items-center justify-center mb-3 overflow-hidden">
-              <p key={hookIndex} className="text-base sm:text-xl font-semibold tracking-tight text-[#5f7487] animate-[fadeIn_0.45s_ease-out]">
+              <p key={hookIndex} className="text-base sm:text-xl font-semibold tracking-tight text-white/80 animate-[fadeIn_0.45s_ease-out]">
                 {hooks[hookIndex]}
               </p>
             </div>
 
-            <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-[-0.055em] max-w-5xl mx-auto leading-[0.98]">
+            <h1 className="hero-title text-4xl sm:text-6xl lg:text-7xl font-black tracking-[-0.055em] max-w-5xl mx-auto leading-[0.98]">
               Ne tradez plus à l’aveugle.
               <span className="block bg-gradient-to-r from-[#00a982] via-[#00c796] to-[#58d9bf] bg-clip-text text-transparent">Comprenez votre trading.</span>
             </h1>
 
-            <p className="mt-7 text-sm sm:text-base text-[#60758d] max-w-2xl mx-auto leading-7">
+            <p className="hero-description mt-7 text-sm sm:text-base max-w-2xl mx-auto leading-7">
               Journalisez vos opérations, maîtrisez votre risque, analysez vos performances et identifiez vos biais pour transformer vos données de trading en décisions plus structurées.
             </p>
-            <p className="mt-3 text-sm font-bold tracking-wide text-[#168c73]">Le trader que vous devez être.</p>
+            <p className="hero-tagline mt-3 text-sm font-bold tracking-wide">Le trader que vous devez être.</p>
 
-            <div className="mt-7 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[11px] font-semibold text-[#71839a]">
+            <div className="hero-proof mt-7 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[11px] font-semibold">
               <span className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-[#00a982]" /> Données structurées</span>
               <span className="flex items-center gap-2"><ShieldCheck className="w-3.5 h-3.5 text-[#00a982]" /> Gestion du risque</span>
               <span className="flex items-center gap-2"><Activity className="w-3.5 h-3.5 text-[#00a982]" /> Analyse en temps réel</span>
@@ -433,7 +456,7 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
               </a>
             </div>
 
-            <div id="platform" className="mt-14 w-full rounded-[28px] border border-white/80 bg-[#081827] p-3 sm:p-5 shadow-[0_35px_90px_rgba(8,24,39,0.18)] text-left scroll-mt-24 ring-1 ring-black/5">
+            <div id="platform" className="hero-panel hero-platform mt-14 w-full rounded-[28px] border border-white/80 bg-[#081827] p-3 sm:p-5 shadow-[0_35px_90px_rgba(8,24,39,0.18)] text-left scroll-mt-24 ring-1 ring-black/5">
               <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-4">
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full bg-[#c9d5de]" />
@@ -452,7 +475,7 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
                   ['Max Drawdown', '-4.2%', 'text-[#e05a78]'],
                   ['Trader Score', '84 / 100', 'text-[#2f6bff]'],
                 ].map(([label, value, color]) => (
-                  <div key={label} className="p-4 rounded-2xl bg-white/[0.06] border border-white/10 backdrop-blur-sm shadow-inner">
+                  <div key={label} className="hero-metric p-4 rounded-2xl bg-white/[0.06] border border-white/10 backdrop-blur-sm shadow-inner">
                     <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400 block mb-2">{label}</span>
                     <span className={`text-xl font-black tabular-nums tracking-tight ${color}`}>{value}</span>
                   </div>
@@ -479,6 +502,7 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
                   </div>
                 </div>
               </div>
+            </div>
             </div>
           </div>
         </section>
