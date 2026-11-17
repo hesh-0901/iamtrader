@@ -426,6 +426,7 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
           <a href="#features" className="rounded-full px-3 py-2 hover:bg-white hover:text-[#0a192f] transition-all">Plateforme</a>
           <a href="#journal" className="rounded-full px-3 py-2 hover:bg-white hover:text-[#0a192f] transition-all">Fonctionnalités</a>
           <a href="#trader-score" className="rounded-full px-3 py-2 hover:bg-white hover:text-[#0a192f] transition-all">Trader Score</a>
+          <a href="#testimonials" className="rounded-full px-3 py-2 hover:bg-white hover:text-[#0a192f] transition-all">Témoignages</a>
           <a href="#pricing" className="rounded-full px-3 py-2 hover:bg-white hover:text-[#0a192f] transition-all">Tarifs</a>
           <a href="#contact" className="rounded-full px-3 py-2 hover:bg-white hover:text-[#0a192f] transition-all">Contact</a>
         </nav>
@@ -467,7 +468,11 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
             <p className="hero-description mt-7 text-sm sm:text-base max-w-2xl mx-auto leading-7">
               Journalisez vos opérations, maîtrisez votre risque, analysez vos performances et identifiez vos biais pour transformer vos données de trading en décisions plus structurées.
             </p>
-            <p className="hero-tagline mt-3 text-sm font-bold tracking-wide">Le trader que vous devez être.</p>
+            <div className="hero-tagline-wrap mt-6 inline-flex flex-col items-center gap-2 rounded-2xl border border-[#5ce0c1]/25 bg-[#041d1c]/55 px-6 py-4 shadow-[0_12px_35px_rgba(0,199,150,0.12)] backdrop-blur-sm">
+              <span className="text-[9px] font-black uppercase tracking-[0.24em] text-[#8baea7]">La signature IAMTRADER</span>
+              <p className="hero-tagline text-lg sm:text-xl font-black tracking-wide">Le trader que vous devez être.</p>
+              <span className="h-1 w-16 rounded-full bg-gradient-to-r from-[#00a982] to-[#5ce0c1]" />
+            </div>
 
             <div className="hero-proof mt-7 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[11px] font-semibold">
               <span className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-[#00a982]" /> Données structurées</span>
@@ -581,6 +586,27 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
                 ['03','Analysez','Vos résultats, votre risque et vos comportements.'],
                 ['04','Progressez','À partir de données que vous pouvez réellement relire.'],
               ].map(([num,title,desc]) => <div key={num} className="relative p-6 rounded-[22px] bg-white border border-[#e0eae7] shadow-[0_12px_30px_rgba(8,24,39,0.04)] hover:-translate-y-1 transition-all"><span className="text-xs font-black text-[#00a982]">{num}</span><h3 className="font-bold mt-5">{title}</h3><p className="text-xs text-slate-400 leading-relaxed mt-2">{desc}</p></div>)}
+            </div>
+          </div>
+        </section>
+
+        <section id="testimonials" className="relative isolate overflow-hidden border-y border-[#dcebe5] bg-[#f5faf8] px-6 py-20 sm:px-12 sm:py-24 scroll-mt-20">
+          <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_50%_0%,rgba(0,199,150,0.10),transparent_55%)]" />
+          <div className="mx-auto max-w-5xl">
+            <div className="mx-auto max-w-3xl text-center">
+              <span className="text-[11px] font-black uppercase tracking-[0.2em] text-[#00a982]">Témoignages</span>
+              <h2 className="mt-3 text-3xl font-black tracking-tight text-[#081827] sm:text-4xl">La progression se construit aussi par le partage.</h2>
+              <p className="mt-4 text-sm leading-7 text-[#60758d]">Les expériences des traders qui utilisent IAMTRADER ont leur place ici. Nous publierons des retours authentiques, avec l'accord de leurs auteurs, plutôt que des avis inventés.</p>
+            </div>
+            <div className="mx-auto mt-10 max-w-3xl rounded-[28px] border border-[#dcebe5] bg-white p-7 text-center shadow-[0_20px_55px_rgba(8,24,39,0.06)] sm:p-10">
+              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#e8faf4] text-[#00a982]">
+                <MessageSquare className="h-5 w-5" />
+              </div>
+              <h3 className="mt-5 text-xl font-black text-[#081827]">Vous utilisez IAMTRADER ?</h3>
+              <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-[#71839a]">Partagez votre expérience : ce que la plateforme vous aide à mieux suivre, comprendre ou améliorer dans votre trading.</p>
+              <a href="mailto:hello@iamtrader.trade?subject=T%C3%A9moignage%20IAMTRADER" className="mt-6 inline-flex items-center justify-center gap-2 rounded-xl bg-[#00a982] px-5 py-3 text-sm font-bold text-white shadow-[0_10px_25px_rgba(0,169,130,0.18)] transition-all hover:-translate-y-0.5 hover:bg-[#008f70]">
+                Partager mon témoignage <ArrowRight className="h-4 w-4" />
+              </a>
             </div>
           </div>
         </section>
