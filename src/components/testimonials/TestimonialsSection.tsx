@@ -1,70 +1,102 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, ImagePlus, LoaderCircle, MessageSquareQuote, Send, ShieldCheck, Star, X } from 'lucide-react';
-import { auth } from '../../firebase/config';
-import { subscribePublishedTestimonials, submitTestimonial, type TraderTestimonial } from '../../services/testimonials';
+import { useEffect, useState } from 'react';
+import { ChevronLeft, ChevronRight, MessageSquareQuote, ShieldCheck, Star } from 'lucide-react';
+import { subscribePublishedTestimonials, type TraderTestimonial } from '../../services/testimonials';
 
-export function TestimonialsSection({ onOpenAuth }: { onOpenAuth: (mode: 'login'|'register') => void }) {
-  const [items,setItems]=useState<TraderTestimonial[]>([]);
-  const [activeIndex,setActiveIndex]=useState(0);
-  const activeItem=items.length?items[Math.min(activeIndex,items.length-1)]:null;
-  useEffect(()=>{setActiveIndex(0);},[items.length]);
-  const [open,setOpen]=useState(false);
-  const [name,setName]=useState(auth.currentUser?.displayName||'');
-  const [rating,setRating]=useState(5);
-  const [message,setMessage]=useState('');
-  const [photo,setPhoto]=useState<File|null>(null);
-  const [preview,setPreview]=useState('');
-  const [busy,setBusy]=useState(false);
-  const [notice,setNotice]=useState<{type:'success'|'error';text:string}|null>(null);
-  const fileRef=useRef<HTMLInputElement>(null);
-  useEffect(()=>subscribePublishedTestimonials(setItems,e=>console.error('[Testimonials]',e)),[]);
-  useEffect(()=>{if(!photo){setPreview('');return;}const url=URL.createObjectURL(photo);setPreview(url);return()=>URL.revokeObjectURL(url);},[photo]);
-  async function submit(e:React.FormEvent){e.preventDefault();setBusy(true);setNotice(null);try{await submitTestimonial({fullName:name,rating,message,photo:photo as File});setNotice({type:'success',text:'Témoignage reçu. Il sera publié après validation par notre équipe.'});setName(auth.currentUser?.displayName||'');setRating(5);setMessage('');setPhoto(null);}catch(err:any){setNotice({type:'error',text:err?.message||'Envoi impossible.'});}finally{setBusy(false);}}
-  return <section id="testimonials" className="relative isolate overflow-hidden border-y border-[#dcebe5] bg-[#f5faf8] px-6 py-20 sm:px-12 sm:py-24 scroll-mt-20">
-    <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_50%_0%,rgba(0,199,150,0.10),transparent_55%)]"/>
-    <div className="mx-auto max-w-6xl">
-      <div className="mx-auto max-w-3xl text-center"><span className="text-[11px] font-black uppercase tracking-[0.2em] text-[#00a982]">La parole aux traders</span><h2 className="mt-3 text-3xl font-black tracking-tight text-[#081827] sm:text-4xl">Les traders racontent leur progression</h2><p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-[#647b8d]">Découvrez les expériences de la communauté IAMTRADER et partagez à votre tour votre parcours.</p></div>
-      <div className="mt-12 grid items-center gap-10 lg:grid-cols-[.9fr_1.1fr] lg:gap-14">
-        <div className="relative mx-auto h-[310px] w-full max-w-[430px] sm:h-[360px]" aria-label="Galerie de témoignages">
-          <div className="absolute left-5 right-5 top-5 h-[245px] rotate-[-7deg] rounded-[26px] border border-[#dcebe5] bg-white/75 shadow-[0_16px_45px_rgba(8,24,39,.08)] sm:left-9 sm:right-9 sm:top-8 sm:h-[275px]"/>
-          <div className="absolute left-2 right-2 top-3 h-[250px] rotate-[5deg] rounded-[26px] border border-[#cfe5dc] bg-[#eaf7f2] shadow-[0_18px_48px_rgba(8,24,39,.10)] sm:left-5 sm:right-5 sm:top-5 sm:h-[280px]"/>
-          <div className="absolute inset-x-0 top-0 z-10 rounded-[26px] border border-[#dcebe5] bg-white p-5 shadow-[0_24px_60px_rgba(8,24,39,.14)] transition-transform duration-500 hover:-translate-y-2">
-            <div className="mb-4 flex items-center justify-between"><span className="text-[9px] font-black uppercase tracking-[.18em] text-[#00a982]">Galerie IAMTRADER</span><span className="rounded-full bg-[#eafbf6] px-2.5 py-1 text-[9px] font-bold text-[#168c73]">{items.length?items.length+' avis':'Aperçu'}</span></div>
-            {items.length>0 ? <div className="grid grid-cols-2 gap-3">
-              {Array.from({length:Math.max(2,Math.min(4,items.length))},(_,i)=>items[(activeIndex+i)%items.length]).map((item,i)=><button key={item.id+'-'+i} type="button" onClick={()=>setActiveIndex(items.findIndex(x=>x.id===item.id))} className={'flex min-w-0 items-center gap-2 rounded-2xl border p-2.5 text-left transition-all '+(i===0?'border-[#8edbc4] bg-[#f0fbf7] shadow-sm':'border-[#e8f0ec] bg-white hover:border-[#b9ded1]')}><img src={item.photoURL} alt="" className="h-9 w-9 shrink-0 rounded-xl object-cover"/><span className="min-w-0"><b className="block truncate text-[10px] text-[#183047]">{item.fullName}</b><span className="mt-0.5 block truncate text-[9px] text-[#7d918a]">{item.message}</span></span></button>)}
-            </div> : <div className="grid grid-cols-2 gap-3"><div className="rounded-2xl border border-[#dcebe5] bg-[#f7fbf9] p-3"><div className="h-8 w-8 rounded-xl bg-[#dff5ec]"/><div className="mt-3 h-2 w-20 rounded bg-[#dcebe5]"/><div className="mt-2 h-2 w-full rounded bg-[#edf3f0]"/></div><div className="mt-5 rounded-2xl border border-[#dcebe5] bg-white p-3"><div className="h-8 w-8 rounded-xl bg-[#dff5ec]"/><div className="mt-3 h-2 w-16 rounded bg-[#dcebe5]"/><div className="mt-2 h-2 w-full rounded bg-[#edf3f0]"/></div></div>}
-            <div className="mt-4 flex items-center justify-between border-t border-[#edf2ef] pt-3"><span className="text-[9px] font-semibold text-[#8aa095]">Des parcours. Une progression.</span><div className="flex gap-1"><span className="h-1.5 w-5 rounded-full bg-[#00a982]"/><span className="h-1.5 w-1.5 rounded-full bg-[#dcebe5]"/><span className="h-1.5 w-1.5 rounded-full bg-[#dcebe5]"/></div></div>
-          </div>
-          <p className="absolute bottom-0 left-0 right-0 text-center text-[10px] font-semibold tracking-wide text-[#81958d]">Sélectionnez une micro-carte pour afficher son témoignage</p>
+export function TestimonialsSection() {
+  const [items, setItems] = useState<TraderTestimonial[]>([]);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const activeItem = items.length ? items[Math.min(activeIndex, items.length - 1)] : null;
+
+  useEffect(() => {
+    return subscribePublishedTestimonials(setItems, error => console.error('[Testimonials]', error));
+  }, []);
+
+  useEffect(() => {
+    setActiveIndex(index => items.length ? Math.min(index, items.length - 1) : 0);
+  }, [items.length]);
+
+  return (
+    <section id="testimonials" className="relative isolate overflow-hidden border-y border-[#dcebe5] bg-[#f5faf8] px-6 py-16 sm:px-12 sm:py-20 scroll-mt-20">
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_50%_0%,rgba(0,199,150,0.10),transparent_55%)]" />
+      <div className="mx-auto max-w-6xl">
+        <div className="mx-auto max-w-3xl text-center">
+          <span className="text-[11px] font-black uppercase tracking-[0.2em] text-[#00a982]">La parole aux traders</span>
+          <h2 className="mt-3 text-3xl font-black tracking-tight text-[#081827] sm:text-4xl">Les traders racontent leur progression</h2>
+          <p className="mx-auto mt-4 max-w-2xl text-sm leading-7 text-[#647b8d]">Découvrez les expériences et les parcours de la communauté IAMTRADER.</p>
         </div>
-        <div className="min-w-0">
-          <div className="relative overflow-hidden rounded-[30px] border border-[#dcebe5] bg-white p-6 shadow-[0_22px_65px_rgba(8,24,39,.08)] sm:p-8">
-            <div className="pointer-events-none absolute -right-16 -top-20 h-52 w-52 rounded-full bg-[#00c796]/10 blur-3xl"/>
-            <div className="relative">
-              <div className="flex items-center justify-between gap-3"><span className="text-[10px] font-black uppercase tracking-[.18em] text-[#00a982]">Témoignage à la une</span><div className="flex gap-2"><button type="button" onClick={()=>setActiveIndex(i=>items.length?(i-1+items.length)%items.length:0)} disabled={!items.length} aria-label="Témoignage précédent" className="flex h-9 w-9 items-center justify-center rounded-full border border-[#dcebe5] text-[#36566b] transition hover:border-[#00a982] hover:text-[#008f70] disabled:opacity-30"><ChevronLeft className="h-4 w-4"/></button><button type="button" onClick={()=>setActiveIndex(i=>items.length?(i+1)%items.length:0)} disabled={!items.length} aria-label="Témoignage suivant" className="flex h-9 w-9 items-center justify-center rounded-full bg-[#081827] text-white transition hover:bg-[#00a982] disabled:opacity-30"><ChevronRight className="h-4 w-4"/></button></div></div>
-              {activeItem ? <div key={activeItem.id} className="mt-7 animate-[landing-fade-up_.45s_ease_both]">
-                <div className="flex items-center gap-4"><img src={activeItem.photoURL} alt={activeItem.fullName} className="h-[76px] w-[76px] rounded-[22px] border-4 border-[#eaf7f2] object-cover shadow-md"/><div className="min-w-0"><h3 className="truncate text-lg font-black text-[#10243b]">{activeItem.fullName}</h3><p className="mt-1 text-[10px] font-bold uppercase tracking-wider text-[#8aa095]">Utilisateur IAMTRADER</p><div className="mt-2 flex gap-1">{[1,2,3,4,5].map(n=><Star key={n} className={'h-3.5 w-3.5 '+(n<=activeItem.rating?'fill-[#e9b34c] text-[#e9b34c]':'text-[#d9e1dd]')}/>)}</div></div></div>
-                <p className="mt-7 min-h-[118px] whitespace-pre-line text-[15px] leading-8 text-[#53697e]">“{activeItem.message}”</p>
-                <div className="mt-5 flex items-center justify-between border-t border-[#edf2ef] pt-4 text-[10px] font-bold text-[#168c73]"><span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5"/> Témoignage vérifié et modéré</span><span>{activeIndex+1} / {items.length}</span></div>
-              </div> : <div className="mt-7 flex min-h-[230px] flex-col items-center justify-center text-center"><MessageSquareQuote className="h-9 w-9 text-[#00a982]"/><h3 className="mt-4 text-base font-extrabold text-[#183047]">Les premiers témoignages arrivent bientôt.</h3><p className="mt-2 max-w-sm text-xs leading-6 text-[#7a8f87]">Les expériences validées par notre équipe apparaîtront ici.</p></div>}
+
+        <div className="mt-10 grid items-center gap-8 lg:grid-cols-[.82fr_1.18fr] lg:gap-14">
+          <div className="relative mx-auto h-[270px] w-full max-w-[430px] sm:h-[310px]" aria-label="Galerie de témoignages">
+            <div className="absolute left-5 right-5 top-5 h-[215px] rotate-[-7deg] rounded-[26px] border border-[#dcebe5] bg-white/75 shadow-[0_16px_45px_rgba(8,24,39,.08)] sm:left-9 sm:right-9 sm:top-8 sm:h-[245px]" />
+            <div className="absolute left-2 right-2 top-3 h-[220px] rotate-[5deg] rounded-[26px] border border-[#cfe5dc] bg-[#eaf7f2] shadow-[0_18px_48px_rgba(8,24,39,.10)] sm:left-5 sm:right-5 sm:top-5 sm:h-[250px]" />
+            <div className="absolute inset-x-0 top-0 z-10 rounded-[26px] border border-[#dcebe5] bg-white p-5 shadow-[0_24px_60px_rgba(8,24,39,.14)]">
+              <div className="mb-4 flex items-center justify-between">
+                <span className="text-[9px] font-black uppercase tracking-[.18em] text-[#00a982]">Galerie IAMTRADER</span>
+                <span className="rounded-full bg-[#eafbf6] px-2.5 py-1 text-[9px] font-bold text-[#168c73]">{items.length ? items.length + ' avis' : 'Aperçu'}</span>
+              </div>
+              {items.length > 0 ? (
+                <div className="grid grid-cols-2 gap-3">
+                  {Array.from({ length: Math.max(2, Math.min(4, items.length)) }, (_, i) => items[(activeIndex + i) % items.length]).map((item, i) => (
+                    <button key={item.id + '-' + i} type="button" onClick={() => setActiveIndex(items.findIndex(entry => entry.id === item.id))} className={'flex min-w-0 items-center gap-2 rounded-2xl border p-2.5 text-left transition-all ' + (i === 0 ? 'border-[#8edbc4] bg-[#f0fbf7] shadow-sm' : 'border-[#e8f0ec] bg-white hover:border-[#b9ded1]')}>
+                      <img src={item.photoURL} alt="" className="h-9 w-9 shrink-0 rounded-xl object-cover" />
+                      <span className="min-w-0"><b className="block truncate text-[10px] text-[#183047]">{item.fullName}</b><span className="mt-0.5 block truncate text-[9px] text-[#7d918a]">{item.message}</span></span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-3">
+                  {[0, 1].map(index => <div key={index} className="rounded-2xl border border-[#dcebe5] bg-[#f7fbf9] p-3"><div className="h-8 w-8 rounded-xl bg-[#dff5ec]" /><div className="mt-3 h-2 w-20 rounded bg-[#dcebe5]" /><div className="mt-2 h-2 w-full rounded bg-[#edf3f0]" /></div>)}
+                </div>
+              )}
+              <div className="mt-4 flex items-center justify-between border-t border-[#edf2ef] pt-3">
+                <span className="text-[9px] font-semibold text-[#8aa095]">Des parcours. Une progression.</span>
+                <div className="flex gap-1"><span className="h-1.5 w-5 rounded-full bg-[#00a982]" /><span className="h-1.5 w-1.5 rounded-full bg-[#dcebe5]" /><span className="h-1.5 w-1.5 rounded-full bg-[#dcebe5]" /></div>
+              </div>
             </div>
+            <p className="absolute bottom-0 left-0 right-0 text-center text-[10px] font-semibold tracking-wide text-[#81958d]">Sélectionnez une micro-carte pour afficher son témoignage</p>
           </div>
-          {items.length>0&&<div className="mt-5 flex flex-wrap items-center justify-center gap-2 lg:justify-start">{items.map((item,i)=><button key={item.id} type="button" onClick={()=>setActiveIndex(i)} aria-label={'Afficher le témoignage de '+item.fullName} aria-pressed={activeIndex===i} className={'flex items-center gap-2 rounded-full border p-1.5 pr-3 transition-all '+(activeIndex===i?'border-[#00a982] bg-white shadow-md ring-2 ring-[#00a982]/10':'border-[#dcebe5] bg-white/70 hover:border-[#9bd8c5]')}><img src={item.photoURL} alt="" className="h-8 w-8 rounded-full object-cover"/><span className="max-w-[110px] truncate text-[10px] font-bold text-[#36566b]">{item.fullName}</span></button>)}</div>}
-          <div className="mt-6 flex justify-start"><button type="button" onClick={()=>{if(!auth.currentUser){onOpenAuth('login');return;}setNotice(null);setOpen(true);}} className="inline-flex items-center gap-2 rounded-xl border border-[#b9ded1] bg-white px-4 py-2.5 text-xs font-bold text-[#008f70] shadow-sm transition hover:-translate-y-0.5 hover:border-[#00a982] hover:bg-[#eafaf4]"><MessageSquareQuote className="h-4 w-4"/>Partager mon expérience</button></div>
+
+          <div className="min-w-0 py-2">
+            <div className="flex items-center justify-between gap-3 border-b border-[#dcebe5] pb-4">
+              <span className="text-[10px] font-black uppercase tracking-[.18em] text-[#00a982]">Témoignage à la une</span>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => setActiveIndex(index => items.length ? (index - 1 + items.length) % items.length : 0)} disabled={!items.length} aria-label="Témoignage précédent" className="flex h-9 w-9 items-center justify-center rounded-full border border-[#dcebe5] text-[#36566b] transition hover:border-[#00a982] hover:text-[#008f70] disabled:opacity-30"><ChevronLeft className="h-4 w-4" /></button>
+                <button type="button" onClick={() => setActiveIndex(index => items.length ? (index + 1) % items.length : 0)} disabled={!items.length} aria-label="Témoignage suivant" className="flex h-9 w-9 items-center justify-center rounded-full bg-[#081827] text-white transition hover:bg-[#00a982] disabled:opacity-30"><ChevronRight className="h-4 w-4" /></button>
+              </div>
+            </div>
+
+            {activeItem ? (
+              <div key={activeItem.id} className="animate-[landing-fade-up_.45s_ease_both]">
+                <div className="mt-5 flex items-center gap-3">
+                  <img src={activeItem.photoURL} alt={activeItem.fullName} className="h-12 w-12 rounded-full border-2 border-white object-cover shadow-sm" />
+                  <div className="min-w-0">
+                    <h3 className="truncate text-sm font-black text-[#10243b]">{activeItem.fullName}</h3>
+                    <p className="mt-0.5 text-[9px] font-bold uppercase tracking-wider text-[#8aa095]">Utilisateur IAMTRADER</p>
+                    <div className="mt-1.5 flex gap-0.5">{[1, 2, 3, 4, 5].map(number => <Star key={number} className={'h-3 w-3 ' + (number <= activeItem.rating ? 'fill-[#e9b34c] text-[#e9b34c]' : 'text-[#d9e1dd]')} />)}</div>
+                  </div>
+                </div>
+                <p className="mt-5 whitespace-pre-line text-[14px] leading-7 text-[#53697e] sm:text-[15px] sm:leading-8">“{activeItem.message}”</p>
+                <div className="mt-5 flex items-center justify-between border-t border-[#dcebe5] pt-3 text-[10px] font-bold text-[#168c73]">
+                  <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5" />Témoignage vérifié et modéré</span>
+                  <span>{activeIndex + 1} / {items.length}</span>
+                </div>
+              </div>
+            ) : (
+              <div className="flex min-h-[190px] flex-col items-center justify-center py-8 text-center">
+                <MessageSquareQuote className="h-8 w-8 text-[#00a982]" />
+                <h3 className="mt-3 text-base font-extrabold text-[#183047]">Les premiers témoignages arrivent bientôt.</h3>
+                <p className="mt-2 max-w-sm text-xs leading-6 text-[#7a8f87]">Les expériences validées par notre équipe apparaîtront ici.</p>
+              </div>
+            )}
+
+            {items.length > 0 && <div className="mt-5 flex flex-wrap items-center gap-2">{items.map((item, index) => (
+              <button key={item.id} type="button" onClick={() => setActiveIndex(index)} aria-label={'Afficher le témoignage de ' + item.fullName} aria-pressed={activeIndex === index} className={'flex items-center gap-2 rounded-full border p-1.5 pr-3 transition-all ' + (activeIndex === index ? 'border-[#00a982] bg-white shadow-sm ring-2 ring-[#00a982]/10' : 'border-[#dcebe5] bg-white/70 hover:border-[#9bd8c5]')}>
+                <img src={item.photoURL} alt="" className="h-7 w-7 rounded-full object-cover" /><span className="max-w-[110px] truncate text-[10px] font-bold text-[#36566b]">{item.fullName}</span>
+              </button>
+            ))}</div>}
+          </div>
         </div>
       </div>
-    </div>
-    {open&&<div className="fixed inset-0 z-[100] flex items-center justify-center overflow-y-auto bg-[#071725]/65 p-4 backdrop-blur-sm" onMouseDown={e=>{if(e.target===e.currentTarget&&!busy)setOpen(false);}}><div role="dialog" aria-modal="true" aria-labelledby="testimonial-title" className="my-auto w-full max-w-xl rounded-[28px] border border-white/70 bg-white p-6 shadow-2xl sm:p-8">
-      <div className="flex items-start justify-between gap-4"><div><span className="text-[10px] font-black uppercase tracking-[.18em] text-[#00a982]">Votre expérience compte</span><h3 id="testimonial-title" className="mt-2 text-2xl font-black text-[#10243b]">Partager un témoignage</h3><p className="mt-2 text-xs leading-5 text-[#71839a]">Votre avis sera examiné avant toute publication.</p></div><button type="button" onClick={()=>!busy&&setOpen(false)} aria-label="Fermer" className="rounded-xl p-2 text-slate-400 hover:bg-slate-100"><X className="h-5 w-5"/></button></div>
-      <form onSubmit={submit} className="mt-6 space-y-4">
-        <div><label className="mb-2 block text-xs font-bold text-[#30485d]">Photo de profil *</label><input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={e=>setPhoto(e.target.files?.[0]||null)}/><button type="button" onClick={()=>fileRef.current?.click()} className="flex w-full items-center gap-4 rounded-2xl border border-dashed border-[#bcd9cd] bg-[#f7fbf9] p-3 text-left">{preview?<img src={preview} alt="Aperçu" className="h-14 w-14 rounded-full object-cover"/>:<span className="flex h-14 w-14 items-center justify-center rounded-full bg-[#e6f8f1] text-[#00a982]"><ImagePlus className="h-6 w-6"/></span>}<span><b className="block text-xs text-[#183047]">{photo?.name||'Ajouter une photo réelle'}</b><small className="mt-1 block text-[10px] text-[#829397]">JPG, PNG ou WEBP · 3 Mo maximum</small></span></button></div>
-        <div><label htmlFor="testimonial-name" className="mb-2 block text-xs font-bold text-[#30485d]">Nom complet</label><input id="testimonial-name" required minLength={3} maxLength={90} value={name} onChange={e=>setName(e.target.value)} className="w-full rounded-xl border border-[#dce7e2] px-4 py-3 text-sm outline-none focus:border-[#00a982] focus:ring-4 focus:ring-[#00a982]/10" placeholder="Votre prénom et nom"/></div>
-        <div><label className="mb-2 block text-xs font-bold text-[#30485d]">Votre note</label><div className="flex items-center gap-2" role="radiogroup" aria-label="Note sur cinq">{[1,2,3,4,5].map(n=><button key={n} type="button" role="radio" aria-checked={rating===n} aria-label={n+' étoile(s)'} onClick={()=>setRating(n)} className="rounded-lg p-1"><Star className={'h-7 w-7 '+(n<=rating?'fill-[#e9b34c] text-[#e9b34c]':'text-[#d9e1dd]')}/></button>)}</div></div>
-        <div><div className="mb-2 flex items-center justify-between"><label htmlFor="testimonial-message" className="text-xs font-bold text-[#30485d]">Votre témoignage</label><span className="text-[10px] text-[#8a9b9b]">{message.length}/700</span></div><textarea id="testimonial-message" required minLength={30} maxLength={700} rows={5} value={message} onChange={e=>setMessage(e.target.value)} className="w-full resize-y rounded-xl border border-[#dce7e2] px-4 py-3 text-sm leading-6 outline-none focus:border-[#00a982] focus:ring-4 focus:ring-[#00a982]/10" placeholder="Expliquez concrètement ce que votre utilisation d’IAMTRADER vous apporte…"/></div>
-        {notice&&<div role="status" className={'rounded-xl px-4 py-3 text-xs leading-5 '+(notice.type==='success'?'bg-emerald-50 text-emerald-800':'bg-rose-50 text-rose-700')}>{notice.text}</div>}
-        <div className="flex flex-col-reverse gap-2 pt-1 sm:flex-row sm:justify-end"><button type="button" disabled={busy} onClick={()=>setOpen(false)} className="rounded-xl border border-[#dce7e2] px-5 py-3 text-xs font-bold text-[#52677b]">Annuler</button><button type="submit" disabled={busy||notice?.type==='success'} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#00a982] px-5 py-3 text-xs font-extrabold text-white disabled:opacity-60">{busy?<LoaderCircle className="h-4 w-4 animate-spin"/>:<Send className="h-4 w-4"/>}{busy?'Envoi…':'Envoyer pour validation'}</button></div>
-        <p className="text-center text-[10px] leading-5 text-[#8a9b9b]">En envoyant ce formulaire, vous autorisez IAMTRADER à afficher votre photo, votre nom et votre avis après approbation.</p>
-      </form>
-    </div></div>}
-  </section>;
+    </section>
+  );
 }
