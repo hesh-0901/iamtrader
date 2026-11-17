@@ -961,10 +961,33 @@ service cloud.firestore {
         && request.resource.data.message.size() <= 700
         && request.resource.data.status == 'pending'
         && request.resource.data.createdAt is string;
+      // isAdmin peut corriger le nom, le texte et la note d'un témoignage.
+      // Les changements de statut restent tracés par moderatedBy.
       allow update: if userManager()
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','moderatedAt','moderatedBy'])
-        && request.resource.data.status in ['published','rejected']
-        && request.resource.data.moderatedBy == request.auth.uid;
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'fullName',
+          'message',
+          'rating',
+          'status',
+          'moderatedAt',
+          'moderatedBy'
+        ])
+        && request.resource.data.fullName is string
+        && request.resource.data.fullName.size() >= 3
+        && request.resource.data.fullName.size() <= 90
+        && request.resource.data.message is string
+        && request.resource.data.message.size() >= 30
+        && request.resource.data.message.size() <= 700
+        && request.resource.data.rating is int
+        && request.resource.data.rating >= 1
+        && request.resource.data.rating <= 5
+        && (
+          !request.resource.data.diff(resource.data).affectedKeys().hasAny(['status'])
+          || (
+            request.resource.data.status in ['published', 'rejected']
+            && request.resource.data.moderatedBy == request.auth.uid
+          )
+        );
       allow delete: if userManager();
     }
 
