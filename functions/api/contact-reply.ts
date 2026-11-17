@@ -11,7 +11,7 @@ function json(data: unknown, status=200) {
 export async function onRequestPost(context:{request:Request;env:Env}) {
   const authHeader=context.request.headers.get('Authorization')||'';
   if(!authHeader.startsWith('Bearer ')) return json({error:'Authentification requise.'},401);
-  let body:{to?:string;cc?:string;subject?:string;reply?:string;replyHtml?:string;originalMessage?:string;name?:string;inReplyTo?:string;references?:string;conversationId?:string};
+  let body:{to?:string;cc?:string;subject?:string;reply?:string;replyHtml?:string;attachments?:Array<{filename?:string;content?:string}>;originalMessage?:string;name?:string;inReplyTo?:string;references?:string;conversationId?:string};
   try { body=await context.request.json(); } catch { return json({error:'Requête invalide.'},400); }
   const toList=String(body.to||'').split(/[;,\s]+/).map(value=>value.trim().toLowerCase()).filter(Boolean);
   const ccList=String(body.cc||'').split(/[;,\s]+/).map(value=>value.trim().toLowerCase()).filter(Boolean);
@@ -25,6 +25,9 @@ export async function onRequestPost(context:{request:Request;env:Env}) {
   if(!toList.length||toList.some(value=>!validEmail(value))||ccList.some(value=>!validEmail(value))||new Set([...toList,...ccList]).size!==toList.length+ccList.length) return json({error:'Vérifiez les adresses des destinataires et des copies.'},400);
   if(!subject||!reply) return json({error:'Sujet et réponse obligatoires.'},400);
   if(reply.length>10000) return json({error:'La réponse est trop longue.'},400);
+  const attachments=Array.isArray(body.attachments)?body.attachments:[];
+  const attachmentBytes=attachments.reduce((sum,file)=>sum+Math.floor(String(file.content||'').length*0.75),0);
+  if(attachments.length>10||attachmentBytes>8*1024*1024||attachments.some(file=>!file.filename||!/^[a-zA-Z0-9._ -]{1,120}$/.test(file.filename)||!file.content||!/^[A-Za-z0-9+/]+={0,2}$/.test(file.content))) return json({error:'Pièces jointes invalides ou trop volumineuses (10 fichiers, 8 Mo au total maximum).'},400);
   const idToken=authHeader.slice(7);
   let identity:{uid:string;email?:string};
   let profile:Record<string, unknown>|null;
@@ -72,6 +75,7 @@ iamtrader.trade`;
         subject:/^re:/i.test(subject)?subject:'Re: '+subject,
         html,
         text,
+        ...(attachments.length?{attachments}:{}),
         ...(threadReplyTo?{reply_to:threadReplyTo}:{}),
         ...(inReplyTo||conversationId?{headers:{...(inReplyTo?{'In-Reply-To':inReplyTo,'References':references||inReplyTo}:{}),...(conversationId?{'X-IAMTRADER-Conversation-ID':conversationId}:{})}}:{})
       })
