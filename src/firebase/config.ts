@@ -1,7 +1,6 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { initializeFirestore } from "firebase/firestore";
-import { getStorage } from "firebase/storage";
 
 // Existing production Firebase Configuration
 export const firebaseConfig = {
@@ -30,4 +29,3 @@ export const db = initializeFirestore(app, {
   experimentalAutoDetectLongPolling: true
 });
 
-export const storage = getStorage(app);
