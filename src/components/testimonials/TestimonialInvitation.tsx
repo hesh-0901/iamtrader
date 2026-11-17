@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { onSnapshot, doc } from 'firebase/firestore';
 import { BellRing, ImagePlus, LoaderCircle, Send, Star, X } from 'lucide-react';
-import { auth, db } from '../firebase/config';
-import { submitTestimonial } from '../services/testimonials';
+import { auth, db } from '../../firebase/config';
+import { submitTestimonial } from '../../services/testimonials';
 
 export function TestimonialInvitation({ uid }: { uid?: string }) {
   const [submitted,setSubmitted]=useState<boolean|null>(null);
