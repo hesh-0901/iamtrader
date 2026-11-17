@@ -940,7 +940,8 @@ service cloud.firestore {
     // 18. TÉMOIGNAGES IAMTRADER
     // =====================================================
     match /testimonials/{testimonialId} {
-      allow get, list: if resource.data.status == 'published' || userManager();
+      allow get: if (signedIn() && testimonialId == request.auth.uid) || userManager() || resource.data.status == 'published';
+      allow list: if resource.data.status == 'published' || userManager();
       allow create: if signedIn()
         && testimonialId == request.auth.uid
         && request.resource.data.keys().hasOnly(['uid','fullName','photoURL','photoPublicId','rating','message','status','createdAt'])
