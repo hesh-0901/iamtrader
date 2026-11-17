@@ -52,5 +52,5 @@ export async function updateTestimonialContent(id: string, input: { fullName: st
   if (fullName.length < 3 || fullName.length > 90) throw new Error('Le nom doit contenir entre 3 et 90 caractères.');
   if (message.length < 30 || message.length > 700) throw new Error('Le témoignage doit contenir entre 30 et 700 caractères.');
   if (!Number.isInteger(input.rating) || input.rating < 1 || input.rating > 5) throw new Error('La note doit être comprise entre 1 et 5 étoiles.');
-  await updateDoc(doc(db, 'testimonials', id), { fullName, message, rating });
+  await updateDoc(doc(db, 'testimonials', id), { fullName, message, rating: input.rating });
 }
