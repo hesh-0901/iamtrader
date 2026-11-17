@@ -28,7 +28,7 @@ export async function submitTestimonial(input: { fullName: string; rating: numbe
   if (!input.photo || input.photo.size > 3145728 || !['image/jpeg','image/png','image/webp'].includes(input.photo.type)) throw new Error('Photo JPG, PNG ou WEBP requise (3 Mo maximum).');
   const ext = input.photo.type === 'image/png' ? 'png' : input.photo.type === 'image/webp' ? 'webp' : 'jpg';
   const testimonialRef = doc(db, 'testimonials', user.uid);
-  const uploaded = await uploadBytes(ref(storage, 'testimonials/' + user.uid + '/' + testimonialRef.id + '/profile.' + ext), input.photo, { contentType: input.photo.type });
+  const uploaded = await uploadBytes(ref(storage, 'testimonials/' + user.uid + '/' + testimonialRef.id + '/profile'), input.photo, { contentType: input.photo.type });
   const photoURL = await getDownloadURL(uploaded.ref);
   await setDoc(testimonialRef, { uid:user.uid, fullName:input.fullName.trim(), photoURL, rating:input.rating, message:input.message.trim(), status:'pending', createdAt:new Date().toISOString() });
 }
