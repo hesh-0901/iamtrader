@@ -17,6 +17,8 @@ import {
   Users,
   PlayCircle,
   Mail,
+  Instagram,
+  Music2,
   MessageSquare,
   Send,
   Sparkles,
@@ -414,6 +416,7 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
             <p className="mt-7 text-sm sm:text-base text-[#60758d] max-w-2xl mx-auto leading-7">
               Journalisez vos opérations, maîtrisez votre risque, analysez vos performances et identifiez vos biais pour transformer vos données de trading en décisions plus structurées.
             </p>
+            <p className="mt-3 text-sm font-bold tracking-wide text-[#168c73]">Le trader que vous devez être.</p>
 
             <div className="mt-7 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[11px] font-semibold text-[#71839a]">
               <span className="flex items-center gap-2"><Check className="w-3.5 h-3.5 text-[#00a982]" /> Données structurées</span>
@@ -632,14 +635,15 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
                     Notre équipe est disponible pour répondre à vos questions concernant IAMTRADER, votre compte, la plateforme ou nos offres.
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={openContactModal}
-                  className="mt-8 inline-flex w-fit items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-white hover:bg-white/10 transition-colors cursor-pointer"
-                >
-                  <Mail className="w-4 h-4 text-[#5ce0c1]" />
-                  support@iamtrader.com
-                </button>
+                <div className="mt-8 flex flex-wrap items-center gap-3">
+                  <a href="mailto:hello@iamtrader.trade" className="inline-flex w-fit items-center gap-3 rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm font-semibold text-white hover:bg-white/10 transition-colors">
+                    <Mail className="w-4 h-4 text-[#5ce0c1]" />
+                    hello@iamtrader.trade
+                  </a>
+                  <button type="button" onClick={openContactModal} className="inline-flex w-fit items-center gap-2 rounded-xl bg-[#00a982] px-4 py-3 text-sm font-bold text-white hover:bg-[#008f70] transition-colors cursor-pointer">
+                    Envoyer un message <ArrowRight className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
 
               <div className="relative flex h-[340px] min-h-[340px] flex-col overflow-hidden rounded-[28px] border border-[#dce9e5] bg-white shadow-[0_20px_60px_rgba(8,24,39,0.08)]">
@@ -757,6 +761,16 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
           <div className="md:col-span-2">
             <img src="/brand/logo-iamtrader-full-white.png" alt="IAMTRADER" className="w-[145px] h-auto object-contain object-left" />
             <p className="mt-3 max-w-md text-slate-400 leading-relaxed">Station de performance pour traders : journal, analyse, risque, psychologie et progression.</p>
+            <p className="mt-2 text-xs font-bold tracking-wide text-[#5ce0c1]">Le trader que vous devez être.</p>
+            <div className="mt-5 flex items-center gap-3">
+              <a href="https://www.instagram.com/iamtrader.trade/" target="_blank" rel="noopener noreferrer" aria-label="IAMTRADER sur Instagram" className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-300 transition-colors hover:border-[#5ce0c1]/50 hover:text-[#5ce0c1]">
+                <Instagram className="h-4 w-4" />
+              </a>
+              <a href="https://www.tiktok.com/@iamtrader.trade" target="_blank" rel="noopener noreferrer" aria-label="IAMTRADER sur TikTok" className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-300 transition-colors hover:border-[#5ce0c1]/50 hover:text-[#5ce0c1]">
+                <Music2 className="h-4 w-4" />
+              </a>
+              <span className="text-[11px] text-slate-400">@iamtrader.trade</span>
+            </div>
           </div>
           <div>
             <div className="font-bold mb-3">Plateforme</div>
@@ -863,7 +877,7 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
                     <Send className="h-4 w-4" />
                   </button>
                 </form>
-                <p className="mt-2 text-center text-[9px] font-medium text-[#9aa9b5]">L’assistant IA sera connecté au moteur IAMTRADER.</p>
+                <p className="mt-2 text-center text-[9px] font-medium text-[#9aa9b5]">VYRA est connectée au moteur IAMTRADER · conversation conservée localement 48 h.</p>
               </div>
             </div>
           </div>
