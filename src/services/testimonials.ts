@@ -1,6 +1,5 @@
-import { collection, deleteDoc, doc, getDoc, limit, onSnapshot, query, setDoc, updateDoc, where } from 'firebase/firestore';
-import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
-import { auth, db, storage } from '../firebase/config';
+import { collection, deleteDoc, doc, limit, onSnapshot, query, setDoc, updateDoc, where } from 'firebase/firestore';
+import { auth, db } from '../firebase/config';
 
 export interface TraderTestimonial {
   id: string; uid: string; fullName: string; photoURL: string; rating: number;
@@ -26,11 +25,17 @@ export async function submitTestimonial(input: { fullName: string; rating: numbe
   if (!Number.isInteger(input.rating) || input.rating < 1 || input.rating > 5) throw new Error('Choisissez une note entre 1 et 5 étoiles.');
   if (input.message.trim().length < 30 || input.message.trim().length > 700) throw new Error('Le témoignage doit contenir entre 30 et 700 caractères.');
   if (!input.photo || input.photo.size > 3145728 || !['image/jpeg','image/png','image/webp'].includes(input.photo.type)) throw new Error('Photo JPG, PNG ou WEBP requise (3 Mo maximum).');
-  const ext = input.photo.type === 'image/png' ? 'png' : input.photo.type === 'image/webp' ? 'webp' : 'jpg';
   const testimonialRef = doc(db, 'testimonials', user.uid);
-  const uploaded = await uploadBytes(ref(storage, 'testimonials/' + user.uid + '/' + testimonialRef.id + '/profile'), input.photo, { contentType: input.photo.type });
-  const photoURL = await getDownloadURL(uploaded.ref);
-  await setDoc(testimonialRef, { uid:user.uid, fullName:input.fullName.trim(), photoURL, rating:input.rating, message:input.message.trim(), status:'pending', createdAt:new Date().toISOString() });
+  const form = new FormData();
+  form.append('file', input.photo, input.photo.name.replace(/[^a-zA-Z0-9._-]/g, '_') || 'profile-photo');
+  form.append('upload_preset', 'piptalk_media');
+  form.append('folder', 'iamtrader/testimonials/' + user.uid);
+  const response = await fetch('https://api.cloudinary.com/v1_1/ocgef9bk/image/upload', { method: 'POST', body: form });
+  const uploaded = await response.json() as { secure_url?: string; public_id?: string; error?: { message?: string } };
+  if (!response.ok || !uploaded.secure_url || !uploaded.public_id) {
+    throw new Error(uploaded.error?.message || 'Échec du téléversement Cloudinary. Vérifiez le preset piptalk_media.');
+  }
+  await setDoc(testimonialRef, { uid:user.uid, fullName:input.fullName.trim(), photoURL:uploaded.secure_url, photoPublicId:uploaded.public_id, rating:input.rating, message:input.message.trim(), status:'pending', createdAt:new Date().toISOString() });
 }
 export async function moderateTestimonial(id: string, status: 'published'|'rejected'): Promise<void> {
   if (!auth.currentUser) throw new Error('Authentification administrateur requise.');
@@ -38,10 +43,5 @@ export async function moderateTestimonial(id: string, status: 'published'|'rejec
 }
 export async function removeTestimonial(id: string): Promise<void> {
   if (!auth.currentUser) throw new Error('Authentification administrateur requise.');
-  const testimonialRef = doc(db,'testimonials',id);
-  const snapshot = await getDoc(testimonialRef);
-  if (snapshot.exists() && typeof snapshot.data().photoURL === 'string') {
-    try { await deleteObject(ref(storage, snapshot.data().photoURL)); } catch (error) { console.warn('Testimonial photo cleanup:', error); }
-  }
-  await deleteDoc(testimonialRef);
+  await deleteDoc(doc(db,'testimonials',id));
 }
