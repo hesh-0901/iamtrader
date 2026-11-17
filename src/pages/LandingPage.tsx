@@ -390,7 +390,22 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
 
   return (
     <div className="min-h-screen bg-[#f4f8f7] text-[#081827] flex flex-col selection:bg-[#00c796]/20">
-      <style>{`@keyframes landing-fade-up { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }\n@keyframes landing-glow { 0%,100% { box-shadow: 0 0 18px rgba(0,199,150,.10); } 50% { box-shadow: 0 0 34px rgba(0,199,150,.24); } }\n.landing-reveal { opacity: 0; transform: translateY(28px); transition: opacity .75s ease, transform .75s cubic-bezier(.2,.7,.2,1); }\n.landing-reveal.landing-revealed { opacity: 1; transform: translateY(0); }\n#iamtrader-hero { isolation: isolate; background-color: #061b1b; }\n#iamtrader-hero .hero-copy { animation: landing-fade-up .8s ease both; }\n#iamtrader-hero .hero-panel { animation: landing-glow 5s ease-in-out infinite; }\n#iamtrader-hero .hero-overlay { background: linear-gradient(90deg, rgba(3,15,22,.94) 0%, rgba(3,19,24,.82) 46%, rgba(3,18,22,.35) 100%), linear-gradient(0deg, rgba(3,15,22,.72), transparent 42%); }\n#iamtrader-hero .hero-title { color: #fff; text-shadow: 0 3px 30px rgba(0,0,0,.28); }\n#iamtrader-hero .hero-description { color: rgba(240,250,248,.82); }\n#iamtrader-hero .hero-tagline { color: #62e8b7; }\n#iamtrader-hero .hero-proof { color: rgba(235,248,245,.78); }\n#iamtrader-hero .hero-platform { border-color: rgba(129,255,218,.24); box-shadow: 0 30px 90px rgba(0,0,0,.42); }\n#platform .hero-metric { transition: transform .25s ease, border-color .25s ease, background .25s ease; }\n#platform .hero-metric:hover { transform: translateY(-4px); border-color: rgba(0,199,150,.48); background: rgba(0,199,150,.10); }\n@media (prefers-reduced-motion: reduce) { .landing-reveal,.landing-reveal.landing-revealed { opacity:1; transform:none; transition:none; } #iamtrader-hero .hero-copy,#iamtrader-hero .hero-panel { animation:none; } #platform .hero-metric { transition:none; } }`}</style>
+      <style>{`@keyframes landing-fade-up { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes landing-glow { 0%,100% { box-shadow: 0 0 18px rgba(0,199,150,.10); } 50% { box-shadow: 0 0 34px rgba(0,199,150,.24); } }
+.landing-reveal { opacity: 0; transform: translateY(28px); transition: opacity .75s ease, transform .75s cubic-bezier(.2,.7,.2,1); }
+.landing-reveal.landing-revealed { opacity: 1; transform: translateY(0); }
+#iamtrader-hero { isolation: isolate; background-color: #061b1b; }
+#iamtrader-hero .hero-copy { animation: landing-fade-up .8s ease both; }
+#iamtrader-hero .hero-panel { animation: landing-glow 5s ease-in-out infinite; }
+#iamtrader-hero .hero-overlay { background: linear-gradient(90deg, rgba(3,15,22,.94) 0%, rgba(3,19,24,.82) 46%, rgba(3,18,22,.35) 100%), linear-gradient(0deg, rgba(3,15,22,.72), transparent 42%); }
+#iamtrader-hero .hero-title { color: #fff; text-shadow: 0 3px 30px rgba(0,0,0,.28); }
+#iamtrader-hero .hero-description { color: rgba(240,250,248,.82); }
+#iamtrader-hero .hero-tagline { color: #62e8b7; }
+#iamtrader-hero .hero-proof { color: rgba(235,248,245,.78); }
+#iamtrader-hero .hero-platform { border-color: rgba(129,255,218,.24); box-shadow: 0 30px 90px rgba(0,0,0,.42); }
+#platform .hero-metric { transition: transform .25s ease, border-color .25s ease, background .25s ease; }
+#platform .hero-metric:hover { transform: translateY(-4px); border-color: rgba(0,199,150,.48); background: rgba(0,199,150,.10); }
+@media (prefers-reduced-motion: reduce) { .landing-reveal,.landing-reveal.landing-revealed { opacity:1; transform:none; transition:none; } #iamtrader-hero .hero-copy,#iamtrader-hero .hero-panel { animation:none; } #platform .hero-metric { transition:none; } }`}</style>
       <header className="h-[72px] border-b border-white/70 px-5 sm:px-10 flex items-center justify-between sticky top-0 z-50 bg-white/80 backdrop-blur-xl shadow-[0_8px_30px_rgba(8,24,39,0.04)]">
         <div className="flex items-center gap-2.5">
            <img src="/brand/logo-iamtrader-full.png" alt="IAMTRADER" className="w-[138px] sm:w-[152px] h-auto object-contain" />
