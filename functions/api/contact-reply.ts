@@ -13,8 +13,8 @@ export async function onRequestPost(context:{request:Request;env:Env}) {
   if(!authHeader.startsWith('Bearer ')) return json({error:'Authentification requise.'},401);
   let body:{to?:string;cc?:string;subject?:string;reply?:string;replyHtml?:string;originalMessage?:string;name?:string;inReplyTo?:string;references?:string;conversationId?:string};
   try { body=await context.request.json(); } catch { return json({error:'Requête invalide.'},400); }
-  const toList=String(body.to||'').split(/[;,\\s]+/).map(value=>value.trim().toLowerCase()).filter(Boolean);
-  const ccList=String(body.cc||'').split(/[;,\\s]+/).map(value=>value.trim().toLowerCase()).filter(Boolean);
+  const toList=String(body.to||'').split(/[;,\s]+/).map(value=>value.trim().toLowerCase()).filter(Boolean);
+  const ccList=String(body.cc||'').split(/[;,\s]+/).map(value=>value.trim().toLowerCase()).filter(Boolean);
   const to=toList[0]||'';
   const subject=String(body.subject||'').trim(), reply=String(body.reply||'').trim();
   const replyHtml=sanitizeRichHtml(String(body.replyHtml||''));
