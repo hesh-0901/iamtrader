@@ -762,32 +762,58 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
         </section>
       </main>
 
-      <footer className="border-t border-[#dfe8ef] px-6 sm:px-12 py-12 bg-[#071725] text-white">
-        <div className="max-w-6xl mx-auto grid md:grid-cols-4 gap-8 text-xs">
-          <div className="md:col-span-2">
-            <img src="/brand/logo-iamtrader-full-white.png" alt="IAMTRADER" className="w-[145px] h-auto object-contain object-left" />
-            <p className="mt-3 max-w-md text-slate-400 leading-relaxed">Station de performance pour traders : journal, analyse, risque, psychologie et progression.</p>
-            <p className="mt-2 text-xs font-bold tracking-wide text-[#5ce0c1]">Le trader que vous devez être.</p>
-            <div className="mt-5 flex items-center gap-3">
-              <a href="https://www.instagram.com/iamtrader.trade/" target="_blank" rel="noopener noreferrer" aria-label="IAMTRADER sur Instagram" className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-300 transition-colors hover:border-[#5ce0c1]/50 hover:text-[#5ce0c1]">
-                <Instagram className="h-4 w-4" />
+      <footer className="relative isolate overflow-hidden border-t border-white/10 bg-[#061522] px-6 py-14 text-white sm:px-12 sm:py-16">
+        <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_12%_0%,rgba(0,199,150,0.13),transparent_38%),radial-gradient(ellipse_at_88%_100%,rgba(0,169,130,0.08),transparent_36%)]" />
+        <div className="mx-auto max-w-6xl">
+          <div className="grid gap-12 border-b border-white/10 pb-10 sm:grid-cols-2 lg:grid-cols-[1.7fr_0.8fr_0.8fr_1fr] lg:gap-10">
+            <div className="max-w-sm">
+              <a href="#iamtrader-hero" aria-label="Retour en haut de page" className="inline-flex rounded-lg transition-opacity hover:opacity-80">
+                <img src="/brand/logo-iamtrader-full-white.png" alt="IAMTRADER" className="w-[154px] h-auto object-contain object-left" />
               </a>
-              <a href="https://www.tiktok.com/@iamtrader.trade" target="_blank" rel="noopener noreferrer" aria-label="IAMTRADER sur TikTok" className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-white/5 text-slate-300 transition-colors hover:border-[#5ce0c1]/50 hover:text-[#5ce0c1]">
-                <Music2 className="h-4 w-4" />
-              </a>
-              <span className="text-[11px] text-slate-400">@iamtrader.trade</span>
+              <p className="mt-5 text-sm leading-7 text-slate-400">L'écosystème conçu pour aider les traders à mieux comprendre leurs performances, maîtriser leur risque et progresser avec méthode.</p>
+              <p className="mt-3 text-xs font-bold tracking-wide text-[#5ce0c1]">Le trader que vous devez être.</p>
+              <div className="mt-6 flex items-center gap-2.5">
+                <a href="https://www.instagram.com/iamtrader.trade/" target="_blank" rel="noopener noreferrer" aria-label="IAMTRADER sur Instagram" className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-slate-300 transition-all hover:-translate-y-0.5 hover:border-[#5ce0c1]/50 hover:bg-[#5ce0c1]/10 hover:text-[#5ce0c1]">
+                  <Instagram className="h-4 w-4" />
+                </a>
+                <a href="https://www.tiktok.com/@iamtrader.trade" target="_blank" rel="noopener noreferrer" aria-label="IAMTRADER sur TikTok" className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-slate-300 transition-all hover:-translate-y-0.5 hover:border-[#5ce0c1]/50 hover:bg-[#5ce0c1]/10 hover:text-[#5ce0c1]">
+                  <Music2 className="h-4 w-4" />
+                </a>
+                <span className="ml-1 text-xs text-slate-500">@iamtrader.trade</span>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="mb-5 text-[11px] font-black uppercase tracking-[0.16em] text-white">Plateforme</h3>
+              <nav className="flex flex-col items-start gap-3 text-sm text-slate-400">
+                <a href="#features" className="transition-colors hover:text-[#5ce0c1]">Fonctionnalités</a>
+                <a href="#trader-score" className="transition-colors hover:text-[#5ce0c1]">Trader Score</a>
+                <a href="#journal" className="transition-colors hover:text-[#5ce0c1]">Comment ça fonctionne</a>
+                <a href="#pricing" className="transition-colors hover:text-[#5ce0c1]">Tarifs</a>
+              </nav>
+            </div>
+
+            <div>
+              <h3 className="mb-5 text-[11px] font-black uppercase tracking-[0.16em] text-white">Votre espace</h3>
+              <div className="flex flex-col items-start gap-3 text-sm text-slate-400">
+                <button onClick={() => onOpenAuth('login')} className="cursor-pointer transition-colors hover:text-[#5ce0c1]">Connexion</button>
+                <button onClick={() => onOpenAuth('register')} className="cursor-pointer transition-colors hover:text-[#5ce0c1]">Créer un compte</button>
+              </div>
+            </div>
+
+            <div>
+              <h3 className="mb-5 text-[11px] font-black uppercase tracking-[0.16em] text-white">Contact</h3>
+              <p className="mb-3 text-sm leading-6 text-slate-400">Une question sur IAMTRADER ou besoin d'assistance ?</p>
+              <a href="mailto:hello@iamtrader.trade" className="inline-flex text-sm font-semibold text-[#5ce0c1] transition-colors hover:text-white">hello@iamtrader.trade</a>
+              <a href="#contact" className="mt-4 inline-flex items-center gap-2 text-xs font-semibold text-slate-400 transition-colors hover:text-[#5ce0c1]">Nous écrire <ArrowRight className="h-3.5 w-3.5" /></a>
             </div>
           </div>
-          <div>
-            <div className="font-bold mb-3">Plateforme</div>
-            <div className="space-y-2 text-[#71839a]"><a href="#features" className="block hover:text-[#0a192f]">Fonctionnalités</a><a href="#trader-score" className="block hover:text-[#0a192f]">Trader Score</a><a href="#pricing" className="block hover:text-[#0a192f]">Tarifs</a><a href="#contact" className="block hover:text-[#0a192f]">Contact</a></div>
-          </div>
-          <div>
-            <div className="font-bold mb-3">Accès</div>
-            <div className="space-y-2 text-[#71839a]"><button onClick={() => onOpenAuth('login')} className="block cursor-pointer hover:text-[#0a192f]">Connexion</button><button onClick={() => onOpenAuth('register')} className="block cursor-pointer hover:text-[#0a192f]">Créer un compte</button></div>
+
+          <div className="flex flex-col gap-4 pt-6 text-[11px] text-slate-500 sm:flex-row sm:items-center sm:justify-between">
+            <span>© 2026 IAMTRADER. Tous droits réservés.</span>
+            <span className="leading-relaxed">Données hébergées et sécurisées sur Google Cloud Platform.</span>
           </div>
         </div>
-        <div className="max-w-6xl mx-auto mt-8 pt-6 border-t border-white/10 text-[11px] text-slate-500 flex flex-col sm:flex-row justify-between gap-2"><span>© 2026 IAMTRADER. Tous droits réservés.</span><span>Données hébergées et sécurisées sur Google Cloud Platform.</span></div>
       </footer>
 
       {isAiExpanded && (
