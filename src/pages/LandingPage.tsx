@@ -591,7 +591,7 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
           </div>
         </section>
 
-        <TestimonialsSection />
+        <TestimonialsSection onOpenAuth={onOpenAuth} />
 
         <section id="pricing" className="px-6 sm:px-12 py-24 bg-[#f3f8f6] border-b border-[#e1e9ef] scroll-mt-20">
           <div className="mx-auto mb-8 max-w-5xl"><PromotionBanners placement="ticker" /></div>
