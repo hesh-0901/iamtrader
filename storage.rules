@@ -15,9 +15,12 @@ service firebase.storage {
       }
       allow create: if signedIn()
         && request.auth.uid == uid
+        && testimonialId == request.auth.uid
+        && fileName == 'profile'
+        && resource == null
         && request.resource.size <= 3 * 1024 * 1024
         && request.resource.contentType.matches('image/(jpeg|png|webp)');
-      allow get: if published() || userManager();
+      allow get: if published() || userManager() || (signedIn() && request.auth.uid == uid);
       allow update, delete: if userManager();
     }
   }
