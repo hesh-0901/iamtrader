@@ -943,13 +943,15 @@ service cloud.firestore {
       allow get, list: if resource.data.status == 'published' || userManager();
       allow create: if signedIn()
         && testimonialId == request.auth.uid
-        && request.resource.data.keys().hasOnly(['uid','fullName','photoURL','rating','message','status','createdAt'])
+        && request.resource.data.keys().hasOnly(['uid','fullName','photoURL','photoPublicId','rating','message','status','createdAt'])
         && request.resource.data.uid == request.auth.uid
         && request.resource.data.fullName is string
         && request.resource.data.fullName.size() >= 3
         && request.resource.data.fullName.size() <= 90
         && request.resource.data.photoURL is string
         && request.resource.data.photoURL.size() <= 2048
+        && request.resource.data.photoPublicId is string
+        && request.resource.data.photoPublicId.size() <= 255
         && request.resource.data.rating is int
         && request.resource.data.rating >= 1
         && request.resource.data.rating <= 5
