@@ -479,58 +479,12 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
               <button onClick={() => onOpenAuth('register')} className="px-6 py-3.5 text-sm font-bold rounded-2xl bg-[#00a982] text-white hover:bg-[#008f70] transition-all cursor-pointer shadow-[0_14px_30px_rgba(0,169,130,0.22)] hover:-translate-y-0.5 flex items-center gap-2">
                 Commencer gratuitement <ArrowRight className="w-4 h-4" />
               </button>
-              <a href="#platform" className="px-6 py-3.5 text-sm font-bold rounded-2xl bg-white/90 border border-[#dbe7e3] text-[#0a192f] hover:bg-white hover:-translate-y-0.5 transition-all shadow-[0_10px_25px_rgba(8,24,39,0.06)] flex items-center gap-2">
-                <PlayCircle className="w-4 h-4" /> Voir la plateforme
+              <a href="#features" className="px-6 py-3.5 text-sm font-bold rounded-2xl bg-white/90 border border-[#dbe7e3] text-[#0a192f] hover:bg-white hover:-translate-y-0.5 transition-all shadow-[0_10px_25px_rgba(8,24,39,0.06)] flex items-center gap-2">
+                <PlayCircle className="w-4 h-4" /> Voir les fonctionnalités
               </a>
             </div>
 
-            <div id="platform" className="hero-panel hero-platform mt-14 w-full rounded-[28px] border border-white/80 bg-[#081827] p-3 sm:p-5 shadow-[0_35px_90px_rgba(8,24,39,0.18)] text-left scroll-mt-24 ring-1 ring-black/5">
-              <div className="flex items-center justify-between pb-4 border-b border-white/10 mb-4">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#c9d5de]" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#c9d5de]" />
-                  <span className="w-2.5 h-2.5 rounded-full bg-[#c9d5de]" />
-                  <span className="text-[11px] text-slate-400 font-mono ml-2">app.iamtrader / dashboard</span>
-                </div>
-                <div className="hidden sm:flex items-center gap-2 text-[11px] font-semibold text-[#6ee7c9]">
-                  <span className="w-1.5 h-1.5 rounded-full bg-[#00c796]" /> Analyse active
-                </div>
-              </div>
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                {[
-                  ['P&L', '+$8,420.50', 'text-[#00a982]'],
-                  ['Win Rate', '68.4%', 'text-white'],
-                  ['Max Drawdown', '-4.2%', 'text-[#e05a78]'],
-                  ['Trader Score', '84 / 100', 'text-[#2f6bff]'],
-                ].map(([label, value, color]) => (
-                  <div key={label} className="hero-metric p-4 rounded-2xl bg-white/[0.06] border border-white/10 backdrop-blur-sm shadow-inner">
-                    <span className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400 block mb-2">{label}</span>
-                    <span className={`text-xl font-black tabular-nums tracking-tight ${color}`}>{value}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="mt-4 grid grid-cols-1 lg:grid-cols-[1.5fr_1fr] gap-4">
-                <div className="h-40 rounded-2xl border border-white/10 bg-white/[0.04] p-4 flex flex-col justify-between">
-                  <div className="flex justify-between text-[10px] font-semibold text-slate-400"><span>Equity Curve</span><span>30 derniers jours</span></div>
-                  <div className="flex items-end gap-1.5 h-24">
-                    {[35,42,38,48,45,56,51,63,58,72,69,82,77,92].map((height, index) => (
-                      <span key={index} className="flex-1 rounded-t-md bg-[#00c796]/25" style={{ height: `${height}%` }} />
-                    ))}
-                  </div>
-                </div>
-                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-                  <div className="text-[10px] font-semibold text-slate-400 mb-3 uppercase tracking-wider">Performance</div>
-                  <div className="space-y-3">
-                    {[['Risk Management','92%'],['Consistency','81%'],['Psychology','78%']].map(([label, value]) => (
-                      <div key={label}>
-                        <div className="flex justify-between text-[11px] font-semibold mb-1"><span>{label}</span><span className="text-[#6ee7c9]">{value}</span></div>
-                        <div className="h-1.5 bg-white/10 rounded-full overflow-hidden"><div className="h-full bg-gradient-to-r from-[#00a982] to-[#5ce0c1] rounded-full" style={{width:value}} /></div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
+
             </div>
             </div>
           </div>
