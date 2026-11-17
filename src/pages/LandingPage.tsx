@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { addContactMessage } from '../services/firestore';
 import { PromotionBanners } from '../components/promotions/PromotionBanners';
+import { TestimonialsSection } from '../components/testimonials/TestimonialsSection';
 
 interface LandingPageProps {
   onOpenAuth: (mode: 'login' | 'register') => void;
@@ -590,26 +591,7 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
           </div>
         </section>
 
-        <section id="testimonials" className="relative isolate overflow-hidden border-y border-[#dcebe5] bg-[#f5faf8] px-6 py-20 sm:px-12 sm:py-24 scroll-mt-20">
-          <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_50%_0%,rgba(0,199,150,0.10),transparent_55%)]" />
-          <div className="mx-auto max-w-5xl">
-            <div className="mx-auto max-w-3xl text-center">
-              <span className="text-[11px] font-black uppercase tracking-[0.2em] text-[#00a982]">Témoignages</span>
-              <h2 className="mt-3 text-3xl font-black tracking-tight text-[#081827] sm:text-4xl">La progression se construit aussi par le partage.</h2>
-              <p className="mt-4 text-sm leading-7 text-[#60758d]">Les expériences des traders qui utilisent IAMTRADER ont leur place ici. Nous publierons des retours authentiques, avec l'accord de leurs auteurs, plutôt que des avis inventés.</p>
-            </div>
-            <div className="mx-auto mt-10 max-w-3xl rounded-[28px] border border-[#dcebe5] bg-white p-7 text-center shadow-[0_20px_55px_rgba(8,24,39,0.06)] sm:p-10">
-              <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl bg-[#e8faf4] text-[#00a982]">
-                <MessageSquare className="h-5 w-5" />
-              </div>
-              <h3 className="mt-5 text-xl font-black text-[#081827]">Vous utilisez IAMTRADER ?</h3>
-              <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-[#71839a]">Partagez votre expérience : ce que la plateforme vous aide à mieux suivre, comprendre ou améliorer dans votre trading.</p>
-              <a href="mailto:hello@iamtrader.trade?subject=T%C3%A9moignage%20IAMTRADER" className="mt-6 inline-flex items-center justify-center gap-2 rounded-xl bg-[#00a982] px-5 py-3 text-sm font-bold text-white shadow-[0_10px_25px_rgba(0,169,130,0.18)] transition-all hover:-translate-y-0.5 hover:bg-[#008f70]">
-                Partager mon témoignage <ArrowRight className="h-4 w-4" />
-              </a>
-            </div>
-          </div>
-        </section>
+        <TestimonialsSection />
 
         <section id="pricing" className="px-6 sm:px-12 py-24 bg-[#f3f8f6] border-b border-[#e1e9ef] scroll-mt-20">
           <div className="mx-auto mb-8 max-w-5xl"><PromotionBanners placement="ticker" /></div>
