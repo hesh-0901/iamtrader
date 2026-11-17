@@ -1,4 +1,4 @@
-import { addDoc, collection, deleteDoc, doc, limit, onSnapshot, query, updateDoc, where } from 'firebase/firestore';
+import { addDoc, collection, deleteDoc, doc, limit, onSnapshot, query, setDoc, updateDoc, where } from 'firebase/firestore';
 import { getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { auth, db, storage } from '../firebase/config';
 
@@ -27,9 +27,10 @@ export async function submitTestimonial(input: { fullName: string; rating: numbe
   if (input.message.trim().length < 30 || input.message.trim().length > 700) throw new Error('Le témoignage doit contenir entre 30 et 700 caractères.');
   if (!input.photo || input.photo.size > 3145728 || !['image/jpeg','image/png','image/webp'].includes(input.photo.type)) throw new Error('Photo JPG, PNG ou WEBP requise (3 Mo maximum).');
   const ext = input.photo.type === 'image/png' ? 'png' : input.photo.type === 'image/webp' ? 'webp' : 'jpg';
-  const uploaded = await uploadBytes(ref(storage, 'testimonials/' + user.uid + '/profile-' + Date.now() + '.' + ext), input.photo, { contentType: input.photo.type });
+  const testimonialRef = doc(collection(db, 'testimonials'));
+  const uploaded = await uploadBytes(ref(storage, 'testimonials/' + user.uid + '/' + testimonialRef.id + '/profile.' + ext), input.photo, { contentType: input.photo.type });
   const photoURL = await getDownloadURL(uploaded.ref);
-  await addDoc(collection(db, 'testimonials'), { uid:user.uid, fullName:input.fullName.trim(), photoURL, rating:input.rating, message:input.message.trim(), status:'pending', createdAt:new Date().toISOString() });
+  await setDoc(testimonialRef, { uid:user.uid, fullName:input.fullName.trim(), photoURL, rating:input.rating, message:input.message.trim(), status:'pending', createdAt:new Date().toISOString() });
 }
 export async function moderateTestimonial(id: string, status: 'published'|'rejected'): Promise<void> {
   if (!auth.currentUser) throw new Error('Authentification administrateur requise.');
