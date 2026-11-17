@@ -937,7 +937,35 @@ service cloud.firestore {
     }
 
     // =====================================================
-    // 18. REFUS PAR DÉFAUT
+    // 18. TÉMOIGNAGES IAMTRADER
+    // =====================================================
+    match /testimonials/{testimonialId} {
+      allow get, list: if resource.data.status == 'published' || userManager();
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly(['uid','fullName','photoURL','rating','message','status','createdAt'])
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.fullName is string
+        && request.resource.data.fullName.size() >= 3
+        && request.resource.data.fullName.size() <= 90
+        && request.resource.data.photoURL is string
+        && request.resource.data.photoURL.size() <= 2048
+        && request.resource.data.rating is int
+        && request.resource.data.rating >= 1
+        && request.resource.data.rating <= 5
+        && request.resource.data.message is string
+        && request.resource.data.message.size() >= 30
+        && request.resource.data.message.size() <= 700
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdAt is string;
+      allow update: if userManager()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status','moderatedAt','moderatedBy'])
+        && request.resource.data.status in ['published','rejected']
+        && request.resource.data.moderatedBy == request.auth.uid;
+      allow delete: if userManager();
+    }
+
+    // =====================================================
+    // 19. REFUS PAR DÉFAUT
     // =====================================================
 
     match /{document=**} {
