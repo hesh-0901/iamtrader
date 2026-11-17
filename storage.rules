@@ -10,7 +10,8 @@ service firebase.storage {
     match /testimonials/{uid}/{testimonialId}/{fileName} {
       function published() {
         return firestore.exists(/databases/(default)/documents/testimonials/$(testimonialId))
-          && firestore.get(/databases/(default)/documents/testimonials/$(testimonialId)).data.get('status', '') == 'published';
+          && firestore.get(/databases/(default)/documents/testimonials/$(testimonialId)).data.get('status', '') == 'published'
+          && firestore.get(/databases/(default)/documents/testimonials/$(testimonialId)).data.get('uid', '') == uid;
       }
       allow create: if signedIn()
         && request.auth.uid == uid
