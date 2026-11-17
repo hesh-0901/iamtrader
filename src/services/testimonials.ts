@@ -1,5 +1,5 @@
 import { collection, deleteDoc, doc, getDoc, limit, onSnapshot, query, setDoc, updateDoc, where } from 'firebase/firestore';
-import { deleteObject, getDownloadURL, ref, refFromURL, uploadBytes } from 'firebase/storage';
+import { deleteObject, getDownloadURL, ref, uploadBytes } from 'firebase/storage';
 import { auth, db, storage } from '../firebase/config';
 
 export interface TraderTestimonial {
@@ -41,7 +41,7 @@ export async function removeTestimonial(id: string): Promise<void> {
   const testimonialRef = doc(db,'testimonials',id);
   const snapshot = await getDoc(testimonialRef);
   if (snapshot.exists() && typeof snapshot.data().photoURL === 'string') {
-    try { await deleteObject(refFromURL(storage, snapshot.data().photoURL)); } catch (error) { console.warn('Testimonial photo cleanup:', error); }
+    try { await deleteObject(ref(storage, snapshot.data().photoURL)); } catch (error) { console.warn('Testimonial photo cleanup:', error); }
   }
   await deleteDoc(testimonialRef);
 }
