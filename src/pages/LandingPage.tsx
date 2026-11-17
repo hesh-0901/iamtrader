@@ -486,7 +486,6 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
 
 
             </div>
-            </div>
           </div>
         </section>
 
