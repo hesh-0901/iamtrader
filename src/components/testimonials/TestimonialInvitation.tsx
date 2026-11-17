@@ -16,8 +16,16 @@ export function TestimonialInvitation({ uid }: { uid?: string }) {
   const [error,setError]=useState('');
   const fileRef=useRef<HTMLInputElement>(null);
   useEffect(()=>{
-    if(!uid){setSubmitted(true);return;}
-    return onSnapshot(doc(db,'testimonials',uid),snapshot=>setSubmitted(snapshot.exists()),()=>setSubmitted(true));
+    if(!uid){setSubmitted(null);return;}
+    setSubmitted(false);
+    return onSnapshot(
+      doc(db,'testimonials',uid),
+      snapshot=>setSubmitted(snapshot.exists()),
+      error=>{
+        console.error('Testimonial status subscription failed:',error);
+        setSubmitted(false);
+      }
+    );
   },[uid]);
   useEffect(()=>{if(!photo){setPreview('');return;}const url=URL.createObjectURL(photo);setPreview(url);return()=>URL.revokeObjectURL(url);},[photo]);
   async function handleSubmit(e:React.FormEvent){e.preventDefault();if(!photo)return setError('Ajoutez une photo de profil.');setBusy(true);setError('');try{await submitTestimonial({fullName:name,rating,message,photo});setSubmitted(true);setOpen(false);setPhoto(null);setMessage('');}catch(e:any){setError(e?.message||'Envoi impossible.');}finally{setBusy(false);}}
