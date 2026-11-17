@@ -11,14 +11,18 @@ function json(data: unknown, status=200) {
 export async function onRequestPost(context:{request:Request;env:Env}) {
   const authHeader=context.request.headers.get('Authorization')||'';
   if(!authHeader.startsWith('Bearer ')) return json({error:'Authentification requise.'},401);
-  let body:{to?:string;subject?:string;reply?:string;replyHtml?:string;originalMessage?:string;name?:string;inReplyTo?:string;references?:string;conversationId?:string};
+  let body:{to?:string;cc?:string;subject?:string;reply?:string;replyHtml?:string;originalMessage?:string;name?:string;inReplyTo?:string;references?:string;conversationId?:string};
   try { body=await context.request.json(); } catch { return json({error:'Requête invalide.'},400); }
-  const to=String(body.to||'').trim(), subject=String(body.subject||'').trim(), reply=String(body.reply||'').trim();
+  const toList=String(body.to||'').split(/[;,\\s]+/).map(value=>value.trim().toLowerCase()).filter(Boolean);
+  const ccList=String(body.cc||'').split(/[;,\\s]+/).map(value=>value.trim().toLowerCase()).filter(Boolean);
+  const to=toList[0]||'';
+  const subject=String(body.subject||'').trim(), reply=String(body.reply||'').trim();
   const replyHtml=sanitizeRichHtml(String(body.replyHtml||''));
   const inReplyTo=String(body.inReplyTo||'').trim();
   const references=String(body.references||'').trim();
   const conversationId=String(body.conversationId||'').trim();
-  if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(to)) return json({error:'Adresse e-mail du destinataire invalide.'},400);
+  const validEmail=(value:string)=>/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+  if(!toList.length||toList.some(value=>!validEmail(value))||ccList.some(value=>!validEmail(value))||new Set([...toList,...ccList]).size!==toList.length+ccList.length) return json({error:'Vérifiez les adresses des destinataires et des copies.'},400);
   if(!subject||!reply) return json({error:'Sujet et réponse obligatoires.'},400);
   if(reply.length>10000) return json({error:'La réponse est trop longue.'},400);
   const idToken=authHeader.slice(7);
@@ -63,7 +67,8 @@ iamtrader.trade`;
       headers:{Authorization:'Bearer '+resendApiKey,'Content-Type':'application/json'},
       body:JSON.stringify({
         from:resendFromHeader,
-        to:[to],
+        to:toList,
+        ...(ccList.length?{cc:ccList}:{}),
         subject:/^re:/i.test(subject)?subject:'Re: '+subject,
         html,
         text,
@@ -99,8 +104,8 @@ iamtrader.trade`;
   let historySaved = false;
   try {
     const existing = await firestoreGet(context.env as any, `contactMessages/${encodeURIComponent(conversationId)}`);
-    if (!existing || String(existing.email || '').trim().toLowerCase() !== to.toLowerCase()) {
-      throw new Error('Support conversation not found or recipient mismatch.');
+    if (!existing) {
+      throw new Error('Support conversation not found.');
     }
     const previousConversation = Array.isArray(existing.conversation) && existing.conversation.length
       ? existing.conversation
@@ -119,7 +124,8 @@ iamtrader.trade`;
       bodyHtml: replyHtml,
       at: sentAt,
       from: resendFromEmail,
-      to,
+      to:toList.join(', '),
+      cc:ccList.join(', '),
       messageId: messageId || undefined,
       resendId: resendEmailId || undefined
     };
@@ -137,8 +143,10 @@ iamtrader.trade`;
     const sentRecordId = (conversationId + '_sent_' + (resendEmailId || crypto.randomUUID())).replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 140);
     await firestoreSet(context.env as any, `contactMessages/${encodeURIComponent(sentRecordId)}`, {
       id: sentRecordId,
-      name: to,
-      email: to,
+      name: toList.join(', '),
+      email: toList.join(', '),
+      to:toList.join(', '),
+      cc:ccList.join(', '),
       subject: /^re:/i.test(subject) ? subject : 'Re: ' + subject,
       message: reply,
       messageHtml: replyHtml,
