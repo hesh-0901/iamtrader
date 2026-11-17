@@ -131,6 +131,8 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
   const [replyTo, setReplyTo] = useState('');
   const [replyCc, setReplyCc] = useState('');
   const [replyCcOpen, setReplyCcOpen] = useState(false);
+  const [replyFiles, setReplyFiles] = useState<File[]>([]);
+  const replyFileInputRef = useRef<HTMLInputElement | null>(null);
   const [replyFormattingOpen, setReplyFormattingOpen] = useState(false);
   const [replyEmojiOpen, setReplyEmojiOpen] = useState(false);
   const [replyFont, setReplyFont] = useState('Arial');
@@ -589,6 +591,7 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
           subject: decodeMimeSubject(selectedMessage.subject),
           reply: currentReplyText,
           replyHtml: currentReplyHtml,
+          attachments: await Promise.all(replyFiles.map(async file => ({ filename: file.name, content: await new Promise<string>((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result||'').split(',')[1]||'');reader.onerror=()=>reject(new Error('Lecture du fichier impossible.'));reader.readAsDataURL(file);}) }))),
           name: selectedMessage.name,
           inReplyTo: lastInbound?.messageId || '',
           references: thread.map(item => item.messageId).filter(Boolean).slice(-20).join(' '),
@@ -633,6 +636,7 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
       setReplyTo(selectedMessage.email || '');
       setReplyCc('');
       setReplyCcOpen(false);
+      setReplyFiles([]);
       setReplyFormattingOpen(false);
       setReplyEmojiOpen(false);
       setShowReplyComposer(false);
@@ -1235,7 +1239,7 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
                                   </div>
                                   <div className="flex items-center gap-2 text-[11px] text-slate-400">
                                     <span>{at&&!Number.isNaN(at.getTime())?at.toLocaleString('fr-FR',{dateStyle:'medium',timeStyle:'short'}):'—'}</span>
-                                    <button type="button" onClick={()=>{setShowReplyComposer(true);setReplyTo(selectedMessage.email || '');setReplyCc('');setReplyCcOpen(false);setReplyText('');setReplyHtml('');setReplyFormattingOpen(false);setReplyEmojiOpen(false);}} className="rounded-lg p-1.5 text-slate-400 hover:bg-[#effaf5] hover:text-[#087f63]" title="Répondre à cet e-mail"><Send className="h-3.5 w-3.5"/></button>
+                                    <button type="button" onClick={()=>{setShowReplyComposer(true);setReplyTo(selectedMessage.email || '');setReplyCc('');setReplyCcOpen(false);setReplyFiles([]);setReplyText('');setReplyHtml('');setReplyFormattingOpen(false);setReplyEmojiOpen(false);}} className="rounded-lg p-1.5 text-slate-400 hover:bg-[#effaf5] hover:text-[#087f63]" title="Répondre à cet e-mail"><Send className="h-3.5 w-3.5"/></button>
                                     
                                   </div>
                                 </div>
@@ -1272,8 +1276,9 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
                           <div className="min-h-[116px] max-h-64 overflow-y-auto px-4 py-3">
                             <div ref={replyEditorRef} contentEditable suppressContentEditableWarning onInput={event=>{setReplyText(event.currentTarget.innerText);setReplyHtml(event.currentTarget.innerHTML);}} onKeyUp={event=>{setReplyText(event.currentTarget.innerText);setReplyHtml(event.currentTarget.innerHTML);rememberReplySelection();}} onMouseUp={rememberReplySelection} onPaste={event=>{event.preventDefault();const html=event.clipboardData.getData("text/html");const plain=event.clipboardData.getData("text/plain");if(html)document.execCommand("insertHTML",false,html);else document.execCommand("insertText",false,plain);setTimeout(()=>{if(replyEditorRef.current){setReplyText(replyEditorRef.current.innerText);setReplyHtml(replyEditorRef.current.innerHTML);}},0);}} data-placeholder="Écrivez votre réponse…" className="email-compose-editor min-h-[90px] w-full text-[13px] leading-7 text-slate-700 outline-none before:text-slate-400 [&:empty:before]:content-[attr(data-placeholder)] [&_a]:text-[#087f63] [&_a]:underline [&_blockquote]:my-3 [&_blockquote]:border-l-2 [&_blockquote]:border-emerald-300 [&_blockquote]:pl-4 [&_h1]:my-3 [&_h1]:text-2xl [&_h1]:font-bold [&_h2]:my-2 [&_h2]:text-xl [&_h2]:font-bold [&_li]:my-1 [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-7 [&_p]:my-2 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-7" style={{fontFamily:replyFont}}/>
                           </div>
+                          {replyFiles.length>0 && <div className="flex flex-wrap gap-2 border-t border-slate-100 px-4 py-3">{replyFiles.map((file,index)=><div key={file.name+index} className="flex max-w-full items-center gap-2 rounded-lg border border-emerald-100 bg-[#f5fbf8] px-3 py-2 text-[11px] text-slate-600"><Paperclip className="h-3.5 w-3.5 shrink-0 text-[#087f63]"/><span className="max-w-[180px] truncate">{file.name}</span><span className="text-slate-400">{(file.size/1024).toFixed(0)} Ko</span><button type="button" onClick={()=>setReplyFiles(files=>files.filter((_,i)=>i!==index))} className="text-slate-400 hover:text-rose-600" aria-label="Retirer la pièce jointe"><X className="h-3.5 w-3.5"/></button></div>)}</div>}
                           {replyFormattingOpen && <div className="border-t border-slate-100 bg-[#f8faf9] px-3 py-3">
-                            <div className="flex items-center gap-1.5 overflow-x-auto rounded-full border border-slate-200/80 bg-[#f1f4f9] px-2.5 py-2 shadow-inner shadow-slate-200/30 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" onMouseDown={event=>{if((event.target as HTMLElement).tagName!=='SELECT'&&(event.target as HTMLElement).tagName!=='INPUT')event.preventDefault();}}>
+                            <div className="flex flex-wrap items-center justify-center gap-1.5 rounded-2xl border border-slate-200/80 bg-[#f1f4f9] p-2.5 shadow-inner shadow-slate-200/30" onMouseDown={event=>{if((event.target as HTMLElement).tagName!=='SELECT'&&(event.target as HTMLElement).tagName!=='INPUT')event.preventDefault();}}>
                               <select value={replyFont} onChange={e=>{applyReplyCommand('fontName',e.target.value);setReplyFont(e.target.value);}} className="h-8 max-w-[120px] rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-700"><option>Arial</option><option>Georgia</option><option>Verdana</option><option>Tahoma</option><option>Courier New</option></select>
                               <select onChange={e=>{const value=e.target.value;if(value==='heading')applyReplyCommand('formatBlock','h2');else applyReplyTextSize(value);}} defaultValue="15px" className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-700" aria-label="Taille et titre"><option value="13px">Petit</option><option value="15px">Normal</option><option value="18px">Grand</option><option value="22px">Très grand</option><option value="heading">Titre</option></select>
                               <span className="mx-1 h-5 w-px bg-slate-200"/>
