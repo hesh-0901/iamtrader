@@ -369,8 +369,12 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
 
   useEffect(() => {
     const sections = Array.from(document.querySelectorAll('main > section'));
+    const cards = Array.from(document.querySelectorAll(
+      'main > section .group, main > section [class*="rounded-[22px]"], main > section [class*="rounded-[24px]"]'
+    ));
+    const targets = Array.from(new Set([...sections, ...cards]));
     if (!('IntersectionObserver' in window)) {
-      sections.forEach((section) => section.classList.add('landing-revealed'));
+      targets.forEach((target) => target.classList.add('landing-revealed'));
       return;
     }
     const observer = new IntersectionObserver((entries) => {
@@ -380,11 +384,13 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
           observer.unobserve(entry.target);
         }
       });
-    }, { threshold: 0.12, rootMargin: '0px 0px -40px 0px' });
-    sections.forEach((section) => {
-      section.classList.add('landing-reveal');
-      observer.observe(section);
+    }, { threshold: 0.08, rootMargin: '0px 0px -55px 0px' });
+    sections.forEach((section) => section.classList.add('landing-reveal'));
+    cards.forEach((card, index) => {
+      card.classList.add('landing-card-reveal');
+      card.style.setProperty('--landing-card-delay', `${(index % 6) * 85}ms`);
     });
+    targets.forEach((target) => observer.observe(target));
     return () => observer.disconnect();
   }, []);
 
@@ -392,9 +398,12 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
     <div className="min-h-screen bg-[#f4f8f7] text-[#081827] flex flex-col selection:bg-[#00c796]/20">
       <style>{`@keyframes landing-fade-up { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes landing-glow { 0%,100% { box-shadow: 0 0 18px rgba(0,199,150,.10); } 50% { box-shadow: 0 0 34px rgba(0,199,150,.24); } }
-@keyframes iamtrader-hero-drift { 0% { transform: scale(1.02) translate3d(-.4%,0,0); } 50% { transform: scale(1.055) translate3d(.5%,-.35%,0); } 100% { transform: scale(1.08) translate3d(-.25%,.25%,0); } }
-.landing-reveal { opacity: 0; transform: translateY(28px); transition: opacity .75s ease, transform .75s cubic-bezier(.2,.7,.2,1); }
-.landing-reveal.landing-revealed { opacity: 1; transform: translateY(0); }
+@keyframes iamtrader-hero-drift { 0% { transform: scale(1.04) translate3d(-.8%,.2%,0); } 50% { transform: scale(1.09) translate3d(.9%,-.7%,0); } 100% { transform: scale(1.13) translate3d(-.6%,.5%,0); } }
+@keyframes iamtrader-card-enter { from { opacity: 0; transform: translate3d(0,48px,0) scale(.96); filter: blur(5px); } to { opacity: 1; transform: translate3d(0,0,0) scale(1); filter: blur(0); } }
+.landing-reveal { opacity: 0; transform: translateY(58px) scale(.985); filter: blur(3px); transition: opacity .95s cubic-bezier(.2,.7,.2,1), transform .95s cubic-bezier(.2,.7,.2,1), filter .95s ease; }
+.landing-reveal.landing-revealed { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+.landing-card-reveal { opacity: 0; transform: translateY(48px) scale(.96); filter: blur(5px); }
+.landing-card-reveal.landing-revealed { animation: iamtrader-card-enter .8s cubic-bezier(.2,.7,.2,1) both; animation-delay: var(--landing-card-delay, 0ms); }
 #iamtrader-hero { isolation: isolate; background-color: #061b1b; }
 #iamtrader-hero .hero-image-motion { animation: iamtrader-hero-drift 32s ease-in-out infinite alternate; will-change: transform; transform-origin: center; }
 #iamtrader-hero .hero-copy { animation: landing-fade-up .8s ease both; }
@@ -407,7 +416,7 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
 #iamtrader-hero .hero-platform { border-color: rgba(129,255,218,.24); box-shadow: 0 30px 90px rgba(0,0,0,.42); }
 #platform .hero-metric { transition: transform .25s ease, border-color .25s ease, background .25s ease; }
 #platform .hero-metric:hover { transform: translateY(-4px); border-color: rgba(0,199,150,.48); background: rgba(0,199,150,.10); }
-@media (prefers-reduced-motion: reduce) { .landing-reveal,.landing-reveal.landing-revealed { opacity:1; transform:none; transition:none; } #iamtrader-hero .hero-copy,#iamtrader-hero .hero-panel,#iamtrader-hero .hero-image-motion { animation:none; transform:none; } #platform .hero-metric { transition:none; } }`}</style>
+@media (prefers-reduced-motion: reduce) { .landing-reveal,.landing-reveal.landing-revealed,.landing-card-reveal,.landing-card-reveal.landing-revealed { opacity:1; transform:none; filter:none; transition:none; animation:none; } #iamtrader-hero .hero-copy,#iamtrader-hero .hero-panel,#iamtrader-hero .hero-image-motion { animation:none; transform:none; } #platform .hero-metric { transition:none; } }`}</style>
       <header className="h-[72px] border-b border-white/70 px-5 sm:px-10 flex items-center justify-between sticky top-0 z-50 bg-white/80 backdrop-blur-xl shadow-[0_8px_30px_rgba(8,24,39,0.04)]">
         <div className="flex items-center gap-2.5">
            <img src="/brand/logo-iamtrader-full.png" alt="IAMTRADER" className="w-[138px] sm:w-[152px] h-auto object-contain" />
