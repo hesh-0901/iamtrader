@@ -416,6 +416,8 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
 @keyframes iamtrader-letter-dissolve { 0%, 8% { opacity: 0; filter: blur(5px); transform: translateY(2px); } 18%, 68% { opacity: 1; filter: blur(0); transform: translateY(0); } 82%, 100% { opacity: 0; filter: blur(6px); transform: translateY(-2px); } }
 #iamtrader-hero .hero-tagline-wrap { display: block; width: fit-content; max-width: 100%; margin: 2rem auto 0; padding: 0; border: 0; background: transparent; box-shadow: none; backdrop-filter: none; }
 #iamtrader-hero .hero-tagline { display: block; font-size: clamp(2.25rem, 5.2vw, 4.5rem); line-height: 1.04; font-weight: 900; letter-spacing: -.045em; text-shadow: 0 0 22px rgba(92,224,193,.16); }
+#iamtrader-hero .hero-proof, #iamtrader-hero .hero-proof span { color: #e3f1ed !important; }
+#iamtrader-hero .hero-proof svg { color: #00d6a2 !important; stroke: #00d6a2 !important; }
 #iamtrader-hero .hero-tagline-letter { display: inline-block; white-space: pre; animation: iamtrader-letter-dissolve 7s ease-in-out infinite; animation-delay: calc(var(--letter-index) * 22ms); will-change: opacity, filter, transform; }
 #platform .hero-metric { transition: transform .25s ease, border-color .25s ease, background .25s ease; }
 #platform .hero-metric:hover { transform: translateY(-4px); border-color: rgba(0,199,150,.48); background: rgba(0,199,150,.10); }
