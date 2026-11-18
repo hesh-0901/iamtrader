@@ -19,7 +19,7 @@ async function createCroppedPhoto(file: File, zoom: number, panX: number, panY: 
   context.drawImage(image, sx, sy, side, side, 0, 0, 900, 900);
   image.close();
   const blob = await new Promise<Blob>((resolve, reject) => canvas.toBlob(value => value ? resolve(value) : reject(new Error('Échec du recadrage.')), 'image/jpeg', 0.9));
-  return new File([blob], file.name.replace(/\\.[^.]+$/, '') + '-iamtrader.jpg', { type: 'image/jpeg', lastModified: Date.now() });
+  return new File([blob], file.name.replace(/\.[^.]+$/, '') + '-iamtrader.jpg', { type: 'image/jpeg', lastModified: Date.now() });
 }
 
 export function TestimonialInvitation({ uid }: { uid?: string }) {
