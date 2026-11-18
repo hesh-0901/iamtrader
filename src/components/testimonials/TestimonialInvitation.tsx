@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { onSnapshot, doc } from 'firebase/firestore';
 import { Camera, ImagePlus, LoaderCircle, Send, Star, X, Check, Crop } from 'lucide-react';
 import { auth, db } from '../../firebase/config';
-import { submitTestimonial } from '../../services/testimonials';
+import { DEFAULT_TESTIMONIAL_INVITATION_CONFIG, submitTestimonial, subscribeTestimonialInvitationConfig, type TestimonialInvitationConfig } from '../../services/testimonials';
 
 async function createCroppedPhoto(file: File, sx: number, sy: number, side: number): Promise<File> {
   const image = await createImageBitmap(file);
@@ -18,9 +18,10 @@ async function createCroppedPhoto(file: File, sx: number, sy: number, side: numb
   return new File([blob], file.name.replace(/\.[^.]+$/, '') + '-iamtrader.jpg', { type: 'image/jpeg', lastModified: Date.now() });
 }
 
-export function TestimonialInvitation({ uid }: { uid?: string }) {
+export function TestimonialInvitation({ uid, tradesCount = 0 }: { uid?: string; tradesCount?: number }) {
   const [submitted,setSubmitted]=useState<boolean|null>(null);
   const [open,setOpen]=useState(false);
+  const [invitationConfig,setInvitationConfig]=useState<TestimonialInvitationConfig>(DEFAULT_TESTIMONIAL_INVITATION_CONFIG);
   const [name,setName]=useState(auth.currentUser?.displayName||'');
   const [rating,setRating]=useState(5);
   const [message,setMessage]=useState('');
@@ -46,43 +47,59 @@ export function TestimonialInvitation({ uid }: { uid?: string }) {
 
   useEffect(()=>{if(!photo){setPreview('');return;}const url=URL.createObjectURL(photo);setPreview(url);return()=>URL.revokeObjectURL(url);},[photo]);
 
+
   useEffect(()=>{
-    if(submitted!==false||!uid)return;
+    return subscribeTestimonialInvitationConfig(setInvitationConfig,error=>console.error('Testimonial invitation config subscription failed:',error));
+  },[]);
+
+  useEffect(()=>{
+    if(submitted!==false||!uid||!invitationConfig.enabled)return;
+    const legacyKey='iamtrader_testimonial_prompt_'+uid;
+    const storageKey='iamtrader_testimonial_prompt_v2_'+uid;
+    window.localStorage.removeItem(legacyKey);
     const user=auth.currentUser;
     const createdAt=user?.metadata?.creationTime ? new Date(user.metadata.creationTime).getTime() : Date.now();
-    const storageKey='iamtrader_testimonial_prompt_'+uid;
-    const readState=()=>{
-      try{
-        const raw=window.localStorage.getItem(storageKey);
-        return raw?JSON.parse(raw) as {shown:number;nextAt:number;initialized:boolean}:{shown:0,nextAt:createdAt+24*60*60*1000,initialized:false};
-      }catch{return {shown:0,nextAt:createdAt+24*60*60*1000,initialized:false};}
-    };
-    const state=readState();
-    if(!state.initialized){
-      state.initialized=true;
-      state.nextAt=Math.max(Date.now(),createdAt+24*60*60*1000);
+    const triggerAt=invitationConfig.trigger==='signup_24h' ? createdAt+86400000
+      : invitationConfig.trigger==='signup_7d' ? createdAt+7*86400000
+      : invitationConfig.trigger==='trades_5' ? (tradesCount>=5?Date.now():null)
+      : invitationConfig.trigger==='trades_10' ? (tradesCount>=10?Date.now():null)
+      : Date.now();
+    if(triggerAt===null)return;
+    let state:{configVersion:string;triggeredAt:number|null;initialShown:boolean;remindersShown:number;nextAt:number|null};
+    try{
+      const saved=JSON.parse(window.localStorage.getItem(storageKey)||'null');
+      state=saved&&saved.configVersion===invitationConfig.updatedAt?saved:{configVersion:invitationConfig.updatedAt,triggeredAt:null,initialShown:false,remindersShown:0,nextAt:null};
+    }catch{
+      state={configVersion:invitationConfig.updatedAt,triggeredAt:null,initialShown:false,remindersShown:0,nextAt:null};
+    }
+    if(!state.triggeredAt){
+      state.triggeredAt=triggerAt;
+      state.nextAt=triggerAt;
       window.localStorage.setItem(storageKey,JSON.stringify(state));
     }
-    if(state.shown>=3)return;
-    const delay=Math.max(0,state.nextAt-Date.now());
-    const timer=window.setTimeout(()=>{
-      if(document.visibilityState==='visible')setOpen(true);
-      else{
-        const onVisible=()=>{if(document.visibilityState==='visible'){setOpen(true);document.removeEventListener('visibilitychange',onVisible);}};
-        document.addEventListener('visibilitychange',onVisible);
-      }
-    },delay);
-    return()=>window.clearTimeout(timer);
-  },[uid,submitted]);
+    if(state.initialShown&&state.remindersShown>=invitationConfig.maxReminders)return;
+    const delay=Math.max(0,(state.nextAt??triggerAt)-Date.now());
+    const show=()=>{
+      if(document.visibilityState!=='visible')return;
+      setOpen(true);
+      state.initialShown=true;
+      window.localStorage.setItem(storageKey,JSON.stringify(state));
+    };
+    const timer=window.setTimeout(show,delay);
+    const onVisible=()=>{if(document.visibilityState==='visible'&&Date.now()>=(state.nextAt??triggerAt))show();};
+    document.addEventListener('visibilitychange',onVisible);
+    return()=>{window.clearTimeout(timer);document.removeEventListener('visibilitychange',onVisible);};
+  },[uid,submitted,invitationConfig,tradesCount]);
 
   function postponeInvitation(){
     if(!uid){setOpen(false);return;}
-    const storageKey='iamtrader_testimonial_prompt_'+uid;
-    let state:{shown:number;nextAt:number;initialized:boolean};
-    try{state=JSON.parse(window.localStorage.getItem(storageKey)||'{"shown":0,"nextAt":0,"initialized":true}');}
-    catch{state={shown:0,nextAt:0,initialized:true};}
-    state.shown=Math.min(3,(state.shown||0)+1);
-    state.nextAt=Date.now()+4*60*60*1000;
+    const storageKey='iamtrader_testimonial_prompt_v2_'+uid;
+    let state:{configVersion:string;triggeredAt:number|null;initialShown:boolean;remindersShown:number;nextAt:number|null};
+    try{state=JSON.parse(window.localStorage.getItem(storageKey)||'null');}catch{state=null as any;}
+    if(!state)state={configVersion:invitationConfig.updatedAt,triggeredAt:Date.now(),initialShown:true,remindersShown:0,nextAt:null};
+    state.initialShown=true;
+    state.remindersShown=Math.min(invitationConfig.maxReminders,state.remindersShown+1);
+    state.nextAt=state.remindersShown<invitationConfig.maxReminders ? Date.now()+invitationConfig.reminderIntervalHours*60*60*1000 : null;
     window.localStorage.setItem(storageKey,JSON.stringify(state));
     setOpen(false);
   }
