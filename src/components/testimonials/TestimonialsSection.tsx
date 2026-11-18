@@ -129,17 +129,28 @@ export function TestimonialsSection() {
                   <p className="relative whitespace-pre-line text-[16px] font-medium leading-8 text-[#405c72] sm:text-[18px] sm:leading-[2.05rem]">{activeItem.message}</p>
                   <span aria-hidden="true" className="absolute -bottom-12 right-1 select-none bg-gradient-to-t from-[#00b889]/25 to-[#00b889]/[0.04] bg-clip-text text-7xl font-black leading-none text-transparent sm:-bottom-14 sm:text-8xl">”</span>
                 </div>
-                <div className="mt-8 flex items-center justify-end border-t border-[#dcebe5] pt-4">
-                  <div ref={reactionPickerRef} className="relative">
-                    <button type="button" onClick={() => setReactionPickerOpen(open => !open)} disabled={reactionBusy} aria-label="Réagir à ce témoignage" aria-expanded={reactionPickerOpen} className={'flex h-10 w-10 items-center justify-center rounded-full border text-xl transition disabled:opacity-50 ' + (reactionPickerOpen || reactionSummary.myReaction ? 'border-[#00a982] bg-[#e4f8f1]' : 'border-[#dcebe5] bg-white hover:border-[#8bd7bf] hover:bg-[#f1fbf7]')}>
+                <div className="mt-8 flex items-center justify-between gap-3 border-t border-[#dcebe5] pt-4">
+                  <div className="flex min-w-0 flex-wrap items-center gap-2" aria-label="Réactions au témoignage">
+                    {TESTIMONIAL_REACTION_EMOJIS.map(emoji => {
+                      const count = reactionSummary.counts[emoji] || 0;
+                      return (
+                        <span key={emoji} title={emoji + ' : ' + count} className={'inline-flex h-8 items-center gap-1.5 rounded-full px-2 text-xs font-semibold tabular-nums ' + (reactionSummary.myReaction === emoji ? 'bg-[#e4f8f1] text-[#087c61] ring-1 ring-[#00a982]/40' : 'bg-white/80 text-[#587064]')}>
+                          <span className="text-base leading-none">{emoji}</span>
+                          <span>{count}</span>
+                        </span>
+                      );
+                    })}
+                  </div>
+                  <div ref={reactionPickerRef} className="relative shrink-0">
+                    <button type="button" onClick={() => setReactionPickerOpen(open => !open)} disabled={reactionBusy} aria-label="Ajouter une réaction" aria-expanded={reactionPickerOpen} className={'flex h-9 w-9 items-center justify-center rounded-full border text-lg transition disabled:opacity-50 ' + (reactionPickerOpen || reactionSummary.myReaction ? 'border-[#00a982] bg-[#e4f8f1]' : 'border-[#dcebe5] bg-white hover:border-[#8bd7bf] hover:bg-[#f1fbf7]')}>
                       {reactionSummary.myReaction || '😊'}
                     </button>
-                    {reactionPickerOpen && <div className="absolute bottom-12 right-0 z-30 flex items-center gap-1.5 rounded-2xl border border-[#dcebe5] bg-white p-2 shadow-[0_12px_32px_rgba(8,24,39,.16)] animate-[landing-fade-up_.16s_ease_both]">
+                    {reactionPickerOpen && <div className="absolute bottom-11 right-0 z-30 flex items-center gap-1.5 rounded-2xl border border-[#dcebe5] bg-white p-2 shadow-[0_12px_32px_rgba(8,24,39,.16)] animate-[landing-fade-up_.16s_ease_both]">
                       {TESTIMONIAL_REACTION_EMOJIS.map(emoji => <button key={emoji} type="button" onClick={() => void handleReaction(emoji)} disabled={reactionBusy} aria-label={'Réagir avec ' + emoji} className={'flex h-9 w-9 items-center justify-center rounded-xl text-xl transition hover:scale-110 hover:bg-[#eafbf6] ' + (reactionSummary.myReaction === emoji ? 'bg-[#e4f8f1] ring-1 ring-[#00a982]' : '')}>{emoji}</button>)}
                     </div>}
                   </div>
                 </div>
-                <div className="mt-12 flex items-center justify-between border-t border-[#dcebe5] pt-4 text-[10px] font-bold text-[#168c73]">
+                <div className="mt-5 flex items-center justify-between text-[10px] font-bold text-[#168c73]">
                   <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5" />Témoignage vérifié et modéré</span>
                   <span className="tabular-nums">{activeIndex + 1} / {items.length}</span>
                 </div>
