@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight, MessageSquareQuote, ShieldCheck, Star } from
 import { subscribePublishedTestimonials, subscribeTestimonialReactions, toggleTestimonialReaction, TESTIMONIAL_REACTION_EMOJIS, type TestimonialReactionSummary, type TestimonialReactionEmoji, type TraderTestimonial } from '../../services/testimonials';
 import { auth } from '../../firebase/config';
 
-export function TestimonialsSection() {
+export function TestimonialsSection({ onOpenAuth }: { onOpenAuth: (mode: 'login' | 'register') => void }) {
   const [items, setItems] = useState<TraderTestimonial[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [reactionSummary, setReactionSummary] = useState<TestimonialReactionSummary>({ counts: {}, myReaction: null });
@@ -32,7 +32,7 @@ export function TestimonialsSection() {
   const handleReaction = async (emoji: TestimonialReactionEmoji) => {
     if (!activeItem || reactionBusy) return;
     if (!auth.currentUser) {
-      setReactionError('Connectez-vous pour laisser une réaction.');
+      onOpenAuth('login');
       return;
     }
     setReactionBusy(true);
@@ -124,7 +124,7 @@ export function TestimonialsSection() {
                 <div className="mt-8 border-t border-[#dcebe5] pt-5">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <p className="text-[10px] font-black uppercase tracking-[.16em] text-[#8aa095]">Votre réaction</p>
-                    {!auth.currentUser && <button type="button" onClick={() => setReactionError('Connectez-vous pour laisser une réaction.')} className="text-[10px] font-bold text-[#168c73] hover:underline">Se connecter pour réagir</button>}
+                    {!auth.currentUser && <button type="button" onClick={() => onOpenAuth('login')} className="text-[10px] font-bold text-[#168c73] hover:underline">Se connecter pour réagir</button>}
                   </div>
                   <div className="mt-3 flex flex-wrap gap-2">
                     {TESTIMONIAL_REACTION_EMOJIS.map(emoji => {
