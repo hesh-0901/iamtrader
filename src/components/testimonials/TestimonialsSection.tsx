@@ -21,11 +21,9 @@ export function TestimonialsSection() {
   
   useEffect(() => {
     setReactionSummary({ counts: {}, myReaction: null });
-    setReactionError('');
     if (!activeItem) return;
     return subscribeTestimonialReactions(activeItem.id, setReactionSummary, error => {
       console.error('[Testimonial reactions]', error);
-      setReactionError('Les réactions sont temporairement indisponibles.');
     });
   }, [activeItem?.id]);
 
