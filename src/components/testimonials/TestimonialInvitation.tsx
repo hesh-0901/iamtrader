@@ -55,10 +55,15 @@ export function TestimonialInvitation({ uid }: { uid?: string }) {
       if(open)return;
       const target=event.target as HTMLElement|null;
       if(!target||target.closest('[role="dialog"]'))return;
-      if(!target.closest('button,a,[role="button"],input,select,textarea,[tabindex]'))return;
+      // Compte les clics réels dans l'espace de l'application, y compris
+      // les cartes, onglets et éléments de navigation qui ne sont pas des boutons HTML.
       const next=Number(window.localStorage.getItem(key)||'0')+1;
-      if(next>=5){window.localStorage.setItem(key,'0');setOpen(true);}
-      else window.localStorage.setItem(key,String(next));
+      if(next>=5){
+        window.localStorage.setItem(key,'0');
+        setOpen(true);
+      }else{
+        window.localStorage.setItem(key,String(next));
+      }
     };
     document.addEventListener('click',handleInteraction,true);
     return()=>document.removeEventListener('click',handleInteraction,true);
