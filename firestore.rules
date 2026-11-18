@@ -1006,6 +1006,32 @@ service cloud.firestore {
           )
         );
       allow delete: if userManager();
+
+      // Réactions emoji publiques sur les témoignages publiés.
+      // Un utilisateur authentifié ne peut gérer que sa propre réaction (une par témoignage).
+      match /reactions/{reactionUid} {
+        function publishedTestimonial() {
+          return get(/databases/$(database)/documents/testimonials/$(testimonialId)).data.status == 'published';
+        }
+        allow get, list: if publishedTestimonial();
+        allow create: if signedIn()
+          && publishedTestimonial()
+          && reactionUid == request.auth.uid
+          && request.resource.data.keys().hasOnly(['uid', 'emoji', 'updatedAt'])
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.emoji in ['👍', '❤️', '🔥', '👏', '💡', '🚀']
+          && request.resource.data.updatedAt is string;
+        allow update: if signedIn()
+          && publishedTestimonial()
+          && reactionUid == request.auth.uid
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['emoji', 'updatedAt'])
+          && request.resource.data.uid == resource.data.uid
+          && request.resource.data.emoji in ['👍', '❤️', '🔥', '👏', '💡', '🚀']
+          && request.resource.data.updatedAt is string;
+        allow delete: if signedIn()
+          && publishedTestimonial()
+          && reactionUid == request.auth.uid;
+      }
     }
 
     // =====================================================
