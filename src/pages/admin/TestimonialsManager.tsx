@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Check, MessageSquareQuote, Pencil, Save, Star, Trash2, X } from 'lucide-react';
-import { moderateTestimonial, removeTestimonial, subscribeAllTestimonials, updateTestimonialContent, type TraderTestimonial } from '../../services/testimonials';
+import { DEFAULT_TESTIMONIAL_INVITATION_CONFIG, moderateTestimonial, removeTestimonial, saveTestimonialInvitationConfig, subscribeAllTestimonials, subscribeTestimonialInvitationConfig, updateTestimonialContent, type TestimonialInvitationConfig, type TraderTestimonial } from '../../services/testimonials';
 
 export function TestimonialsManager() {
   const [items,setItems]=useState<TraderTestimonial[]>([]);
@@ -11,7 +11,11 @@ export function TestimonialsManager() {
   const [editName,setEditName]=useState('');
   const [editMessage,setEditMessage]=useState('');
   const [editRating,setEditRating]=useState(5);
+  const [invitationConfig,setInvitationConfig]=useState<TestimonialInvitationConfig>(DEFAULT_TESTIMONIAL_INVITATION_CONFIG);
+  const [configBusy,setConfigBusy]=useState(false);
   useEffect(()=>subscribeAllTestimonials(setItems,e=>setError(e.message)),[]);
+  useEffect(()=>subscribeTestimonialInvitationConfig(setInvitationConfig,e=>setError(e.message)),[]);
+  async function saveInvitationConfig(){setConfigBusy(true);setError('');try{await saveTestimonialInvitationConfig({enabled:invitationConfig.enabled,trigger:invitationConfig.trigger,reminderIntervalHours:invitationConfig.reminderIntervalHours,maxReminders:invitationConfig.maxReminders});}catch(e:any){setError(e?.message||'Impossible d’enregistrer les paramètres.');}finally{setConfigBusy(false);}}
   const counts={pending:items.filter(x=>x.status==='pending').length,published:items.filter(x=>x.status==='published').length,rejected:items.filter(x=>x.status==='rejected').length};
   const visible=items.filter(x=>filter==='all'||x.status===filter);
   function startEdit(item:TraderTestimonial){setEditing(item);setEditName(item.fullName);setEditMessage(item.message);setEditRating(item.rating);setError('');}
@@ -19,6 +23,18 @@ export function TestimonialsManager() {
   async function moderate(id:string,status:'published'|'rejected'){setBusy(id);setError('');try{await moderateTestimonial(id,status);}catch(e:any){setError(e?.message||'Action impossible.');}finally{setBusy('');}}
   async function remove(id:string){if(!window.confirm('Supprimer définitivement ce témoignage ?'))return;setBusy(id);setError('');try{await removeTestimonial(id);}catch(e:any){setError(e?.message||'Suppression impossible.');}finally{setBusy('');}}
   return <section className="space-y-5">
+    <div className="rounded-2xl border border-emerald-100 bg-white p-5 shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div><p className="text-[10px] font-black uppercase tracking-[.18em] text-emerald-600">Automatisation</p><h2 className="mt-1 text-base font-black text-slate-900">Demande de témoignage</h2><p className="mt-1 max-w-2xl text-xs leading-5 text-slate-500">Choisissez une condition de déclenchement et définissez les rappels. Les paramètres sont partagés avec tous les utilisateurs.</p></div>
+        <label className="inline-flex items-center gap-2 rounded-xl bg-slate-50 px-3 py-2 text-xs font-bold text-slate-700"><input type="checkbox" checked={invitationConfig.enabled} onChange={e=>setInvitationConfig(v=>({...v,enabled:e.target.checked}))} className="h-4 w-4 accent-emerald-600"/> Invitations activées</label>
+      </div>
+      <div className="mt-5 grid gap-4 md:grid-cols-3">
+        <label className="block"><span className="mb-1.5 block text-[11px] font-bold text-slate-600">Condition de déclenchement</span><select value={invitationConfig.trigger} onChange={e=>setInvitationConfig(v=>({...v,trigger:e.target.value as TestimonialInvitationConfig['trigger']}))} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-xs font-semibold text-slate-700 outline-none focus:border-emerald-500"><option value="signup_24h">24 heures après l'inscription</option><option value="signup_7d">7 jours après l'inscription</option><option value="trades_5">Après 5 trades enregistrés</option><option value="trades_10">Après 10 trades enregistrés</option><option value="next_dashboard">À la prochaine ouverture du tableau de bord</option></select></label>
+        <label className="block"><span className="mb-1.5 block text-[11px] font-bold text-slate-600">Intervalle entre les rappels</span><select value={invitationConfig.reminderIntervalHours} onChange={e=>setInvitationConfig(v=>({...v,reminderIntervalHours:Number(e.target.value) as TestimonialInvitationConfig['reminderIntervalHours']}))} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-xs font-semibold text-slate-700 outline-none focus:border-emerald-500"><option value={1}>1 heure</option><option value={4}>4 heures</option><option value={24}>24 heures</option><option value={72}>3 jours</option></select></label>
+        <label className="block"><span className="mb-1.5 block text-[11px] font-bold text-slate-600">Nombre maximal de rappels</span><select value={invitationConfig.maxReminders} onChange={e=>setInvitationConfig(v=>({...v,maxReminders:Number(e.target.value) as TestimonialInvitationConfig['maxReminders']}))} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-xs font-semibold text-slate-700 outline-none focus:border-emerald-500"><option value={0}>Aucun rappel</option><option value={1}>1 rappel</option><option value={2}>2 rappels</option><option value={3}>3 rappels</option></select></label>
+      </div>
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 pt-4"><p className="text-[10px] text-slate-400">Toute modification réinitialise le calendrier d'invitation des utilisateurs.</p><button type="button" onClick={()=>void saveInvitationConfig()} disabled={configBusy} className="inline-flex items-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-bold text-white disabled:opacity-50"><Save className="h-4 w-4"/>{configBusy?'Enregistrement…':'Enregistrer les conditions'}</button></div>
+    </div>
     <div className="grid gap-3 sm:grid-cols-3">{[{label:'En attente',count:counts.pending,color:'text-amber-700'},{label:'Publiés',count:counts.published,color:'text-emerald-700'},{label:'Refusés',count:counts.rejected,color:'text-rose-700'}].map(item=><div key={item.label} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{item.label}</p><b className={'mt-2 block text-2xl font-black '+item.color}>{item.count}</b></div>)}</div>
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-3"><div className="flex flex-wrap gap-2">{(['pending','published','rejected','all'] as const).map(key=><button key={key} onClick={()=>setFilter(key)} className={'rounded-xl px-3 py-2 text-[11px] font-bold '+(filter===key?'bg-[#10243b] text-white':'bg-slate-100 text-slate-600')}>{key==='pending'?'En attente':key==='published'?'Publiés':key==='rejected'?'Refusés':'Tous'}</button>)}</div><span className="text-[10px] text-slate-400">{visible.length} témoignage(s)</span></div>
     {error&&<div role="alert" className="rounded-xl bg-rose-50 p-3 text-xs text-rose-700">{error}</div>}
