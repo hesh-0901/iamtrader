@@ -1,6 +1,39 @@
 import { collection, deleteDoc, doc, limit, onSnapshot, query, setDoc, updateDoc, where } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 
+
+export type TestimonialInvitationTrigger = 'signup_24h' | 'signup_7d' | 'trades_5' | 'trades_10' | 'next_dashboard';
+export interface TestimonialInvitationConfig {
+  enabled: boolean;
+  trigger: TestimonialInvitationTrigger;
+  reminderIntervalHours: 1 | 4 | 24 | 72;
+  maxReminders: 0 | 1 | 2 | 3;
+  updatedAt: string;
+}
+export const DEFAULT_TESTIMONIAL_INVITATION_CONFIG: TestimonialInvitationConfig = {
+  enabled: true,
+  trigger: 'signup_24h',
+  reminderIntervalHours: 4,
+  maxReminders: 2,
+  updatedAt: 'default-v1'
+};
+export function subscribeTestimonialInvitationConfig(callback: (config: TestimonialInvitationConfig) => void, onError?: (error: Error) => void) {
+  return onSnapshot(doc(db, 'appSettings', 'testimonialInvitation'), snapshot => {
+    const data = snapshot.exists() ? snapshot.data() : {};
+    callback({
+      enabled: typeof data.enabled === 'boolean' ? data.enabled : DEFAULT_TESTIMONIAL_INVITATION_CONFIG.enabled,
+      trigger: ['signup_24h','signup_7d','trades_5','trades_10','next_dashboard'].includes(data.trigger) ? data.trigger : DEFAULT_TESTIMONIAL_INVITATION_CONFIG.trigger,
+      reminderIntervalHours: [1,4,24,72].includes(data.reminderIntervalHours) ? data.reminderIntervalHours : DEFAULT_TESTIMONIAL_INVITATION_CONFIG.reminderIntervalHours,
+      maxReminders: [0,1,2,3].includes(data.maxReminders) ? data.maxReminders : DEFAULT_TESTIMONIAL_INVITATION_CONFIG.maxReminders,
+      updatedAt: typeof data.updatedAt === 'string' ? data.updatedAt : DEFAULT_TESTIMONIAL_INVITATION_CONFIG.updatedAt
+    });
+  }, error => onError?.(error));
+}
+export async function saveTestimonialInvitationConfig(input: Omit<TestimonialInvitationConfig, 'updatedAt'>): Promise<void> {
+  if (!auth.currentUser) throw new Error('Authentification administrateur requise.');
+  await setDoc(doc(db, 'appSettings', 'testimonialInvitation'), { ...input, updatedAt: new Date().toISOString(), updatedBy: auth.currentUser.uid });
+}
+
 export interface TraderTestimonial {
   id: string; uid: string; fullName: string; photoURL: string; rating: number;
   message: string; status: 'pending' | 'published' | 'rejected'; createdAt: string;
