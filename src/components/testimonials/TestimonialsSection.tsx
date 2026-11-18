@@ -32,34 +32,32 @@ export function TestimonialsSection() {
               <span className="text-[10px] font-black uppercase tracking-[.2em] text-[#00a982]">Galerie IAMTRADER</span>
               <span className="rounded-full bg-[#eafbf6] px-3 py-1.5 text-[10px] font-bold text-[#168c73]">{items.length ? items.length + ' avis' : 'Aperçu'}</span>
             </div>
-            {items.length > 0 ? (
-              <div className="grid grid-cols-1 gap-4">
-                {items.slice(0, 4).map(item => {
-                  const itemIndex = items.findIndex(entry => entry.id === item.id);
-                  const selected = itemIndex === activeIndex;
-                  return (
-                    <div key={item.id} className="group relative isolate -mb-2 px-1 pb-3">
-                      <div aria-hidden="true" className="pointer-events-none absolute inset-x-3 bottom-1 top-3 -z-10 rotate-[2deg] rounded-[24px] border border-[#dcebe5] bg-[#eaf7f2] shadow-[0_8px_20px_rgba(8,24,39,.045)] transition-transform duration-200 group-hover:rotate-[3deg]" />
-                      <div aria-hidden="true" className="pointer-events-none absolute inset-x-1 bottom-2 top-1 -z-10 -rotate-[1.2deg] rounded-[24px] border border-[#e5efe9] bg-white/90 shadow-[0_8px_20px_rgba(8,24,39,.04)]" />
-                      <button
-                        type="button"
-                        onClick={() => setActiveIndex(itemIndex)}
-                        aria-pressed={selected}
-                        className={'relative z-10 flex w-full min-w-0 items-start gap-4 rounded-[24px] border bg-white p-4 text-left shadow-[0_14px_34px_rgba(8,24,39,.09)] transition-all duration-200 sm:p-5 ' + (selected ? 'border-[#55c9a8] bg-[#f4fcf8] ring-1 ring-[#00a982]/20 shadow-[0_16px_38px_rgba(0,169,130,.13)]' : 'border-[#e3eee8] hover:-translate-y-1 hover:border-[#b9ded1] hover:shadow-[0_18px_40px_rgba(8,24,39,.12)]')}
-                      >
-                        <img src={item.photoURL} alt="" className="h-[66px] w-[66px] shrink-0 rounded-2xl object-cover ring-2 ring-white shadow-sm sm:h-[76px] sm:w-[76px]" />
-                        <span className="min-w-0 flex-1">
-                          <span className="flex items-center justify-between gap-2">
-                            <b className="truncate text-[13px] font-extrabold text-[#183047]">{item.fullName}</b>
-                            <span className="shrink-0 text-[9px] font-bold uppercase tracking-wider text-[#00a982]">{selected ? 'À la une' : 'Lire'}</span>
-                          </span>
-                          <span className="mt-2 block text-[11px] leading-[1.65] text-[#71877e] line-clamp-3">{item.message}</span>
-                          <span className="mt-3 flex gap-0.5">{[1,2,3,4,5].map(star => <Star key={star} className={'h-3 w-3 ' + (star <= item.rating ? 'fill-[#e9b34c] text-[#e9b34c]' : 'text-[#d9e1dd]')} />)}</span>
-                        </span>
-                      </button>
-                    </div>
-                  );
-                })}
+            {activeItem ? (
+              <div className="relative isolate px-2 pb-5 pt-1">
+                <div aria-hidden="true" className="pointer-events-none absolute inset-x-8 bottom-1 top-7 -z-20 rotate-[4deg] rounded-[26px] border border-[#cfe5dc] bg-[#e4f4ed] shadow-[0_10px_24px_rgba(8,24,39,.05)]" />
+                <div aria-hidden="true" className="pointer-events-none absolute inset-x-4 bottom-2 top-4 -z-10 -rotate-[2.5deg] rounded-[26px] border border-[#dcebe5] bg-white shadow-[0_12px_28px_rgba(8,24,39,.07)]" />
+                <button
+                  key={activeItem.id}
+                  type="button"
+                  aria-label="Témoignage affiché : " + activeItem.fullName
+                  className="relative z-10 flex min-h-[190px] w-full items-start gap-4 rounded-[26px] border border-[#55c9a8] bg-[#f4fcf8] p-5 text-left shadow-[0_18px_42px_rgba(8,24,39,.11)] ring-1 ring-[#00a982]/15 sm:p-6"
+                >
+                  <img src={activeItem.photoURL} alt="" className="h-[76px] w-[76px] shrink-0 rounded-2xl object-cover ring-2 ring-white shadow-sm sm:h-[88px] sm:w-[88px]" />
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center justify-between gap-2">
+                      <b className="truncate text-[13px] font-extrabold text-[#183047]">{activeItem.fullName}</b>
+                      <span className="shrink-0 text-[9px] font-bold uppercase tracking-wider text-[#00a982]">À la une</span>
+                    </span>
+                    <span className="mt-2 block text-[11px] leading-[1.7] text-[#71877e] line-clamp-4">{activeItem.message}</span>
+                    <span className="mt-3 flex gap-0.5">{[1,2,3,4,5].map(star => <Star key={star} className={'h-3 w-3 ' + (star <= activeItem.rating ? 'fill-[#e9b34c] text-[#e9b34c]' : 'text-[#d9e1dd]')} />)}</span>
+                  </span>
+                </button>
+                <div className="mt-4 flex items-center justify-between px-2">
+                  <span className="text-[10px] font-semibold text-[#81958d]">Témoignage {activeIndex + 1} sur {items.length}</span>
+                  <span className="flex items-center gap-1.5">
+                    {items.map((item, index) => <span key={item.id} className={'h-1.5 rounded-full transition-all ' + (index === activeIndex ? 'w-5 bg-[#00a982]' : 'w-1.5 bg-[#d5e7df]')} />)}
+                  </span>
+                </div>
               </div>
             ) : (
               <div className="rounded-[24px] border border-[#dcebe5] bg-white p-6 shadow-[0_12px_32px_rgba(8,24,39,.06)]">
@@ -69,7 +67,7 @@ export function TestimonialsSection() {
                 <div className="mt-2 h-2 w-4/5 rounded bg-[#edf3f0]" />
               </div>
             )}
-            <p className="mt-5 px-1 text-center text-[10px] font-semibold tracking-wide text-[#81958d]">Chaque témoignage possède sa propre carte.</p>
+            <p className="mt-5 px-1 text-center text-[10px] font-semibold tracking-wide text-[#81958d]">Les témoignages défilent sur une pile de cartes superposées.</p>
           </div>
 
           <div className="min-w-0">
