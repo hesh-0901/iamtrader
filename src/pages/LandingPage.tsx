@@ -413,17 +413,13 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
 #iamtrader-hero .hero-title { color: #fff; text-shadow: 0 3px 30px rgba(0,0,0,.28); }
 #iamtrader-hero .hero-description { color: rgba(240,250,248,.82); }
 #iamtrader-hero .hero-tagline { color: #62e8b7; }
-@keyframes iamtrader-slogan-dust { 0%, 8% { opacity: 0; filter: blur(18px); transform: translateY(8px) scale(.96); letter-spacing: .12em; } 22%, 68% { opacity: 1; filter: blur(0); transform: translateY(0) scale(1); letter-spacing: -.035em; } 82%, 100% { opacity: 0; filter: blur(16px); transform: translateY(-5px) scale(1.025); letter-spacing: .1em; } }
-@keyframes iamtrader-dust-drift { 0%, 12% { opacity: 0; transform: translate3d(0,12px,0) scale(.5); } 28% { opacity: .75; } 70% { opacity: .45; transform: translate3d(0,-8px,0) scale(1.2); } 100% { opacity: 0; transform: translate3d(0,-22px,0) scale(.2); } }
-#iamtrader-hero .hero-tagline-wrap { position: relative; display: block; width: fit-content; max-width: 100%; margin: 2rem auto 0; padding: 0; border: 0; background: transparent; box-shadow: none; backdrop-filter: none; }
-#iamtrader-hero .hero-tagline { display: block; font-size: clamp(2.25rem, 5.2vw, 4.5rem); line-height: 1.04; font-weight: 900; letter-spacing: -.045em; text-shadow: 0 0 28px rgba(92,224,193,.22); animation: iamtrader-slogan-dust 7s ease-in-out infinite; }
-#iamtrader-hero .hero-tagline-wrap::before, #iamtrader-hero .hero-tagline-wrap::after { content: ""; position: absolute; inset: -28% -8%; pointer-events: none; background-image: radial-gradient(circle, rgba(92,224,193,.9) 0 1px, transparent 1.8px), radial-gradient(circle, rgba(0,199,150,.75) 0 1px, transparent 2px), radial-gradient(circle, rgba(255,255,255,.7) 0 1px, transparent 1.8px); background-size: 31px 29px, 43px 37px, 53px 47px; mask-image: linear-gradient(90deg, transparent, #000 18%, #000 82%, transparent); animation: iamtrader-dust-drift 7s ease-in-out infinite; }
-#iamtrader-hero .hero-tagline-wrap::after { animation-delay: 350ms; transform: scaleX(-1); opacity: .5; }
-#iamtrader-hero .hero-proof { color: rgba(235,248,245,.78); }
-#iamtrader-hero .hero-platform { border-color: rgba(129,255,218,.24); box-shadow: 0 30px 90px rgba(0,0,0,.42); }
+@keyframes iamtrader-letter-dissolve { 0%, 8% { opacity: 0; filter: blur(5px); transform: translateY(2px); } 18%, 68% { opacity: 1; filter: blur(0); transform: translateY(0); } 82%, 100% { opacity: 0; filter: blur(6px); transform: translateY(-2px); } }
+#iamtrader-hero .hero-tagline-wrap { display: block; width: fit-content; max-width: 100%; margin: 2rem auto 0; padding: 0; border: 0; background: transparent; box-shadow: none; backdrop-filter: none; }
+#iamtrader-hero .hero-tagline { display: block; font-size: clamp(2.25rem, 5.2vw, 4.5rem); line-height: 1.04; font-weight: 900; letter-spacing: -.045em; text-shadow: 0 0 22px rgba(92,224,193,.16); }
+#iamtrader-hero .hero-tagline-letter { display: inline-block; white-space: pre; animation: iamtrader-letter-dissolve 7s ease-in-out infinite; animation-delay: calc(var(--letter-index) * 22ms); will-change: opacity, filter, transform; }
 #platform .hero-metric { transition: transform .25s ease, border-color .25s ease, background .25s ease; }
 #platform .hero-metric:hover { transform: translateY(-4px); border-color: rgba(0,199,150,.48); background: rgba(0,199,150,.10); }
-@media (prefers-reduced-motion: reduce) { .landing-reveal,.landing-reveal.landing-revealed,.landing-card-reveal,.landing-card-reveal.landing-revealed { opacity:1; transform:none; filter:none; transition:none; animation:none; } #iamtrader-hero .hero-copy,#iamtrader-hero .hero-panel,#iamtrader-hero .hero-image-motion,#iamtrader-hero .hero-tagline,#iamtrader-hero .hero-tagline-wrap::before,#iamtrader-hero .hero-tagline-wrap::after { animation:none; transform:none; opacity:1; filter:none; } #platform .hero-metric { transition:none; } }`}</style>
+@media (prefers-reduced-motion: reduce) { .landing-reveal,.landing-reveal.landing-revealed,.landing-card-reveal,.landing-card-reveal.landing-revealed { opacity:1; transform:none; filter:none; transition:none; animation:none; } #iamtrader-hero .hero-copy,#iamtrader-hero .hero-panel,#iamtrader-hero .hero-image-motion,#iamtrader-hero .hero-tagline-letter { animation:none; transform:none; opacity:1; filter:none; } #platform .hero-metric { transition:none; } }`}</style>
       <header className="h-[72px] border-b border-white/70 px-5 sm:px-10 flex items-center justify-between sticky top-0 z-50 bg-white/80 backdrop-blur-xl shadow-[0_8px_30px_rgba(8,24,39,0.04)]">
         <div className="flex items-center gap-2.5">
            <img src="/brand/logo-iamtrader-full.png" alt="IAMTRADER" className="w-[138px] sm:w-[152px] h-auto object-contain" />
@@ -477,7 +473,9 @@ export function LandingPage({ onOpenAuth }: LandingPageProps) {
             </p>
             <div className="hero-tagline-wrap" aria-label="La signature IAMTRADER">
               <span className="mb-3 block text-[10px] sm:text-xs font-black uppercase tracking-[0.28em] text-[#8baea7]">La signature IAMTRADER</span>
-              <p className="hero-tagline">Le trader que vous devez être.</p>
+              <p className="hero-tagline" aria-label="Le trader que vous devez être.">{Array.from('Le trader que vous devez être.').map((letter, index) => (
+                <span key={index} className="hero-tagline-letter" style={{ '--letter-index': index } as React.CSSProperties}>{letter}</span>
+              ))}</p>
             </div>
 
             <div className="hero-proof mt-7 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[11px] font-semibold">
