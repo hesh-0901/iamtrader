@@ -1,14 +1,14 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, MessageSquareQuote, ShieldCheck, Star } from 'lucide-react';
 import { subscribePublishedTestimonials, subscribeTestimonialReactions, toggleTestimonialReaction, TESTIMONIAL_REACTION_EMOJIS, type TestimonialReactionSummary, type TestimonialReactionEmoji, type TraderTestimonial } from '../../services/testimonials';
-import { auth } from '../../firebase/config';
 
-export function TestimonialsSection({ onOpenAuth }: { onOpenAuth: (mode: 'login' | 'register') => void }) {
+export function TestimonialsSection() {
   const [items, setItems] = useState<TraderTestimonial[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
   const [reactionSummary, setReactionSummary] = useState<TestimonialReactionSummary>({ counts: {}, myReaction: null });
-  const [reactionError, setReactionError] = useState('');
   const [reactionBusy, setReactionBusy] = useState(false);
+  const [reactionPickerOpen, setReactionPickerOpen] = useState(false);
+  const reactionPickerRef = useRef<HTMLDivElement>(null);
   const activeItem = items.length ? items[Math.min(activeIndex, items.length - 1)] : null;
 
   useEffect(() => {
@@ -29,18 +29,28 @@ export function TestimonialsSection({ onOpenAuth }: { onOpenAuth: (mode: 'login'
     });
   }, [activeItem?.id]);
 
+  useEffect(() => {
+    if (!reactionPickerOpen) return;
+    const closeOnOutsideClick = (event: PointerEvent) => {
+      if (reactionPickerRef.current && !reactionPickerRef.current.contains(event.target as Node)) setReactionPickerOpen(false);
+    };
+    const closeOnScroll = () => setReactionPickerOpen(false);
+    document.addEventListener('pointerdown', closeOnOutsideClick);
+    window.addEventListener('scroll', closeOnScroll, true);
+    return () => {
+      document.removeEventListener('pointerdown', closeOnOutsideClick);
+      window.removeEventListener('scroll', closeOnScroll, true);
+    };
+  }, [reactionPickerOpen]);
+
   const handleReaction = async (emoji: TestimonialReactionEmoji) => {
     if (!activeItem || reactionBusy) return;
-    if (!auth.currentUser) {
-      onOpenAuth('login');
-      return;
-    }
     setReactionBusy(true);
-    setReactionError('');
+    setReactionPickerOpen(false);
     try {
       await toggleTestimonialReaction(activeItem.id, emoji);
     } catch (error: any) {
-      setReactionError(error?.message || 'Impossible d’enregistrer votre réaction.');
+      console.error('[Testimonial reaction]', error);
     } finally {
       setReactionBusy(false);
     }
@@ -121,21 +131,15 @@ export function TestimonialsSection({ onOpenAuth }: { onOpenAuth: (mode: 'login'
                   <p className="relative whitespace-pre-line text-[16px] font-medium leading-8 text-[#405c72] sm:text-[18px] sm:leading-[2.05rem]">{activeItem.message}</p>
                   <span aria-hidden="true" className="absolute -bottom-12 right-1 select-none bg-gradient-to-t from-[#00b889]/25 to-[#00b889]/[0.04] bg-clip-text text-7xl font-black leading-none text-transparent sm:-bottom-14 sm:text-8xl">”</span>
                 </div>
-                <div className="mt-8 border-t border-[#dcebe5] pt-5">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <p className="text-[10px] font-black uppercase tracking-[.16em] text-[#8aa095]">Votre réaction</p>
-                    {!auth.currentUser && <button type="button" onClick={() => onOpenAuth('login')} className="text-[10px] font-bold text-[#168c73] hover:underline">Se connecter pour réagir</button>}
+                <div className="mt-8 flex items-center justify-end border-t border-[#dcebe5] pt-4">
+                  <div ref={reactionPickerRef} className="relative">
+                    <button type="button" onClick={() => setReactionPickerOpen(open => !open)} disabled={reactionBusy} aria-label="Réagir à ce témoignage" aria-expanded={reactionPickerOpen} className={'flex h-10 w-10 items-center justify-center rounded-full border text-xl transition disabled:opacity-50 ' + (reactionPickerOpen || reactionSummary.myReaction ? 'border-[#00a982] bg-[#e4f8f1]' : 'border-[#dcebe5] bg-white hover:border-[#8bd7bf] hover:bg-[#f1fbf7]')}>
+                      {reactionSummary.myReaction || '😊'}
+                    </button>
+                    {reactionPickerOpen && <div className="absolute bottom-12 right-0 z-30 flex items-center gap-1.5 rounded-2xl border border-[#dcebe5] bg-white p-2 shadow-[0_12px_32px_rgba(8,24,39,.16)] animate-[landing-fade-up_.16s_ease_both]">
+                      {TESTIMONIAL_REACTION_EMOJIS.map(emoji => <button key={emoji} type="button" onClick={() => void handleReaction(emoji)} disabled={reactionBusy} aria-label={'Réagir avec ' + emoji} className={'flex h-9 w-9 items-center justify-center rounded-xl text-xl transition hover:scale-110 hover:bg-[#eafbf6] ' + (reactionSummary.myReaction === emoji ? 'bg-[#e4f8f1] ring-1 ring-[#00a982]' : '')}>{emoji}</button>)}
+                    </div>}
                   </div>
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {TESTIMONIAL_REACTION_EMOJIS.map(emoji => {
-                      const selected = reactionSummary.myReaction === emoji;
-                      const count = reactionSummary.counts[emoji] || 0;
-                      return <button key={emoji} type="button" onClick={() => void handleReaction(emoji)} disabled={reactionBusy} aria-pressed={selected} aria-label={emoji + ' ' + count + ' réaction(s)'} title={auth.currentUser ? 'Réagir avec ' + emoji : 'Connectez-vous pour réagir'} className={'inline-flex items-center gap-2 rounded-full border px-3 py-2 text-sm transition disabled:cursor-wait disabled:opacity-50 ' + (selected ? 'border-[#00a982] bg-[#e4f8f1] shadow-sm' : 'border-[#dcebe5] bg-white hover:border-[#8bd7bf] hover:bg-[#f1fbf7]')}>
-                        <span>{emoji}</span><span className="text-[10px] font-bold tabular-nums text-[#547064]">{count}</span>
-                      </button>;
-                    })}
-                  </div>
-                  {reactionError && <p role="status" className="mt-2 text-[10px] font-medium text-[#b45353]">{reactionError}</p>}
                 </div>
                 <div className="mt-12 flex items-center justify-between border-t border-[#dcebe5] pt-4 text-[10px] font-bold text-[#168c73]">
                   <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5" />Témoignage vérifié et modéré</span>
