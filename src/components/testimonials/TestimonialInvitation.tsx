@@ -20,7 +20,7 @@ async function createCroppedPhoto(file: File, sx: number, sy: number, side: numb
 
 export function TestimonialInvitation({ uid }: { uid?: string }) {
   const [submitted,setSubmitted]=useState<boolean|null>(null);
-  const [open,setOpen]=useState(true);
+  const [open,setOpen]=useState(false);
   const [name,setName]=useState(auth.currentUser?.displayName||'');
   const [rating,setRating]=useState(5);
   const [message,setMessage]=useState('');
@@ -33,7 +33,6 @@ export function TestimonialInvitation({ uid }: { uid?: string }) {
   const cropDragRef=useRef<{mode:'move'|'resize';startX:number;startY:number;initial:{x:number;y:number;size:number}}|null>(null);
   const [busy,setBusy]=useState(false);
   const [error,setError]=useState('');
-  const [dismissed,setDismissed]=useState(false);
   const fileRef=useRef<HTMLInputElement>(null);
 
   useEffect(()=>{
@@ -46,6 +45,24 @@ export function TestimonialInvitation({ uid }: { uid?: string }) {
   },[uid]);
 
   useEffect(()=>{if(!photo){setPreview('');return;}const url=URL.createObjectURL(photo);setPreview(url);return()=>URL.revokeObjectURL(url);},[photo]);
+
+  useEffect(()=>{
+    if(submitted!==false||!uid)return;
+    const key='iamtrader_testimonial_interactions_'+uid;
+    const stored=Number(window.localStorage.getItem(key)||'0');
+    if(stored>=5){window.localStorage.setItem(key,'0');setOpen(true);}
+    const handleInteraction=(event:MouseEvent)=>{
+      if(open)return;
+      const target=event.target as HTMLElement|null;
+      if(!target||target.closest('[role="dialog"]'))return;
+      if(!target.closest('button,a,[role="button"],input,select,textarea,[tabindex]'))return;
+      const next=Number(window.localStorage.getItem(key)||'0')+1;
+      if(next>=5){window.localStorage.setItem(key,'0');setOpen(true);}
+      else window.localStorage.setItem(key,String(next));
+    };
+    document.addEventListener('click',handleInteraction,true);
+    return()=>document.removeEventListener('click',handleInteraction,true);
+  },[uid,submitted,open]);
 
   async function applyCrop(){
     if(!photo||!cropFrameRef.current||!cropNatural.width||!cropNatural.height)return;
@@ -77,15 +94,15 @@ export function TestimonialInvitation({ uid }: { uid?: string }) {
 
   return <>
     {open&&<div className="fixed inset-0 z-[120] flex items-center justify-center overflow-y-auto overscroll-contain bg-[#071725]/55 p-3 backdrop-blur-[5px]">
-      <div role="dialog" aria-modal="true" aria-labelledby="dashboard-testimonial-title" className="my-auto max-h-[calc(100dvh-24px)] w-full max-w-4xl overflow-y-auto rounded-[26px] bg-white p-0 shadow-[0_30px_100px_rgba(0,0,0,.35)]">
+      <div role="dialog" aria-modal="true" aria-labelledby="dashboard-testimonial-title" className="my-auto max-h-[calc(100dvh-24px)] w-full max-w-3xl overflow-y-auto rounded-[26px] bg-white p-0 shadow-[0_30px_100px_rgba(0,0,0,.35)]">
         <div className="relative h-48 w-full overflow-hidden bg-[#062b35] sm:h-60 lg:h-64"><img src="/images/testimonial-invite.png" alt="" className="absolute inset-0 h-full w-full object-cover"/><div className="absolute inset-0 bg-gradient-to-r from-[#061e2c]/80 via-[#063c37]/30 to-transparent"/><div className="absolute bottom-5 left-6 right-6 text-white sm:bottom-7 sm:left-9"><span className="text-[10px] font-black uppercase tracking-[.18em]">Communauté IAMTRADER</span><h3 id="dashboard-testimonial-title" className="mt-1 text-2xl font-black sm:text-3xl lg:text-4xl">Racontez votre progression</h3><p className="mt-1 text-xs text-white/85 sm:text-sm">Votre expérience peut inspirer toute une communauté.</p></div></div>
         <form onSubmit={handleSubmit} className="space-y-5 px-6 pb-7 pt-5 sm:px-8 sm:pb-8">
-          <div><label className="mb-2 block text-xs font-bold text-slate-700">Votre photo *</label><input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={e=>{const file=e.target.files?.[0]||null;if(file&&file.size>3145728){setError('Photo de 3 Mo maximum.');return;}setPhoto(file);setCropRect({x:0.12,y:0.12,size:0.76});setError('');}}/><div className="flex items-center justify-center gap-4 bg-transparent p-0"><div className="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-full border-2 border-dashed border-[#9ed9c2] bg-white shadow-sm">{preview?<img src={preview} alt="Aperçu de la photo" className="h-full w-full rounded-full object-cover"/>:<span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#e6f8f1] text-[#00a982]"><ImagePlus className="h-6 w-6"/></span>}<button type="button" onClick={()=>fileRef.current?.click()} aria-label="Ajouter une photo" className="absolute -bottom-1 -right-1 flex h-9 w-9 items-center justify-center rounded-full border-[3px] border-white bg-[#00a982] text-white shadow-md transition hover:scale-105 hover:bg-[#008f70]"><Camera className="h-4 w-4"/></button></div><div className="min-w-0 flex-1"><p className="text-sm font-bold text-[#183047]">{photo?'Photo sélectionnée':'Ajoutez votre photo'}</p><p className="mt-1 text-[11px] text-slate-500">{photo?.name||'Choisissez une photo où votre visage est bien visible.'}</p><p className="mt-1 text-[10px] text-slate-400">JPG, PNG ou WEBP · 3 Mo maximum</p>{photo&&<button type="button" onClick={()=>setCropOpen(true)} className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-[#cfe5dc] bg-white px-3 py-1.5 text-[10px] font-bold text-[#087b63]"><Crop className="h-3 w-3"/>Ajuster le cadrage</button>}</div></div></div>
+          <div><label className="mb-2 block text-xs font-bold text-slate-700">Votre photo *</label><input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={e=>{const file=e.target.files?.[0]||null;if(file&&file.size>3145728){setError('Photo de 3 Mo maximum.');return;}setPhoto(file);setCropRect({x:0.12,y:0.12,size:0.76});setCropNatural({width:0,height:0});setError('');setCropOpen(!!file);}}/><div className="flex items-center justify-center gap-4 bg-transparent p-0"><div className="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-full border-2 border-dashed border-[#9ed9c2] bg-white shadow-sm">{preview?<img src={preview} alt="Aperçu de la photo" className="h-full w-full rounded-full object-cover"/>:<span className="flex h-12 w-12 items-center justify-center rounded-full bg-[#e6f8f1] text-[#00a982]"><ImagePlus className="h-6 w-6"/></span>}<button type="button" onClick={()=>fileRef.current?.click()} aria-label="Ajouter une photo" className="absolute -bottom-1 -right-1 flex h-9 w-9 items-center justify-center rounded-full border-[3px] border-white bg-[#00a982] text-white shadow-md transition hover:scale-105 hover:bg-[#008f70]"><Camera className="h-4 w-4"/></button></div><div className="min-w-0 flex-1"><p className="text-sm font-bold text-[#183047]">{photo?'Photo sélectionnée':'Ajoutez votre photo'}</p><p className="mt-1 text-[11px] text-slate-500">{photo?.name||'Choisissez une photo où votre visage est bien visible.'}</p><p className="mt-1 text-[10px] text-slate-400">JPG, PNG ou WEBP · 3 Mo maximum</p>{photo&&<button type="button" onClick={()=>setCropOpen(true)} className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-[#cfe5dc] bg-white px-3 py-1.5 text-[10px] font-bold text-[#087b63]"><Crop className="h-3 w-3"/>Ajuster le cadrage</button>}</div></div></div>
           <div><label htmlFor="dashboard-testimonial-name" className="mb-1.5 block text-xs font-bold text-slate-700">Nom affiché</label><input id="dashboard-testimonial-name" required minLength={3} maxLength={90} value={name} onChange={e=>setName(e.target.value)} className="w-full rounded-xl border border-slate-200 px-4 py-3.5 text-base outline-none transition focus:border-[#00a982] focus:ring-4 focus:ring-[#00a982]/10" placeholder="Prénom et nom"/></div>
           <div><label className="mb-2 block text-xs font-bold text-slate-700">Votre appréciation</label><div className="flex gap-2">{[1,2,3,4,5].map(n=><button key={n} type="button" onClick={()=>setRating(n)} aria-label={n+' étoiles'} aria-pressed={rating===n}><Star className={'h-7 w-7 '+(n<=rating?'fill-amber-400 text-amber-400':'text-slate-200')}/></button>)}</div></div>
           <div><div className="mb-1.5 flex justify-between"><label htmlFor="dashboard-testimonial-message" className="text-xs font-bold text-slate-700">Votre expérience</label><span className="text-[10px] text-slate-400">{message.length}/700</span></div><textarea id="dashboard-testimonial-message" required minLength={30} maxLength={700} rows={5} value={message} onChange={e=>setMessage(e.target.value)} className="w-full rounded-xl border border-slate-200 px-4 py-4 text-base outline-none transition focus:border-[#00a982] focus:ring-4 focus:ring-[#00a982]/10" placeholder="Qu’est-ce qui a changé dans votre façon de trader ?"/></div>
           {error&&<p role="alert" className="rounded-lg bg-rose-50 p-3 text-xs text-rose-700">{error}</p>}
-          <div className="flex justify-end gap-2"><button type="button" disabled={busy} onClick={()=>{setOpen(false);setDismissed(true);}} className="rounded-xl border border-slate-200 px-4 py-3 text-xs font-bold text-slate-600">Me le rappeler plus tard</button><button type="submit" disabled={busy} className="inline-flex items-center gap-2 rounded-xl bg-[#00a982] px-4 py-3 text-xs font-extrabold text-white disabled:opacity-60">{busy?<LoaderCircle className="h-4 w-4 animate-spin"/>:<Send className="h-4 w-4"/>}{busy?'Envoi…':'Envoyer mon témoignage'}</button></div>
+          <div className="flex justify-end gap-2"><button type="button" disabled={busy} onClick={()=>{setOpen(false);}} className="rounded-xl border border-slate-200 px-4 py-3 text-xs font-bold text-slate-600">Me le rappeler plus tard</button><button type="submit" disabled={busy} className="inline-flex items-center gap-2 rounded-xl bg-[#00a982] px-4 py-3 text-xs font-extrabold text-white disabled:opacity-60">{busy?<LoaderCircle className="h-4 w-4 animate-spin"/>:<Send className="h-4 w-4"/>}{busy?'Envoi…':'Envoyer mon témoignage'}</button></div>
         </form>
       </div>
     </div>}
