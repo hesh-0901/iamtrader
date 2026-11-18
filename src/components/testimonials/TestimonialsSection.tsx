@@ -8,6 +8,7 @@ export function TestimonialsSection() {
   const [reactionSummary, setReactionSummary] = useState<TestimonialReactionSummary>({ counts: {}, myReaction: null });
   const [reactionBusy, setReactionBusy] = useState(false);
   const [reactionPickerOpen, setReactionPickerOpen] = useState(false);
+  const [isPaused, setIsPaused] = useState(false);
   const reactionPickerRef = useRef<HTMLDivElement>(null);
   const activeItem = items.length ? items[Math.min(activeIndex, items.length - 1)] : null;
 
@@ -26,6 +27,16 @@ export function TestimonialsSection() {
       console.error('[Testimonial reactions]', error);
     });
   }, [activeItem?.id]);
+
+  // Défilement automatique : 6 secondes entre deux témoignages.
+  // Pause au survol et lorsque le sélecteur de réactions est ouvert.
+  useEffect(() => {
+    if (items.length < 2 || isPaused || reactionPickerOpen) return;
+    const intervalId = window.setInterval(() => {
+      setActiveIndex(index => (index + 1) % items.length);
+    }, 6000);
+    return () => window.clearInterval(intervalId);
+  }, [items.length, activeIndex, isPaused, reactionPickerOpen]);
 
   useEffect(() => {
     if (!reactionPickerOpen) return;
@@ -114,7 +125,7 @@ export function TestimonialsSection() {
             </div>
 
             {activeItem ? (
-              <div key={activeItem.id} className="relative isolate overflow-hidden pt-6 sm:pt-7 animate-[landing-fade-up_.45s_ease_both]">
+              <div key={activeItem.id} onMouseEnter={() => setIsPaused(true)} onMouseLeave={() => setIsPaused(false)} onFocusCapture={() => setIsPaused(true)} onBlurCapture={event => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setIsPaused(false); }} className="relative isolate overflow-hidden pt-6 sm:pt-7 animate-[landing-fade-up_.45s_ease_both]">
                 <div aria-hidden="true" className="pointer-events-none absolute -right-1 -top-7 -z-10 select-none bg-gradient-to-br from-[#00b889]/25 via-[#00b889]/10 to-transparent bg-clip-text text-[190px] font-black leading-none text-transparent sm:-right-2 sm:text-[230px]">“</div>
                 <div className="relative flex items-center gap-5 sm:gap-7">
                   <img src={activeItem.photoURL} alt={activeItem.fullName} className="h-24 w-24 shrink-0 rounded-[26px] border-4 border-white object-cover shadow-[0_12px_32px_rgba(8,24,39,.15)] ring-1 ring-[#cfe5dc] sm:h-28 sm:w-28 sm:rounded-[30px] lg:h-32 lg:w-32" />
