@@ -88,8 +88,20 @@ export async function updateTestimonialContent(id: string, input: { fullName: st
   await updateDoc(doc(db, 'testimonials', id), { fullName, message, rating: input.rating });
 }
 
+
 export const TESTIMONIAL_REACTION_EMOJIS = ['👍', '❤️', '🔥', '👏', '💡', '🚀'] as const;
 export type TestimonialReactionEmoji = typeof TESTIMONIAL_REACTION_EMOJIS[number];
+const VISITOR_REACTION_ID_KEY = 'iamtrader_testimonial_visitor_id_v1';
+function getTestimonialVisitorId(): string {
+  let id = window.localStorage.getItem(VISITOR_REACTION_ID_KEY);
+  if (!id) {
+    id = typeof crypto !== 'undefined' && 'randomUUID' in crypto
+      ? crypto.randomUUID()
+      : 'visitor-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
+    window.localStorage.setItem(VISITOR_REACTION_ID_KEY, id);
+  }
+  return id;
+}
 export interface TestimonialReactionSummary {
   counts: Partial<Record<TestimonialReactionEmoji, number>>;
   myReaction: TestimonialReactionEmoji | null;
@@ -99,6 +111,7 @@ export function subscribeTestimonialReactions(
   callback: (summary: TestimonialReactionSummary) => void,
   onError?: (error: Error) => void
 ) {
+  const visitorId = getTestimonialVisitorId();
   return onSnapshot(collection(db, 'testimonials', testimonialId, 'reactions'), snapshot => {
     const counts: Partial<Record<TestimonialReactionEmoji, number>> = {};
     let myReaction: TestimonialReactionEmoji | null = null;
@@ -107,21 +120,20 @@ export function subscribeTestimonialReactions(
       if (TESTIMONIAL_REACTION_EMOJIS.includes(data.emoji)) {
         const emoji = data.emoji as TestimonialReactionEmoji;
         counts[emoji] = (counts[emoji] || 0) + 1;
-        if (auth.currentUser?.uid === item.id) myReaction = emoji;
+        if (visitorId === item.id) myReaction = emoji;
       }
     });
     callback({ counts, myReaction });
   }, error => onError?.(error));
 }
 export async function toggleTestimonialReaction(testimonialId: string, emoji: TestimonialReactionEmoji): Promise<void> {
-  const user = auth.currentUser;
-  if (!user) throw new Error('Connectez-vous pour réagir à ce témoignage.');
   if (!TESTIMONIAL_REACTION_EMOJIS.includes(emoji)) throw new Error('Réaction non autorisée.');
-  const reactionRef = doc(db, 'testimonials', testimonialId, 'reactions', user.uid);
+  const visitorId = getTestimonialVisitorId();
+  const reactionRef = doc(db, 'testimonials', testimonialId, 'reactions', visitorId);
   const existing = await getDoc(reactionRef);
   if (existing.exists() && existing.data().emoji === emoji) {
     await deleteDoc(reactionRef);
     return;
   }
-  await setDoc(reactionRef, { uid: user.uid, emoji, updatedAt: new Date().toISOString() });
+  await setDoc(reactionRef, { visitorId, emoji, updatedAt: new Date().toISOString() });
 }
