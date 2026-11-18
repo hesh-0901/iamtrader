@@ -80,11 +80,13 @@ export function TestimonialInvitation({ uid, tradesCount = 0 }: { uid?: string; 
       window.localStorage.setItem(storageKey,JSON.stringify(state));
     }
     if(state.initialShown&&state.remindersShown>=invitationConfig.maxReminders)return;
+    if(state.initialShown&&state.nextAt===null){setOpen(true);return;}
     const delay=Math.max(0,(state.nextAt??triggerAt)-Date.now());
     const show=()=>{
       if(document.visibilityState!=='visible')return;
       setOpen(true);
       state.initialShown=true;
+      state.nextAt=null;
       window.localStorage.setItem(storageKey,JSON.stringify(state));
     };
     const timer=window.setTimeout(show,delay);
