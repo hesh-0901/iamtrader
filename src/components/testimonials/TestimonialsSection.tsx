@@ -130,16 +130,23 @@ export function TestimonialsSection() {
                   <span aria-hidden="true" className="absolute -bottom-12 right-1 select-none bg-gradient-to-t from-[#00b889]/25 to-[#00b889]/[0.04] bg-clip-text text-7xl font-black leading-none text-transparent sm:-bottom-14 sm:text-8xl">”</span>
                 </div>
                 <div className="mt-8 flex items-center justify-between gap-3 border-t border-[#dcebe5] pt-4">
-                  <div className="flex min-w-0 flex-wrap items-center gap-2" aria-label="Réactions au témoignage">
-                    {TESTIMONIAL_REACTION_EMOJIS.map(emoji => {
-                      const count = reactionSummary.counts[emoji] || 0;
-                      return (
-                        <span key={emoji} title={emoji + ' : ' + count} className={'inline-flex h-8 items-center gap-1.5 rounded-full px-2 text-xs font-semibold tabular-nums ' + (reactionSummary.myReaction === emoji ? 'bg-[#e4f8f1] text-[#087c61] ring-1 ring-[#00a982]/40' : 'bg-white/80 text-[#587064]')}>
-                          <span className="text-base leading-none">{emoji}</span>
-                          <span>{count}</span>
-                        </span>
-                      );
-                    })}
+                  <div className="flex min-w-0 items-center gap-2">
+                    <span className="text-xs font-semibold tabular-nums text-[#587064]">
+                      {(Object.values(reactionSummary.counts) as number[]).reduce((total, count) => total + count, 0)} réaction(s)
+                    </span>
+                    {reactionPickerOpen && (
+                      <div className="flex min-w-0 flex-wrap items-center gap-1.5" aria-label="Réactions par catégorie">
+                        {TESTIMONIAL_REACTION_EMOJIS.map(emoji => {
+                          const count = reactionSummary.counts[emoji] || 0;
+                          return (
+                            <span key={emoji} title={emoji + ' : ' + count} className={'inline-flex h-8 items-center gap-1 rounded-full px-2 text-xs font-semibold tabular-nums ' + (reactionSummary.myReaction === emoji ? 'bg-[#e4f8f1] text-[#087c61] ring-1 ring-[#00a982]/40' : 'bg-white/80 text-[#587064]')}>
+                              <span className="text-base leading-none">{emoji}</span>
+                              <span>{count}</span>
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                   <div ref={reactionPickerRef} className="relative shrink-0">
                     <button type="button" onClick={() => setReactionPickerOpen(open => !open)} disabled={reactionBusy} aria-label="Ajouter une réaction" aria-expanded={reactionPickerOpen} className={'flex h-9 w-9 items-center justify-center rounded-full border text-lg transition disabled:opacity-50 ' + (reactionPickerOpen || reactionSummary.myReaction ? 'border-[#00a982] bg-[#e4f8f1]' : 'border-[#dcebe5] bg-white hover:border-[#8bd7bf] hover:bg-[#f1fbf7]')}>
