@@ -939,6 +939,23 @@ service cloud.firestore {
     // =====================================================
     // 18. TÉMOIGNAGES IAMTRADER
     // =====================================================
+    // Paramètres globaux des invitations de témoignage.
+    // Les utilisateurs authentifiés peuvent lire la configuration; seuls les administrateurs la modifient.
+    match /appSettings/{settingId} {
+      allow get: if signedIn() && settingId == 'testimonialInvitation';
+      allow list: if false;
+      allow create, update: if userManager()
+        && settingId == 'testimonialInvitation'
+        && request.resource.data.keys().hasOnly(['enabled','trigger','reminderIntervalHours','maxReminders','updatedAt','updatedBy'])
+        && request.resource.data.enabled is bool
+        && request.resource.data.trigger in ['signup_24h','signup_7d','trades_5','trades_10','next_dashboard']
+        && request.resource.data.reminderIntervalHours in [1,4,24,72]
+        && request.resource.data.maxReminders in [0,1,2,3]
+        && request.resource.data.updatedAt is string
+        && request.resource.data.updatedBy == request.auth.uid;
+      allow delete: if userManager() && settingId == 'testimonialInvitation';
+    }
+
     match /testimonials/{testimonialId} {
       allow get: if (signedIn() && testimonialId == request.auth.uid) || userManager() || resource.data.status == 'published';
       allow list: if resource.data.status == 'published' || userManager();
