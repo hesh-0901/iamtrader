@@ -39,8 +39,9 @@ export function TestimonialsSection() {
                 <button
                   key={activeItem.id}
                   type="button"
-                  aria-label={"Témoignage affiché : " + activeItem.fullName}
-                  className="relative z-10 flex min-h-[190px] w-full items-start gap-4 rounded-[26px] border border-[#55c9a8] bg-[#f4fcf8] p-5 text-left shadow-[0_18px_42px_rgba(8,24,39,.11)] ring-1 ring-[#00a982]/15 sm:p-6"
+                  aria-label={"Afficher le témoignage suivant après : " + activeItem.fullName}
+                  onClick={() => setActiveIndex(index => items.length ? (index + 1) % items.length : 0)}
+                  className="relative z-10 flex min-h-[190px] w-full cursor-pointer items-start gap-4 rounded-[26px] border border-[#55c9a8] bg-[#f4fcf8] p-5 text-left shadow-[0_18px_42px_rgba(8,24,39,.11)] ring-1 ring-[#00a982]/15 transition-transform duration-300 hover:-translate-y-1 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#00a982] sm:p-6"
                 >
                   <img src={activeItem.photoURL} alt="" className="h-[76px] w-[76px] shrink-0 rounded-2xl object-cover ring-2 ring-white shadow-sm sm:h-[88px] sm:w-[88px]" />
                   <span className="min-w-0 flex-1">
@@ -52,12 +53,6 @@ export function TestimonialsSection() {
                     <span className="mt-3 flex gap-0.5">{[1,2,3,4,5].map(star => <Star key={star} className={'h-3 w-3 ' + (star <= activeItem.rating ? 'fill-[#e9b34c] text-[#e9b34c]' : 'text-[#d9e1dd]')} />)}</span>
                   </span>
                 </button>
-                <div className="mt-4 flex items-center justify-between px-2">
-                  <span className="text-[10px] font-semibold text-[#81958d]">Témoignage {activeIndex + 1} sur {items.length}</span>
-                  <span className="flex items-center gap-1.5">
-                    {items.map((item, index) => <span key={item.id} className={'h-1.5 rounded-full transition-all ' + (index === activeIndex ? 'w-5 bg-[#00a982]' : 'w-1.5 bg-[#d5e7df]')} />)}
-                  </span>
-                </div>
               </div>
             ) : (
               <div className="rounded-[24px] border border-[#dcebe5] bg-white p-6 shadow-[0_12px_32px_rgba(8,24,39,.06)]">
@@ -67,7 +62,6 @@ export function TestimonialsSection() {
                 <div className="mt-2 h-2 w-4/5 rounded bg-[#edf3f0]" />
               </div>
             )}
-            <p className="mt-5 px-1 text-center text-[10px] font-semibold tracking-wide text-[#81958d]">Les témoignages défilent sur une pile de cartes superposées.</p>
           </div>
 
           <div className="min-w-0">
