@@ -324,7 +324,7 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
   );
 
 
-  if (mode === 'focus') return <div className="space-y-5">{situation}<TestimonialInvitation uid={userProfile?.uid} />{modeBar}
+  if (mode === 'focus') return <div className="space-y-5">{situation}<TestimonialInvitation uid={userProfile?.uid} tradesCount={trades.length} />{modeBar}
     <div className="grid grid-cols-1 xl:grid-cols-4 gap-4">
       <div className="xl:col-span-3 p-5 rounded-2xl card-premium"><div className="flex items-center justify-between mb-3"><div><h2 className="text-sm font-bold text-[#10233a]">Focus Trading</h2><p className="text-[10px] text-[#8798a8]">Equity, risque et résultats récents.</p></div><Focus className="w-4 h-4 text-[#08b77a]" /></div><div className="min-h-[280px]">{chart}</div></div>
       <div className="p-5 rounded-2xl card-premium"><div className="flex items-center justify-between mb-4"><div><h2 className="text-sm font-bold text-[#10233a]">À surveiller</h2><p className="text-[10px] text-[#8798a8]">Deux repères avant une décision.</p></div><ShieldAlert className="w-4 h-4 text-[#f59e0b]" /></div><div className="space-y-3">
