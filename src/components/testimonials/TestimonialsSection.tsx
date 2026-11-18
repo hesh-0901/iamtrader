@@ -1,10 +1,14 @@
 import { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, MessageSquareQuote, ShieldCheck, Star } from 'lucide-react';
-import { subscribePublishedTestimonials, type TraderTestimonial } from '../../services/testimonials';
+import { subscribePublishedTestimonials, subscribeTestimonialReactions, toggleTestimonialReaction, TESTIMONIAL_REACTION_EMOJIS, type TestimonialReactionSummary, type TestimonialReactionEmoji, type TraderTestimonial } from '../../services/testimonials';
+import { auth } from '../../firebase/config';
 
 export function TestimonialsSection() {
   const [items, setItems] = useState<TraderTestimonial[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [reactionSummary, setReactionSummary] = useState<TestimonialReactionSummary>({ counts: {}, myReaction: null });
+  const [reactionError, setReactionError] = useState('');
+  const [reactionBusy, setReactionBusy] = useState(false);
   const activeItem = items.length ? items[Math.min(activeIndex, items.length - 1)] : null;
 
   useEffect(() => {
@@ -14,6 +18,34 @@ export function TestimonialsSection() {
   useEffect(() => {
     setActiveIndex(index => items.length ? Math.min(index, items.length - 1) : 0);
   }, [items.length]);
+  
+  useEffect(() => {
+    setReactionSummary({ counts: {}, myReaction: null });
+    setReactionError('');
+    if (!activeItem) return;
+    return subscribeTestimonialReactions(activeItem.id, setReactionSummary, error => {
+      console.error('[Testimonial reactions]', error);
+      setReactionError('Les réactions sont temporairement indisponibles.');
+    });
+  }, [activeItem?.id]);
+
+  const handleReaction = async (emoji: TestimonialReactionEmoji) => {
+    if (!activeItem || reactionBusy) return;
+    if (!auth.currentUser) {
+      setReactionError('Connectez-vous pour laisser une réaction.');
+      return;
+    }
+    setReactionBusy(true);
+    setReactionError('');
+    try {
+      await toggleTestimonialReaction(activeItem.id, emoji);
+    } catch (error: any) {
+      setReactionError(error?.message || 'Impossible d’enregistrer votre réaction.');
+    } finally {
+      setReactionBusy(false);
+    }
+  };
+
 
   return (
     <section id="testimonials" className="relative isolate overflow-hidden border-y border-[#dcebe5] bg-[#f5faf8] px-5 py-12 sm:px-10 sm:py-14 lg:px-14 scroll-mt-20">
@@ -88,6 +120,22 @@ export function TestimonialsSection() {
                   <span aria-hidden="true" className="pointer-events-none absolute -left-3 -top-10 select-none bg-gradient-to-b from-[#00b889]/30 to-[#00b889]/[0.04] bg-clip-text text-7xl font-black leading-none text-transparent sm:-left-5 sm:-top-12 sm:text-8xl">“</span>
                   <p className="relative whitespace-pre-line text-[16px] font-medium leading-8 text-[#405c72] sm:text-[18px] sm:leading-[2.05rem]">{activeItem.message}</p>
                   <span aria-hidden="true" className="absolute -bottom-12 right-1 select-none bg-gradient-to-t from-[#00b889]/25 to-[#00b889]/[0.04] bg-clip-text text-7xl font-black leading-none text-transparent sm:-bottom-14 sm:text-8xl">”</span>
+                </div>
+                <div className="mt-8 border-t border-[#dcebe5] pt-5">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <p className="text-[10px] font-black uppercase tracking-[.16em] text-[#8aa095]">Votre réaction</p>
+                    {!auth.currentUser && <button type="button" onClick={() => setReactionError('Connectez-vous pour laisser une réaction.')} className="text-[10px] font-bold text-[#168c73] hover:underline">Se connecter pour réagir</button>}
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {TESTIMONIAL_REACTION_EMOJIS.map(emoji => {
+                      const selected = reactionSummary.myReaction === emoji;
+                      const count = reactionSummary.counts[emoji] || 0;
+                      return <button key={emoji} type="button" onClick={() => void handleReaction(emoji)} disabled={reactionBusy} aria-pressed={selected} aria-label={emoji + ' ' + count + ' réaction(s)'} title={auth.currentUser ? 'Réagir avec ' + emoji : 'Connectez-vous pour réagir'} className={'inline-flex items-center gap-2 rounded-full border px-3 py-2 text-sm transition disabled:cursor-wait disabled:opacity-50 ' + (selected ? 'border-[#00a982] bg-[#e4f8f1] shadow-sm' : 'border-[#dcebe5] bg-white hover:border-[#8bd7bf] hover:bg-[#f1fbf7]')}>
+                        <span>{emoji}</span><span className="text-[10px] font-bold tabular-nums text-[#547064]">{count}</span>
+                      </button>;
+                    })}
+                  </div>
+                  {reactionError && <p role="status" className="mt-2 text-[10px] font-medium text-[#b45353]">{reactionError}</p>}
                 </div>
                 <div className="mt-12 flex items-center justify-between border-t border-[#dcebe5] pt-4 text-[10px] font-bold text-[#168c73]">
                   <span className="inline-flex items-center gap-1.5"><ShieldCheck className="h-3.5 w-3.5" />Témoignage vérifié et modéré</span>
