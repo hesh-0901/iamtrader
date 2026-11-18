@@ -22,6 +22,7 @@ export function TestimonialInvitation({ uid, tradesCount = 0 }: { uid?: string; 
   const [submitted,setSubmitted]=useState<boolean|null>(null);
   const [open,setOpen]=useState(false);
   const [invitationConfig,setInvitationConfig]=useState<TestimonialInvitationConfig>(DEFAULT_TESTIMONIAL_INVITATION_CONFIG);
+  const [scheduleRevision,setScheduleRevision]=useState(0);
   const [name,setName]=useState(auth.currentUser?.displayName||'');
   const [rating,setRating]=useState(5);
   const [message,setMessage]=useState('');
@@ -53,10 +54,11 @@ export function TestimonialInvitation({ uid, tradesCount = 0 }: { uid?: string; 
   },[]);
 
   useEffect(()=>{
-    if(submitted!==false||!uid||!invitationConfig.enabled)return;
+    if(!uid)return;
     const legacyKey='iamtrader_testimonial_prompt_'+uid;
     const storageKey='iamtrader_testimonial_prompt_v2_'+uid;
     window.localStorage.removeItem(legacyKey);
+    if(submitted!==false||!invitationConfig.enabled)return;
     const user=auth.currentUser;
     const createdAt=user?.metadata?.creationTime ? new Date(user.metadata.creationTime).getTime() : Date.now();
     const triggerAt=invitationConfig.trigger==='signup_24h' ? createdAt+86400000
@@ -89,7 +91,7 @@ export function TestimonialInvitation({ uid, tradesCount = 0 }: { uid?: string; 
     const onVisible=()=>{if(document.visibilityState==='visible'&&Date.now()>=(state.nextAt??triggerAt))show();};
     document.addEventListener('visibilitychange',onVisible);
     return()=>{window.clearTimeout(timer);document.removeEventListener('visibilitychange',onVisible);};
-  },[uid,submitted,invitationConfig,tradesCount]);
+  },[uid,submitted,invitationConfig,tradesCount,scheduleRevision]);
 
   function postponeInvitation(){
     if(!uid){setOpen(false);return;}
@@ -102,6 +104,7 @@ export function TestimonialInvitation({ uid, tradesCount = 0 }: { uid?: string; 
     state.nextAt=state.remindersShown<invitationConfig.maxReminders ? Date.now()+invitationConfig.reminderIntervalHours*60*60*1000 : null;
     window.localStorage.setItem(storageKey,JSON.stringify(state));
     setOpen(false);
+    setScheduleRevision(value=>value+1);
   }
 
   async function applyCrop(){
