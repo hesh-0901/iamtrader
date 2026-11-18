@@ -1,4 +1,4 @@
-import { collection, deleteDoc, doc, limit, onSnapshot, query, setDoc, updateDoc, where } from 'firebase/firestore';
+import { collection, deleteDoc, doc, getDoc, limit, onSnapshot, query, setDoc, updateDoc, where } from 'firebase/firestore';
 import { auth, db } from '../firebase/config';
 
 
@@ -86,4 +86,42 @@ export async function updateTestimonialContent(id: string, input: { fullName: st
   if (message.length < 30 || message.length > 700) throw new Error('Le témoignage doit contenir entre 30 et 700 caractères.');
   if (!Number.isInteger(input.rating) || input.rating < 1 || input.rating > 5) throw new Error('La note doit être comprise entre 1 et 5 étoiles.');
   await updateDoc(doc(db, 'testimonials', id), { fullName, message, rating: input.rating });
+}
+
+export const TESTIMONIAL_REACTION_EMOJIS = ['👍', '❤️', '🔥', '👏', '💡', '🚀'] as const;
+export type TestimonialReactionEmoji = typeof TESTIMONIAL_REACTION_EMOJIS[number];
+export interface TestimonialReactionSummary {
+  counts: Partial<Record<TestimonialReactionEmoji, number>>;
+  myReaction: TestimonialReactionEmoji | null;
+}
+export function subscribeTestimonialReactions(
+  testimonialId: string,
+  callback: (summary: TestimonialReactionSummary) => void,
+  onError?: (error: Error) => void
+) {
+  return onSnapshot(collection(db, 'testimonials', testimonialId, 'reactions'), snapshot => {
+    const counts: Partial<Record<TestimonialReactionEmoji, number>> = {};
+    let myReaction: TestimonialReactionEmoji | null = null;
+    snapshot.docs.forEach(item => {
+      const data = item.data();
+      if (TESTIMONIAL_REACTION_EMOJIS.includes(data.emoji)) {
+        const emoji = data.emoji as TestimonialReactionEmoji;
+        counts[emoji] = (counts[emoji] || 0) + 1;
+        if (auth.currentUser?.uid === item.id) myReaction = emoji;
+      }
+    });
+    callback({ counts, myReaction });
+  }, error => onError?.(error));
+}
+export async function toggleTestimonialReaction(testimonialId: string, emoji: TestimonialReactionEmoji): Promise<void> {
+  const user = auth.currentUser;
+  if (!user) throw new Error('Connectez-vous pour réagir à ce témoignage.');
+  if (!TESTIMONIAL_REACTION_EMOJIS.includes(emoji)) throw new Error('Réaction non autorisée.');
+  const reactionRef = doc(db, 'testimonials', testimonialId, 'reactions', user.uid);
+  const existing = await getDoc(reactionRef);
+  if (existing.exists() && existing.data().emoji === emoji) {
+    await deleteDoc(reactionRef);
+    return;
+  }
+  await setDoc(reactionRef, { uid: user.uid, emoji, updatedAt: new Date().toISOString() });
 }
