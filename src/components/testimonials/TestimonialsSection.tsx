@@ -27,48 +27,46 @@ export function TestimonialsSection() {
         </div>
 
         <div className="mt-9 grid items-center gap-8 lg:grid-cols-[minmax(390px,.88fr)_minmax(0,1.32fr)] lg:gap-14 xl:gap-20">
-          <div className="relative mx-auto w-full max-w-[510px]" aria-label="Galerie de témoignages">
-            <div className="absolute inset-x-8 -bottom-4 top-8 rotate-[-3deg] rounded-[28px] border border-[#dcebe5] bg-white/65 shadow-[0_12px_32px_rgba(8,24,39,.06)]" />
-            <div className="absolute inset-x-4 -bottom-2 top-4 rotate-[2deg] rounded-[28px] border border-[#cfe5dc] bg-[#eaf7f2] shadow-[0_14px_34px_rgba(8,24,39,.07)]" />
-            <div className="relative z-10 rounded-[28px] border border-[#dcebe5] bg-white p-5 shadow-[0_22px_55px_rgba(8,24,39,.12)] sm:p-6">
-              <div className="mb-5 flex items-center justify-between">
-                <span className="text-[10px] font-black uppercase tracking-[.2em] text-[#00a982]">Galerie IAMTRADER</span>
-                <span className="rounded-full bg-[#eafbf6] px-3 py-1.5 text-[10px] font-bold text-[#168c73]">{items.length ? items.length + ' avis' : 'Aperçu'}</span>
-              </div>
-              {items.length > 0 ? (
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  {items.slice(0, 4).map(item => {
-                    const itemIndex = items.findIndex(entry => entry.id === item.id);
-                    const selected = itemIndex === activeIndex;
-                    return (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => setActiveIndex(itemIndex)}
-                        aria-pressed={selected}
-                        className={'group flex min-w-0 items-center gap-3 rounded-2xl border p-3 text-left transition-all duration-200 ' + (selected ? 'border-[#55c9a8] bg-[#effbf6] shadow-[0_7px_20px_rgba(0,169,130,.10)] ring-1 ring-[#00a982]/15' : 'border-[#e8f0ec] bg-white hover:-translate-y-0.5 hover:border-[#b9ded1] hover:shadow-md')}
-                      >
-                        <img src={item.photoURL} alt="" className="h-[58px] w-[58px] shrink-0 rounded-xl object-cover ring-2 ring-white shadow-sm" />
-                        <span className="min-w-0 flex-1">
-                          <b className="block truncate text-[12px] font-extrabold text-[#183047]">{item.fullName}</b>
-                          <span className="mt-1.5 block text-[10px] leading-4 text-[#7d918a] line-clamp-2">{item.message}</span>
-                          <span className="mt-2 flex gap-0.5">{[1,2,3,4,5].map(star => <Star key={star} className={'h-3 w-3 ' + (star <= item.rating ? 'fill-[#e9b34c] text-[#e9b34c]' : 'text-[#d9e1dd]')} />)}</span>
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  {[0, 1].map(index => <div key={index} className="rounded-2xl border border-[#dcebe5] bg-[#f7fbf9] p-4"><div className="h-12 w-12 rounded-xl bg-[#dff5ec]" /><div className="mt-3 h-2 w-24 rounded bg-[#dcebe5]" /><div className="mt-2 h-2 w-full rounded bg-[#edf3f0]" /></div>)}
-                </div>
-              )}
-              <div className="mt-5 flex items-center justify-between border-t border-[#edf2ef] pt-3">
-                <span className="text-[10px] font-semibold text-[#8aa095]">Chaque carte raconte une expérience.</span>
-                <div className="flex gap-1"><span className="h-1.5 w-5 rounded-full bg-[#00a982]" /><span className="h-1.5 w-1.5 rounded-full bg-[#dcebe5]" /><span className="h-1.5 w-1.5 rounded-full bg-[#dcebe5]" /></div>
-              </div>
+          <div className="mx-auto w-full max-w-[510px]" aria-label="Galerie de témoignages">
+            <div className="mb-5 flex items-center justify-between px-1">
+              <span className="text-[10px] font-black uppercase tracking-[.2em] text-[#00a982]">Galerie IAMTRADER</span>
+              <span className="rounded-full bg-[#eafbf6] px-3 py-1.5 text-[10px] font-bold text-[#168c73]">{items.length ? items.length + ' avis' : 'Aperçu'}</span>
             </div>
-            <p className="mt-7 text-center text-[10px] font-semibold tracking-wide text-[#81958d]">Sélectionnez une carte pour lire le témoignage complet</p>
+            {items.length > 0 ? (
+              <div className="grid grid-cols-1 gap-4">
+                {items.slice(0, 4).map(item => {
+                  const itemIndex = items.findIndex(entry => entry.id === item.id);
+                  const selected = itemIndex === activeIndex;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setActiveIndex(itemIndex)}
+                      aria-pressed={selected}
+                      className={'group flex w-full min-w-0 items-start gap-4 rounded-[24px] border bg-white p-4 text-left shadow-[0_12px_32px_rgba(8,24,39,.07)] transition-all duration-200 sm:p-5 ' + (selected ? 'border-[#55c9a8] bg-[#f4fcf8] ring-1 ring-[#00a982]/20 shadow-[0_14px_34px_rgba(0,169,130,.11)]' : 'border-[#e3eee8] hover:-translate-y-0.5 hover:border-[#b9ded1] hover:shadow-[0_16px_36px_rgba(8,24,39,.10)]')}
+                    >
+                      <img src={item.photoURL} alt="" className="h-[66px] w-[66px] shrink-0 rounded-2xl object-cover ring-2 ring-white shadow-sm sm:h-[76px] sm:w-[76px]" />
+                      <span className="min-w-0 flex-1">
+                        <span className="flex items-center justify-between gap-2">
+                          <b className="truncate text-[13px] font-extrabold text-[#183047]">{item.fullName}</b>
+                          <span className="shrink-0 text-[9px] font-bold uppercase tracking-wider text-[#00a982]">{selected ? 'À la une' : 'Lire'}</span>
+                        </span>
+                        <span className="mt-2 block text-[11px] leading-[1.65] text-[#71877e] line-clamp-3">{item.message}</span>
+                        <span className="mt-3 flex gap-0.5">{[1,2,3,4,5].map(star => <Star key={star} className={'h-3 w-3 ' + (star <= item.rating ? 'fill-[#e9b34c] text-[#e9b34c]' : 'text-[#d9e1dd]')} />)}</span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="rounded-[24px] border border-[#dcebe5] bg-white p-6 shadow-[0_12px_32px_rgba(8,24,39,.06)]">
+                <div className="h-12 w-12 rounded-xl bg-[#dff5ec]" />
+                <div className="mt-4 h-2 w-28 rounded bg-[#dcebe5]" />
+                <div className="mt-3 h-2 w-full rounded bg-[#edf3f0]" />
+                <div className="mt-2 h-2 w-4/5 rounded bg-[#edf3f0]" />
+              </div>
+            )}
+            <p className="mt-5 px-1 text-center text-[10px] font-semibold tracking-wide text-[#81958d]">Chaque témoignage possède sa propre carte.</p>
           </div>
 
           <div className="min-w-0">
