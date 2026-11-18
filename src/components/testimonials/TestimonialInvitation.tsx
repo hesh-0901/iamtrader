@@ -48,26 +48,44 @@ export function TestimonialInvitation({ uid }: { uid?: string }) {
 
   useEffect(()=>{
     if(submitted!==false||!uid)return;
-    const key='iamtrader_testimonial_interactions_'+uid;
-    const stored=Number(window.localStorage.getItem(key)||'0');
-    if(stored>=5){window.localStorage.setItem(key,'0');setOpen(true);}
-    const handleInteraction=(event:MouseEvent)=>{
-      if(open)return;
-      const target=event.target as HTMLElement|null;
-      if(!target||target.closest('[role="dialog"]'))return;
-      // Compte les clics réels dans l'espace de l'application, y compris
-      // les cartes, onglets et éléments de navigation qui ne sont pas des boutons HTML.
-      const next=Number(window.localStorage.getItem(key)||'0')+1;
-      if(next>=5){
-        window.localStorage.setItem(key,'0');
-        setOpen(true);
-      }else{
-        window.localStorage.setItem(key,String(next));
-      }
+    const user=auth.currentUser;
+    const createdAt=user?.metadata?.creationTime ? new Date(user.metadata.creationTime).getTime() : Date.now();
+    const storageKey='iamtrader_testimonial_prompt_'+uid;
+    const readState=()=>{
+      try{
+        const raw=window.localStorage.getItem(storageKey);
+        return raw?JSON.parse(raw) as {shown:number;nextAt:number;initialized:boolean}:{shown:0,nextAt:createdAt+24*60*60*1000,initialized:false};
+      }catch{return {shown:0,nextAt:createdAt+24*60*60*1000,initialized:false};}
     };
-    document.addEventListener('click',handleInteraction,true);
-    return()=>document.removeEventListener('click',handleInteraction,true);
-  },[uid,submitted,open]);
+    const state=readState();
+    if(!state.initialized){
+      state.initialized=true;
+      state.nextAt=Math.max(Date.now(),createdAt+24*60*60*1000);
+      window.localStorage.setItem(storageKey,JSON.stringify(state));
+    }
+    if(state.shown>=3)return;
+    const delay=Math.max(0,state.nextAt-Date.now());
+    const timer=window.setTimeout(()=>{
+      if(document.visibilityState==='visible')setOpen(true);
+      else{
+        const onVisible=()=>{if(document.visibilityState==='visible'){setOpen(true);document.removeEventListener('visibilitychange',onVisible);}};
+        document.addEventListener('visibilitychange',onVisible);
+      }
+    },delay);
+    return()=>window.clearTimeout(timer);
+  },[uid,submitted]);
+
+  function postponeInvitation(){
+    if(!uid){setOpen(false);return;}
+    const storageKey='iamtrader_testimonial_prompt_'+uid;
+    let state:{shown:number;nextAt:number;initialized:boolean};
+    try{state=JSON.parse(window.localStorage.getItem(storageKey)||'{"shown":0,"nextAt":0,"initialized":true}');}
+    catch{state={shown:0,nextAt:0,initialized:true};}
+    state.shown=Math.min(3,(state.shown||0)+1);
+    state.nextAt=Date.now()+4*60*60*1000;
+    window.localStorage.setItem(storageKey,JSON.stringify(state));
+    setOpen(false);
+  }
 
   async function applyCrop(){
     if(!photo||!cropFrameRef.current||!cropNatural.width||!cropNatural.height)return;
@@ -107,7 +125,7 @@ export function TestimonialInvitation({ uid }: { uid?: string }) {
           <div><label className="mb-2 block text-xs font-bold text-slate-700">Votre appréciation</label><div className="flex gap-2">{[1,2,3,4,5].map(n=><button key={n} type="button" onClick={()=>setRating(n)} aria-label={n+' étoiles'} aria-pressed={rating===n}><Star className={'h-7 w-7 '+(n<=rating?'fill-amber-400 text-amber-400':'text-slate-200')}/></button>)}</div></div>
           <div><div className="mb-1.5 flex justify-between"><label htmlFor="dashboard-testimonial-message" className="text-xs font-bold text-slate-700">Votre expérience</label><span className="text-[10px] text-slate-400">{message.length}/700</span></div><textarea id="dashboard-testimonial-message" required minLength={30} maxLength={700} rows={5} value={message} onChange={e=>setMessage(e.target.value)} className="w-full rounded-xl border border-slate-200 px-4 py-4 text-base outline-none transition focus:border-[#00a982] focus:ring-4 focus:ring-[#00a982]/10" placeholder="Qu’est-ce qui a changé dans votre façon de trader ?"/></div>
           {error&&<p role="alert" className="rounded-lg bg-rose-50 p-3 text-xs text-rose-700">{error}</p>}
-          <div className="flex justify-end gap-2"><button type="button" disabled={busy} onClick={()=>{setOpen(false);}} className="rounded-xl border border-slate-200 px-4 py-3 text-xs font-bold text-slate-600">Me le rappeler plus tard</button><button type="submit" disabled={busy} className="inline-flex items-center gap-2 rounded-xl bg-[#00a982] px-4 py-3 text-xs font-extrabold text-white disabled:opacity-60">{busy?<LoaderCircle className="h-4 w-4 animate-spin"/>:<Send className="h-4 w-4"/>}{busy?'Envoi…':'Envoyer mon témoignage'}</button></div>
+          <div className="flex justify-end gap-2"><button type="button" disabled={busy} onClick={postponeInvitation} className="rounded-xl border border-slate-200 px-4 py-3 text-xs font-bold text-slate-600">Me le rappeler plus tard</button><button type="submit" disabled={busy} className="inline-flex items-center gap-2 rounded-xl bg-[#00a982] px-4 py-3 text-xs font-extrabold text-white disabled:opacity-60">{busy?<LoaderCircle className="h-4 w-4 animate-spin"/>:<Send className="h-4 w-4"/>}{busy?'Envoi…':'Envoyer mon témoignage'}</button></div>
         </form>
       </div>
     </div>}
