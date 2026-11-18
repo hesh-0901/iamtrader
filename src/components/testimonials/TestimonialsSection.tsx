@@ -38,23 +38,26 @@ export function TestimonialsSection() {
                   const itemIndex = items.findIndex(entry => entry.id === item.id);
                   const selected = itemIndex === activeIndex;
                   return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => setActiveIndex(itemIndex)}
-                      aria-pressed={selected}
-                      className={'group flex w-full min-w-0 items-start gap-4 rounded-[24px] border bg-white p-4 text-left shadow-[0_12px_32px_rgba(8,24,39,.07)] transition-all duration-200 sm:p-5 ' + (selected ? 'border-[#55c9a8] bg-[#f4fcf8] ring-1 ring-[#00a982]/20 shadow-[0_14px_34px_rgba(0,169,130,.11)]' : 'border-[#e3eee8] hover:-translate-y-0.5 hover:border-[#b9ded1] hover:shadow-[0_16px_36px_rgba(8,24,39,.10)]')}
-                    >
-                      <img src={item.photoURL} alt="" className="h-[66px] w-[66px] shrink-0 rounded-2xl object-cover ring-2 ring-white shadow-sm sm:h-[76px] sm:w-[76px]" />
-                      <span className="min-w-0 flex-1">
-                        <span className="flex items-center justify-between gap-2">
-                          <b className="truncate text-[13px] font-extrabold text-[#183047]">{item.fullName}</b>
-                          <span className="shrink-0 text-[9px] font-bold uppercase tracking-wider text-[#00a982]">{selected ? 'À la une' : 'Lire'}</span>
+                    <div key={item.id} className="group relative isolate -mb-2 px-1 pb-3">
+                      <div aria-hidden="true" className="pointer-events-none absolute inset-x-3 bottom-1 top-3 -z-10 rotate-[2deg] rounded-[24px] border border-[#dcebe5] bg-[#eaf7f2] shadow-[0_8px_20px_rgba(8,24,39,.045)] transition-transform duration-200 group-hover:rotate-[3deg]" />
+                      <div aria-hidden="true" className="pointer-events-none absolute inset-x-1 bottom-2 top-1 -z-10 -rotate-[1.2deg] rounded-[24px] border border-[#e5efe9] bg-white/90 shadow-[0_8px_20px_rgba(8,24,39,.04)]" />
+                      <button
+                        type="button"
+                        onClick={() => setActiveIndex(itemIndex)}
+                        aria-pressed={selected}
+                        className={'relative z-10 flex w-full min-w-0 items-start gap-4 rounded-[24px] border bg-white p-4 text-left shadow-[0_14px_34px_rgba(8,24,39,.09)] transition-all duration-200 sm:p-5 ' + (selected ? 'border-[#55c9a8] bg-[#f4fcf8] ring-1 ring-[#00a982]/20 shadow-[0_16px_38px_rgba(0,169,130,.13)]' : 'border-[#e3eee8] hover:-translate-y-1 hover:border-[#b9ded1] hover:shadow-[0_18px_40px_rgba(8,24,39,.12)]')}
+                      >
+                        <img src={item.photoURL} alt="" className="h-[66px] w-[66px] shrink-0 rounded-2xl object-cover ring-2 ring-white shadow-sm sm:h-[76px] sm:w-[76px]" />
+                        <span className="min-w-0 flex-1">
+                          <span className="flex items-center justify-between gap-2">
+                            <b className="truncate text-[13px] font-extrabold text-[#183047]">{item.fullName}</b>
+                            <span className="shrink-0 text-[9px] font-bold uppercase tracking-wider text-[#00a982]">{selected ? 'À la une' : 'Lire'}</span>
+                          </span>
+                          <span className="mt-2 block text-[11px] leading-[1.65] text-[#71877e] line-clamp-3">{item.message}</span>
+                          <span className="mt-3 flex gap-0.5">{[1,2,3,4,5].map(star => <Star key={star} className={'h-3 w-3 ' + (star <= item.rating ? 'fill-[#e9b34c] text-[#e9b34c]' : 'text-[#d9e1dd]')} />)}</span>
                         </span>
-                        <span className="mt-2 block text-[11px] leading-[1.65] text-[#71877e] line-clamp-3">{item.message}</span>
-                        <span className="mt-3 flex gap-0.5">{[1,2,3,4,5].map(star => <Star key={star} className={'h-3 w-3 ' + (star <= item.rating ? 'fill-[#e9b34c] text-[#e9b34c]' : 'text-[#d9e1dd]')} />)}</span>
-                      </span>
-                    </button>
+                      </button>
+                    </div>
                   );
                 })}
               </div>
