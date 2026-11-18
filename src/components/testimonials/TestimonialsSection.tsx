@@ -39,7 +39,7 @@ export function TestimonialsSection() {
                 <button
                   key={activeItem.id}
                   type="button"
-                  aria-label="Témoignage affiché : " + activeItem.fullName
+                  aria-label={"Témoignage affiché : " + activeItem.fullName}
                   className="relative z-10 flex min-h-[190px] w-full items-start gap-4 rounded-[26px] border border-[#55c9a8] bg-[#f4fcf8] p-5 text-left shadow-[0_18px_42px_rgba(8,24,39,.11)] ring-1 ring-[#00a982]/15 sm:p-6"
                 >
                   <img src={activeItem.photoURL} alt="" className="h-[76px] w-[76px] shrink-0 rounded-2xl object-cover ring-2 ring-white shadow-sm sm:h-[88px] sm:w-[88px]" />
