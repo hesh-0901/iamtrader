@@ -1013,24 +1013,32 @@ service cloud.firestore {
         function publishedTestimonial() {
           return get(/databases/$(database)/documents/testimonials/$(testimonialId)).data.status == 'published';
         }
+
+        // Les compteurs de réactions sont consultables publiquement.
         allow get, list: if publishedTestimonial();
-        allow create: if signedIn()
-          && publishedTestimonial()
-          && reactionUid == request.auth.uid
-          && request.resource.data.keys().hasOnly(['uid', 'emoji', 'updatedAt'])
-          && request.resource.data.uid == request.auth.uid
+
+        // Les visiteurs, connectés ou non, peuvent enregistrer une réaction
+        // sous un identifiant anonyme persistant propre à leur navigateur.
+        allow create: if publishedTestimonial()
+          && reactionUid == request.resource.data.visitorId
+          && request.resource.data.keys().hasOnly(['visitorId', 'emoji', 'updatedAt'])
+          && request.resource.data.visitorId is string
+          && request.resource.data.visitorId.size() >= 20
+          && request.resource.data.visitorId.size() <= 80
           && request.resource.data.emoji in ['👍', '❤️', '🔥', '👏', '💡', '🚀']
           && request.resource.data.updatedAt is string;
-        allow update: if signedIn()
-          && publishedTestimonial()
-          && reactionUid == request.auth.uid
+
+        // L'identifiant de document sert de clé anonyme pour modifier
+        // ou remplacer la réaction du même navigateur.
+        allow update: if publishedTestimonial()
+          && reactionUid == resource.data.visitorId
+          && request.resource.data.visitorId == resource.data.visitorId
           && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['emoji', 'updatedAt'])
-          && request.resource.data.uid == resource.data.uid
           && request.resource.data.emoji in ['👍', '❤️', '🔥', '👏', '💡', '🚀']
           && request.resource.data.updatedAt is string;
-        allow delete: if signedIn()
-          && publishedTestimonial()
-          && reactionUid == request.auth.uid;
+
+        allow delete: if publishedTestimonial()
+          && reactionUid == resource.data.visitorId;
       }
     }
 
