@@ -4,7 +4,7 @@ import { onRequest as handleInstrumentSuggest } from '../functions/api/instrumen
 import { onRequest as handleMarketData } from '../functions/api/market-data';
 import { onRequestPost as handleContactReply } from '../functions/api/contact-reply';
 import { onRequestPost as handleContactCompose } from '../functions/api/contact-compose';
-import { handlePaymentRequest, handlePaymentCallback, handleCinetPayNotification, handleSasPayWebhook, handleSasPayVerifyRequest, handleSasPayStatusRequest } from './payments';
+import { handlePaymentRequest, handlePaymentCallback, handleCinetPayNotification, handleSasPayWebhook, handleSasPayVerifyRequest, handleSasPayStatusRequest, handleChariowPulse } from './payments';
 import { resolvePromotion } from './promotions';
 import type { PaymentEnv } from './firebaseAdmin';
 import { firestoreQueryCollection, firestorePatch } from './firebaseAdmin';
@@ -53,6 +53,10 @@ interface Env {
   SASPAY_API_KEY?: string;
   SASPAY_WEBHOOK_SECRET?: string;
   SASPAY_COUNTRY?: string;
+  CHARIOW_API_KEY?: string;
+  CHARIOW_PULSE_SECRET?: string;
+  CHARIOW_PLUS_PRODUCT_ID?: string;
+  CHARIOW_COMMUNITY_PRODUCT_ID?: string;
   FIREBASE_API_KEY?: string;
   FIREBASE_SERVICE_ACCOUNT_JSON?: string;
   PAYMENT_SIMULATION_ENABLED?: string;
@@ -204,6 +208,10 @@ export default {
 
     if (url.pathname === '/api/payments/saspay/webhook') {
       return handleSasPayWebhook(request, env);
+    }
+
+    if (url.pathname === '/api/payments/chariow/pulse') {
+      return handleChariowPulse(request, env);
     }
 
     if (url.pathname === '/api/payments/verify') {

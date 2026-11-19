@@ -450,7 +450,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
     try {
       const details: PaymentDetails = {
         months: paymentPlan === 'community' ? 6 : paymentMonths,
-        phone: paymentMethod === 'mobile_money' ? paymentPhone.trim() : undefined,
+        phone: paymentPhone.trim() || undefined,
         countryCode: paymentCountryCode,
         paymentMethod,
         paymentProvider: paymentMethod === 'mobile_money' ? paymentProvider : undefined,
@@ -463,7 +463,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
       setPaymentReference(payment.reference || null);
       setPaymentStatus('processing');
       setPaymentMessage(payment.message || (paymentMethod === 'card'
-        ? 'Vous allez être redirigé vers la page sécurisée de SasPay pour régler par carte.'
+        ? 'Vous allez être redirigé vers la page sécurisée de Chariow pour régler par carte.'
         : 'Demande envoyée. Confirmez le paiement sur votre téléphone.'));
       if (paymentMethod === 'card') {
         if (!payment.paymentUrl) throw new Error('Le lien sécurisé de paiement par carte est introuvable.');
@@ -943,15 +943,23 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                             <input id="cardholder-email" type="email" autoComplete="email" value={paymentCardholderEmail} onChange={event => setPaymentCardholderEmail(event.target.value)} placeholder="nom@exemple.com" className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100" required />
                           </div>
                           <div>
+                            <label htmlFor="card-phone" className="mb-1.5 block text-xs font-bold text-slate-700">Numéro de téléphone</label>
+                            <div className="flex min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white">
+                              <span className="flex shrink-0 items-center border-r border-slate-200 bg-slate-50 px-3 text-sm font-bold text-slate-700">{countryOptions.find(item => item.code === paymentCountryCode)?.dialCode || '+243'}</span>
+                              <input id="card-phone" type="tel" inputMode="numeric" autoComplete="tel-national" value={paymentPhone} onChange={event => setPaymentPhone(event.target.value.replace(/[^0-9]/g, '').replace(/^0+/, '').slice(0, countryOptions.find(item => item.code === paymentCountryCode)?.phoneLength || 9))} placeholder={'X'.repeat(countryOptions.find(item => item.code === paymentCountryCode)?.phoneLength || 9)} className="min-w-0 flex-1 px-3 py-3 text-sm text-slate-900 outline-none" required />
+                            </div>
+                            <p className="mt-1 text-[10px] text-slate-500">Ce numéro est transmis à Chariow pour préremplir le formulaire de paiement.</p>
+                          </div>
+                          <div>
                             <label htmlFor="card-billing-country" className="mb-1.5 block text-xs font-bold text-slate-700">Pays de facturation</label>
                             <select id="card-billing-country" value={paymentCountryCode} onChange={event => setPaymentCountryCode(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-900 outline-none focus:border-emerald-500">
                               {countryOptions.map(item => <option key={item.code} value={item.code}>{item.name}</option>)}
                             </select>
                           </div>
-                          <p className="text-[11px] leading-5 text-emerald-900/80">Après validation, SasPay vous demandera le numéro de carte, la date d’expiration et le code de sécurité (CVV) sur sa page sécurisée. Ces données ne passent jamais par IAMTRADER.</p>
+                          <p className="text-[11px] leading-5 text-emerald-900/80">Après validation, Chariow vous redirigera vers sa page sécurisée pour régler par carte. Les données de carte ne passent jamais par IAMTRADER.</p>
                         </div>
                       )}
-                      <div className="flex gap-2 pt-2"><button type="button" onClick={() => setPaymentStep('duration')} className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-600">Retour</button><button type="button" onClick={() => setPaymentStep('summary')} disabled={(paymentMethod === 'mobile_money' && (!paymentPhone.trim() || !paymentProvider)) || (paymentMethod === 'card' && (!paymentCardholderName.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(paymentCardholderEmail.trim())))} className="flex-[1.5] rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-40">Continuer</button></div>
+                      <div className="flex gap-2 pt-2"><button type="button" onClick={() => setPaymentStep('duration')} className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-600">Retour</button><button type="button" onClick={() => setPaymentStep('summary')} disabled={(paymentMethod === 'mobile_money' && (!paymentPhone.trim() || !paymentProvider)) || (paymentMethod === 'card' && (!paymentCardholderName.trim() || !paymentPhone.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(paymentCardholderEmail.trim())))} className="flex-[1.5] rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-40">Continuer</button></div>
                     </div>
                   )}
 

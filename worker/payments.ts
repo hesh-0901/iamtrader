@@ -1,4 +1,4 @@
-import { firestoreCreate, firestoreGet, firestorePatch, PaymentEnv, verifyFirebaseIdToken } from './firebaseAdmin';
+import { firestoreCreate, firestoreDelete, firestoreGet, firestorePatch, PaymentEnv, verifyFirebaseIdToken } from './firebaseAdmin';
 import { decideSubscription, subscriptionFields, SubscriptionAction } from './subscription';
 import { resolvePromotion, type AppliedPromotion } from './promotions';
 
@@ -179,7 +179,7 @@ function publicPayment(payment: Record<string, unknown>) {
     paidAt: payment.paidAt || null,
     updatedAt: payment.updatedAt || null,
     failureMessage: payment.failureMessage || null,
-    providerStatus: payment.cinetpayStatus || payment.saspayStatus || null
+    providerStatus: payment.cinetpayStatus || payment.saspayStatus || payment.chariowStatus || null
   };
 }
 
@@ -190,6 +190,13 @@ type SasPayEnv = PaymentEnv & {
   RESEND_API_KEY?: string;
   RESEND_FROM_EMAIL?: string;
   RESEND_REPLY_TO?: string;
+};
+
+type ChariowEnv = CinetPayEnv & {
+  CHARIOW_API_KEY?: string;
+  CHARIOW_PULSE_SECRET?: string;
+  CHARIOW_PLUS_PRODUCT_ID?: string;
+  CHARIOW_COMMUNITY_PRODUCT_ID?: string;
 };
 
 type CinetPayEnv = SasPayEnv & {
@@ -477,6 +484,110 @@ async function createSasPayCardCheckout(
   }
 }
 
+async function createChariowCheckout(
+  request: Request, env: ChariowEnv, user: any, body: any, profile: any,
+  planKey: keyof typeof PLANS, plan: (typeof PLANS)[keyof typeof PLANS],
+  amounts: ReturnType<typeof calculatePaymentAmounts>, decision: any, payerName: string
+) {
+  const apiKey = String(env.CHARIOW_API_KEY || '').trim();
+  const productId = String(planKey === 'community'
+    ? env.CHARIOW_COMMUNITY_PRODUCT_ID || 'prd_m2cdsq07'
+    : env.CHARIOW_PLUS_PRODUCT_ID || 'prd_u0schrfp').trim();
+  if (!apiKey) return json({ success: false, message: 'Le paiement par carte est temporairement indisponible.' }, 503);
+  if (body._promotion) return json({ success: false, message: 'Les codes promotionnels IAMTRADER ne sont pas encore compatibles avec le paiement Chariow. Choisissez un autre moyen de paiement.' }, 400);
+  const months = Number(body.months || 1);
+  if ((planKey === 'pro' && months !== 1) || (planKey === 'community' && months !== 6)) {
+    return json({ success: false, message: 'La durée sélectionnée ne correspond pas au produit Chariow publié.' }, 400);
+  }
+  const email = String(body.cardholderEmail || user.email || profile.email || '').trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ success: false, message: 'Une adresse e-mail valide est nécessaire pour le paiement.' }, 400);
+  const fullName = String(payerName || traderFullName(profile) || profile.displayName || email).trim();
+  const names = fullName.split(/\s+/).filter(Boolean);
+  const firstName = (names.shift() || 'Trader').slice(0, 50);
+  const lastName = (names.join(' ') || 'IAMTRADER').slice(0, 50);
+  const countryCode = String(body.countryCode || profile.countryCode || 'CD').toUpperCase();
+  const rawPhoneInput = String(body.phone || profile.phone || profile.whatsapp || profile.traderProfile?.phone || '').replace(/[^0-9]/g, '');
+  const dialDigits = String(SASPAY_COUNTRIES[countryCode as keyof typeof SASPAY_COUNTRIES]?.dialCode || '').replace(/[^0-9]/g, '');
+  const rawPhone = dialDigits && rawPhoneInput.startsWith(dialDigits) ? rawPhoneInput.slice(dialDigits.length) : rawPhoneInput;
+  if (!/^[A-Z]{2}$/.test(countryCode) || rawPhone.length < 7 || rawPhone.length > 15) {
+    return json({ success: false, message: 'Un numéro de téléphone valide et le pays correspondant sont requis pour le paiement Chariow.' }, 400);
+  }
+  const idempotencyKey = String(body.idempotencyKey || '');
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(idempotencyKey)) {
+    return json({ success: false, message: 'Clé de paiement invalide. Réessayez.' }, 400);
+  }
+  const paymentId = randomId();
+  const now = new Date().toISOString();
+  const reference = 'IMAT-' + paymentId.toUpperCase();
+  await firestoreCreate(env, 'payments', paymentId, {
+    id: paymentId, uid: user.uid, email, displayName: profile.displayName || email, fullName,
+    countryCode, plan: planKey, planName: plan.name, months, amount: amounts.total,
+    amountUsd: amounts.total, baseAmount: amounts.baseAmount, paymentFee: amounts.fee,
+    paymentFeeRate: PAYMENT_FEE_RATE, currency: 'USD', payerName: fullName,
+    paymentMethod: 'card', paymentProvider: 'card', provider: 'CHARIOW',
+    chariowProductId: productId, subscriptionAction: decision.action,
+    currentPlanAtPurchase: decision.currentPlan, activationStartAt: decision.start.toISOString(),
+    activationExpiresAt: decision.expires.toISOString(), status: 'initiated',
+    reference, transactionReference: reference, idempotencyKey,
+    invoiceNumber: invoiceNumber(paymentId, now), createdAt: now
+  });
+  try {
+    const origin = new URL(request.url).origin;
+    const response = await fetch('https://api.chariow.com/v1/checkout', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + apiKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        product_id: productId, email, first_name: firstName, last_name: lastName,
+        phone: { number: rawPhone, country_code: countryCode },
+        payment_currency: 'USD',
+        redirect_url: origin + '/?payment=callback&reference=' + encodeURIComponent(paymentId),
+        custom_metadata: { iamtrader_payment_id: paymentId, iamtrader_plan: planKey, iamtrader_months: String(months) }
+      })
+    });
+    const raw = await response.text();
+    let result: any = {};
+    try { result = raw ? JSON.parse(raw) : {}; } catch { result = {}; }
+    const data = result?.data || {};
+    const purchase = data?.purchase || {};
+    const checkoutUrl = String(data?.payment?.checkout_url || '').trim();
+    const purchaseId = String(purchase?.id || '').trim();
+    const amount = Number(purchase?.amount?.value);
+    const currency = String(purchase?.amount?.currency || '').toUpperCase();
+    let safeUrl = false;
+    try {
+      const parsed = new URL(checkoutUrl);
+      safeUrl = parsed.protocol === 'https:' && (parsed.hostname === 'chariow.com' || parsed.hostname.endsWith('.chariow.com') || parsed.hostname.endsWith('.mychariow.market'));
+    } catch { safeUrl = false; }
+    if (!response.ok || data.step !== 'payment' || !purchaseId || !safeUrl ||
+      !amountsMatchToCents(amount, Number(amounts.total)) || currency !== 'USD') {
+      await firestorePatch(env, 'payments/' + paymentId, {
+        status: 'failed', failureMessage: 'Chariow n’a pas pu préparer le paiement ou le montant du produit ne correspond pas à la commande.',
+        chariowHttpStatus: response.status, updatedAt: new Date().toISOString()
+      }, ['status', 'failureMessage', 'chariowHttpStatus', 'updatedAt']);
+      console.error('Chariow checkout initialization rejected:', response.status, raw.slice(0, 500));
+      return json({ success: false, message: result?.message || 'Impossible de créer le paiement Chariow. Vérifiez le prix et le type du produit publié.' }, 502);
+    }
+    await firestorePatch(env, 'payments/' + paymentId, {
+      status: 'processing', chariowSaleId: purchaseId, chariowCheckoutUrl: checkoutUrl,
+      chariowStatus: String(purchase?.status || 'awaiting_payment'), updatedAt: new Date().toISOString()
+    }, ['status', 'chariowSaleId', 'chariowCheckoutUrl', 'chariowStatus', 'updatedAt']);
+    return json({ success: true, payment: {
+      id: paymentId, plan: planKey, planName: plan.name, months, amount, currency,
+      status: 'processing', reference, paymentUrl: checkoutUrl,
+      subscriptionAction: decision.action, activationStartAt: decision.start.toISOString(),
+      activationExpiresAt: decision.expires.toISOString(),
+      message: 'Votre session de paiement sécurisé Chariow est prête. Vous allez être redirigé.'
+    } });
+  } catch (error) {
+    await firestorePatch(env, 'payments/' + paymentId, {
+      status: 'failed', failureMessage: 'Impossible de joindre Chariow pour créer le paiement.',
+      updatedAt: new Date().toISOString()
+    }, ['status', 'failureMessage', 'updatedAt']);
+    console.error('Chariow checkout request failed:', error);
+    return json({ success: false, message: 'Impossible de joindre Chariow. Réessayez ultérieurement.' }, 502);
+  }
+}
+
 export async function handleSasPayVerifyRequest(request: Request, env: SasPayEnv) {
   if (request.method !== 'GET') return json({ success: false, message: 'Méthode non autorisée.' }, 405);
   const token = authHeader(request);
@@ -745,7 +856,7 @@ export async function handlePaymentRequest(request: Request, env: CinetPayEnv) {
       } });
     }
     if (paymentMethod === 'card') {
-      return await createSasPayCardCheckout(request, env, user, body, profile, planKey, plan, amounts, decision, payerName);
+      return await createChariowCheckout(request, env as ChariowEnv, user, body, profile, planKey, plan, amounts, decision, payerName);
     }
     if (isSasPay) {
       return await createSasPayCheckout(request, env, user, body, profile, planKey, plan, phone!, amounts, decision, payerName);
@@ -1231,3 +1342,122 @@ export async function handleSasPayWebhook(
     return json({ received: false }, 500);
   }
 }
+
+
+export async function handleChariowPulse(request: Request, env: ChariowEnv) {
+  if (request.method !== 'POST') return json({ received: false }, 405);
+  const secret = String(env.CHARIOW_PULSE_SECRET || '').trim();
+  const apiKey = String(env.CHARIOW_API_KEY || '').trim();
+  if (!secret || !apiKey) return json({ received: false, message: 'Configuration Chariow incomplète.' }, 503);
+  let claimPath = '';
+  try {
+    const rawBody = await request.text();
+    const signature = request.headers.get('x-chariow-signature') || '';
+    const deliveryId = request.headers.get('x-pulse-delivery-id') || '';
+    const eventHeader = request.headers.get('x-pulse-event') || '';
+    if (!/^sha256=[a-f0-9]{64}$/i.test(signature) || !deliveryId || deliveryId.length > 200) {
+      return json({ received: false, message: 'En-têtes Pulse invalides.' }, 401);
+    }
+    const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    const digest = new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(rawBody)));
+    const expected = 'sha256=' + Array.from(digest, byte => byte.toString(16).padStart(2, '0')).join('');
+    let diff = expected.length ^ signature.length;
+    for (let i = 0; i < Math.min(expected.length, signature.length); i++) diff |= expected.charCodeAt(i) ^ signature.toLowerCase().charCodeAt(i);
+    if (diff !== 0) return json({ received: false, message: 'Signature Chariow invalide.' }, 401);
+    const payload = JSON.parse(rawBody);
+    if (payload?.event !== eventHeader) return json({ received: false, message: 'Événement Chariow incohérent.' }, 400);
+    if (payload.event !== 'successful.sale') return json({ received: true, ignored: true });
+    const saleId = String(payload?.sale?.id || '').trim();
+    if (saleId.startsWith('test_')) return json({ received: true, ignored: true, test: true });
+    const paymentId = String(payload?.sale?.custom_metadata?.iamtrader_payment_id || payload?.sale?.custom_metadata?.order_ref || '').trim();
+    if (!/^sal_[A-Za-z0-9_-]+$/.test(saleId) || !/^[a-f0-9]{24}$/i.test(paymentId)) {
+      return json({ received: false, message: 'Référence de vente IAMTRADER absente.' }, 400);
+    }
+    const payment = await firestoreGet(env, 'payments/' + paymentId.toLowerCase());
+    if (!payment || payment.provider !== 'CHARIOW' || payment.chariowProductId !== String(payload?.product?.id || '')) {
+      return json({ received: false, message: 'Paiement IAMTRADER introuvable ou produit non correspondant.' }, 404);
+    }
+    if (payment.status === 'paid') return json({ received: true, duplicate: true });
+    const saleResponse = await fetch('https://api.chariow.com/v1/sales/' + encodeURIComponent(saleId), {
+      headers: { Authorization: 'Bearer ' + apiKey, Accept: 'application/json' }
+    });
+    const saleRaw = await saleResponse.text();
+    let saleResult: any = {};
+    try { saleResult = saleRaw ? JSON.parse(saleRaw) : {}; } catch { saleResult = {}; }
+    const sale = saleResult?.data || {};
+    if (!saleResponse.ok || String(sale?.id || '') !== saleId || String(sale?.status || '').toLowerCase() !== 'completed') {
+      console.error('Chariow canonical sale verification failed:', saleResponse.status, saleRaw.slice(0, 300));
+      return json({ received: false, message: 'La vente Chariow n’a pas pu être vérifiée.' }, 502);
+    }
+    const productId = String(sale?.product?.id || sale?.product_id || payload?.product?.id || '');
+    const metadataPaymentId = String(payload?.sale?.custom_metadata?.iamtrader_payment_id || '').toLowerCase();
+    const customerEmail = String(sale?.customer?.email || payload?.customer?.email || '').trim().toLowerCase();
+    const amount = Number(sale?.amount?.value);
+    const currency = String(sale?.amount?.currency || '').toUpperCase();
+    if (productId !== String(payment.chariowProductId) || metadataPaymentId !== paymentId.toLowerCase() ||
+      customerEmail !== String(payment.email || '').toLowerCase() ||
+      !amountsMatchToCents(amount, Number(payment.amount)) || currency !== String(payment.currency || 'USD').toUpperCase()) {
+      return json({ received: false, message: 'Les données de la vente ne correspondent pas à la commande IAMTRADER.' }, 409);
+    }
+    const planKey = payment.plan as keyof typeof PLANS;
+    const profile = await firestoreGet(env, 'users/' + encodeURIComponent(String(payment.uid)));
+    if (!PLANS[planKey] || !profile) return json({ received: false, message: 'Profil ou formule introuvable.' }, 404);
+    const paidAt = String(sale?.completed_at || new Date().toISOString());
+    const storedStart = new Date(String(payment.activationStartAt || ''));
+    const storedExpires = new Date(String(payment.activationExpiresAt || ''));
+    const validStored = ['initial', 'renewal', 'upgrade'].includes(String(payment.subscriptionAction)) &&
+      Number.isFinite(storedStart.getTime()) && Number.isFinite(storedExpires.getTime());
+    const fallback = validStored ? null : decideSubscription(profile, planKey, new Date(paidAt));
+    if (fallback && 'error' in fallback) return json({ received: false, message: fallback.error }, 409);
+    const action = validStored ? payment.subscriptionAction as SubscriptionAction : fallback!.action;
+    const start = validStored ? storedStart.toISOString() : fallback!.start.toISOString();
+    const expires = validStored ? storedExpires.toISOString() : fallback!.expires.toISOString();
+    // Claim this Pulse delivery before changing the subscription. Chariow keeps the
+    // delivery ID stable across retries; Firestore CREATE makes the claim atomic.
+    const saleClaimPath = 'chariowPulseDeliveries/' + encodeURIComponent(deliveryId);
+    const existingClaim = await firestoreGet(env, saleClaimPath);
+    if (existingClaim?.status === 'completed') return json({ received: true, duplicate: true });
+    if (existingClaim?.status === 'processing') {
+      const claimedAt = new Date(String(existingClaim.createdAt || '')).getTime();
+      if (Number.isFinite(claimedAt) && Date.now() - claimedAt < 10 * 60 * 1000) {
+        return json({ received: false, message: 'Cette vente est déjà en cours de traitement.' }, 409);
+      }
+      await firestoreDelete(env, saleClaimPath);
+    } else if (existingClaim) {
+      await firestoreDelete(env, saleClaimPath);
+    }
+    await firestoreCreate(env, 'chariowPulseDeliveries', deliveryId, {
+      id: deliveryId, event: payload.event, saleId, paymentId,
+      status: 'processing', createdAt: new Date().toISOString()
+    });
+    claimPath = saleClaimPath;
+
+    // Update the user's entitlement before marking the payment as paid. If a later
+    // step fails, Chariow can retry and the same subscription dates are reapplied.
+    await firestorePatch(env, 'users/' + encodeURIComponent(String(payment.uid)),
+      subscriptionFields(profile, planKey, action, start, expires, paidAt),
+      ['plan', 'paymentDate', 'subscriptionStartAt', 'subscriptionExpiresAt', 'subscriptionExpiresAtMs', 'subscriptionStatus', 'paymentStatus', 'planChangeConfirmedAt', 'pendingPlan', 'planChangeRequestedAt', 'scheduledPlan', 'scheduledStartAt', 'scheduledExpiresAt', 'scheduledExpiresAtMs', 'updatedAt']);
+    await markReferralFirstPayment(env, String(payment.uid), paidAt);
+    await firestorePatch(env, 'payments/' + paymentId.toLowerCase(), {
+      status: 'paid', paidAt, provider: 'CHARIOW', chariowStatus: 'completed',
+      chariowSaleId: saleId, updatedAt: paidAt
+    }, ['status', 'paidAt', 'provider', 'chariowStatus', 'chariowSaleId', 'updatedAt']);
+    await sendSasPayInvoiceEmail(env, { ...payment, id: paymentId, status: 'paid', paidAt }, paidAt);
+    await firestorePatch(env, claimPath, {
+      status: 'completed', processedAt: paidAt
+    }, ['status', 'processedAt']);
+    claimPath = '';
+    return json({ received: true });
+  } catch (error) {
+    if (claimPath) {
+      try {
+        await firestorePatch(env, claimPath, { status: 'failed', failedAt: new Date().toISOString() }, ['status', 'failedAt']);
+      } catch (claimError) {
+        console.error('Chariow Pulse claim cleanup failed:', claimError);
+      }
+    }
+    console.error('Chariow Pulse processing error:', error);
+    return json({ received: false }, 500);
+  }
+}
+
