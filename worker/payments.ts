@@ -541,6 +541,7 @@ async function createChariowCheckout(
         phone: { number: rawPhone, country_code: countryCode },
         payment_currency: 'USD',
         customer_ip: request.headers.get('CF-Connecting-IP') || undefined,
+        embed_origins: ['https://iamtrader.trade'],
         redirect_url: origin + '/?payment=callback&reference=' + encodeURIComponent(paymentId),
         custom_metadata: { iamtrader_payment_id: paymentId, iamtrader_plan: planKey, iamtrader_months: String(months) }
       })
