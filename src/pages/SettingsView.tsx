@@ -447,6 +447,11 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
 
   const submitPayment = async () => {
     if (!paymentPlan) return;
+    // Open a blank tab synchronously from the user's click so browser popup
+    // blockers do not prevent the authenticated provider checkout from opening.
+    const checkoutWindow = paymentMethod === 'card'
+      ? window.open('about:blank', '_blank', 'noopener,noreferrer')
+      : null;
     setIsPaymentLoading(true); setPaymentMessage(''); setPaymentLastCheckedAt(null); setPaymentCheckError(''); setPaymentPollTimedOut(false);
     try {
       const details: PaymentDetails = {
@@ -464,14 +469,18 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
       setPaymentReference(payment.reference || null);
       setPaymentStatus('processing');
       setPaymentMessage(payment.message || (paymentMethod === 'card'
-        ? 'Paiement sécurisé prêt. Effectuez le règlement ci-dessous sans quitter IAMTRADER.'
+        ? 'Le paiement sécurisé va s’ouvrir dans un nouvel onglet. IAMTRADER restera ouvert ici.'
         : 'Demande envoyée. Confirmez le paiement sur votre téléphone.'));
       if (paymentMethod === 'card') {
         const checkout = String(payment.paymentUrl || '').trim();
         if (!/^https:\/\//i.test(checkout)) throw new Error('Le lien sécurisé de paiement par carte est introuvable.');
         setPaymentUrl(checkout);
+        if (checkoutWindow && !checkoutWindow.closed) {
+          checkoutWindow.location.replace(checkout);
+        }
       }
     } catch (error: any) {
+      if (checkoutWindow && !checkoutWindow.closed) checkoutWindow.close();
       setPaymentStatus('failed');
       setPaymentMessage(error?.message || 'Impossible d’initier le paiement.');
     } finally { setIsPaymentLoading(false); }
@@ -978,15 +987,12 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
               )}
 
               {paymentStatus === 'processing' && paymentMethod === 'card' && (
-                <div className="mx-auto w-full max-w-2xl space-y-3 py-2">
-                  <div className="flex items-center justify-between gap-3">
-                    <div><h4 className="text-lg font-black text-slate-900">Paiement sécurisé</h4><p className="text-xs text-slate-500">Effectuez votre paiement par carte dans IAMTRADER.</p></div>
-                    <span className="rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-bold text-emerald-700">Connexion sécurisée</span>
-                  </div>
-                  {paymentUrl ? (
-                    <iframe title="Paiement sécurisé Chariow" src={paymentUrl} className="h-[620px] w-full rounded-2xl border border-slate-200 bg-white" allow="payment *" referrerPolicy="strict-origin-when-cross-origin" />
-                  ) : <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600">Préparation de la session de paiement…</p>}
-                  <p className="text-center text-xs text-slate-500">Ne fermez pas cette fenêtre. IAMTRADER vérifie automatiquement la confirmation du paiement.</p>
+                <div className="mx-auto w-full max-w-lg space-y-4 py-5 text-center">
+                  <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-700"><CreditCard className="h-8 w-8" /></div>
+                  <h4 className="text-xl font-black text-slate-900">Paiement sécurisé Chariow</h4>
+                  <p className="text-sm leading-6 text-slate-600">{paymentMessage || 'Finalisez le paiement dans l’onglet sécurisé qui vient de s’ouvrir. IAMTRADER reste ouvert et vérifiera automatiquement la confirmation.'}</p>
+                  {paymentUrl && <button type="button" onClick={() => window.open(paymentUrl, '_blank', 'noopener,noreferrer')} className="w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700">Ouvrir le paiement sécurisé</button>}
+                  <p className="text-xs text-slate-500">Après le paiement, revenez sur cet onglet. Votre abonnement sera activé après confirmation de Chariow.</p>
                   <button type="button" onClick={() => { setPaymentStatus('idle'); setPaymentId(null); setPaymentUrl(null); setPaymentStep('summary'); }} className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-600">Retour au récapitulatif</button>
                 </div>
               )}
