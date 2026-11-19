@@ -1414,22 +1414,23 @@ export async function handleChariowPulse(request: Request, env: ChariowEnv) {
     const expires = validStored ? storedExpires.toISOString() : fallback!.expires.toISOString();
     // Claim the sale before changing the subscription. Firestore CREATE is atomic:
     // concurrent deliveries cannot both acquire the same sale claim.
-    claimPath = 'chariowPulseDeliveries/' + encodeURIComponent(saleId);
-    const existingClaim = await firestoreGet(env, claimPath);
+    const saleClaimPath = 'chariowPulseDeliveries/' + encodeURIComponent(saleId);
+    const existingClaim = await firestoreGet(env, saleClaimPath);
     if (existingClaim?.status === 'completed') return json({ received: true, duplicate: true });
     if (existingClaim?.status === 'processing') {
       const claimedAt = new Date(String(existingClaim.createdAt || '')).getTime();
       if (Number.isFinite(claimedAt) && Date.now() - claimedAt < 10 * 60 * 1000) {
         return json({ received: false, message: 'Cette vente est déjà en cours de traitement.' }, 409);
       }
-      await firestoreDelete(env, claimPath);
+      await firestoreDelete(env, saleClaimPath);
     } else if (existingClaim) {
-      await firestoreDelete(env, claimPath);
+      await firestoreDelete(env, saleClaimPath);
     }
     await firestoreCreate(env, 'chariowPulseDeliveries', saleId, {
       id: saleId, deliveryId, event: payload.event, saleId, paymentId,
       status: 'processing', createdAt: new Date().toISOString()
     });
+    claimPath = saleClaimPath;
 
     // Update the user's entitlement before marking the payment as paid. If a later
     // step fails, Chariow can retry and the same subscription dates are reapplied.
