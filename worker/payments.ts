@@ -540,6 +540,7 @@ async function createChariowCheckout(
         product_id: productId, email, first_name: firstName, last_name: lastName,
         phone: { number: rawPhone, country_code: countryCode },
         payment_currency: 'USD',
+        customer_ip: request.headers.get('CF-Connecting-IP') || undefined,
         redirect_url: origin + '/?payment=callback&reference=' + encodeURIComponent(paymentId),
         custom_metadata: { iamtrader_payment_id: paymentId, iamtrader_plan: planKey, iamtrader_months: String(months) }
       })
@@ -551,21 +552,47 @@ async function createChariowCheckout(
     const purchase = data?.purchase || {};
     const checkoutUrl = String(data?.payment?.checkout_url || '').trim();
     const purchaseId = String(purchase?.id || '').trim();
-    const amount = Number(purchase?.amount?.value);
-    const currency = String(purchase?.amount?.currency || '').toUpperCase();
+
+    // Chariow distinguishes the product's sale amount from the amount charged
+    // after currency conversion. Validate the payment amount when available.
+    const chargedAmount = purchase?.payment?.amount || purchase?.amount;
+    const amount = Number(chargedAmount?.value);
+    const currency = String(chargedAmount?.currency || '').toUpperCase();
     let safeUrl = false;
     try {
       const parsed = new URL(checkoutUrl);
       safeUrl = parsed.protocol === 'https:' && (parsed.hostname === 'chariow.com' || parsed.hostname.endsWith('.chariow.com') || parsed.hostname.endsWith('.mychariow.market'));
     } catch { safeUrl = false; }
-    if (!response.ok || data.step !== 'payment' || !purchaseId || !safeUrl ||
-      !amountsMatchToCents(amount, Number(amounts.total)) || currency !== 'USD') {
+
+    const validPaymentResponse = data.step === 'payment' && Boolean(purchaseId) && safeUrl &&
+      Number.isFinite(amount) && amountsMatchToCents(amount, Number(amounts.total)) && currency === 'USD';
+
+    if (!response.ok || !validPaymentResponse) {
+      const providerMessage = String(result?.message || data?.message || '').slice(0, 500);
+      const validationErrors = result?.errors && typeof result.errors === 'object'
+        ? Object.entries(result.errors).map(([field, messages]) => field + ': ' + (Array.isArray(messages) ? messages.join(', ') : String(messages))).join('; ').slice(0, 1000)
+        : '';
+      const failureReason = !response.ok
+        ? 'Chariow API a refusé la création du paiement (HTTP ' + response.status + ').'
+        : data.step !== 'payment' ? 'Chariow a retourné une étape inattendue : ' + String(data.step || 'absente') + '.'
+        : !purchaseId ? 'Chariow n’a pas retourné d’identifiant de vente.'
+        : !safeUrl ? 'Chariow n’a pas retourné une URL de paiement sécurisée valide.'
+        : !Number.isFinite(amount) || !currency ? 'Chariow n’a pas retourné le montant ou la devise du paiement.'
+        : currency !== 'USD' ? 'La devise facturée par Chariow (' + currency + ') ne correspond pas à USD.'
+        : 'Le montant facturé par Chariow ne correspond pas au montant de la commande IAMTRADER.';
       await firestorePatch(env, 'payments/' + paymentId, {
-        status: 'failed', failureMessage: 'Chariow n’a pas pu préparer le paiement ou le montant du produit ne correspond pas à la commande.',
-        chariowHttpStatus: response.status, updatedAt: new Date().toISOString()
-      }, ['status', 'failureMessage', 'chariowHttpStatus', 'updatedAt']);
-      console.error('Chariow checkout initialization rejected:', response.status, raw.slice(0, 500));
-      return json({ success: false, message: result?.message || 'Impossible de créer le paiement Chariow. Vérifiez le prix et le type du produit publié.' }, 502);
+        status: 'failed', failureMessage: failureReason,
+        chariowHttpStatus: response.status, chariowErrorMessage: providerMessage,
+        chariowValidationErrors: validationErrors, updatedAt: new Date().toISOString()
+      }, ['status', 'failureMessage', 'chariowHttpStatus', 'chariowErrorMessage', 'chariowValidationErrors', 'updatedAt']);
+      // Log provider diagnostics without logging API keys, phone numbers, or full customer payloads.
+      console.error('Chariow checkout initialization rejected:', JSON.stringify({
+        httpStatus: response.status, step: data?.step || null, message: providerMessage,
+        errors: validationErrors, hasPurchaseId: Boolean(purchaseId), hasCheckoutUrl: Boolean(checkoutUrl),
+        amount: Number.isFinite(amount) ? amount : null, currency: currency || null,
+        amountSource: purchase?.payment?.amount ? 'purchase.payment.amount' : purchase?.amount ? 'purchase.amount' : 'missing'
+      }));
+      return json({ success: false, message: providerMessage || failureReason }, response.ok ? 502 : (response.status >= 400 && response.status < 500 ? response.status : 502));
     }
     await firestorePatch(env, 'payments/' + paymentId, {
       status: 'processing', chariowSaleId: purchaseId, chariowCheckoutUrl: checkoutUrl,
