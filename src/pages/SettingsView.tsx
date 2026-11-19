@@ -450,7 +450,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
     // Open a blank tab synchronously from the user's click so browser popup
     // blockers do not prevent the authenticated provider checkout from opening.
     const checkoutWindow = paymentMethod === 'card'
-      ? window.open('about:blank', '_blank', 'noopener,noreferrer')
+      ? window.open('about:blank', '_blank')
       : null;
     setIsPaymentLoading(true); setPaymentMessage(''); setPaymentLastCheckedAt(null); setPaymentCheckError(''); setPaymentPollTimedOut(false);
     try {
@@ -476,6 +476,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
         if (!/^https:\/\//i.test(checkout)) throw new Error('Le lien sécurisé de paiement par carte est introuvable.');
         setPaymentUrl(checkout);
         if (checkoutWindow && !checkoutWindow.closed) {
+          checkoutWindow.opener = null;
           checkoutWindow.location.replace(checkout);
         }
       }
