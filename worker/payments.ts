@@ -559,9 +559,15 @@ async function createChariowCheckout(
     const amount = Number(chargedAmount?.value);
     const currency = String(chargedAmount?.currency || '').toUpperCase();
     let safeUrl = false;
+    let checkoutHost = '';
     try {
       const parsed = new URL(checkoutUrl);
-      safeUrl = parsed.protocol === 'https:' && (parsed.hostname === 'chariow.com' || parsed.hostname.endsWith('.chariow.com') || parsed.hostname.endsWith('.mychariow.market'));
+      checkoutHost = parsed.hostname;
+      // Chariow's API returns hosted checkout URLs from its payment partners.
+      // The official API contract does not guarantee a fixed checkout hostname,
+      // so trust only an absolute HTTPS URL returned by the authenticated API.
+      safeUrl = parsed.protocol === 'https:' && Boolean(parsed.hostname) &&
+        !parsed.username && !parsed.password;
     } catch { safeUrl = false; }
 
     const validPaymentResponse = data.step === 'payment' && Boolean(purchaseId) && safeUrl &&
@@ -588,7 +594,7 @@ async function createChariowCheckout(
       // Log provider diagnostics without logging API keys, phone numbers, or full customer payloads.
       console.error('Chariow checkout initialization rejected:', JSON.stringify({
         httpStatus: response.status, step: data?.step || null, message: providerMessage,
-        errors: validationErrors, hasPurchaseId: Boolean(purchaseId), hasCheckoutUrl: Boolean(checkoutUrl),
+        errors: validationErrors, hasPurchaseId: Boolean(purchaseId), hasCheckoutUrl: Boolean(checkoutUrl), checkoutHost: checkoutHost || null,
         amount: Number.isFinite(amount) ? amount : null, currency: currency || null,
         amountSource: purchase?.payment?.amount ? 'purchase.payment.amount' : purchase?.amount ? 'purchase.amount' : 'missing'
       }));
