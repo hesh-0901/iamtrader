@@ -82,58 +82,6 @@ const detectCountryCode = () => {
 };
 
 
-function ChariowSnapWidget({ productId }: { productId: string }) {
-  React.useEffect(() => {
-    const widget = document.getElementById('chariow-widget');
-    if (!widget) return;
-
-    widget.setAttribute('data-product-id', productId);
-    widget.setAttribute('data-store-domain', 'bdfnahlm.mychariow.market');
-    widget.setAttribute('data-style', 'frame');
-    widget.setAttribute('data-border-style', 'rounded');
-    widget.setAttribute('data-cta-width', 'xs');
-    widget.setAttribute('data-cta-animation', 'shine');
-    widget.setAttribute('data-locale', 'en');
-    widget.setAttribute('data-primary-color', '#ffcc00');
-    widget.setAttribute('data-background-color', '#FFFFFF');
-
-    const stylesheetId = 'chariow-widget-styles';
-    if (!document.getElementById(stylesheetId)) {
-      const link = document.createElement('link');
-      link.id = stylesheetId;
-      link.rel = 'stylesheet';
-      link.href = 'https://js.chariowcdn.com/v1/widget.min.css';
-      document.head.appendChild(link);
-    }
-
-    const script = document.createElement('script');
-    script.src = 'https://js.chariowcdn.com/v1/widget.min.js';
-    script.async = true;
-    document.head.appendChild(script);
-
-    return () => {
-      script.remove();
-    };
-  }, [productId]);
-
-  return <div className="space-y-3">
-    <div id="chariow-widget"
-      data-product-id={productId}
-      data-store-domain="bdfnahlm.mychariow.market"
-      data-style="frame"
-      data-border-style="rounded"
-      data-cta-width="xs"
-      data-cta-animation="shine"
-      data-locale="en"
-      data-primary-color="#ffcc00"
-      data-background-color="#FFFFFF"
-    />
-    <p className="text-[11px] leading-5 text-amber-800">
-      Le paiement Snap est intégré directement par Chariow. La confirmation et l’activation automatique de l’abonnement IAMTRADER ne sont pas encore reliées à ce widget.
-    </p>
-  </div>;
-}
-
 export function SettingsView({ userProfile, accounts, trades, selectedAccountId, onRequestPlan, pendingPaymentReference }: SettingsViewProps) {
   const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<'profile' | 'certificates' | 'subscription' | 'security' | 'preferences' | 'journal' | 'history' | 'affiliation'>('profile');
@@ -174,6 +122,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
   const [paymentCountryCode, setPaymentCountryCode] = useState<string>(() => detectCountryCode());
   const [paymentProvider, setPaymentProvider] = useState(() => countryOptions.find(item => item.code === detectCountryCode())?.networks[0]?.value || 'vodacom_cd');
   const [paymentId, setPaymentId] = useState<string | null>(null);
+  const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
   const [paymentReference, setPaymentReference] = useState<string | null>(null);
   const [paymentStatus, setPaymentStatus] = useState<'idle' | 'processing' | 'paid' | 'failed'>('idle');
   const [paymentMessage, setPaymentMessage] = useState('');
@@ -515,11 +464,12 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
       setPaymentReference(payment.reference || null);
       setPaymentStatus('processing');
       setPaymentMessage(payment.message || (paymentMethod === 'card'
-        ? 'Vous allez être redirigé vers la page sécurisée de Chariow pour régler par carte.'
+        ? 'Paiement sécurisé prêt. Effectuez le règlement ci-dessous sans quitter IAMTRADER.'
         : 'Demande envoyée. Confirmez le paiement sur votre téléphone.'));
       if (paymentMethod === 'card') {
-        if (!payment.paymentUrl) throw new Error('Le lien sécurisé de paiement par carte est introuvable.');
-        window.location.assign(payment.paymentUrl);
+        const checkout = String(payment.paymentUrl || '').trim();
+        if (!/^https:\/\//i.test(checkout)) throw new Error('Le lien sécurisé de paiement par carte est introuvable.');
+        setPaymentUrl(checkout);
       }
     } catch (error: any) {
       setPaymentStatus('failed');
@@ -1008,11 +958,7 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                       {promoMessage && <p className="text-xs text-slate-500">{promoMessage}</p>}
                       <div className="space-y-3">
                         <button type="button" onClick={() => setPaymentStep('details')} className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-600">Modifier</button>
-                        {paymentMethod === 'card' ? (
-                          <ChariowSnapWidget productId={paymentPlan === 'community' ? 'prd_m2cdsq07' : 'prd_u0schrfp'} />
-                        ) : (
-                          <button type="button" onClick={() => void submitPayment()} disabled={isPaymentLoading} className="w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50">{isPaymentLoading ? 'Enregistrement…' : 'Confirmer et continuer'}</button>
-                        )}
+                        <button type="button" onClick={() => void submitPayment()} disabled={isPaymentLoading} className="w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50">{isPaymentLoading ? 'Préparation du paiement…' : paymentMethod === 'card' ? 'Payer par carte' : 'Confirmer et continuer'}</button>
                       </div>
                     </div>
                   )}
@@ -1028,6 +974,20 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                     {promoMessage && <p className={'mt-2 text-xs font-semibold ' + (promoQuote ? 'text-emerald-700' : 'text-rose-600')}>{promoMessage}</p>}
                     <div className="mt-5 flex gap-2"><button type="button" onClick={() => setIsPromoModalOpen(false)} className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-xs font-bold text-slate-600">Annuler</button><button type="button" onClick={() => void applyPromoCode()} disabled={isPromoApplying || !promoCode.trim()} className="flex-1 rounded-xl bg-emerald-600 px-4 py-3 text-xs font-extrabold text-white disabled:opacity-50">{isPromoApplying ? 'Vérification…' : 'Appliquer'}</button></div>
                   </div>
+                </div>
+              )}
+
+              {paymentStatus === 'processing' && paymentMethod === 'card' && (
+                <div className="mx-auto w-full max-w-2xl space-y-3 py-2">
+                  <div className="flex items-center justify-between gap-3">
+                    <div><h4 className="text-lg font-black text-slate-900">Paiement sécurisé</h4><p className="text-xs text-slate-500">Effectuez votre paiement par carte dans IAMTRADER.</p></div>
+                    <span className="rounded-full bg-emerald-50 px-3 py-1 text-[10px] font-bold text-emerald-700">Connexion sécurisée</span>
+                  </div>
+                  {paymentUrl ? (
+                    <iframe title="Paiement sécurisé Chariow" src={paymentUrl} className="h-[620px] w-full rounded-2xl border border-slate-200 bg-white" allow="payment *" referrerPolicy="strict-origin-when-cross-origin" />
+                  ) : <p className="rounded-xl bg-slate-50 p-4 text-sm text-slate-600">Préparation de la session de paiement…</p>}
+                  <p className="text-center text-xs text-slate-500">Ne fermez pas cette fenêtre. IAMTRADER vérifie automatiquement la confirmation du paiement.</p>
+                  <button type="button" onClick={() => { setPaymentStatus('idle'); setPaymentId(null); setPaymentUrl(null); setPaymentStep('summary'); }} className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-600">Retour au récapitulatif</button>
                 </div>
               )}
 
