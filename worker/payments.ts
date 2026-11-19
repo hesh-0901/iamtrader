@@ -1412,9 +1412,9 @@ export async function handleChariowPulse(request: Request, env: ChariowEnv) {
     const action = validStored ? payment.subscriptionAction as SubscriptionAction : fallback!.action;
     const start = validStored ? storedStart.toISOString() : fallback!.start.toISOString();
     const expires = validStored ? storedExpires.toISOString() : fallback!.expires.toISOString();
-    // Claim the sale before changing the subscription. Firestore CREATE is atomic:
-    // concurrent deliveries cannot both acquire the same sale claim.
-    const saleClaimPath = 'chariowPulseDeliveries/' + encodeURIComponent(saleId);
+    // Claim this Pulse delivery before changing the subscription. Chariow keeps the
+    // delivery ID stable across retries; Firestore CREATE makes the claim atomic.
+    const saleClaimPath = 'chariowPulseDeliveries/' + encodeURIComponent(deliveryId);
     const existingClaim = await firestoreGet(env, saleClaimPath);
     if (existingClaim?.status === 'completed') return json({ received: true, duplicate: true });
     if (existingClaim?.status === 'processing') {
@@ -1426,8 +1426,8 @@ export async function handleChariowPulse(request: Request, env: ChariowEnv) {
     } else if (existingClaim) {
       await firestoreDelete(env, saleClaimPath);
     }
-    await firestoreCreate(env, 'chariowPulseDeliveries', saleId, {
-      id: saleId, deliveryId, event: payload.event, saleId, paymentId,
+    await firestoreCreate(env, 'chariowPulseDeliveries', deliveryId, {
+      id: deliveryId, event: payload.event, saleId, paymentId,
       status: 'processing', createdAt: new Date().toISOString()
     });
     claimPath = saleClaimPath;
