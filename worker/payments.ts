@@ -500,7 +500,7 @@ async function createChariowCheckout(
     return json({ success: false, message: 'La durée sélectionnée ne correspond pas au produit Chariow publié.' }, 400);
   }
   const email = String(body.cardholderEmail || user.email || profile.email || '').trim().toLowerCase();
-  if (!/^[^\s@]+@[^\s@]+\\.[^\s@]+$/.test(email)) return json({ success: false, message: 'Une adresse e-mail valide est nécessaire pour le paiement.' }, 400);
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return json({ success: false, message: 'Une adresse e-mail valide est nécessaire pour le paiement.' }, 400);
   const fullName = String(payerName || traderFullName(profile) || profile.displayName || email).trim();
   const names = fullName.split(/\s+/).filter(Boolean);
   const firstName = (names.shift() || 'Trader').slice(0, 50);
