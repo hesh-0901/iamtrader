@@ -56,14 +56,17 @@ function emailParts(value?: string) {
 function renderEmailContent(value?: string) {
   const raw = String(value || '').trim();
   if (!raw) return '(Message vide)';
-  const escapeHtml = (text: string) => text.replace(/[&<>\"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',\"'\":'&#39;'}[char] || char));
-  const looksLikeHtml = /<(?:html|body|div|p|br|table|tr|td|a|ul|ol|li|h[1-6])\\b/i.test(raw);
+  const htmlEntities: Record<string, string> = {
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  };
+  const escapeHtml = (text: string) => text.replace(/[&<>"']/g, char => htmlEntities[char] || char);
+  const looksLikeHtml = /<(?:html|body|div|p|br|table|tr|td|a|ul|ol|li|h[1-6])\b/i.test(raw);
   if (!looksLikeHtml) {
-    const linked = escapeHtml(raw).replace(/(https?:\\/\\/[^\\s<]+|www\\.[^\\s<]+)/gi, url => {
+    const linked = escapeHtml(raw).replace(/(https?:\/\/[^\s<]+|www\.[^\s<]+)/gi, url => {
       const href = url.startsWith('www.') ? 'https://' + url : url;
-      return '<a href=\"' + href + '\" target=\"_blank\" rel=\"noopener noreferrer nofollow\">' + url + '</a>';
+      return '<a href="' + href + '" target="_blank" rel="noopener noreferrer nofollow">' + url + '</a>';
     });
-    return linked.replace(/\\n/g, '<br>');
+    return linked.replace(/\n/g, '<br>');
   }
   const doc = new DOMParser().parseFromString(raw, 'text/html');
   doc.querySelectorAll('script,style,iframe,frame,object,embed,form,input,button,textarea,select,meta,link,base,svg,math').forEach(node => node.remove());
@@ -74,14 +77,22 @@ function renderEmailContent(value?: string) {
     });
     if (node instanceof HTMLAnchorElement) {
       const href = (node.getAttribute('href') || '').trim();
-      if (/^(https?:\\/\\/|mailto:)/i.test(href)) { node.setAttribute('target','_blank'); node.setAttribute('rel','noopener noreferrer nofollow'); }
-      else { node.removeAttribute('href'); node.removeAttribute('target'); }
+      if (/^(https?:\/\/|mailto:)/i.test(href)) {
+        node.setAttribute('target', 'blank');
+        node.setAttribute('rel', 'noopener noreferrer nofollow');
+      } else {
+        node.removeAttribute('href');
+        node.removeAttribute('target');
+      }
     } else {
-      [...node.attributes].forEach(attribute => { if (!['colspan','rowspan','align','valign','width','height'].includes(attribute.name.toLowerCase())) node.removeAttribute(attribute.name); });
+      [...node.attributes].forEach(attribute => {
+        if (!['colspan','rowspan','align','valign','width','height'].includes(attribute.name.toLowerCase())) node.removeAttribute(attribute.name);
+      });
     }
   });
-  return doc.body.innerHTML || escapeHtml(raw).replace(/\\n/g, '<br>');
+  return doc.body.innerHTML || escapeHtml(raw).replace(/\n/g, '<br>');
 }
+
 function splitEmailSignature(value?: string) {
   const body = String(value || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
   const match = body.match(/\n[ \t]*--[ \t]*\n/);
