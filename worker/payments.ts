@@ -179,7 +179,7 @@ function publicPayment(payment: Record<string, unknown>) {
     paidAt: payment.paidAt || null,
     updatedAt: payment.updatedAt || null,
     failureMessage: payment.failureMessage || null,
-    providerStatus: payment.cinetpayStatus || payment.saspayStatus || null
+    providerStatus: payment.cinetpayStatus || payment.saspayStatus || payment.chariowStatus || null
   };
 }
 
@@ -506,7 +506,9 @@ async function createChariowCheckout(
   const firstName = (names.shift() || 'Trader').slice(0, 50);
   const lastName = (names.join(' ') || 'IAMTRADER').slice(0, 50);
   const countryCode = String(body.countryCode || profile.countryCode || 'CD').toUpperCase();
-  const rawPhone = String(body.phone || profile.phone || profile.whatsapp || profile.traderProfile?.phone || '').replace(/[^0-9]/g, '');
+  const rawPhoneInput = String(body.phone || profile.phone || profile.whatsapp || profile.traderProfile?.phone || '').replace(/[^0-9]/g, '');
+  const dialDigits = String(SASPAY_COUNTRIES[countryCode as keyof typeof SASPAY_COUNTRIES]?.dialCode || '').replace(/[^0-9]/g, '');
+  const rawPhone = dialDigits && rawPhoneInput.startsWith(dialDigits) ? rawPhoneInput.slice(dialDigits.length) : rawPhoneInput;
   if (!/^[A-Z]{2}$/.test(countryCode) || rawPhone.length < 7 || rawPhone.length > 15) {
     return json({ success: false, message: 'Un numéro de téléphone valide et le pays correspondant sont requis pour le paiement Chariow.' }, 400);
   }
@@ -1365,6 +1367,7 @@ export async function handleChariowPulse(request: Request, env: ChariowEnv) {
     if (payload?.event !== eventHeader) return json({ received: false, message: 'Événement Chariow incohérent.' }, 400);
     if (payload.event !== 'successful.sale') return json({ received: true, ignored: true });
     const saleId = String(payload?.sale?.id || '').trim();
+    if (saleId.startsWith('test_')) return json({ received: true, ignored: true, test: true });
     const paymentId = String(payload?.sale?.custom_metadata?.iamtrader_payment_id || payload?.sale?.custom_metadata?.order_ref || '').trim();
     if (!/^sal_[A-Za-z0-9_-]+$/.test(saleId) || !/^[a-f0-9]{24}$/i.test(paymentId)) {
       return json({ received: false, message: 'Référence de vente IAMTRADER absente.' }, 400);
@@ -1386,7 +1389,7 @@ export async function handleChariowPulse(request: Request, env: ChariowEnv) {
       return json({ received: false, message: 'La vente Chariow n’a pas pu être vérifiée.' }, 502);
     }
     const productId = String(sale?.product?.id || sale?.product_id || payload?.product?.id || '');
-    const metadataPaymentId = String(sale?.custom_metadata?.iamtrader_payment_id || '').toLowerCase();
+    const metadataPaymentId = String(payload?.sale?.custom_metadata?.iamtrader_payment_id || '').toLowerCase();
     const customerEmail = String(sale?.customer?.email || payload?.customer?.email || '').trim().toLowerCase();
     const amount = Number(sale?.amount?.value);
     const currency = String(sale?.amount?.currency || '').toUpperCase();
