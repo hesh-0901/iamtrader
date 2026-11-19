@@ -570,8 +570,11 @@ async function createChariowCheckout(
         !parsed.username && !parsed.password;
     } catch { safeUrl = false; }
 
+    // Chariow owns the final product price and may round decimal prices.
+    // The selected product ID is the plan binding; persist Chariow's quoted
+    // amount as the transaction amount and verify that exact amount at Pulse.
     const validPaymentResponse = data.step === 'payment' && Boolean(purchaseId) && safeUrl &&
-      Number.isFinite(amount) && amountsMatchToCents(amount, Number(amounts.total)) && currency === 'USD';
+      Number.isFinite(amount) && amount > 0 && currency === 'USD';
 
     if (!response.ok || !validPaymentResponse) {
       const providerMessage = String(result?.message || data?.message || '').slice(0, 500);
@@ -585,7 +588,7 @@ async function createChariowCheckout(
         : !safeUrl ? 'Chariow n’a pas retourné une URL de paiement sécurisée valide.'
         : !Number.isFinite(amount) || !currency ? 'Chariow n’a pas retourné le montant ou la devise du paiement.'
         : currency !== 'USD' ? 'La devise facturée par Chariow (' + currency + ') ne correspond pas à USD.'
-        : 'Le montant facturé par Chariow ne correspond pas au montant de la commande IAMTRADER.';
+        : 'Chariow n’a pas retourné un montant facturé valide.';
       await firestorePatch(env, 'payments/' + paymentId, {
         status: 'failed', failureMessage: failureReason,
         chariowHttpStatus: response.status, chariowErrorMessage: providerMessage,
@@ -601,9 +604,13 @@ async function createChariowCheckout(
       return json({ success: false, message: providerMessage || failureReason }, response.ok ? 502 : (response.status >= 400 && response.status < 500 ? response.status : 502));
     }
     await firestorePatch(env, 'payments/' + paymentId, {
-      status: 'processing', chariowSaleId: purchaseId, chariowCheckoutUrl: checkoutUrl,
-      chariowStatus: String(purchase?.status || 'awaiting_payment'), updatedAt: new Date().toISOString()
-    }, ['status', 'chariowSaleId', 'chariowCheckoutUrl', 'chariowStatus', 'updatedAt']);
+      status: 'processing', amount, amountUsd: amount, currency,
+      chariowSaleId: purchaseId, chariowCheckoutUrl: checkoutUrl,
+      chariowStatus: String(purchase?.status || 'awaiting_payment'),
+      chariowQuotedAmount: amount, chariowQuotedCurrency: currency,
+      updatedAt: new Date().toISOString()
+    }, ['status', 'amount', 'amountUsd', 'currency', 'chariowSaleId', 'chariowCheckoutUrl',
+        'chariowStatus', 'chariowQuotedAmount', 'chariowQuotedCurrency', 'updatedAt']);
     return json({ success: true, payment: {
       id: paymentId, plan: planKey, planName: plan.name, months, amount, currency,
       status: 'processing', reference, paymentUrl: checkoutUrl,
