@@ -82,6 +82,58 @@ const detectCountryCode = () => {
 };
 
 
+function ChariowSnapWidget({ productId }: { productId: string }) {
+  React.useEffect(() => {
+    const widget = document.getElementById('chariow-widget');
+    if (!widget) return;
+
+    widget.setAttribute('data-product-id', productId);
+    widget.setAttribute('data-store-domain', 'bdfnahlm.mychariow.market');
+    widget.setAttribute('data-style', 'frame');
+    widget.setAttribute('data-border-style', 'rounded');
+    widget.setAttribute('data-cta-width', 'xs');
+    widget.setAttribute('data-cta-animation', 'shine');
+    widget.setAttribute('data-locale', 'en');
+    widget.setAttribute('data-primary-color', '#ffcc00');
+    widget.setAttribute('data-background-color', '#FFFFFF');
+
+    const stylesheetId = 'chariow-widget-styles';
+    if (!document.getElementById(stylesheetId)) {
+      const link = document.createElement('link');
+      link.id = stylesheetId;
+      link.rel = 'stylesheet';
+      link.href = 'https://js.chariowcdn.com/v1/widget.min.css';
+      document.head.appendChild(link);
+    }
+
+    const script = document.createElement('script');
+    script.src = 'https://js.chariowcdn.com/v1/widget.min.js';
+    script.async = true;
+    document.head.appendChild(script);
+
+    return () => {
+      script.remove();
+    };
+  }, [productId]);
+
+  return <div className="space-y-3">
+    <div id="chariow-widget"
+      data-product-id={productId}
+      data-store-domain="bdfnahlm.mychariow.market"
+      data-style="frame"
+      data-border-style="rounded"
+      data-cta-width="xs"
+      data-cta-animation="shine"
+      data-locale="en"
+      data-primary-color="#ffcc00"
+      data-background-color="#FFFFFF"
+    />
+    <p className="text-[11px] leading-5 text-amber-800">
+      Le paiement Snap est intégré directement par Chariow. La confirmation et l’activation automatique de l’abonnement IAMTRADER ne sont pas encore reliées à ce widget.
+    </p>
+  </div>;
+}
+
 export function SettingsView({ userProfile, accounts, trades, selectedAccountId, onRequestPlan, pendingPaymentReference }: SettingsViewProps) {
   const { showToast } = useToast();
   const [activeTab, setActiveTab] = useState<'profile' | 'certificates' | 'subscription' | 'security' | 'preferences' | 'journal' | 'history' | 'affiliation'>('profile');
@@ -932,34 +984,12 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                           <div><label className="mb-1.5 block text-xs font-bold text-slate-700">Réseau Mobile Money</label><select value={paymentProvider} onChange={event => setPaymentProvider(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm text-slate-900 outline-none focus:border-emerald-500">{(countryOptions.find(item => item.code === paymentCountryCode)?.networks || []).map(network => <option key={network.value} value={network.value}>{network.label}</option>)}</select></div>
                         </>
                       ) : (
-                        <div className="space-y-3 rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
-                          <div className="flex items-center gap-2 text-sm font-extrabold text-emerald-900"><CreditCard className="h-5 w-5" /> Informations du titulaire</div>
-                          <div>
-                            <label htmlFor="cardholder-name" className="mb-1.5 block text-xs font-bold text-slate-700">Nom complet sur la carte</label>
-                            <input id="cardholder-name" type="text" autoComplete="cc-name" value={paymentCardholderName} onChange={event => setPaymentCardholderName(event.target.value)} placeholder="Nom et prénom du titulaire" className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100" required />
-                          </div>
-                          <div>
-                            <label htmlFor="cardholder-email" className="mb-1.5 block text-xs font-bold text-slate-700">Adresse e-mail</label>
-                            <input id="cardholder-email" type="email" autoComplete="email" value={paymentCardholderEmail} onChange={event => setPaymentCardholderEmail(event.target.value)} placeholder="nom@exemple.com" className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-900 outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100" required />
-                          </div>
-                          <div>
-                            <label htmlFor="card-phone" className="mb-1.5 block text-xs font-bold text-slate-700">Numéro de téléphone</label>
-                            <div className="flex min-w-0 overflow-hidden rounded-xl border border-slate-200 bg-white">
-                              <span className="flex shrink-0 items-center border-r border-slate-200 bg-slate-50 px-3 text-sm font-bold text-slate-700">{countryOptions.find(item => item.code === paymentCountryCode)?.dialCode || '+243'}</span>
-                              <input id="card-phone" type="tel" inputMode="numeric" autoComplete="tel-national" value={paymentPhone} onChange={event => setPaymentPhone(event.target.value.replace(/[^0-9]/g, '').replace(/^0+/, '').slice(0, countryOptions.find(item => item.code === paymentCountryCode)?.phoneLength || 9))} placeholder={'X'.repeat(countryOptions.find(item => item.code === paymentCountryCode)?.phoneLength || 9)} className="min-w-0 flex-1 px-3 py-3 text-sm text-slate-900 outline-none" required />
-                            </div>
-                            <p className="mt-1 text-[10px] text-slate-500">Ce numéro est transmis à Chariow pour préremplir le formulaire de paiement.</p>
-                          </div>
-                          <div>
-                            <label htmlFor="card-billing-country" className="mb-1.5 block text-xs font-bold text-slate-700">Pays de facturation</label>
-                            <select id="card-billing-country" value={paymentCountryCode} onChange={event => setPaymentCountryCode(event.target.value)} className="w-full rounded-xl border border-slate-200 bg-white px-3.5 py-3 text-sm text-slate-900 outline-none focus:border-emerald-500">
-                              {countryOptions.map(item => <option key={item.code} value={item.code}>{item.name}</option>)}
-                            </select>
-                          </div>
-                          <p className="text-[11px] leading-5 text-emerald-900/80">Après validation, Chariow vous redirigera vers sa page sécurisée pour régler par carte. Les données de carte ne passent jamais par IAMTRADER.</p>
+                        <div className="space-y-2 rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
+                          <div className="flex items-center gap-2 text-sm font-extrabold text-emerald-900"><CreditCard className="h-5 w-5" /> Paiement par Chariow Snap</div>
+                          <p className="text-xs leading-5 text-emerald-900/80">Le formulaire sécurisé et les informations de paiement seront affichés dans l’étape suivante par Chariow.</p>
                         </div>
                       )}
-                      <div className="flex gap-2 pt-2"><button type="button" onClick={() => setPaymentStep('duration')} className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-600">Retour</button><button type="button" onClick={() => setPaymentStep('summary')} disabled={(paymentMethod === 'mobile_money' && (!paymentPhone.trim() || !paymentProvider)) || (paymentMethod === 'card' && (!paymentCardholderName.trim() || !paymentPhone.trim() || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(paymentCardholderEmail.trim())))} className="flex-[1.5] rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-40">Continuer</button></div>
+                      <div className="flex gap-2 pt-2"><button type="button" onClick={() => setPaymentStep('duration')} className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-600">Retour</button><button type="button" onClick={() => setPaymentStep('summary')} disabled={(paymentMethod === 'mobile_money' && (!paymentPhone.trim() || !paymentProvider))} className="flex-[1.5] rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-40">Continuer</button></div>
                     </div>
                   )}
 
@@ -976,7 +1006,14 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                       </div>
                       <button type="button" onClick={() => { setPromoMessage(''); setIsPromoModalOpen(true); }} className="inline-flex items-center gap-2 rounded-lg px-2 py-2 text-xs font-bold text-emerald-700 hover:bg-emerald-50"><Tag className="h-4 w-4" /> Ajouter un code promo</button>
                       {promoMessage && <p className="text-xs text-slate-500">{promoMessage}</p>}
-                      <div className="flex flex-col gap-2 sm:flex-row"><button type="button" onClick={() => setPaymentStep('details')} className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-600 sm:flex-1">Modifier</button><button type="button" onClick={() => void submitPayment()} disabled={isPaymentLoading} className="rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50 sm:flex-[1.5]">{isPaymentLoading ? 'Enregistrement…' : 'Confirmer et continuer'}</button></div>
+                      <div className="space-y-3">
+                        <button type="button" onClick={() => setPaymentStep('details')} className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-600">Modifier</button>
+                        {paymentMethod === 'card' ? (
+                          <ChariowSnapWidget productId={paymentPlan === 'community' ? 'prd_m2cdsq07' : 'prd_u0schrfp'} />
+                        ) : (
+                          <button type="button" onClick={() => void submitPayment()} disabled={isPaymentLoading} className="w-full rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white hover:bg-emerald-700 disabled:opacity-50">{isPaymentLoading ? 'Enregistrement…' : 'Confirmer et continuer'}</button>
+                        )}
+                      </div>
                     </div>
                   )}
                 </>
