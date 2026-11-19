@@ -53,6 +53,35 @@ function emailParts(value?: string) {
   return at > 0 ? { local: email.slice(0, at), domain: email.slice(at) } : { local: email, domain: '' };
 }
 
+function renderEmailContent(value?: string) {
+  const raw = String(value || '').trim();
+  if (!raw) return '(Message vide)';
+  const escapeHtml = (text: string) => text.replace(/[&<>\"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','\"':'&quot;',\"'\":'&#39;'}[char] || char));
+  const looksLikeHtml = /<(?:html|body|div|p|br|table|tr|td|a|ul|ol|li|h[1-6])\\b/i.test(raw);
+  if (!looksLikeHtml) {
+    const linked = escapeHtml(raw).replace(/(https?:\\/\\/[^\\s<]+|www\\.[^\\s<]+)/gi, url => {
+      const href = url.startsWith('www.') ? 'https://' + url : url;
+      return '<a href=\"' + href + '\" target=\"_blank\" rel=\"noopener noreferrer nofollow\">' + url + '</a>';
+    });
+    return linked.replace(/\\n/g, '<br>');
+  }
+  const doc = new DOMParser().parseFromString(raw, 'text/html');
+  doc.querySelectorAll('script,style,iframe,frame,object,embed,form,input,button,textarea,select,meta,link,base,svg,math').forEach(node => node.remove());
+  doc.body.querySelectorAll('*').forEach(node => {
+    [...node.attributes].forEach(attribute => {
+      const name = attribute.name.toLowerCase();
+      if (name.startsWith('on') || ['srcdoc','formaction','style'].includes(name)) node.removeAttribute(attribute.name);
+    });
+    if (node instanceof HTMLAnchorElement) {
+      const href = (node.getAttribute('href') || '').trim();
+      if (/^(https?:\\/\\/|mailto:)/i.test(href)) { node.setAttribute('target','_blank'); node.setAttribute('rel','noopener noreferrer nofollow'); }
+      else { node.removeAttribute('href'); node.removeAttribute('target'); }
+    } else {
+      [...node.attributes].forEach(attribute => { if (!['colspan','rowspan','align','valign','width','height'].includes(attribute.name.toLowerCase())) node.removeAttribute(attribute.name); });
+    }
+  });
+  return doc.body.innerHTML || escapeHtml(raw).replace(/\\n/g, '<br>');
+}
 function splitEmailSignature(value?: string) {
   const body = String(value || '').replace(/\r\n/g, '\n').replace(/\r/g, '\n').trim();
   const match = body.match(/\n[ \t]*--[ \t]*\n/);
@@ -1250,7 +1279,7 @@ export function AdminConsole({ onOpenSidebar, canManageUsers = false }: { onOpen
                                 </button>
                                 {emailExpanded && <div className="px-4 py-4 sm:px-5">
                                   {!outbound && <div className="mb-3 text-sm font-bold text-[#173b31]">{decodeMimeSubject(selectedMessage.subject)||'(Sans objet)'}</div>}
-                                  <div className="email-rich-content break-words text-[13px] leading-7 text-slate-700 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-7 [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-7 [&_li]:my-1 [&_a]:text-[#087f63] [&_a]:underline" dangerouslySetInnerHTML={{__html: (item as any).bodyHtml || (outbound && (selectedMessage as any).messageHtml) || bodyParts.message || "(Message vide)"}} />
+                                  <div className="email-rich-content break-words text-[13px] leading-7 text-slate-700 [&_ul]:my-3 [&_ul]:list-disc [&_ul]:pl-7 [&_ol]:my-3 [&_ol]:list-decimal [&_ol]:pl-7 [&_li]:my-1 [&_a]:text-[#087f63] [&_a]:underline" dangerouslySetInnerHTML={{__html: renderEmailContent((item as any).bodyHtml || (outbound && (selectedMessage as any).messageHtml) || bodyParts.message)}} />
                                   {bodyParts.signature&&<div className="mt-4 border-t border-slate-100 pt-3 text-xs leading-6 text-slate-500"><div className="mb-1 text-[9px] font-bold uppercase tracking-wider text-slate-400">Signature</div><div className="whitespace-pre-wrap break-words">{bodyParts.signature}</div></div>}
                                 </div>}
                               </article>;
