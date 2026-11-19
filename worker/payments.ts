@@ -1,4 +1,4 @@
-import { firestoreCreate, firestoreGet, firestorePatch, PaymentEnv, verifyFirebaseIdToken } from './firebaseAdmin';
+import { firestoreCreate, firestoreDelete, firestoreGet, firestorePatch, PaymentEnv, verifyFirebaseIdToken } from './firebaseAdmin';
 import { decideSubscription, subscriptionFields, SubscriptionAction } from './subscription';
 import { resolvePromotion, type AppliedPromotion } from './promotions';
 
@@ -1349,6 +1349,7 @@ export async function handleChariowPulse(request: Request, env: ChariowEnv) {
   const secret = String(env.CHARIOW_PULSE_SECRET || '').trim();
   const apiKey = String(env.CHARIOW_API_KEY || '').trim();
   if (!secret || !apiKey) return json({ received: false, message: 'Configuration Chariow incomplète.' }, 503);
+  let claimPath = '';
   try {
     const rawBody = await request.text();
     const signature = request.headers.get('x-chariow-signature') || '';
@@ -1411,18 +1412,49 @@ export async function handleChariowPulse(request: Request, env: ChariowEnv) {
     const action = validStored ? payment.subscriptionAction as SubscriptionAction : fallback!.action;
     const start = validStored ? storedStart.toISOString() : fallback!.start.toISOString();
     const expires = validStored ? storedExpires.toISOString() : fallback!.expires.toISOString();
-    await firestorePatch(env, 'payments/' + paymentId.toLowerCase(), {
-      status: 'paid', paidAt, provider: 'CHARIOW', chariowStatus: 'completed',
-      chariowSaleId: saleId, updatedAt: paidAt
-    }, ['status', 'paidAt', 'provider', 'chariowStatus', 'chariowSaleId', 'updatedAt']);
+    // Claim the sale before changing the subscription. Firestore CREATE is atomic:
+    // concurrent deliveries cannot both acquire the same sale claim.
+    claimPath = 'chariowPulseDeliveries/' + encodeURIComponent(saleId);
+    const existingClaim = await firestoreGet(env, claimPath);
+    if (existingClaim?.status === 'completed') return json({ received: true, duplicate: true });
+    if (existingClaim?.status === 'processing') {
+      const claimedAt = new Date(String(existingClaim.createdAt || '')).getTime();
+      if (Number.isFinite(claimedAt) && Date.now() - claimedAt < 10 * 60 * 1000) {
+        return json({ received: false, message: 'Cette vente est déjà en cours de traitement.' }, 409);
+      }
+      await firestoreDelete(env, claimPath);
+    } else if (existingClaim) {
+      await firestoreDelete(env, claimPath);
+    }
+    await firestoreCreate(env, 'chariowPulseDeliveries', saleId, {
+      id: saleId, deliveryId, event: payload.event, saleId, paymentId,
+      status: 'processing', createdAt: new Date().toISOString()
+    });
+
+    // Update the user's entitlement before marking the payment as paid. If a later
+    // step fails, Chariow can retry and the same subscription dates are reapplied.
     await firestorePatch(env, 'users/' + encodeURIComponent(String(payment.uid)),
       subscriptionFields(profile, planKey, action, start, expires, paidAt),
       ['plan', 'paymentDate', 'subscriptionStartAt', 'subscriptionExpiresAt', 'subscriptionExpiresAtMs', 'subscriptionStatus', 'paymentStatus', 'planChangeConfirmedAt', 'pendingPlan', 'planChangeRequestedAt', 'scheduledPlan', 'scheduledStartAt', 'scheduledExpiresAt', 'scheduledExpiresAtMs', 'updatedAt']);
     await markReferralFirstPayment(env, String(payment.uid), paidAt);
+    await firestorePatch(env, 'payments/' + paymentId.toLowerCase(), {
+      status: 'paid', paidAt, provider: 'CHARIOW', chariowStatus: 'completed',
+      chariowSaleId: saleId, updatedAt: paidAt
+    }, ['status', 'paidAt', 'provider', 'chariowStatus', 'chariowSaleId', 'updatedAt']);
     await sendSasPayInvoiceEmail(env, { ...payment, id: paymentId, status: 'paid', paidAt }, paidAt);
-    await firestoreCreate(env, 'chariowPulseDeliveries', deliveryId, { id: deliveryId, event: payload.event, saleId, paymentId, processedAt: paidAt });
+    await firestorePatch(env, claimPath, {
+      status: 'completed', processedAt: paidAt
+    }, ['status', 'processedAt']);
+    claimPath = '';
     return json({ received: true });
   } catch (error) {
+    if (claimPath) {
+      try {
+        await firestorePatch(env, claimPath, { status: 'failed', failedAt: new Date().toISOString() }, ['status', 'failedAt']);
+      } catch (claimError) {
+        console.error('Chariow Pulse claim cleanup failed:', claimError);
+      }
+    }
     console.error('Chariow Pulse processing error:', error);
     return json({ received: false }, 500);
   }
