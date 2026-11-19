@@ -935,8 +935,8 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                         </>
                       ) : (
                         <div className="space-y-2 rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
-                          <div className="flex items-center gap-2 text-sm font-extrabold text-emerald-900"><CreditCard className="h-5 w-5" /> Paiement par Chariow Snap</div>
-                          <p className="text-xs leading-5 text-emerald-900/80">Le formulaire sécurisé et les informations de paiement seront affichés dans l’étape suivante par Chariow.</p>
+                          <div className="flex items-center gap-2 text-sm font-extrabold text-emerald-900"><CreditCard className="h-5 w-5" /> Paiement par carte bancaire</div>
+                          <p className="text-xs leading-5 text-emerald-900/80">Le formulaire sécurisé de paiement sera intégré directement dans IAMTRADER.</p>
                         </div>
                       )}
                       <div className="flex gap-2 pt-2"><button type="button" onClick={() => setPaymentStep('duration')} className="flex-1 rounded-xl border border-slate-200 px-4 py-3 text-sm font-bold text-slate-600">Retour</button><button type="button" onClick={() => setPaymentStep('summary')} disabled={(paymentMethod === 'mobile_money' && (!paymentPhone.trim() || !paymentProvider))} className="flex-[1.5] rounded-xl bg-emerald-600 px-4 py-3 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-40">Continuer</button></div>
