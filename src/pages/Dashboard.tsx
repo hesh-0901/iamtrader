@@ -225,28 +225,16 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
     </div>
   );
 
-  const modeDescriptions: Record<Mode, string> = {
-    standard: 'Vue complète de votre activité et de votre compte.',
-    focus: 'Pilotage de session, protection du capital et décisions rapides.',
-    analysis: 'Analyse approfondie des performances et des facteurs de rentabilité.',
-    compact: 'Les indicateurs prioritaires dans une vue condensée.',
-  };
   const modeBar = (
-    <div className="rounded-2xl border border-[#dce7e3] bg-white p-3 shadow-[0_8px_24px_rgba(16,35,58,0.035)]">
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div className="min-w-0">
-          <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#08a875]">Espace de travail</div>
-          <div className="mt-1 text-sm font-bold text-[#10233a]">Mode Dashboard</div>
-          <p className="mt-0.5 text-[10px] text-[#8292a2]">{modeDescriptions[mode]}</p>
-        </div>
-        <div className="grid grid-cols-2 gap-1.5 rounded-xl bg-[#f3f7f5] p-1 sm:grid-cols-4">
-          {modes.map(([value,label,Icon]) => (
-            <button key={value} onClick={() => setDashboardMode(value)} aria-pressed={mode === value}
-              className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-lg px-3 py-2 text-[10px] font-semibold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[#08b77a] ${mode === value ? 'bg-[#102b3f] text-white shadow-sm' : 'text-[#71839a] hover:bg-white hover:text-[#10233a]'}`}>
-              <Icon className="h-3.5 w-3.5 shrink-0" /><span>{label}</span>
-            </button>
-          ))}
-        </div>
+    <div className="flex justify-end">
+      <div className="inline-flex max-w-full items-center gap-0.5 rounded-lg border border-[#e7efec] bg-white/90 p-0.5 shadow-[0_2px_8px_rgba(16,35,58,0.035)]">
+        {modes.map(([value,label,Icon]) => (
+          <button key={value} onClick={() => setDashboardMode(value)} aria-pressed={mode === value}
+            title={label}
+            className={`inline-flex h-7 items-center justify-center gap-1 rounded-md px-2 text-[9px] font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[#08b77a] ${mode === value ? 'bg-[#102b3f] text-white' : 'text-[#8795a3] hover:bg-[#f3f7f5] hover:text-[#10233a]'}`}>
+            <Icon className="h-3 w-3 shrink-0" /><span className="hidden sm:inline">{label}</span>
+          </button>
+        ))}
       </div>
     </div>
   );
