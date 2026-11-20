@@ -231,12 +231,12 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
                 <text x="49" y={y + 3} textAnchor="end" fill="#8798a8" fontSize="9" fontFamily="monospace">{formatCurrency(labelValue)}</text>
               </g>;
             })}
-            <path d={chartAreaPath} fill="#08b77a" clipPath="url(#iam-equity-positive-clip)" />
+            <path d={chartAreaPath} fill="#d7f2db" clipPath="url(#iam-equity-positive-clip)" />
             <path d={chartAreaPath} fill="#e14d5d" clipPath="url(#iam-equity-negative-clip)" />
             <line x1="58" y1={chartBaseline} x2="758" y2={chartBaseline} stroke="#aab8b2" strokeWidth="1" />
-            <path d={chartLine} fill="none" stroke="#08b77a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" clipPath="url(#iam-equity-positive-clip)" />
+            <path d={chartLine} fill="none" stroke="#20c342" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" clipPath="url(#iam-equity-positive-clip)" />
             <path d={chartLine} fill="none" stroke="#e14d5d" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" clipPath="url(#iam-equity-negative-clip)" />
-            {hover !== null && curve[hover] && <circle cx={curve[hover].x} cy={curve[hover].y} r="4" fill="white" stroke={curve[hover].value >= 0 ? '#08b77a' : '#e14d5d'} strokeWidth="2" />}
+            {hover !== null && curve[hover] && <circle cx={curve[hover].x} cy={curve[hover].y} r="4" fill="white" stroke={curve[hover].value >= 0 ? '#20c342' : '#e14d5d'} strokeWidth="2" />}
             {hover !== null && curve[hover] && <>
               <line x1={curve[hover].x} y1="24" x2={curve[hover].x} y2="166" stroke="#82998f" strokeDasharray="3 4" />
               <circle cx={curve[hover].x} cy={curve[hover].y} r="5" fill="white" stroke={curve[hover].value >= 0 ? '#08b77a' : '#e14d5d'} strokeWidth="2.5" />
