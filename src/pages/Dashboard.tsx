@@ -194,7 +194,6 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
     </div>
   );
 
-  const zeroY = curve.length ? curve[0].y + (curve[0].value / (curve[0].value - (curve[curve.length - 1]?.value ?? curve[0].value || 1))) * 0 : 166;
   const chartAreas = curve.slice(1).flatMap((point, index) => {
     const previous = curve[index];
     const baseline = curve.length ? 24 + ((Math.max(0, ...curve.map(p => p.value)) / ((Math.max(0, ...curve.map(p => p.value)) - Math.min(0, ...curve.map(p => p.value))) || 1)) * 142) : 166;
@@ -235,6 +234,7 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
                 <text x="49" y={y + 3} textAnchor="end" fill="#8798a8" fontSize="9" fontFamily="monospace">{formatCurrency(labelValue)}</text>
               </g>;
             })}
+            <line x1="58" y1={24 + (Math.max(0, ...curve.map(p => p.value)) / ((Math.max(0, ...curve.map(p => p.value)) - Math.min(0, ...curve.map(p => p.value))) || 1)) * 142} x2="758" y2={24 + (Math.max(0, ...curve.map(p => p.value)) / ((Math.max(0, ...curve.map(p => p.value)) - Math.min(0, ...curve.map(p => p.value))) || 1)) * 142} stroke="#aab8b2" strokeWidth="1" />
             {chartAreas.map(area => <polygon key={area.key} points={area.points} fill={area.color} />)}
             <path d={chartLine} fill="none" stroke={metrics.totalPnl >= 0 ? '#08b77a' : '#e14d5d'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
             {curve.map((point, index) => <circle key={index} cx={point.x} cy={point.y} r={hover === index ? 4 : 2.2} fill="white" stroke={point.value >= 0 ? '#08b77a' : '#e14d5d'} strokeWidth="1.5" />)}
