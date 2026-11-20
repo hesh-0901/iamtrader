@@ -225,7 +225,31 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
     </div>
   );
 
-  const modeBar = <div className="flex flex-wrap gap-1.5 rounded-xl bg-white border border-[#dce7e3] p-1.5 shadow-[0_5px_18px_rgba(16,35,58,0.03)]">{modes.map(([value,label,Icon]) => <button key={value} onClick={() => setDashboardMode(value)} className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-[10px] font-semibold cursor-pointer transition-all ${mode === value ? 'bg-[#10233a] text-white' : 'text-[#71839a] hover:bg-[#f3f7f5]'}`}><Icon className="w-3.5 h-3.5" />{label}</button>)}</div>;
+  const modeDescriptions: Record<Mode, string> = {
+    standard: 'Vue complète de votre activité et de votre compte.',
+    focus: 'Pilotage de session, protection du capital et décisions rapides.',
+    analysis: 'Analyse approfondie des performances et des facteurs de rentabilité.',
+    compact: 'Les indicateurs prioritaires dans une vue condensée.',
+  };
+  const modeBar = (
+    <div className="rounded-2xl border border-[#dce7e3] bg-white p-3 shadow-[0_8px_24px_rgba(16,35,58,0.035)]">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="min-w-0">
+          <div className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#08a875]">Espace de travail</div>
+          <div className="mt-1 text-sm font-bold text-[#10233a]">Mode Dashboard</div>
+          <p className="mt-0.5 text-[10px] text-[#8292a2]">{modeDescriptions[mode]}</p>
+        </div>
+        <div className="grid grid-cols-2 gap-1.5 rounded-xl bg-[#f3f7f5] p-1 sm:grid-cols-4">
+          {modes.map(([value,label,Icon]) => (
+            <button key={value} onClick={() => setDashboardMode(value)} aria-pressed={mode === value}
+              className={`inline-flex min-h-10 items-center justify-center gap-2 rounded-lg px-3 py-2 text-[10px] font-semibold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-[#08b77a] ${mode === value ? 'bg-[#102b3f] text-white shadow-sm' : 'text-[#71839a] hover:bg-white hover:text-[#10233a]'}`}>
+              <Icon className="h-3.5 w-3.5 shrink-0" /><span>{label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 
   const intelligenceStandard = (
     <div className="p-5 rounded-2xl card-premium">
@@ -324,16 +348,32 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
   );
 
 
-  if (mode === 'focus') return <div className="space-y-5">{situation}<TestimonialInvitation uid={userProfile?.uid} tradesCount={trades.length} />{modeBar}
-    <div className="grid grid-cols-1 xl:grid-cols-4 gap-4">
-      <div className="xl:col-span-3 p-5 rounded-2xl card-premium"><div className="flex items-center justify-between mb-3"><div><h2 className="text-sm font-bold text-[#10233a]">Focus Trading</h2><p className="text-[10px] text-[#8798a8]">Equity, risque et résultats récents.</p></div><Focus className="w-4 h-4 text-[#08b77a]" /></div><div className="min-h-[280px]">{chart}</div></div>
-      <div className="p-5 rounded-2xl card-premium"><div className="flex items-center justify-between mb-4"><div><h2 className="text-sm font-bold text-[#10233a]">À surveiller</h2><p className="text-[10px] text-[#8798a8]">Deux repères avant une décision.</p></div><ShieldAlert className="w-4 h-4 text-[#f59e0b]" /></div><div className="space-y-3">
+  if (mode === 'focus') return <div className="space-y-5">
+    {modeBar}
+    <div className="flex flex-wrap items-end justify-between gap-3">
+      <div><div className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#08a875]">Session cockpit</div><h1 className="mt-1 text-2xl font-bold tracking-tight text-[#10233a]">Focus Trading</h1><p className="mt-1 text-xs text-[#71839a]">Les informations qui comptent avant, pendant et après votre session.</p></div>
+      <button onClick={onOpenNewTrade} className="inline-flex items-center gap-2 rounded-xl bg-[#087b59] px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-[#06694c]"><span className="text-base leading-none">+</span>Nouveau trade</button>
+    </div>
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-4 xl:grid-cols-5">
+      <div className="rounded-xl border border-[#dce7e3] bg-white p-3"><div className="text-[9px] font-semibold uppercase tracking-wide text-[#8798a8]">Equity</div><div className="mt-1 text-lg font-bold font-mono text-[#10233a]">{formatCurrency(equity)}</div><div className="mt-1 text-[9px] text-[#71839a]">Capital actuel</div></div>
+      <div className="rounded-xl border border-[#dce7e3] bg-white p-3"><div className="text-[9px] font-semibold uppercase tracking-wide text-[#8798a8]">P&L total</div><div className={`mt-1 text-lg font-bold font-mono ${metrics.totalPnl >= 0 ? 'text-[#008f63]' : 'text-[#e14d5d]'}`}>{formatCurrency(metrics.totalPnl)}</div><div className="mt-1 text-[9px] text-[#71839a]">{roi >= 0 ? '+' : ''}{roi.toFixed(2)}% de rendement</div></div>
+      <div className="rounded-xl border border-[#dce7e3] bg-white p-3"><div className="text-[9px] font-semibold uppercase tracking-wide text-[#8798a8]">Drawdown max.</div><div className={`mt-1 text-lg font-bold font-mono ${metrics.maxDrawdownPercent > 5 ? 'text-[#e14d5d]' : 'text-[#10233a]'}`}>{metrics.maxDrawdownPercent.toFixed(2)}%</div><div className="mt-1 text-[9px] text-[#71839a]">Historique observé</div></div>
+      <div className="rounded-xl border border-[#dce7e3] bg-white p-3"><div className="text-[9px] font-semibold uppercase tracking-wide text-[#8798a8]">Série actuelle</div><div className={`mt-1 text-lg font-bold font-mono ${metrics.currentStreak.type === 'WIN' ? 'text-[#008f63]' : metrics.currentStreak.type === 'LOSS' ? 'text-[#e14d5d]' : 'text-[#10233a]'}`}>{metrics.currentStreak.count ? (metrics.currentStreak.type === 'WIN' ? '+' : '-') + metrics.currentStreak.count : '—'}</div><div className="mt-1 text-[9px] text-[#71839a]">{metrics.currentStreak.type === 'WIN' ? 'Gains consécutifs' : metrics.currentStreak.type === 'LOSS' ? 'Pertes consécutives' : 'Aucune série'}</div></div>
+      <div className="col-span-2 rounded-xl border border-[#dce7e3] bg-white p-3 sm:col-span-4 xl:col-span-1"><div className="text-[9px] font-semibold uppercase tracking-wide text-[#8798a8]">Discipline</div><div className="mt-1 text-lg font-bold font-mono text-[#10233a]">{score.isSufficientData ? score.overallScore + '/100' : '—'}</div><div className="mt-1 text-[9px] text-[#71839a]">{score.isSufficientData ? 'Trader Score' : 'Minimum 5 trades'}</div></div>
+    </div>
+    <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
+      <div className="rounded-2xl border border-[#dce7e3] bg-white p-5 shadow-[0_8px_24px_rgba(16,35,58,0.035)] xl:col-span-2"><div className="mb-3 flex items-center justify-between"><div><div className="text-[9px] font-bold uppercase tracking-[0.15em] text-[#08a875]">Évolution du compte</div><h2 className="mt-1 text-sm font-bold text-[#10233a]">Courbe d'equity</h2></div><TrendingUp className="h-4 w-4 text-[#08b77a]" /></div><div className="min-h-[260px]">{chart}</div></div>
+      <div className="rounded-2xl border border-[#dce7e3] bg-white p-5 shadow-[0_8px_24px_rgba(16,35,58,0.035)]"><div className="mb-4"><div className="text-[9px] font-bold uppercase tracking-[0.15em] text-[#d18a1b]">Protection du capital</div><h2 className="mt-1 text-sm font-bold text-[#10233a]">Contrôle du risque</h2><p className="mt-1 text-[10px] text-[#8798a8]">Repères de risque calculés à partir du journal.</p></div><div className="space-y-3">
         <div className="rounded-xl border border-[#e7efec] bg-[#fbfdfc] p-3"><div className="text-[9px] uppercase tracking-wide text-[#71839a]">Profit Factor</div><div className="mt-1 text-2xl font-bold font-mono text-[#10233a]">{metrics.profitFactor.toFixed(2)}</div><div className={"mt-1 text-[9px] "+(metrics.profitFactor>=1?'text-[#008f63]':'text-[#e14d5d]')}>{metrics.profitFactor>=1?'Positif':'À surveiller'}</div></div>
         <div className="rounded-xl border border-[#e7efec] bg-[#fbfdfc] p-3"><div className="text-[9px] uppercase tracking-wide text-[#71839a]">Expectancy</div><div className={"mt-1 text-2xl font-bold font-mono "+(metrics.expectancy>=0?'text-[#008f63]':'text-[#e14d5d]')}>{formatCurrency(metrics.expectancy)}</div><div className="mt-1 text-[9px] text-[#71839a]">Par trade</div></div>
       </div></div>
     </div>
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-3"><Metric label="Win Rate" value={metrics.winRate.toFixed(1)+'%'} sub="Gagnants" tone="positive" /><Metric label="Avg R" value={metrics.avgRR.toFixed(2)} sub="R moyen" /><Metric label="Drawdown" value={'-'+metrics.maxDrawdownPercent.toFixed(1)+'%'} sub="Max observé" tone={metrics.maxDrawdownPercent>5?'negative':'positive'} /><Metric label="Trades" value={String(metrics.totalTrades)} sub="Journal" /></div>
-    {intelligenceFocus}{recentTrades(6)}
+    <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+      <div className="rounded-2xl border border-[#dce7e3] bg-white p-4 shadow-[0_8px_24px_rgba(16,35,58,0.035)]"><div className="mb-3"><div className="text-[9px] font-bold uppercase tracking-[0.15em] text-[#08a875]">Qualité d'exécution</div><h2 className="mt-1 text-sm font-bold text-[#10233a]">Performance de session</h2></div><div className="grid grid-cols-2 gap-2"><Metric label="Win Rate" value={metrics.winRate.toFixed(1)+'%'} sub="Trades gagnants" tone="positive" /><Metric label="Avg R" value={metrics.avgRR.toFixed(2)} sub="R moyen" /><Metric label="Profit Factor" value={metrics.profitFactor.toFixed(2)} sub="Gains / pertes" tone={metrics.profitFactor >= 1 ? 'positive' : 'negative'} /><Metric label="Trades" value={String(metrics.totalTrades)} sub="Journal" /></div></div>
+      <div className="rounded-2xl border border-[#dce7e3] bg-white p-4 shadow-[0_8px_24px_rgba(16,35,58,0.035)]"><div className="mb-3"><div className="text-[9px] font-bold uppercase tracking-[0.15em] text-[#08a875]">Comportement</div><h2 className="mt-1 text-sm font-bold text-[#10233a]">Discipline & vigilance</h2></div>{intelligenceCompact}</div>
+    </div>
+    {intelligenceFocus}
+    {recentTrades(6)}
   </div>;
 
   if (mode === 'analysis') return <div className="space-y-5">{situation}<TestimonialInvitation uid={userProfile?.uid} tradesCount={trades.length} />{modeBar}
