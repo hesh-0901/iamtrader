@@ -914,16 +914,11 @@ export function SettingsView({ userProfile, accounts, trades, selectedAccountId,
                           <div><label className="block text-base font-extrabold text-slate-900">Choisissez votre moyen de paiement</label><p className="mt-0.5 text-[11px] text-slate-500">Sélectionnez comment régler votre abonnement.</p></div>
                           <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide text-emerald-700">Disponible</span>
                         </div>
-                        <div className="grid gap-2 sm:grid-cols-2">
+                        <div className="grid gap-2">
                           <button type="button" aria-pressed={paymentMethod === 'mobile_money'} onClick={() => setPaymentMethod('mobile_money')} className={`flex min-w-0 items-center gap-3 rounded-2xl border-2 p-3.5 text-left transition ${paymentMethod === 'mobile_money' ? 'border-emerald-500 bg-emerald-50 shadow-sm shadow-emerald-100/70' : 'border-slate-200 bg-white hover:border-emerald-200'}`}>
                             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-emerald-700 shadow-sm"><Smartphone className="h-5 w-5" /></span>
                             <span className="min-w-0 flex-1"><span className="block text-sm font-extrabold text-slate-950">Mobile Money</span><span className="mt-1 block text-[11px] leading-4 text-slate-600">Paiement mobile</span></span>
                             <span className={`h-4 w-4 shrink-0 rounded-full border-[5px] bg-white ${paymentMethod === 'mobile_money' ? 'border-emerald-600' : 'border-slate-300'}`} />
-                          </button>
-                          <button type="button" aria-pressed={paymentMethod === 'card'} onClick={() => setPaymentMethod('card')} className={`flex min-w-0 items-center gap-3 rounded-2xl border-2 p-3.5 text-left transition ${paymentMethod === 'card' ? 'border-emerald-500 bg-emerald-50 shadow-sm shadow-emerald-100/70' : 'border-slate-200 bg-white hover:border-emerald-200'}`}>
-                            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white text-emerald-700 shadow-sm"><CreditCard className="h-5 w-5" /></span>
-                            <span className="min-w-0 flex-1"><span className="block text-sm font-extrabold text-slate-950">Carte bancaire</span><span className="mt-1 block text-[11px] leading-4 text-slate-600">Paiement sécurisé via Chariow</span></span>
-                            <span className={`h-4 w-4 shrink-0 rounded-full border-[5px] bg-white ${paymentMethod === 'card' ? 'border-emerald-600' : 'border-slate-300'}`} />
                           </button>
                         </div>
                       </div>
