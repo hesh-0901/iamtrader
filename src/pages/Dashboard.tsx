@@ -336,7 +336,7 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
   );
 
 
-  if (mode === 'focus') return <div className="space-y-5">
+  if (mode === 'focus') return <div className="mx-auto w-full max-w-[1440px] space-y-5 px-3 sm:px-5 xl:px-6">
     {modeBar}
     <div className="flex flex-wrap items-end justify-between gap-3">
       <div><div className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#08a875]">Session cockpit</div><h1 className="mt-1 text-2xl font-bold tracking-tight text-[#10233a]">Focus Trading</h1><p className="mt-1 text-xs text-[#71839a]">Les informations qui comptent avant, pendant et après votre session.</p></div>
@@ -364,7 +364,7 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
     {recentTrades(6)}
   </div>;
 
-  if (mode === 'analysis') return <div className="space-y-5">{situation}<TestimonialInvitation uid={userProfile?.uid} tradesCount={trades.length} />{modeBar}
+  if (mode === 'analysis') return <div className="mx-auto w-full max-w-[1440px] space-y-5 px-3 sm:px-5 xl:px-6">{situation}<TestimonialInvitation uid={userProfile?.uid} tradesCount={trades.length} />{modeBar}
     <div className="grid grid-cols-2 md:grid-cols-5 gap-3"><Metric label="Trades" value={String(metrics.totalTrades)} sub="Total" /><Metric label="Win Rate" value={metrics.winRate.toFixed(1)+'%'} sub="Gagnants" tone="positive" /><Metric label="Profit Factor" value={metrics.profitFactor.toFixed(2)} sub="Gains / pertes" /><Metric label="Expectancy" value={formatCurrency(metrics.expectancy)} sub="Par trade" tone={metrics.expectancy>=0?'positive':'negative'} /><Metric label="Avg R" value={metrics.avgRR.toFixed(2)} sub="Ratio moyen" /></div>
     <div className="p-5 rounded-2xl card-premium"><div className="flex items-center justify-between mb-2"><div><h2 className="text-sm font-bold text-[#10233a]">Analyse de l'equity</h2><p className="text-[10px] text-[#8798a8]">Évolution du capital et points de retournement.</p></div><TrendingUp className="w-4 h-4 text-[#08b77a]" /></div>{chart}</div>
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
@@ -373,13 +373,13 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
     </div>{intelligenceAnalysis}{recentTrades(8)}
   </div>;
 
-  if (mode === 'compact') return <div className="space-y-4">{situation}<TestimonialInvitation uid={userProfile?.uid} tradesCount={trades.length} />{modeBar}
+  if (mode === 'compact') return <div className="mx-auto w-full max-w-[1240px] space-y-4 px-3 sm:px-5 xl:px-6">{situation}<TestimonialInvitation uid={userProfile?.uid} tradesCount={trades.length} />{modeBar}
     <div className="p-4 rounded-2xl card-premium"><div className="flex items-center justify-between mb-2"><div><h2 className="text-sm font-bold text-[#10233a]">Vue compacte</h2><p className="text-[10px] text-[#8798a8]">L'essentiel du compte, sans surcharge.</p></div><Minimize2 className="w-4 h-4 text-[#08b77a]" /></div><div className="min-h-[240px]">{chart}</div></div>
     <div className="grid grid-cols-2 md:grid-cols-4 gap-2"><div className="rounded-xl bg-white border border-[#e7efec] px-3 py-2"><div className="text-[8px] uppercase text-[#8798a8]">P&L</div><div className={"text-sm font-bold font-mono "+(metrics.totalPnl>=0?'text-[#008f63]':'text-[#e14d5d]')}>{formatCurrency(metrics.totalPnl)}</div></div><div className="rounded-xl bg-white border border-[#e7efec] px-3 py-2"><div className="text-[8px] uppercase text-[#8798a8]">Win Rate</div><div className="text-sm font-bold font-mono text-[#10233a]">{metrics.winRate.toFixed(1)}%</div></div><div className="rounded-xl bg-white border border-[#e7efec] px-3 py-2"><div className="text-[8px] uppercase text-[#8798a8]">Drawdown</div><div className="text-sm font-bold font-mono text-[#10233a]">-{metrics.maxDrawdownPercent.toFixed(1)}%</div></div><div className="rounded-xl bg-white border border-[#e7efec] px-3 py-2"><div className="text-[8px] uppercase text-[#8798a8]">Trades</div><div className="text-sm font-bold font-mono text-[#10233a]">{metrics.totalTrades}</div></div></div>
     {intelligenceCompact}{recentTrades(5)}
   </div>;
 
-  return <div className="space-y-5">{situation}<TestimonialInvitation uid={userProfile?.uid} tradesCount={trades.length} />{modeBar}<div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
+  return <div className="mx-auto w-full max-w-[1440px] space-y-5 px-3 sm:px-5 xl:px-6">{situation}<TestimonialInvitation uid={userProfile?.uid} tradesCount={trades.length} />{modeBar}<div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
   <div className="p-5 rounded-2xl card-premium">
     <div className="flex items-center justify-between mb-4"><div><h2 className="text-sm font-bold text-[#10233a]">Score psychologique</h2><p className="text-[10px] text-[#8798a8]">Maîtrise émotionnelle et qualité d'exécution.</p></div><ShieldCheck className="w-4 h-4 text-[#08b77a]" /></div>
     <DisciplineGauge value={score.psychologyScore} sufficient={score.isSufficientData} title="Score psychologique" subtitle="Maîtrise émotionnelle et discipline." showHeader={false} />
