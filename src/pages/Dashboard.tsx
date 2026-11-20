@@ -42,7 +42,7 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
     const range = max - min || 1;
     return metrics.equityCurve.map((item, index) => ({
       ...item,
-      x: 24 + (index / (metrics.equityCurve.length - 1)) * 752,
+      x: 58 + (index / (metrics.equityCurve.length - 1)) * 700,
       y: 190 - 24 - ((item.balance - min) / range) * 142,
     }));
   }, [metrics.equityCurve]);
@@ -193,28 +193,54 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
     </div>
   );
 
+  const chartPositive = metrics.totalPnl >= 0;
+  const chartColor = chartPositive ? '#08b77a' : '#e14d5d';
   const chart = (
     <div className="relative">
       {curve.length > 1 ? (
         <>
-          <svg viewBox="0 0 800 190" className="w-full h-56 overflow-visible" onMouseLeave={() => setHover(null)} onMouseMove={event => {
+          <svg viewBox="0 0 800 190" className="h-56 w-full overflow-visible" onMouseLeave={() => setHover(null)} onMouseMove={event => {
             const rect = event.currentTarget.getBoundingClientRect();
             const x = ((event.clientX - rect.left) / rect.width) * 800;
             const index = curve.reduce((best, point, i) => Math.abs(point.x - x) < Math.abs(curve[best].x - x) ? i : best, 0);
             setHover(index);
           }}>
-            <defs><linearGradient id="iam-equity-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#08b77a" stopOpacity=".20" /><stop offset="100%" stopColor="#08b77a" stopOpacity="0" /></linearGradient></defs>
-            <line x1="24" y1="24" x2="776" y2="24" stroke="#edf2f0" strokeDasharray="3 5" />
-            <line x1="24" y1="95" x2="776" y2="95" stroke="#edf2f0" strokeDasharray="3 5" />
-            <line x1="24" y1="166" x2="776" y2="166" stroke="#edf2f0" strokeDasharray="3 5" />
-            <polygon points={`24,166 ${curve.map(p => `${p.x},${p.y}`).join(' ')} 776,166`} fill="url(#iam-equity-fill)" />
-            <polyline points={curve.map(p => `${p.x},${p.y}`).join(' ')} fill="none" stroke="#08b77a" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-            {hover !== null && curve[hover] && <><line x1={curve[hover].x} y1="24" x2={curve[hover].x} y2="166" stroke="#b8cfc6" strokeDasharray="3 4" /><circle cx={curve[hover].x} cy={curve[hover].y} r="5" fill="white" stroke="#08b77a" strokeWidth="2.5" /></>}
+            <defs>
+              <linearGradient id="iam-equity-fill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={chartColor} stopOpacity=".28" />
+                <stop offset="100%" stopColor={chartColor} stopOpacity=".015" />
+              </linearGradient>
+            </defs>
+            {[24, 95, 166].map((y, index) => {
+              const values = curve.map(point => point.balance);
+              const minValue = Math.min(...values);
+              const maxValue = Math.max(...values);
+              const labelValue = maxValue - ((maxValue - minValue) * index / 2);
+              return (
+                <g key={y}>
+                  <line x1="58" y1={y} x2="758" y2={y} stroke="#edf2f0" strokeDasharray="3 5" />
+                  <text x="49" y={y + 3} textAnchor="end" fill="#8798a8" fontSize="9" fontFamily="monospace">{formatCurrency(labelValue)}</text>
+                </g>
+              );
+            })}
+            <polygon points={`58,166 ${curve.map(p => `${p.x},${p.y}`).join(' ')} 758,166`} fill="url(#iam-equity-fill)" />
+            <polyline points={curve.map(p => `${p.x},${p.y}`).join(' ')} fill="none" stroke={chartColor} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+            {hover !== null && curve[hover] && <>
+              <line x1={curve[hover].x} y1="24" x2={curve[hover].x} y2="166" stroke={chartColor} strokeOpacity=".55" strokeDasharray="3 4" />
+              <circle cx={curve[hover].x} cy={curve[hover].y} r="5" fill="white" stroke={chartColor} strokeWidth="2.5" />
+            </>}
           </svg>
-          <div className="flex justify-between text-[9px] text-[#94a2ad] font-mono"><span>{new Date(curve[0].date).toLocaleDateString('fr-FR', {day:'2-digit',month:'short'})}</span><span>{new Date(curve[curve.length-1].date).toLocaleDateString('fr-FR', {day:'2-digit',month:'short'})}</span></div>
-          {hover !== null && curve[hover] && <div className="absolute top-1 pointer-events-none px-3 py-2 rounded-xl bg-[#10233a]/95 text-white text-[10px] font-mono shadow-lg" style={{left:`${Math.min(Math.max(curve[hover].x / 8, 12), 88)}%`,transform:'translateX(-50%)'}}><div className="text-white/60">{new Date(curve[hover].date).toLocaleDateString('fr-FR')}</div><div className="font-bold">{formatCurrency(curve[hover].balance)}</div><div className={curve[hover].pnl >= 0 ? 'text-emerald-300' : 'text-rose-300'}>P&L {formatCurrency(curve[hover].pnl)}</div></div>}
+          <div className="ml-[58px] flex justify-between text-[9px] font-mono text-[#94a2ad]">
+            <span>{new Date(curve[0].date).toLocaleDateString('fr-FR', {day:'2-digit',month:'short'})}</span>
+            <span>{new Date(curve[curve.length-1].date).toLocaleDateString('fr-FR', {day:'2-digit',month:'short'})}</span>
+          </div>
+          {hover !== null && curve[hover] && <div className="pointer-events-none absolute top-1 rounded-xl bg-[#10233a]/95 px-3 py-2 text-[10px] font-mono text-white shadow-lg" style={{left:`${Math.min(Math.max(curve[hover].x / 8, 12), 88)}%`,transform:'translateX(-50%)'}}>
+            <div className="text-white/60">{new Date(curve[hover].date).toLocaleDateString('fr-FR')}</div>
+            <div className="font-bold">{formatCurrency(curve[hover].balance)}</div>
+            <div className={curve[hover].pnl >= 0 ? 'text-emerald-300' : 'text-rose-300'}>P&L {formatCurrency(curve[hover].pnl)}</div>
+          </div>}
         </>
-      ) : <div className="h-56 flex flex-col items-center justify-center rounded-xl bg-[#fbfdfc] border border-[#edf2f0]"><Activity className="w-5 h-5 text-[#a6b4bf] mb-2" /><span className="text-xs font-semibold text-[#62788d]">Courbe disponible après 2 trades</span><span className="text-[10px] text-[#98a7b3] mt-1">Votre progression apparaîtra automatiquement ici.</span></div>}
+      ) : <div className="flex h-56 flex-col items-center justify-center rounded-xl border border-[#edf2f0] bg-[#fbfdfc]"><Activity className="mb-2 h-5 w-5 text-[#a6b4bf]" /><span className="text-xs font-semibold text-[#62788d]">Courbe disponible après 2 trades</span><span className="mt-1 text-[10px] text-[#98a7b3]">Votre progression apparaîtra automatiquement ici.</span></div>}
     </div>
   );
 
