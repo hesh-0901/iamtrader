@@ -194,26 +194,19 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
     </div>
   );
 
-  const chartAreas = curve.slice(1).flatMap((point, index) => {
-    const previous = curve[index];
-    const baseline = curve.length ? 24 + ((Math.max(0, ...curve.map(p => p.value)) / ((Math.max(0, ...curve.map(p => p.value)) - Math.min(0, ...curve.map(p => p.value))) || 1)) * 142) : 166;
-    const colorFor = (value: number) => value >= 0 ? '#08b77a' : '#e14d5d';
-    if ((previous.value >= 0 && point.value >= 0) || (previous.value <= 0 && point.value <= 0)) {
-      return [{ key: index, points: `${previous.x},${previous.y} ${point.x},${point.y} ${point.x},${baseline} ${previous.x},${baseline}`, color: colorFor((previous.value + point.value) / 2) }];
-    }
-    const ratio = Math.abs(previous.value) / (Math.abs(previous.value) + Math.abs(point.value));
-    const crossX = previous.x + (point.x - previous.x) * ratio;
-    return [
-      { key: index + '-a', points: `${previous.x},${previous.y} ${crossX},${baseline} ${crossX},${baseline} ${previous.x},${baseline}`, color: colorFor(previous.value) },
-      { key: index + '-b', points: `${crossX},${baseline} ${point.x},${point.y} ${point.x},${baseline}`, color: colorFor(point.value) },
-    ];
-  });
+  const chartMin = Math.min(0, ...curve.map(point => point.value));
+  const chartMax = Math.max(0, ...curve.map(point => point.value));
+  const chartRange = chartMax - chartMin || 1;
+  const chartBaseline = 24 + (chartMax / chartRange) * 142;
   const chartLine = curve.map((point, index) => {
     if (index === 0) return `M ${point.x} ${point.y}`;
     const previous = curve[index - 1];
-    const dx = (point.x - previous.x) / 3;
-    return `C ${previous.x + dx} ${previous.y}, ${point.x - dx} ${point.y}, ${point.x} ${point.y}`;
+    const control = (point.x - previous.x) / 3;
+    return `C ${previous.x + control} ${previous.y}, ${point.x - control} ${point.y}, ${point.x} ${point.y}`;
   }).join(' ');
+  const chartAreaPath = curve.length > 1
+    ? `${chartLine} L ${curve[curve.length - 1].x} ${chartBaseline} L ${curve[0].x} ${chartBaseline} Z`
+    : ''; 
   const chart = (
     <div className="relative">
       {curve.length > 1 ? (
@@ -224,6 +217,10 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
             const index = curve.reduce((best, point, i) => Math.abs(point.x - x) < Math.abs(curve[best].x - x) ? i : best, 0);
             setHover(index);
           }}>
+            <defs>
+              <clipPath id="iam-equity-positive-clip"><rect x="58" y="24" width="700" height={Math.max(0, chartBaseline - 24)} /></clipPath>
+              <clipPath id="iam-equity-negative-clip"><rect x="58" y={chartBaseline} width="700" height={Math.max(0, 166 - chartBaseline)} /></clipPath>
+            </defs>
             {[24, 95, 166].map((y, index) => {
               const values = curve.map(point => point.value);
               const maxValue = Math.max(0, ...values);
@@ -234,10 +231,12 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
                 <text x="49" y={y + 3} textAnchor="end" fill="#8798a8" fontSize="9" fontFamily="monospace">{formatCurrency(labelValue)}</text>
               </g>;
             })}
-            <line x1="58" y1={24 + (Math.max(0, ...curve.map(p => p.value)) / ((Math.max(0, ...curve.map(p => p.value)) - Math.min(0, ...curve.map(p => p.value))) || 1)) * 142} x2="758" y2={24 + (Math.max(0, ...curve.map(p => p.value)) / ((Math.max(0, ...curve.map(p => p.value)) - Math.min(0, ...curve.map(p => p.value))) || 1)) * 142} stroke="#aab8b2" strokeWidth="1" />
-            {chartAreas.map(area => <polygon key={area.key} points={area.points} fill={area.color} />)}
-            <path d={chartLine} fill="none" stroke={metrics.totalPnl >= 0 ? '#08b77a' : '#e14d5d'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-            {curve.map((point, index) => <circle key={index} cx={point.x} cy={point.y} r={hover === index ? 4 : 2.2} fill="white" stroke={point.value >= 0 ? '#08b77a' : '#e14d5d'} strokeWidth="1.5" />)}
+            <path d={chartAreaPath} fill="#08b77a" clipPath="url(#iam-equity-positive-clip)" />
+            <path d={chartAreaPath} fill="#e14d5d" clipPath="url(#iam-equity-negative-clip)" />
+            <line x1="58" y1={chartBaseline} x2="758" y2={chartBaseline} stroke="#aab8b2" strokeWidth="1" />
+            <path d={chartLine} fill="none" stroke="#08b77a" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" clipPath="url(#iam-equity-positive-clip)" />
+            <path d={chartLine} fill="none" stroke="#e14d5d" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" clipPath="url(#iam-equity-negative-clip)" />
+            {hover !== null && curve[hover] && <circle cx={curve[hover].x} cy={curve[hover].y} r="4" fill="white" stroke={curve[hover].value >= 0 ? '#08b77a' : '#e14d5d'} strokeWidth="2" />}
             {hover !== null && curve[hover] && <>
               <line x1={curve[hover].x} y1="24" x2={curve[hover].x} y2="166" stroke="#82998f" strokeDasharray="3 4" />
               <circle cx={curve[hover].x} cy={curve[hover].y} r="5" fill="white" stroke={curve[hover].value >= 0 ? '#08b77a' : '#e14d5d'} strokeWidth="2.5" />
