@@ -207,8 +207,8 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
           }}>
             <defs>
               <linearGradient id="iam-equity-fill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={chartColor} stopOpacity=".28" />
-                <stop offset="100%" stopColor={chartColor} stopOpacity=".015" />
+                <stop offset="0%" stopColor={chartColor} stopOpacity="1" />
+                <stop offset="100%" stopColor={chartColor} stopOpacity="1" />
               </linearGradient>
             </defs>
             {[24, 95, 166].map((y, index) => {
