@@ -200,12 +200,6 @@ type ChariowEnv = CinetPayEnv & {
 };
 
 type CinetPayEnv = SasPayEnv & {
-  BANK_TRANSFER_BANK_NAME?: string;
-  BANK_TRANSFER_ACCOUNT_NAME?: string;
-  BANK_TRANSFER_ACCOUNT_NUMBER?: string;
-  BANK_TRANSFER_SWIFT?: string;
-  BANK_TRANSFER_BRANCH?: string;
-  BANK_TRANSFER_INSTRUCTIONS?: string;
   CINETPAY_API_KEY?: string;
   CINETPAY_API_PASSWORD?: string;
   CINETPAY_COUNTRY?: string;
@@ -790,7 +784,7 @@ export async function handlePaymentRequest(request: Request, env: CinetPayEnv) {
       months?: number;
       phone?: string;
       countryCode?: string;
-      paymentMethod?: 'mobile_money' | 'card' | 'bank_transfer';
+      paymentMethod?: 'mobile_money' | 'card';
       paymentProvider?: string;
       payerName?: string;
       promoCode?: string;
@@ -801,101 +795,6 @@ export async function handlePaymentRequest(request: Request, env: CinetPayEnv) {
     // Keep every downstream provider branch and stored payment aligned with the server-enforced duration.
     body.months = months;
     const paymentMethod = body.paymentMethod === 'bank_transfer' ? 'bank_transfer' : body.paymentMethod === 'card' ? 'card' : 'mobile_money';
-    if (paymentMethod === 'bank_transfer') {
-      return json({ success: false, message: 'Le virement bancaire est temporairement indisponible. Utilisez Mobile Money.' }, 503);
-    }
-    const countryCode = String(body.countryCode || 'CD').toUpperCase();
-    const phone = paymentMethod === 'mobile_money' ? normalizePhone(body.phone, countryCode) : null;
-    const price = plan ? (planKey === 'community'
-      ? Math.round((plan.amount / 6 * months) * 100) / 100
-      : Math.round((plan.amount * months) * 100) / 100) : 0;
-    const baseAmounts = plan ? calculatePaymentAmounts(price) : undefined;
-    let amounts = baseAmounts;
-    const countryConfig = SASPAY_COUNTRIES[countryCode as keyof typeof SASPAY_COUNTRIES];
-    const isSasPay = paymentMethod === 'mobile_money' && Boolean(countryConfig && Object.prototype.hasOwnProperty.call(countryConfig.networks, String(body.paymentProvider || '')));
-
-    if (!plan || !planKey) return json({ success: false, message: 'Formule invalide.' }, 400);
-    if (paymentMethod === 'mobile_money' && !phone) {
-      const country = SASPAY_COUNTRIES[countryCode as keyof typeof SASPAY_COUNTRIES];
-      return json({ success: false, message: country ? `Numéro invalide pour ${country.name}. Utilisez l’indicatif ${country.dialCode} et ${country.phoneLength} chiffres nationaux.` : 'Pays de paiement non pris en charge.' }, 400);
-    }
-    if (paymentMethod === 'mobile_money' && !isSasPay && (!env.CINETPAY_API_KEY || !env.CINETPAY_API_PASSWORD)) {
-      const configState = [
-        'API_KEY=' + (env.CINETPAY_API_KEY ? 'OK' : 'MISSING'),
-        'API_PASSWORD=' + (env.CINETPAY_API_PASSWORD ? 'OK' : 'MISSING'),
-        'COUNTRY=' + (env.CINETPAY_COUNTRY || 'CD')
-      ].join(', ');
-      console.error('CinetPay runtime configuration incomplete:', configState);
-      return json({
-        success: false,
-        message: 'Le paiement mobile est temporairement indisponible. Réessayez ultérieurement.'
-      }, 503);
-    }
-    if (paymentMethod === 'mobile_money' && !isSasPay && (env.CINETPAY_COUNTRY || 'CD') !== 'CD') {
-      return json({ success: false, message: 'Le paiement mobile n’est pas disponible pour ce pays actuellement.' }, 503);
-    }
-
-    paymentStage = 'firestore-profile';
-    const profile = await firestoreGet(env, `users/${encodeURIComponent(user.uid)}`);
-    if (!profile) return json({ success: false, message: 'Profil utilisateur introuvable.' }, 404);
-    if (profile.status === 'suspended') return json({ success: false, message: 'Ce compte est suspendu.' }, 403);
-
-    const baseDecision = decideSubscription(profile, planKey, new Date());
-    if ('error' in baseDecision) return json({ success: false, message: baseDecision.error }, 409);
-    const decision = { ...baseDecision, expires: new Date(baseDecision.start.getTime() + months * 30 * 86400000) };
-
-    const payerName = String(body.payerName || profile.displayName || user.email || 'Client IAMTRADER').trim();
-    if (!amounts) return json({ success: false, message: 'Données de paiement invalides.' }, 400);
-    let appliedPromotion: AppliedPromotion | null = null;
-    try {
-      const resolved = await resolvePromotion(env, planKey, amounts.total, String(body.promoCode || ''));
-      if (resolved.message) return json({ success: false, message: resolved.message }, 400);
-      appliedPromotion = resolved.applied;
-      if (appliedPromotion) {
-        amounts = { ...amounts, total: appliedPromotion.finalAmount };
-        (body as any)._promotion = appliedPromotion;
-      }
-    } catch (promotionError) {
-      console.error('Promotion resolution failed:', promotionError);
-      return json({ success: false, message: 'Impossible de vérifier les promotions. Réessayez dans quelques instants.' }, 503);
-    }
-    if (paymentMethod === 'bank_transfer') {
-      const bankName = String(env.BANK_TRANSFER_BANK_NAME || '').trim();
-      const accountName = String(env.BANK_TRANSFER_ACCOUNT_NAME || '').trim();
-      const accountNumber = String(env.BANK_TRANSFER_ACCOUNT_NUMBER || '').trim();
-      if (!bankName || !accountName || !accountNumber) {
-        return json({ success: false, message: 'Le virement bancaire n’est pas encore configuré. Choisissez Mobile Money ou réessayez ultérieurement.' }, 503);
-      }
-      const paymentId = randomId();
-      const now = new Date().toISOString();
-      const reference = paymentReference(paymentId, now);
-      await firestoreCreate(env, 'payments', paymentId, {
-        id: paymentId, uid: user.uid, email: user.email || profile.email || '',
-        displayName: profile.displayName || user.email || '', fullName: traderFullName(profile),
-        plan: planKey, planName: plan.name, months, amount: amounts.total, amountUsd: amounts.total,
-        baseAmount: baseAmounts?.baseAmount ?? amounts.baseAmount, paymentFee: amounts.fee,
-        paymentFeeRate: PAYMENT_FEE_RATE, currency: 'USD', payerName,
-        ...(appliedPromotion ? { originalAmount: appliedPromotion.baseAmount, discountAmount: appliedPromotion.discountAmount, promotionId: appliedPromotion.promotionId, promotionKind: appliedPromotion.promotionKind, promotionName: appliedPromotion.promotionName, promoCode: appliedPromotion.promoCode } : {}),
-        paymentMethod: 'bank_transfer', paymentProvider: 'manual', provider: 'MANUAL',
-        subscriptionAction: decision.action, currentPlanAtPurchase: decision.currentPlan,
-        activationStartAt: decision.start.toISOString(), activationExpiresAt: decision.expires.toISOString(),
-        status: 'pending', reference: paymentId, transactionReference: reference,
-        invoiceNumber: invoiceNumber(paymentId, now), createdAt: now
-      });
-      return json({ success: true, payment: {
-        id: paymentId, plan: planKey, planName: plan.name, months, amount: amounts.total,
-        currency: 'USD', status: 'processing', reference, message: 'Demande enregistrée. Effectuez le virement puis transmettez la preuve avec cette référence à IAMTRADER.',
-        subscriptionAction: decision.action, activationStartAt: decision.start.toISOString(),
-        activationExpiresAt: decision.expires.toISOString(),
-        bankDetails: {
-          bankName, accountName, accountNumber,
-          swift: String(env.BANK_TRANSFER_SWIFT || ''),
-          branch: String(env.BANK_TRANSFER_BRANCH || ''),
-          currency: 'USD',
-          instructions: String(env.BANK_TRANSFER_INSTRUCTIONS || '')
-        }
-      } });
-    }
     if (paymentMethod === 'card') {
       return await createChariowCheckout(request, env as ChariowEnv, user, body, profile, planKey, plan, amounts, decision, payerName);
     }
