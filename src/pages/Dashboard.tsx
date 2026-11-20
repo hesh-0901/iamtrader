@@ -36,16 +36,17 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
 
   const curve = useMemo(() => {
     if (metrics.equityCurve.length < 2) return [];
-    const values = metrics.equityCurve.map(item => item.balance);
-    const min = Math.min(...values);
-    const max = Math.max(...values);
+    const values = metrics.equityCurve.map(item => item.balance - capital);
+    const min = Math.min(0, ...values);
+    const max = Math.max(0, ...values);
     const range = max - min || 1;
     return metrics.equityCurve.map((item, index) => ({
       ...item,
+      value: item.balance - capital,
       x: 58 + (index / (metrics.equityCurve.length - 1)) * 700,
-      y: 190 - 24 - ((item.balance - min) / range) * 142,
+      y: 24 + ((max - (item.balance - capital)) / range) * 142,
     }));
-  }, [metrics.equityCurve]);
+  }, [metrics.equityCurve, capital]);
 
   const setDashboardMode = (value: Mode) => {
     setMode(value);
@@ -193,8 +194,27 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
     </div>
   );
 
-  const chartPositive = metrics.totalPnl >= 0;
-  const chartColor = chartPositive ? '#08b77a' : '#e14d5d';
+  const zeroY = curve.length ? curve[0].y + (curve[0].value / (curve[0].value - (curve[curve.length - 1]?.value ?? curve[0].value || 1))) * 0 : 166;
+  const chartAreas = curve.slice(1).flatMap((point, index) => {
+    const previous = curve[index];
+    const baseline = curve.length ? 24 + ((Math.max(0, ...curve.map(p => p.value)) / ((Math.max(0, ...curve.map(p => p.value)) - Math.min(0, ...curve.map(p => p.value))) || 1)) * 142) : 166;
+    const colorFor = (value: number) => value >= 0 ? '#08b77a' : '#e14d5d';
+    if ((previous.value >= 0 && point.value >= 0) || (previous.value <= 0 && point.value <= 0)) {
+      return [{ key: index, points: `${previous.x},${previous.y} ${point.x},${point.y} ${point.x},${baseline} ${previous.x},${baseline}`, color: colorFor((previous.value + point.value) / 2) }];
+    }
+    const ratio = Math.abs(previous.value) / (Math.abs(previous.value) + Math.abs(point.value));
+    const crossX = previous.x + (point.x - previous.x) * ratio;
+    return [
+      { key: index + '-a', points: `${previous.x},${previous.y} ${crossX},${baseline} ${crossX},${baseline} ${previous.x},${baseline}`, color: colorFor(previous.value) },
+      { key: index + '-b', points: `${crossX},${baseline} ${point.x},${point.y} ${point.x},${baseline}`, color: colorFor(point.value) },
+    ];
+  });
+  const chartLine = curve.map((point, index) => {
+    if (index === 0) return `M ${point.x} ${point.y}`;
+    const previous = curve[index - 1];
+    const dx = (point.x - previous.x) / 3;
+    return `C ${previous.x + dx} ${previous.y}, ${point.x - dx} ${point.y}, ${point.x} ${point.y}`;
+  }).join(' ');
   const chart = (
     <div className="relative">
       {curve.length > 1 ? (
@@ -205,29 +225,22 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
             const index = curve.reduce((best, point, i) => Math.abs(point.x - x) < Math.abs(curve[best].x - x) ? i : best, 0);
             setHover(index);
           }}>
-            <defs>
-              <linearGradient id="iam-equity-fill" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="0%" stopColor={chartColor} stopOpacity="1" />
-                <stop offset="100%" stopColor={chartColor} stopOpacity="1" />
-              </linearGradient>
-            </defs>
             {[24, 95, 166].map((y, index) => {
-              const values = curve.map(point => point.balance);
-              const minValue = Math.min(...values);
-              const maxValue = Math.max(...values);
+              const values = curve.map(point => point.value);
+              const maxValue = Math.max(0, ...values);
+              const minValue = Math.min(0, ...values);
               const labelValue = maxValue - ((maxValue - minValue) * index / 2);
-              return (
-                <g key={y}>
-                  <line x1="58" y1={y} x2="758" y2={y} stroke="#edf2f0" strokeDasharray="3 5" />
-                  <text x="49" y={y + 3} textAnchor="end" fill="#8798a8" fontSize="9" fontFamily="monospace">{formatCurrency(labelValue)}</text>
-                </g>
-              );
+              return <g key={y}>
+                <line x1="58" y1={y} x2="758" y2={y} stroke="#edf2f0" strokeDasharray="3 5" />
+                <text x="49" y={y + 3} textAnchor="end" fill="#8798a8" fontSize="9" fontFamily="monospace">{formatCurrency(labelValue)}</text>
+              </g>;
             })}
-            <polygon points={`58,166 ${curve.map(p => `${p.x},${p.y}`).join(' ')} 758,166`} fill="url(#iam-equity-fill)" />
-            <polyline points={curve.map(p => `${p.x},${p.y}`).join(' ')} fill="none" stroke={chartColor} strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+            {chartAreas.map(area => <polygon key={area.key} points={area.points} fill={area.color} />)}
+            <path d={chartLine} fill="none" stroke={metrics.totalPnl >= 0 ? '#08b77a' : '#e14d5d'} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+            {curve.map((point, index) => <circle key={index} cx={point.x} cy={point.y} r={hover === index ? 4 : 2.2} fill="white" stroke={point.value >= 0 ? '#08b77a' : '#e14d5d'} strokeWidth="1.5" />)}
             {hover !== null && curve[hover] && <>
-              <line x1={curve[hover].x} y1="24" x2={curve[hover].x} y2="166" stroke={chartColor} strokeOpacity=".55" strokeDasharray="3 4" />
-              <circle cx={curve[hover].x} cy={curve[hover].y} r="5" fill="white" stroke={chartColor} strokeWidth="2.5" />
+              <line x1={curve[hover].x} y1="24" x2={curve[hover].x} y2="166" stroke="#82998f" strokeDasharray="3 4" />
+              <circle cx={curve[hover].x} cy={curve[hover].y} r="5" fill="white" stroke={curve[hover].value >= 0 ? '#08b77a' : '#e14d5d'} strokeWidth="2.5" />
             </>}
           </svg>
           <div className="ml-[58px] flex justify-between text-[9px] font-mono text-[#94a2ad]">
@@ -236,8 +249,8 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
           </div>
           {hover !== null && curve[hover] && <div className="pointer-events-none absolute top-1 rounded-xl bg-[#10233a]/95 px-3 py-2 text-[10px] font-mono text-white shadow-lg" style={{left:`${Math.min(Math.max(curve[hover].x / 8, 12), 88)}%`,transform:'translateX(-50%)'}}>
             <div className="text-white/60">{new Date(curve[hover].date).toLocaleDateString('fr-FR')}</div>
-            <div className="font-bold">{formatCurrency(curve[hover].balance)}</div>
-            <div className={curve[hover].pnl >= 0 ? 'text-emerald-300' : 'text-rose-300'}>P&L {formatCurrency(curve[hover].pnl)}</div>
+            <div className="font-bold">{formatCurrency(curve[hover].value)}</div>
+            <div className="text-white/65">Equity {formatCurrency(curve[hover].balance)}</div>
           </div>}
         </>
       ) : <div className="flex h-56 flex-col items-center justify-center rounded-xl border border-[#edf2f0] bg-[#fbfdfc]"><Activity className="mb-2 h-5 w-5 text-[#a6b4bf]" /><span className="text-xs font-semibold text-[#62788d]">Courbe disponible après 2 trades</span><span className="mt-1 text-[10px] text-[#98a7b3]">Votre progression apparaîtra automatiquement ici.</span></div>}
