@@ -394,7 +394,7 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
       </div></div>
     </div>
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
-      <div className="rounded-2xl border border-[#dce7e3] bg-white p-4 shadow-[0_8px_24px_rgba(16,35,58,0.035)]"><div className="mb-3"><div className="text-[9px] font-bold uppercase tracking-[0.15em] text-[#08a875]">Qualité d'exécution</div><h2 className="mt-1 text-sm font-bold text-[#10233a]">Performance de session</h2></div><div className="grid grid-cols-2 gap-2"><Metric label="Win Rate" value={metrics.winRate.toFixed(1)+'%'} sub="Trades gagnants" tone="positive" /><Metric label="Avg R" value={metrics.avgRR.toFixed(2)} sub="R moyen" /><Metric label="Profit Factor" value={metrics.profitFactor.toFixed(2)} sub="Gains / pertes" tone={metrics.profitFactor >= 1 ? 'positive' : 'negative'} /><Metric label="Trades" value={String(metrics.totalTrades)} sub="Journal" /></div></div>
+      <div className="rounded-2xl border border-[#dce7e3] bg-white p-4 shadow-[0_8px_24px_rgba(16,35,58,0.035)]"><div className="mb-3"><div className="text-[9px] font-bold uppercase tracking-[0.15em] text-[#08a875]">Qualité d'exécution</div><h2 className="mt-1 text-sm font-bold text-[#10233a]">Performance de session</h2></div><div className="grid grid-cols-2 gap-2"><Metric label="Win Rate" value={metrics.winRate.toFixed(1)+'%'} sub="Trades gagnants" tone="positive" gauge={metrics.winRate} icon={Target} /><Metric label="Avg R" value={metrics.avgRR.toFixed(2)} sub="R moyen" icon={TrendingUp} /><Metric label="Profit Factor" value={metrics.profitFactor.toFixed(2)} sub="Gains / pertes" tone={metrics.profitFactor >= 1 ? 'positive' : 'negative'} icon={BarChart3} /><Metric label="Trades" value={String(metrics.totalTrades)} sub="Journal" icon={Activity} /></div></div>
       <div className="rounded-2xl border border-[#dce7e3] bg-white p-4 shadow-[0_8px_24px_rgba(16,35,58,0.035)]"><div className="mb-3"><div className="text-[9px] font-bold uppercase tracking-[0.15em] text-[#08a875]">Comportement</div><h2 className="mt-1 text-sm font-bold text-[#10233a]">Discipline & vigilance</h2></div>{intelligenceCompact}</div>
     </div>
     {intelligenceFocus}
@@ -402,7 +402,7 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
   </div>;
 
   if (mode === 'analysis') return <div className="mx-auto w-full max-w-[1440px] space-y-5 px-3 sm:px-5 xl:px-6">{situation}<TestimonialInvitation uid={userProfile?.uid} tradesCount={trades.length} />{modeBar}
-    <div className="grid grid-cols-2 md:grid-cols-5 gap-3"><Metric label="Trades" value={String(metrics.totalTrades)} sub="Total" /><Metric label="Win Rate" value={metrics.winRate.toFixed(1)+'%'} sub="Gagnants" tone="positive" /><Metric label="Profit Factor" value={metrics.profitFactor.toFixed(2)} sub="Gains / pertes" /><Metric label="Expectancy" value={formatCurrency(metrics.expectancy)} sub="Par trade" tone={metrics.expectancy>=0?'positive':'negative'} /><Metric label="Avg R" value={metrics.avgRR.toFixed(2)} sub="Ratio moyen" /></div>
+    <div className="grid grid-cols-2 md:grid-cols-5 gap-3"><Metric label="Trades" value={String(metrics.totalTrades)} sub="Total" icon={Activity} /><Metric label="Win Rate" value={metrics.winRate.toFixed(1)+'%'} sub="Gagnants" tone="positive" gauge={metrics.winRate} icon={Target} /><Metric label="Profit Factor" value={metrics.profitFactor.toFixed(2)} sub="Gains / pertes" tone={metrics.profitFactor >= 1 ? 'positive' : 'negative'} icon={BarChart3} /><Metric label="Expectancy" value={formatCurrency(metrics.expectancy)} sub="Par trade" tone={metrics.expectancy>=0?'positive':'negative'} icon={CircleDollarSign} /><Metric label="Avg R" value={metrics.avgRR.toFixed(2)} sub="Ratio moyen" icon={TrendingUp} /></div>
     <div className="p-5 rounded-2xl card-premium"><div className="flex items-center justify-between mb-2"><div><h2 className="text-sm font-bold text-[#10233a]">Analyse de l'equity</h2><p className="text-[10px] text-[#8798a8]">Évolution du capital et points de retournement.</p></div><TrendingUp className="w-4 h-4 text-[#08b77a]" /></div>{chart}</div>
     <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
       <div className="p-5 rounded-2xl card-premium"><div className="flex items-center justify-between mb-4"><div><h2 className="text-sm font-bold text-[#10233a]">Performance par instrument</h2><p className="text-[10px] text-[#8798a8]">Comparaison du P&L cumulé.</p></div><BarChart3 className="w-4 h-4 text-[#08b77a]" /></div><div className="space-y-3">{(() => {const rows=Object.entries(trades.reduce<Record<string,number>>((map,t)=>{map[t.symbol]=(map[t.symbol]||0)+(Number(t.pnl)||0);return map;},{})).sort((a,b)=>b[1]-a[1]).slice(0,5);const max=Math.max(...rows.map(([,v])=>Math.abs(v)),1);return rows.map(([symbol,pnl])=><div key={symbol}><div className="flex justify-between mb-1"><span className="text-[10px] font-semibold text-[#314861]">{symbol}</span><span className={pnl>=0?'text-[#008f63]':'text-[#e14d5d]'}>{formatCurrency(pnl)}</span></div><div className="h-3 rounded-full bg-[#edf2f0]"><div className={"h-full rounded-full "+(pnl>=0?'bg-[#08b77a]':'bg-[#e14d5d]')} style={{width:Math.max(5,Math.abs(pnl)/max*100)+'%'}} /></div></div>);})()}</div></div>
@@ -615,6 +615,27 @@ function DashboardMetricCard({
     </div>
   );
 }
-function Metric({ label, value, sub, tone = 'neutral' }: { label: string; value: string; sub?: string; tone?: 'neutral'|'positive'|'negative' }) {
-  return <div className="p-3 rounded-xl bg-[#f8fbfa] border border-[#e7efec] mb-2"><div className="text-[9px] uppercase tracking-wider font-semibold text-[#8a9aab]">{label}</div><div className={`mt-1 text-sm font-bold font-mono ${tone==='positive'?'text-[#008f63]':tone==='negative'?'text-[#e14d5d]':'text-[#10233a]'}`}>{value}</div>{sub && <div className="text-[9px] text-[#94a2ad] mt-0.5">{sub}</div>}</div>;
+function Metric({ label, value, sub, tone = 'neutral', gauge, icon: Icon }: { label: string; value: string; sub?: string; tone?: 'neutral'|'positive'|'negative'; gauge?: number; icon?: React.ElementType }) {
+  const color = tone === 'positive' ? '#08b77a' : tone === 'negative' ? '#e14d5d' : '#64748b';
+  const progress = Math.max(0, Math.min(100, gauge ?? 0));
+  const circumference = Math.PI * 42;
+  return (
+    <div className="relative min-w-0 rounded-xl border border-[#e2ece8] bg-white p-3.5 shadow-[0_3px_12px_rgba(16,35,58,0.025)] transition-shadow hover:shadow-[0_6px_18px_rgba(16,35,58,0.06)]">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 text-[9px] font-bold uppercase tracking-[0.11em] text-[#8293a2]">{label}</div>
+        {Icon && <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg" style={{ backgroundColor: color + '14', color }}><Icon className="h-3.5 w-3.5" /></span>}
+      </div>
+      <div className={`mt-2 text-xl font-extrabold leading-none tracking-tight font-mono ${tone==='positive'?'text-[#008f63]':tone==='negative'?'text-[#e14d5d]':'text-[#10233a]'}`}>{value}</div>
+      {gauge !== undefined && (
+        <div className="mt-2 flex items-center gap-2">
+          <svg viewBox="0 0 100 54" className="h-8 w-[62px] shrink-0" aria-label={`Progression ${progress}%`}>
+            <path d="M 8 48 A 42 42 0 0 1 92 48" fill="none" stroke="#e8efec" strokeWidth="9" strokeLinecap="round" />
+            <path d="M 8 48 A 42 42 0 0 1 92 48" fill="none" stroke={color} strokeWidth="9" strokeLinecap="round" strokeDasharray={`${circumference * progress / 100} ${circumference}`} />
+          </svg>
+          <span className="text-[9px] font-semibold tabular-nums" style={{ color }}>{Math.round(progress)}%</span>
+        </div>
+      )}
+      {sub && <div className="mt-1.5 text-[9px] font-medium text-[#94a2ad]">{sub}</div>}
+    </div>
+  );
 }
