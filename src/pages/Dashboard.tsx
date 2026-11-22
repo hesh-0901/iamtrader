@@ -416,9 +416,26 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
     </div>
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-3">
       <div className="rounded-2xl border border-[#dce7e3] bg-white p-5 shadow-[0_8px_24px_rgba(16,35,58,0.035)] xl:col-span-2"><div className="mb-3 flex items-center justify-between"><div><div className="text-[9px] font-bold uppercase tracking-[0.15em] text-[#08a875]">Évolution du compte</div><h2 className="mt-1 text-sm font-bold text-[#10233a]">Courbe d'equity</h2></div><TrendingUp className="h-4 w-4 text-[#08b77a]" /></div><div className="min-h-[260px]">{chart}</div></div>
-      <div className="rounded-2xl border border-[#dce7e3] bg-white p-5 shadow-[0_8px_24px_rgba(16,35,58,0.035)]"><div className="mb-4"><div className="text-[9px] font-bold uppercase tracking-[0.15em] text-[#d18a1b]">Protection du capital</div><h2 className="mt-1 text-sm font-bold text-[#10233a]">Contrôle du risque</h2><p className="mt-1 text-[10px] text-[#8798a8]">Repères de risque calculés à partir du journal.</p></div><div className="space-y-3">
-        <div className="rounded-xl border border-[#e7efec] bg-[#fbfdfc] p-3"><div className="text-[9px] uppercase tracking-wide text-[#71839a]">Profit Factor</div><div className="mt-1 text-2xl font-bold font-mono text-[#10233a]">{metrics.profitFactor.toFixed(2)}</div><div className={"mt-1 text-[9px] "+(metrics.profitFactor>=1?'text-[#008f63]':'text-[#e14d5d]')}>{metrics.profitFactor>=1?'Positif':'À surveiller'}</div></div>
-        <div className="rounded-xl border border-[#e7efec] bg-[#fbfdfc] p-3"><div className="text-[9px] uppercase tracking-wide text-[#71839a]">Expectancy</div><div className={"mt-1 text-2xl font-bold font-mono "+(metrics.expectancy>=0?'text-[#008f63]':'text-[#e14d5d]')}>{formatCurrency(metrics.expectancy)}</div><div className="mt-1 text-[9px] text-[#71839a]">Par trade</div></div>
+      <div className="rounded-2xl border border-[#dce7e3] bg-white p-5 shadow-[0_8px_24px_rgba(16,35,58,0.035)]"><div className="mb-4"><div className="text-[9px] font-bold uppercase tracking-[0.15em] text-[#d18a1b]">Protection du capital</div><h2 className="mt-1 text-sm font-bold text-[#10233a]">Contrôle du risque</h2><p className="mt-1 text-[10px] text-[#8798a8]">Repères de risque calculés à partir du journal.</p></div><div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="flex min-w-0 flex-col rounded-xl border border-[#e2ece8] bg-[#fbfdfc] p-3.5">
+          <div className="flex items-center justify-between gap-2"><div className="text-[9px] font-bold uppercase tracking-wide text-[#71839a]">Profit Factor</div><span className="flex h-8 w-8 items-center justify-center rounded-lg bg-[#eaf8f1] text-[#079669]"><ShieldCheck className="h-4 w-4" /></span></div>
+          <div className="mt-2 text-2xl font-extrabold font-mono tabular-nums text-[#10233a]">{metrics.profitFactor.toFixed(2)}</div>
+          <div className={"mt-1 text-[9px] font-semibold "+(metrics.profitFactor>=1?'text-[#008f63]':'text-[#e14d5d]')}>{metrics.profitFactor>=1?'Rentabilité positive':'À surveiller'}</div>
+          <div className="mt-auto pt-3">
+            <div className="mb-1.5 flex items-center justify-between text-[9px] text-[#8798a8]"><span>Ratio gains / pertes</span><span>Échelle 0–5</span></div>
+            <div className="h-2 overflow-hidden rounded-full bg-[#e8efec]"><div className={"h-full rounded-full "+(metrics.profitFactor>=1?'bg-[#10b981]':'bg-[#e36a73]')} style={{width:`${Math.min(100,Math.max(0,metrics.profitFactor/5*100))}%`}} /></div>
+            <div className="mt-1 flex justify-between text-[8px] text-[#a0acb5]"><span>0</span><span>1</span><span>3</span><span>5+</span></div>
+          </div>
+        </div>
+        <div className="flex min-w-0 flex-col rounded-xl border border-[#e2ece8] bg-[#fbfdfc] p-3.5">
+          <div className="flex items-center justify-between gap-2"><div className="text-[9px] font-bold uppercase tracking-wide text-[#71839a]">Expectancy</div><span className={"flex h-8 w-8 items-center justify-center rounded-lg "+(metrics.expectancy>=0?'bg-[#eaf8f1] text-[#079669]':'bg-[#fff0f1] text-[#df5360]')}><Target className="h-4 w-4" /></span></div>
+          <div className={"mt-2 text-2xl font-extrabold font-mono tabular-nums "+(metrics.expectancy>=0?'text-[#008f63]':'text-[#e14d5d]')}>{formatCurrency(metrics.expectancy)}</div>
+          <div className="mt-1 text-[9px] font-medium text-[#71839a]">Gain ou perte moyenne par trade</div>
+          <div className="mt-auto flex items-center gap-2 pt-3">
+            <span className={"flex h-7 w-7 items-center justify-center rounded-full "+(metrics.expectancy>=0?'bg-[#eaf8f1] text-[#079669]':'bg-[#fff0f1] text-[#df5360]')}>{metrics.expectancy>=0?<TrendingUp className="h-4 w-4" />:<TrendingDown className="h-4 w-4" />}</span>
+            <span className={"text-[10px] font-semibold "+(metrics.expectancy>=0?'text-[#008f63]':'text-[#e14d5d]')}>{metrics.expectancy>=0?'Espérance positive':'Espérance négative'}</span>
+          </div>
+        </div>
       </div></div>
     </div>
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
