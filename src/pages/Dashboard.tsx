@@ -48,6 +48,15 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
     }));
   }, [metrics.equityCurve, capital]);
 
+  const importantCurvePoints = curve.filter((point, index) => {
+    if (index === 0 || index === curve.length - 1) return true;
+    const previous = curve[index - 1].value;
+    const next = curve[index + 1].value;
+    const isTurningPoint = (point.value >= previous && point.value > next) || (point.value <= previous && point.value < next);
+    const significance = Math.abs(point.value - (previous + next) / 2);
+    return isTurningPoint && significance >= chartRange * 0.06;
+  });
+
   const setDashboardMode = (value: Mode) => {
     setMode(value);
     localStorage.setItem('iamtrader-dashboard-mode', value);
@@ -234,6 +243,9 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
             <line x1="58" y1={chartBaseline} x2="758" y2={chartBaseline} stroke="#aab8b2" strokeWidth="1" />
             <path d={chartLine} fill="none" stroke="#20c342" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" clipPath="url(#iam-equity-positive-clip)" />
             <path d={chartLine} fill="none" stroke="#e14d5d" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" clipPath="url(#iam-equity-negative-clip)" />
+            {importantCurvePoints.map((point, index) => (
+              <circle key={`key-point-${index}`} cx={point.x} cy={point.y} r="3" fill="#ffffff" stroke={point.value >= 0 ? "#20c342" : "#e14d5d"} strokeWidth="1.8" />
+            ))}
             {hover !== null && curve[hover] && <circle cx={curve[hover].x} cy={curve[hover].y} r="4" fill="white" stroke={curve[hover].value >= 0 ? '#20c342' : '#e14d5d'} strokeWidth="2" />}
             {hover !== null && curve[hover] && <>
               <line x1={curve[hover].x} y1={Math.max(24, curve[hover].y - 22)} x2={curve[hover].x} y2={Math.min(166, curve[hover].y + 22)} stroke="#82998f" strokeDasharray="3 4" />
