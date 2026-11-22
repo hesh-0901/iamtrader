@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Trade, TradingAccount, UserProfile } from '../types';
 import { calculatePerformance, calculateTraderScore, formatCurrency } from '../utils/calculations';
 import { ResultBadge, DirectionBadge } from '../components/common/Badge';
-import { Activity, ChevronRight, Focus, LayoutGrid, Minimize2, ShieldCheck, TrendingUp, BarChart3, CircleDollarSign, Target, ShieldAlert, Star, Info } from 'lucide-react';
+import { Activity, ChevronRight, Focus, LayoutGrid, Minimize2, ShieldCheck, TrendingUp, BarChart3, CircleDollarSign, Target, ShieldAlert, Star, Info, Brain, Flame, Gauge, TrendingDown } from 'lucide-react';
 import { TestimonialInvitation } from '../components/testimonials/TestimonialInvitation';
 
 interface DashboardProps {
@@ -324,17 +324,45 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
   );
 
   const intelligenceFocus = (
-    <div className="p-4 rounded-2xl border border-[#dce7e3] bg-white shadow-[0_8px_24px_rgba(16,35,58,0.04)]">
-      <div className="flex items-center justify-between mb-3"><div><h2 className="text-sm font-bold text-[#10233a]">Avant de trader</h2><p className="text-[10px] text-[#8798a8]">Lecture instantanée des contraintes du journal.</p></div><ShieldCheck className="w-4 h-4 text-[#08b77a]" /></div>
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
-        <InsightMini label="PF" value={metrics.profitFactor.toFixed(2)} sub="edge" tone={metrics.profitFactor >= 1 ? 'positive' : 'negative'} />
-        <InsightMini label="Risque moyen" value={intelligence.avgRisk ? formatCurrency(intelligence.avgRisk) : '—'} sub={intelligence.riskPct ? intelligence.riskPct.toFixed(2) + '% capital' : 'non renseigné'} />
-        <InsightMini label="Émotion" value={intelligence.emotionalRate.toFixed(0) + '%'} sub="historique" tone={intelligence.emotionalRate <= 20 ? 'positive' : 'negative'} />
-        <InsightMini label="Série" value={metrics.currentStreak.count ? (metrics.currentStreak.type === 'WIN' ? '+' : '-') + metrics.currentStreak.count : '—'} sub="actuelle" tone={metrics.currentStreak.type === 'WIN' ? 'positive' : metrics.currentStreak.type === 'LOSS' ? 'negative' : 'neutral'} />
-        <InsightMini label="DD max" value={'-' + metrics.maxDrawdownPercent.toFixed(1) + '%'} sub="observé" tone={metrics.maxDrawdownPercent <= 5 ? 'positive' : 'negative'} />
+    <section className="overflow-hidden rounded-2xl border border-[#dce7e3] bg-white p-4 shadow-[0_8px_24px_rgba(16,35,58,0.04)] sm:p-5">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div><div className="text-[9px] font-bold uppercase tracking-[0.15em] text-[#08a875]">Préparation de session</div><h2 className="mt-1 text-base font-bold text-[#10233a]">Avant de trader</h2><p className="mt-1 text-[10px] text-[#8798a8]">Les repères à consulter avant votre prochaine décision.</p></div>
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#eaf8f1] text-[#079669]"><ShieldCheck className="h-[18px] w-[18px]" /></span>
       </div>
-      <div className="mt-3 rounded-xl bg-[#f8fbfa] border border-[#e7efec] p-3"><div className="text-[9px] uppercase tracking-wider font-bold text-[#087b59]">Point à contrôler</div><div className="mt-1 text-xs font-semibold text-[#314861]">{intelligence.actions[0]}</div></div>
-    </div>
+      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 xl:grid-cols-5">
+        <div className="flex min-h-[116px] min-w-0 flex-col rounded-xl border border-[#e2ece8] bg-[#fbfdfc] p-3">
+          <div className="flex items-center justify-between gap-1"><span className="text-[9px] font-bold uppercase tracking-wide text-[#8293a2]">Profit Factor</span><BarChart3 className="h-4 w-4 text-[#079669]" /></div>
+          <div className="mt-2 text-xl font-extrabold font-mono tabular-nums text-[#10233a]">{metrics.profitFactor.toFixed(2)}</div>
+          <span className={`mt-1 text-[9px] font-semibold ${metrics.profitFactor >= 1 ? 'text-[#008f63]' : 'text-[#e14d5d]'}`}>{metrics.profitFactor >= 1 ? 'Edge positif' : 'À surveiller'}</span>
+          <div className="mt-auto pt-2"><div className="h-1.5 overflow-hidden rounded-full bg-[#e8efec]"><div className={`h-full rounded-full ${metrics.profitFactor >= 1 ? 'bg-[#10b981]' : 'bg-[#e36a73]'}`} style={{width:`${Math.min(100,Math.max(0,metrics.profitFactor/5*100))}%`}} /></div><div className="mt-1 flex justify-between text-[8px] text-[#a0acb5]"><span>0</span><span>5+</span></div></div>
+        </div>
+        <div className="flex min-h-[116px] min-w-0 flex-col rounded-xl border border-[#e2ece8] bg-[#fbfdfc] p-3">
+          <div className="flex items-center justify-between gap-1"><span className="text-[9px] font-bold uppercase tracking-wide text-[#8293a2]">Risque moyen</span><ShieldAlert className="h-4 w-4 text-[#c58a27]" /></div>
+          <div className="mt-2 text-xl font-extrabold font-mono tabular-nums text-[#10233a]">{intelligence.avgRisk ? formatCurrency(intelligence.avgRisk) : '—'}</div>
+          <span className="mt-1 text-[9px] font-medium text-[#8293a2]">{intelligence.riskPct ? intelligence.riskPct.toFixed(2) + '% du capital' : 'Risque non renseigné'}</span>
+        </div>
+        <div className="flex min-h-[116px] min-w-0 flex-col rounded-xl border border-[#e2ece8] bg-[#fbfdfc] p-3">
+          <div className="flex items-center justify-between gap-1"><span className="text-[9px] font-bold uppercase tracking-wide text-[#8293a2]">Émotion</span><Brain className={`h-4 w-4 ${intelligence.emotionalRate <= 20 ? 'text-[#079669]' : 'text-[#df5360]'}`} /></div>
+          <div className={`mt-2 text-xl font-extrabold font-mono tabular-nums ${intelligence.emotionalRate <= 20 ? 'text-[#008f63]' : 'text-[#d97735]'}`}>{intelligence.emotionalRate.toFixed(0)}%</div>
+          <span className="mt-1 text-[9px] font-medium text-[#8293a2]">Trades émotionnels</span>
+          <div className="mt-auto pt-2"><div className="h-1.5 overflow-hidden rounded-full bg-[#e8efec]"><div className={`h-full rounded-full ${intelligence.emotionalRate <= 20 ? 'bg-[#10b981]' : 'bg-[#e5a044]'}`} style={{width:`${Math.min(100,Math.max(0,intelligence.emotionalRate))}%`}} /></div></div>
+        </div>
+        <div className="flex min-h-[116px] min-w-0 flex-col rounded-xl border border-[#e2ece8] bg-[#fbfdfc] p-3">
+          <div className="flex items-center justify-between gap-1"><span className="text-[9px] font-bold uppercase tracking-wide text-[#8293a2]">Série actuelle</span><Flame className={`h-4 w-4 ${metrics.currentStreak.type === 'WIN' ? 'text-[#079669]' : metrics.currentStreak.type === 'LOSS' ? 'text-[#df5360]' : 'text-[#94a3b8]'}`} /></div>
+          <div className={`mt-2 text-xl font-extrabold font-mono tabular-nums ${metrics.currentStreak.type === 'WIN' ? 'text-[#008f63]' : metrics.currentStreak.type === 'LOSS' ? 'text-[#e14d5d]' : 'text-[#10233a]'}`}>{metrics.currentStreak.count ? (metrics.currentStreak.type === 'WIN' ? '+' : '-') + metrics.currentStreak.count : '—'}</div>
+          <span className="mt-1 text-[9px] font-medium text-[#8293a2]">{metrics.currentStreak.type === 'WIN' ? 'Gains consécutifs' : metrics.currentStreak.type === 'LOSS' ? 'Pertes consécutives' : 'Aucune série'}</span>
+        </div>
+        <div className="flex min-h-[116px] min-w-0 flex-col rounded-xl border border-[#e2ece8] bg-[#fbfdfc] p-3">
+          <div className="flex items-center justify-between gap-1"><span className="text-[9px] font-bold uppercase tracking-wide text-[#8293a2]">Drawdown max.</span><Gauge className={`h-4 w-4 ${metrics.maxDrawdownPercent <= 5 ? 'text-[#079669]' : 'text-[#df5360]'}`} /></div>
+          <div className={`mt-2 text-xl font-extrabold font-mono tabular-nums ${metrics.maxDrawdownPercent <= 5 ? 'text-[#10233a]' : 'text-[#e14d5d]'}`}>{metrics.maxDrawdownPercent.toFixed(2)}%</div>
+          <span className="mt-1 text-[9px] font-medium text-[#8293a2]">Maximum observé</span>
+        </div>
+      </div>
+      <div className="mt-3 flex items-start gap-3 rounded-xl border border-[#f0e2c8] bg-[#fffaf1] p-3">
+        <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#fff0d7] text-[#bd8126]"><Info className="h-4 w-4" /></span>
+        <div className="min-w-0"><div className="text-[9px] font-bold uppercase tracking-[0.12em] text-[#a66d1b]">Point à contrôler</div><p className="mt-1 text-xs font-semibold leading-relaxed text-[#314861]">{intelligence.actions[0] || 'Aucun point de vigilance particulier identifié dans les données disponibles.'}</p></div>
+      </div>
+    </section>
   );
 
   const intelligenceAnalysis = (
