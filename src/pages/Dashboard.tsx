@@ -48,13 +48,14 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
     }));
   }, [metrics.equityCurve, capital]);
 
+  const curveValueRange = curve.length ? Math.max(1, ...curve.map(point => point.value)) - Math.min(0, ...curve.map(point => point.value)) : 1;
   const importantCurvePoints = curve.filter((point, index) => {
     if (index === 0 || index === curve.length - 1) return true;
     const previous = curve[index - 1].value;
     const next = curve[index + 1].value;
     const isTurningPoint = (point.value >= previous && point.value > next) || (point.value <= previous && point.value < next);
     const significance = Math.abs(point.value - (previous + next) / 2);
-    return isTurningPoint && significance >= chartRange * 0.06;
+    return isTurningPoint && significance >= curveValueRange * 0.06;
   });
 
   const setDashboardMode = (value: Mode) => {
