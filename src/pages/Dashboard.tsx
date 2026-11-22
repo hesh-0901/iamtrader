@@ -628,12 +628,19 @@ function Metric({ label, value, sub, tone = 'neutral', gauge, icon: Icon }: { la
       <div className="flex flex-1 items-center justify-between gap-2">
         <div className={`min-w-0 text-2xl font-extrabold leading-none tracking-tight font-mono tabular-nums ${tone==='positive'?'text-[#008f63]':tone==='negative'?'text-[#e14d5d]':'text-[#10233a]'}`}>{value}</div>
         {gauge !== undefined && (
-          <div className="flex shrink-0 items-center gap-1.5">
-            <svg viewBox="0 0 100 54" className="h-10 w-[74px]" aria-label={`Progression ${progress}%`}>
-              <path d="M 8 48 A 42 42 0 0 1 92 48" fill="none" stroke="#e8efec" strokeWidth="9" strokeLinecap="round" />
-              <path d="M 8 48 A 42 42 0 0 1 92 48" fill="none" stroke={color} strokeWidth="9" strokeLinecap="round" strokeDasharray={`${circumference * progress / 100} ${circumference}`} />
+          <div className="flex shrink-0 items-center justify-center rounded-xl bg-[#f5faf8] px-2 py-1">
+            <svg viewBox="0 0 112 64" className="h-[50px] w-[88px]" role="img" aria-label={`Taux de réussite : ${progress}%`}>
+              <defs>
+                <linearGradient id="iam-winrate-gauge" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stopColor="#0aa879" />
+                  <stop offset="100%" stopColor="#20c997" />
+                </linearGradient>
+              </defs>
+              <path d="M 10 56 A 46 46 0 0 1 102 56" fill="none" stroke="#e2ece8" strokeWidth="8" strokeLinecap="round" />
+              <path d="M 10 56 A 46 46 0 0 1 102 56" fill="none" stroke="url(#iam-winrate-gauge)" strokeWidth="8" strokeLinecap="round" pathLength="100" strokeDasharray={`${progress} 100`} />
+              <circle cx="10" cy="56" r="2.5" fill="#d5e5de" />
+              <circle cx="102" cy="56" r="2.5" fill="#d5e5de" />
             </svg>
-            <span className="text-[10px] font-bold tabular-nums" style={{ color }}>{Math.round(progress)}%</span>
           </div>
         )}
       </div>
