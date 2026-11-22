@@ -221,13 +221,11 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
               <clipPath id="iam-equity-positive-clip"><rect x="58" y="24" width="700" height={Math.max(0, chartBaseline - 24)} /></clipPath>
               <clipPath id="iam-equity-negative-clip"><rect x="58" y={chartBaseline} width="700" height={Math.max(0, 166 - chartBaseline)} /></clipPath>
             </defs>
-            {[24, 95, 166].map((y, index) => {
-              const values = curve.map(point => point.value);
-              const maxValue = Math.max(0, ...values);
-              const minValue = Math.min(0, ...values);
-              const labelValue = maxValue - ((maxValue - minValue) * index / 2);
-              return <g key={y}>
-                <line x1="58" y1={y} x2="758" y2={y} stroke="#edf2f0" strokeDasharray="3 5" />
+            {Array.from({ length: 5 }, (_, index) => {
+              const y = 24 + index * 35.5;
+              const labelValue = chartMax - (chartRange * index / 4);
+              return <g key={index}>
+                <line x1="58" y1={y} x2="758" y2={y} stroke={index === 4 ? "#dce7e3" : "#edf2f0"} strokeDasharray={index === 4 ? "0" : "3 5"} />
                 <text x="49" y={y + 3} textAnchor="end" fill="#8798a8" fontSize="9" fontFamily="monospace">{formatCurrency(labelValue)}</text>
               </g>;
             })}
@@ -242,9 +240,10 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
               <circle cx={curve[hover].x} cy={curve[hover].y} r="5" fill="white" stroke={curve[hover].value >= 0 ? '#08b77a' : '#e14d5d'} strokeWidth="2.5" />
             </>}
           </svg>
-          <div className="ml-[58px] flex justify-between text-[9px] font-mono text-[#94a2ad]">
-            <span>{new Date(curve[0].date).toLocaleDateString('fr-FR', {day:'2-digit',month:'short'})}</span>
-            <span>{new Date(curve[curve.length-1].date).toLocaleDateString('fr-FR', {day:'2-digit',month:'short'})}</span>
+          <div className="ml-[58px] flex justify-between gap-1 text-[9px] font-mono text-[#94a2ad]">
+            {Array.from(new Set(Array.from({ length: 5 }, (_, tick) => Math.round((curve.length - 1) * tick / 4)))).map(index => (
+              <span key={index} className="whitespace-nowrap">{new Date(curve[index].date).toLocaleDateString('fr-FR', {day:'2-digit',month:'short',year: curve.length > 20 ? '2-digit' : undefined})}</span>
+            ))}
           </div>
           {hover !== null && curve[hover] && <div className="pointer-events-none absolute top-1 rounded-xl bg-[#10233a]/95 px-3 py-2 text-[10px] font-mono text-white shadow-lg" style={{left:`${Math.min(Math.max(curve[hover].x / 8, 12), 88)}%`,transform:'translateX(-50%)'}}>
             <div className="text-white/60">{new Date(curve[hover].date).toLocaleDateString('fr-FR')}</div>
