@@ -630,14 +630,10 @@ function Metric({ label, value, sub, tone = 'neutral', gauge, icon: Icon }: { la
         {gauge !== undefined && (
           <div className="flex shrink-0 items-center justify-center">
             <svg viewBox="0 0 120 82" className="h-[66px] w-[100px] overflow-visible" role="img" aria-label={`Taux de réussite : ${progress}%`}>
-              <path d="M 14 66 A 46 46 0 0 1 106 66" fill="none" stroke="#e6ece9" strokeWidth="13" strokeLinecap="round" />
-              <circle cx="14" cy="66" r="6.5" fill="#e6ece9" />
-              <circle cx="106" cy="66" r="6.5" fill="#e6ece9" />
-              {progress > 0 && <>
-                <path d="M 14 66 A 46 46 0 0 1 106 66" fill="none" stroke={color} strokeWidth="13" strokeLinecap="round" pathLength="100" strokeDasharray={`${progress} 100`} />
-                <circle cx="14" cy="66" r="6.5" fill={color} />
-                <circle cx={60 + 46 * Math.cos(Math.PI - Math.PI * progress / 100)} cy={66 - 46 * Math.sin(Math.PI - Math.PI * progress / 100)} r="6.5" fill={color} />
-              </>}
+              <path d="M 14 66 A 46 46 0 0 1 106 66" fill="none" stroke="#252a2e" strokeWidth="13" strokeLinecap="butt" />
+              {progress > 0 && (
+                <path d="M 14 66 A 46 46 0 0 1 106 66" fill="none" stroke={color} strokeWidth="13" strokeLinecap="butt" pathLength="100" strokeDasharray={`${progress} 100`} />
+              )}
               <text x="60" y="59" textAnchor="middle" fill={color} fontSize="15" fontWeight="700" fontFamily="Inter, sans-serif">{Math.round(progress)}%</text>
             </svg>
           </div>
