@@ -629,15 +629,10 @@ function Metric({ label, value, sub, tone = 'neutral', gauge, icon: Icon }: { la
         <div className={`min-w-0 text-2xl font-extrabold leading-none tracking-tight font-mono tabular-nums ${tone==='positive'?'text-[#008f63]':tone==='negative'?'text-[#e14d5d]':'text-[#10233a]'}`}>{value}</div>
         {gauge !== undefined && (
           <div className="flex shrink-0 items-center justify-center">
-            <svg viewBox="0 0 112 64" className="h-[58px] w-[96px] overflow-visible" role="img" aria-label={`Taux de réussite : ${progress}%`}>
-              <defs>
-                <linearGradient id="iam-winrate-gauge" x1="0" y1="0" x2="1" y2="0">
-                  <stop offset="0%" stopColor={progress < 40 ? "#e14d5d" : progress < 60 ? "#e6a23c" : "#08a879"} />
-                  <stop offset="100%" stopColor={progress < 40 ? "#f07883" : progress < 60 ? "#f2c16b" : "#20c997"} />
-                </linearGradient>
-              </defs>
-              <path d="M 10 56 A 46 46 0 0 1 102 56" fill="none" stroke="#e8efec" strokeWidth="10" strokeLinecap="round" />
-              <path d="M 10 56 A 46 46 0 0 1 102 56" fill="none" stroke="url(#iam-winrate-gauge)" strokeWidth="10" strokeLinecap="round" pathLength="100" strokeDasharray={`${progress} 100`} />
+            <svg viewBox="0 0 120 82" className="h-[66px] w-[100px] overflow-visible" role="img" aria-label={`Taux de réussite : ${progress}%`}>
+              <path d="M 14 66 A 46 46 0 0 1 106 66" fill="none" stroke="#e6ece9" strokeWidth="13" strokeLinecap="round" />
+              <path d="M 14 66 A 46 46 0 0 1 106 66" fill="none" stroke={color} strokeWidth="13" strokeLinecap="round" pathLength="100" strokeDasharray={`${progress} 100`} />
+              <text x="60" y="59" textAnchor="middle" fill={color} fontSize="15" fontWeight="700" fontFamily="Inter, sans-serif">{Math.round(progress)}%</text>
             </svg>
           </div>
         )}
