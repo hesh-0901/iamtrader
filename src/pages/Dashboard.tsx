@@ -245,10 +245,10 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
               <span key={index} className="whitespace-nowrap">{new Date(curve[index].date).toLocaleDateString('fr-FR', {day:'2-digit',month:'short',year: curve.length > 20 ? '2-digit' : undefined})}</span>
             ))}
           </div>
-          {hover !== null && curve[hover] && <div className="pointer-events-none absolute top-1 rounded-xl bg-[#10233a]/95 px-3 py-2 text-[10px] font-mono text-white shadow-lg" style={{left:`${Math.min(Math.max(curve[hover].x / 8, 12), 88)}%`,transform:'translateX(-50%)'}}>
-            <div className="text-white/60">{new Date(curve[hover].date).toLocaleDateString('fr-FR')}</div>
+          {hover !== null && curve[hover] && <div className="pointer-events-none absolute top-1 text-[10px] font-mono leading-relaxed text-[#111827]" style={{left:`${Math.min(Math.max(curve[hover].x / 8, 12), 88)}%`,transform:'translateX(-50%)'}}>
+            <div className="font-medium">{new Date(curve[hover].date).toLocaleDateString('fr-FR')}</div>
             <div className="font-bold">{formatCurrency(curve[hover].value)}</div>
-            <div className="text-white/65">Equity {formatCurrency(curve[hover].balance)}</div>
+            <div className="font-medium">Equity {formatCurrency(curve[hover].balance)}</div>
           </div>}
         </>
       ) : <div className="flex h-56 flex-col items-center justify-center rounded-xl border border-[#edf2f0] bg-[#fbfdfc]"><Activity className="mb-2 h-5 w-5 text-[#a6b4bf]" /><span className="text-xs font-semibold text-[#62788d]">Courbe disponible après 2 trades</span><span className="mt-1 text-[10px] text-[#98a7b3]">Votre progression apparaîtra automatiquement ici.</span></div>}
