@@ -620,22 +620,24 @@ function Metric({ label, value, sub, tone = 'neutral', gauge, icon: Icon }: { la
   const progress = Math.max(0, Math.min(100, gauge ?? 0));
   const circumference = Math.PI * 42;
   return (
-    <div className="relative min-w-0 rounded-xl border border-[#e2ece8] bg-white p-3.5 shadow-[0_3px_12px_rgba(16,35,58,0.025)] transition-shadow hover:shadow-[0_6px_18px_rgba(16,35,58,0.06)]">
-      <div className="flex items-start justify-between gap-2">
+    <div className="flex h-full min-h-[126px] min-w-0 flex-col rounded-xl border border-[#e2ece8] bg-white p-3.5 shadow-[0_3px_12px_rgba(16,35,58,0.025)] transition-shadow hover:shadow-[0_6px_18px_rgba(16,35,58,0.06)]">
+      <div className="flex items-center justify-between gap-2">
         <div className="min-w-0 text-[9px] font-bold uppercase tracking-[0.11em] text-[#8293a2]">{label}</div>
-        {Icon && <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg" style={{ backgroundColor: color + '14', color }}><Icon className="h-3.5 w-3.5" /></span>}
+        {Icon && gauge === undefined && <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg" style={{ backgroundColor: color + '14', color }}><Icon className="h-3.5 w-3.5" /></span>}
       </div>
-      <div className={`mt-2 text-xl font-extrabold leading-none tracking-tight font-mono ${tone==='positive'?'text-[#008f63]':tone==='negative'?'text-[#e14d5d]':'text-[#10233a]'}`}>{value}</div>
-      {gauge !== undefined && (
-        <div className="mt-2 flex items-center gap-2">
-          <svg viewBox="0 0 100 54" className="h-8 w-[62px] shrink-0" aria-label={`Progression ${progress}%`}>
-            <path d="M 8 48 A 42 42 0 0 1 92 48" fill="none" stroke="#e8efec" strokeWidth="9" strokeLinecap="round" />
-            <path d="M 8 48 A 42 42 0 0 1 92 48" fill="none" stroke={color} strokeWidth="9" strokeLinecap="round" strokeDasharray={`${circumference * progress / 100} ${circumference}`} />
-          </svg>
-          <span className="text-[9px] font-semibold tabular-nums" style={{ color }}>{Math.round(progress)}%</span>
-        </div>
-      )}
-      {sub && <div className="mt-1.5 text-[9px] font-medium text-[#94a2ad]">{sub}</div>}
+      <div className="flex flex-1 items-center justify-between gap-2">
+        <div className={`min-w-0 text-2xl font-extrabold leading-none tracking-tight font-mono tabular-nums ${tone==='positive'?'text-[#008f63]':tone==='negative'?'text-[#e14d5d]':'text-[#10233a]'}`}>{value}</div>
+        {gauge !== undefined && (
+          <div className="flex shrink-0 items-center gap-1.5">
+            <svg viewBox="0 0 100 54" className="h-10 w-[74px]" aria-label={`Progression ${progress}%`}>
+              <path d="M 8 48 A 42 42 0 0 1 92 48" fill="none" stroke="#e8efec" strokeWidth="9" strokeLinecap="round" />
+              <path d="M 8 48 A 42 42 0 0 1 92 48" fill="none" stroke={color} strokeWidth="9" strokeLinecap="round" strokeDasharray={`${circumference * progress / 100} ${circumference}`} />
+            </svg>
+            <span className="text-[10px] font-bold tabular-nums" style={{ color }}>{Math.round(progress)}%</span>
+          </div>
+        )}
+      </div>
+      {sub && <div className="mt-1 text-[9px] font-medium text-[#94a2ad]">{sub}</div>}
     </div>
   );
 }
