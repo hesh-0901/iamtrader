@@ -630,7 +630,7 @@ function Metric({ label, value, sub, tone = 'neutral', gauge, icon: Icon }: { la
         {gauge !== undefined && (
           <div className="flex shrink-0 items-center justify-center">
             <svg viewBox="0 0 120 82" className="h-[66px] w-[100px] overflow-visible" role="img" aria-label={`Taux de réussite : ${progress}%`}>
-              <path d="M 14 66 A 46 46 0 0 1 106 66" fill="none" stroke="#252a2e" strokeWidth="13" strokeLinecap="butt" />
+              <path d="M 14 66 A 46 46 0 0 1 106 66" fill="none" stroke="#e6ece9" strokeWidth="13" strokeLinecap="butt" />
               {progress > 0 && (
                 <path d="M 14 66 A 46 46 0 0 1 106 66" fill="none" stroke={color} strokeWidth="13" strokeLinecap="butt" pathLength="100" strokeDasharray={`${progress} 100`} />
               )}
