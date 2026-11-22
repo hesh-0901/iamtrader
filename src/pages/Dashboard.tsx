@@ -397,19 +397,59 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
     </div>
   );
 
+  const radarMetrics = [
+    { label: 'Risque', value: score.riskManagementScore },
+    { label: 'Discipline', value: score.disciplineScore },
+    { label: 'Régularité', value: score.consistencyScore },
+    { label: 'Exécution', value: score.executionScore },
+    { label: 'Psychologie', value: score.psychologyScore },
+    { label: 'Rentabilité', value: score.profitabilityScore },
+  ];
+  const radarCenter = { x: 150, y: 112 };
+  const radarRadius = 76;
+  const radarPoint = (value: number, index: number, radius = radarRadius) => {
+    const angle = -Math.PI / 2 + (index * Math.PI * 2) / radarMetrics.length;
+    const distance = radius * Math.max(0, Math.min(100, value)) / 100;
+    return { x: radarCenter.x + Math.cos(angle) * distance, y: radarCenter.y + Math.sin(angle) * distance };
+  };
+  const radarPolygon = radarMetrics.map((item, index) => { const point = radarPoint(item.value, index); return `${point.x},${point.y}`; }).join(' ');
+  const radarGrid = [25, 50, 75, 100].map(level => radarMetrics.map((_, index) => { const point = radarPoint(level, index); return `${point.x},${point.y}`; }).join(' '));
+
   const intelligenceCompact = (
     <div className="rounded-2xl border border-[#dce7e3] bg-white p-4 shadow-[0_8px_24px_rgba(16,35,58,0.04)]">
-      <div className="flex flex-wrap items-center gap-2">
-        <span className="text-[9px] font-bold uppercase tracking-wider text-[#087b59]">Lecture instantanée</span>
-        <span className="text-[10px] text-[#71839a]">PF {metrics.profitFactor.toFixed(2)}</span>
-        <span className="text-[10px] text-[#71839a]">·</span>
-        <span className={intelligence.recentPnl >= 0 ? "text-[10px] font-semibold text-[#008f63]" : "text-[10px] font-semibold text-[#e14d5d]"}>7j {formatCurrency(intelligence.recentPnl)}</span>
-        <span className="text-[10px] text-[#71839a]">·</span>
-        <span className="text-[10px] text-[#71839a]">Émotion {intelligence.emotionalRate.toFixed(0)}%</span>
-        <span className="text-[10px] text-[#71839a]">·</span>
-        <span className="text-[10px] text-[#71839a]">DD {metrics.maxDrawdownPercent.toFixed(1)}%</span>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <div><div className="text-[9px] font-bold uppercase tracking-[0.15em] text-[#08a875]">Profil comportemental</div><h3 className="mt-1 text-xs font-bold text-[#10233a]">Radar de performance</h3></div>
+        {score.isSufficientData && <div className="text-right"><div className="text-[9px] text-[#8798a8]">Trader Score</div><div className="text-lg font-extrabold font-mono tabular-nums text-[#079669]">{score.overallScore}<span className="text-[10px] font-semibold text-[#8798a8]">/100</span></div></div>}
       </div>
-      <div className="mt-2 text-xs font-semibold text-[#314861]">{intelligence.actions[0]}</div>
+      {score.isSufficientData ? (
+        <div className="grid grid-cols-1 items-center gap-3 sm:grid-cols-[minmax(190px,0.9fr)_minmax(0,1.1fr)]">
+          <div className="flex items-center justify-center">
+            <svg viewBox="0 0 300 224" className="h-auto w-full max-w-[290px]" role="img" aria-label="Radar des six dimensions du Trader Score">
+              {radarGrid.map((points, index) => <polygon key={`grid-${index}`} points={points} fill="none" stroke="#e7efec" strokeWidth="1" />)}
+              {radarMetrics.map((_, index) => { const point = radarPoint(100, index); return <line key={`axis-${index}`} x1={radarCenter.x} y1={radarCenter.y} x2={point.x} y2={point.y} stroke="#e1eae6" strokeWidth="1" />; })}
+              <polygon points={radarPolygon} fill="#10b981" fillOpacity="0.20" stroke="#079669" strokeWidth="2.5" strokeLinejoin="round" />
+              {radarMetrics.map((item, index) => { const point = radarPoint(item.value, index); return <circle key={item.label} cx={point.x} cy={point.y} r="3.5" fill="#ffffff" stroke="#079669" strokeWidth="2" />; })}
+            </svg>
+          </div>
+          <div className="grid grid-cols-2 gap-x-3 gap-y-3">
+            {radarMetrics.map(item => <div key={item.label} className="min-w-0">
+              <div className="mb-1 flex items-center justify-between gap-1"><span className="truncate text-[9px] font-semibold text-[#71839a]">{item.label}</span><span className="text-[10px] font-bold font-mono tabular-nums text-[#10233a]">{item.value}</span></div>
+              <div className="h-1.5 overflow-hidden rounded-full bg-[#edf2f0]"><div className="h-full rounded-full bg-[#10b981]" style={{ width: `${Math.max(0, Math.min(100, item.value))}%` }} /></div>
+            </div>)}
+          </div>
+        </div>
+      ) : (
+        <div className="flex min-h-[170px] flex-col items-center justify-center rounded-xl border border-dashed border-[#dce7e3] bg-[#fbfdfc] px-4 text-center">
+          <Activity className="mb-2 h-6 w-6 text-[#9aabb5]" />
+          <p className="text-xs font-semibold text-[#314861]">Données insuffisantes pour établir le radar</p>
+          <p className="mt-1 text-[10px] text-[#8798a8]">{score.tradesAnalyzed}/5 trades clôturés minimum. Les scores apparaîtront automatiquement lorsque l'échantillon sera suffisant.</p>
+        </div>
+      )}
+      <div className="mt-3 rounded-xl border border-[#e7efec] bg-[#f8fbfa] p-3">
+        <div className="text-[9px] font-bold uppercase tracking-[0.12em] text-[#087b59]">Lecture instantanée</div>
+        <p className="mt-1 text-[11px] font-semibold leading-relaxed text-[#314861]">{intelligence.actions[0] || 'Continuez à renseigner vos trades pour obtenir des recommandations comportementales.'}</p>
+        <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-[9px] text-[#71839a]"><span>PF {metrics.profitFactor.toFixed(2)}</span><span className={intelligence.recentPnl >= 0 ? 'font-semibold text-[#008f63]' : 'font-semibold text-[#e14d5d]'}>7j {formatCurrency(intelligence.recentPnl)}</span><span>Émotion {intelligence.emotionalRate.toFixed(0)}%</span><span>DD {metrics.maxDrawdownPercent.toFixed(1)}%</span></div>
+      </div>
     </div>
   );
 
