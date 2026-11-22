@@ -418,7 +418,7 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
   const intelligenceCompact = (
     <div className="flex w-full items-center justify-center py-1">
       {score.isSufficientData ? (
-        <svg viewBox="0 0 440 310" className="h-auto w-full max-w-[560px]" role="img" aria-label="Radar de performance avec six dimensions et leurs scores">
+        <svg viewBox="0 0 440 310" className="h-auto w-full max-w-[390px]" role="img" aria-label="Radar de performance avec six dimensions et leurs scores">
           {radarGrid.map((points, index) => <polygon key={`grid-${index}`} points={points} fill="none" stroke="#e7efec" strokeWidth="1" />)}
           {radarMetrics.map((_, index) => { const point = radarPoint(100, index); return <line key={`axis-${index}`} x1={radarCenter.x} y1={radarCenter.y} x2={point.x} y2={point.y} stroke="#e1eae6" strokeWidth="1" />; })}
           <polygon points={radarPolygon} fill="#10b981" fillOpacity="0.22" stroke="#079669" strokeWidth="2.5" strokeLinejoin="round" />
