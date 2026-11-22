@@ -236,7 +236,7 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
             <path d={chartLine} fill="none" stroke="#e14d5d" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" clipPath="url(#iam-equity-negative-clip)" />
             {hover !== null && curve[hover] && <circle cx={curve[hover].x} cy={curve[hover].y} r="4" fill="white" stroke={curve[hover].value >= 0 ? '#20c342' : '#e14d5d'} strokeWidth="2" />}
             {hover !== null && curve[hover] && <>
-              <line x1={curve[hover].x} y1="24" x2={curve[hover].x} y2="166" stroke="#82998f" strokeDasharray="3 4" />
+              <line x1={curve[hover].x} y1={Math.max(24, curve[hover].y - 22)} x2={curve[hover].x} y2={Math.min(166, curve[hover].y + 22)} stroke="#82998f" strokeDasharray="3 4" />
               <circle cx={curve[hover].x} cy={curve[hover].y} r="5" fill="white" stroke={curve[hover].value >= 0 ? '#08b77a' : '#e14d5d'} strokeWidth="2.5" />
             </>}
           </svg>
