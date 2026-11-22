@@ -230,7 +230,7 @@ export function Dashboard({ trades, accounts, selectedAccountId, userProfile, on
               </g>;
             })}
             <path d={chartAreaPath} fill="#d7f2db" clipPath="url(#iam-equity-positive-clip)" />
-            <path d={chartAreaPath} fill="#e14d5d" clipPath="url(#iam-equity-negative-clip)" />
+            <path d={chartAreaPath} fill="#f8d7da" clipPath="url(#iam-equity-negative-clip)" />
             <line x1="58" y1={chartBaseline} x2="758" y2={chartBaseline} stroke="#aab8b2" strokeWidth="1" />
             <path d={chartLine} fill="none" stroke="#20c342" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" clipPath="url(#iam-equity-positive-clip)" />
             <path d={chartLine} fill="none" stroke="#e14d5d" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" clipPath="url(#iam-equity-negative-clip)" />
